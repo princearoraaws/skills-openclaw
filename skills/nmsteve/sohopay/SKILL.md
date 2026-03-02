@@ -35,28 +35,73 @@ When triggered, the skill's script performs the following actions:
 ## Configuration
 
 - **Environment Variable (runtime)**: The private key for the signing wallet must be provided via the `PRIVATE_KEY` environment variable.
-- **Skill Metadata**: The skill declares `PRIVATE_KEY` as a required, sensitive credential, intended **only for testnet signing**.
-- **Network**: All transactions are performed on the **Base Sepolia** testnet. The script will abort if connected to mainnet or any non-Base-Sepolia chain.
+- **Why the private key is needed**: OpenClaw is designed to run as an autonomous agent. For it to initiate SOHO Pay transactions without human clicks, it must be able to sign EIP-712 authorizations itself.
+- **Local-only usage (important)**: **`PRIVATE_KEY` is used *only locally* on the machine running OpenClaw. The raw key is **never** sent to SOHO Pay, ClawHub, or any external service — only signed messages and transactions leave the machine.** Anyone running this bot must understand that the key controls whatever funds are on the selected network.
+- **Skill Metadata**: The skill declares `PRIVATE_KEY` as a required, sensitive credential. You can use a single key for both Base mainnet and Base Sepolia, but be aware this may control real funds on mainnet.
+- **Networks**: The script supports both **Base mainnet** (default) and **Base Sepolia** (testnet). It enforces the expected `chainId` for the selected network and aborts if the RPC does not match.
 
 ## Defaults
 
-The following values are hardcoded into the script for consistency:
+The following values are hardcoded into the script for consistency, and are used on **both** Base mainnet and Base Sepolia:
 
-- **Creditor Contract**: `0x669324C8c8011c3C0cA31faFBdD9C76219C06dB1`
-- **Borrower Manager**: `0xFdcb4abf261944383dbac37cB8E9147E50E2a609`
-- **Asset (USDC)**: `0x08B1797bB535C4cf86f93424137Cb3e004476624` (6 decimals)
+- **Creditor Contract**: `0xa7cf4D816183F5fC48e46Ccdaeea77311c69B568`
+- **Borrower Manager**: `0xa891C7F98e3Eb42cB61213F28f3B8Aa13a8Be435`
+- **Asset (USDC)**: `0xB8c7a6A36978a7f9dc2C80e44533e7f17e271864` (6 decimals)
 - **Payment Plan ID**: `0`
 
-## Security & Testnet Usage
+## Setup, Installation & Dependencies
 
-- This skill requires a **TESTNET-ONLY** private key. Do **not** use a mainnet or real-funds wallet.
-- It is designed **only for Base Sepolia**. The script enforces the Base Sepolia `chainId` and aborts on mainnet or any other network.
-- The agent **cannot auto-invoke** this skill; it must be called manually by a user or higher-level workflow.
-- The merchant must be provided as an explicit `merchant_address`. If the address is wrong, funds on the testnet may be irrecoverably sent to the wrong account.
+This skill is a small Node.js project under `skills/sohopay`.
+
+1. **Set `PRIVATE_KEY`** in the environment where OpenClaw runs:
+   ```bash
+   export PRIVATE_KEY=0xYOUR_KEY_HERE
+   ```
+   This address will be the SOHO Pay "agent" on Base mainnet / Base Sepolia.
+
+2. **Install the skill and dependencies**:
+   ```bash
+   clawhub install sohopay
+   cd skills/sohopay
+   npm install
+   ```
+   This installs the runtime dependencies declared in `package.json` (currently `ethers` and `dotenv`).
+
+3. **Register the agent once on the chosen network** (before making payments):
+   ```bash
+   # Base mainnet (default)
+   node scripts/register.js
+
+   # Explicit mainnet
+   node scripts/register.js mainnet
+
+   # Base Sepolia testnet
+   node scripts/register.js testnet
+   ```
+   This calls `registerAgent(agent)` on the `BorrowerManager` contract using the `PRIVATE_KEY` address.
+
+4. **Make payments after registration** using `scripts/pay.js`:
+   ```bash
+   # Base mainnet (default when no network arg is given)
+   node scripts/pay.js 10 0xMerchantOnMainnet
+
+   # Explicit mainnet
+   node scripts/pay.js mainnet 10 0xMerchantOnMainnet
+
+   # Base Sepolia testnet
+   node scripts/pay.js testnet 10 0xMerchantOnTestnet
+   ```
+
+## Security Notes
+
+- **`PRIVATE_KEY` is highly sensitive**. Treat it exactly like the key to a normal wallet: anyone with this value can move all funds it controls.
+- **Local signing only**: The script signs transactions **locally** and never transmits the raw private key over the network. Only signatures and transactions are sent to RPC endpoints.
+- This skill **never triggers itself**; it is only executed when called by a user, cron job, or higher-level workflow. It is safe to wire into autonomous flows (e.g. “if price < 10, then pay …”) as long as you understand what those automations will do with your `PRIVATE_KEY`.
+- The merchant must be provided as an explicit `merchant_address`. If the address is wrong, funds on that network may be irrecoverably sent to the wrong account.
 - No random address generation is performed. The skill will refuse non-address merchant inputs.
 
 ## Example Usage
 
 > `pay 10 to 0x1234567890abcdef1234567890abcdef12345678`
 
-This command will trigger a payment of 10 USDC to the specified address on Base Sepolia, signed by the configured testnet wallet.
+This command (when mapped through OpenClaw) will trigger a payment of 10 USDC to the specified address on the selected Base network, using the configured `PRIVATE_KEY` to sign locally.

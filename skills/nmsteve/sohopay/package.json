@@ -1,7 +1,7 @@
 {
   "name": "sohopay-skill",
-  "version": "1.0.0",
-  "description": "SOHO Pay credit layer payment skill for Base Sepolia (testnet-only).",
+  "version": "1.0.10",
+  "description": "SOHO Pay credit layer payment skill for Base mainnet and Base Sepolia.",
   "main": "scripts/pay.js",
   "scripts": {
     "pay": "node scripts/pay.js"
