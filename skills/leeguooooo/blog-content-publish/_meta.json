@@ -3,9 +3,15 @@
   "slug": "blog-content-publish",
   "displayName": "Blog Content Publish",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1772178997134,
-    "commit": "https://github.com/openclaw/skills/commit/6a715379082b3dd0168771cae2cdfc8419ee2c33"
+    "version": "1.0.6",
+    "publishedAt": 1772419301236,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1772178997134,
+      "commit": "https://github.com/openclaw/skills/commit/6a715379082b3dd0168771cae2cdfc8419ee2c33"
+    }
+  ]
 }

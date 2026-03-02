@@ -1,14 +1,14 @@
 ---
 name: blog-content-publish
-description: Publish editorial and dynamic section content with blog-publish, enforce bilingual pairing and quality gates for hot/news/ai_news, and sync repository skills to ClawHub via clawhub sync --all.
+description: Publish editorial and dynamic section content with blog-publish, enforce quality gates for hot/news/ai_news, and sync repository skills to ClawHub via clawhub sync --all.
 ---
 
 # Goal
 - Canonical npm package name is `@leeguoo/blog-publish` (single source of truth).
 - Use `blog-publish` to publish normal blog content and dynamic section content.
-- Keep dynamic section publishing compliant with bilingual pairing and no public `producer` leakage.
+- Keep dynamic section publishing compliant with no public `producer` leakage.
 - Reuse one skill across `editorial`, `hot`, `news`, and `ai_news`.
-- Enforce deterministic quality rules so auto-published News/Hot briefs are readable, source-grounded, and consistent across zh/en.
+- Enforce deterministic quality rules so auto-published News/Hot briefs are readable and source-grounded.
 
 # When to Use
 - Publishing normal editorial posts.
@@ -24,9 +24,8 @@ description: Publish editorial and dynamic section content with blog-publish, en
   - `contentMarkdown`
 - Required for dynamic sections:
   - `section` (`hot`, `news`, or `ai_news`)
-  - `pairId`
-  - en + zh paired submissions under the same `pairId`
 - Optional:
+  - `pairId` (if omitted, server falls back to `slug`)
   - `sourceUrl`
   - `publicSourceLabel`
   - `producer` (internal only, never for public display)
@@ -52,10 +51,6 @@ description: Publish editorial and dynamic section content with blog-publish, en
   - Use Markdown links only: `[来源标题](https://...)`.
   - One topic should have one primary source link + one evidence link when available.
   - Avoid same-link repetition across all topics; evidence links should be topic-specific whenever possible.
-- Bilingual parity:
-  - zh/en pair must keep the same `pairId`, same topic count, same topic ordering, and equivalent meaning.
-  - zh/en pair must keep the same evidence anchors and the same risk level per topic.
-  - If one language cannot be completed with equivalent quality, reject the whole pair.
 - Forbidden patterns:
   - No "据说/rumor/未证实" style claims without attribution.
   - No placeholder text (`TBD`, `待补充`, `lorem ipsum`).
@@ -70,8 +65,7 @@ description: Publish editorial and dynamic section content with blog-publish, en
   - Actionability: recommendation can be executed.
 - Reject publish if:
   - Any topic total score `< 4`, or
-  - Any topic missing `Evidence`/`Action`, or
-  - zh/en pair has mismatched topic count/order/risk level/evidence anchor.
+  - Any topic missing `Evidence`/`Action`.
 
 # Body Template (`news` / `hot` / `ai_news`)
 ```md
@@ -111,13 +105,12 @@ description: Publish editorial and dynamic section content with blog-publish, en
   - Verify each topic has `Source + Evidence + Summary + Interpretation + Action`.
   - Verify each interpretation includes risk level label (`P0|P1|P2`).
   - Verify evidence links are not all identical across every topic.
-  - Verify paired locale payload includes both `en` and `zh` with same slug/pairId.
-  - Publish en+zh as one logical batch; if either locale fails, mark the pair failed and re-publish both.
+  - If `pairId` is missing, ensure `slug` is stable because server uses it for localization grouping.
 - Only proceed to real publish when dry-run is clean.
 
 # Publishing Rules
 - Default `section` is `editorial` when absent.
-- `hot/news/ai_news` must be submitted as en + zh pairs with the same `pairId`.
+- Single-language submit is supported for all sections; server handles auto-localization.
 - Auto-generated section content is free by default and does not enter premium gating.
 - Keep `producer` as internal metadata only; public surfaces must use `publicSourceLabel` or section label.
 
@@ -126,6 +119,10 @@ description: Publish editorial and dynamic section content with blog-publish, en
   - `pnpm add -g @leeguoo/blog-publish`
   - `blog-publish login --api-base https://blog.misonote.com --sso-client-id misonote-blog-web --sso-redirect-uri https://blog.misonote.com/auth/callback`
   - `blog-publish whoami`
+- Automation Auth (OpenClaw/CI):
+  - Use service token only: `PUBLISH_API_TOKEN=<secret>`
+  - Preflight: `blog-publish whoami --api-base https://blog.misonote.com`
+  - Never prompt end users to complete browser authorization links.
 - Publish:
   - `blog-publish publish --dry-run`
   - `blog-publish publish`
@@ -139,9 +136,10 @@ description: Publish editorial and dynamic section content with blog-publish, en
 # Failure Handling
 - Publish failure:
   - Check API status code and error payload first.
-  - Fix validation issues (pairing, required fields, auth scope), then retry.
-  - If quality gates fail, stop and regenerate both locales together.
+  - Fix validation issues (required fields, auth scope), then retry.
+  - If quality gates fail, regenerate the current locale content and retry.
   - If login gets wrong client/redirect values, remove environment overrides (`BLOG_PUBLISH_SSO_CLIENT_ID`, `BLOG_PUBLISH_SSO_REDIRECT_URI`) and rerun strict login command.
+  - If running in automation and error is `PUBLISH_UNAUTHORIZED`, stop interactive login attempts, rotate `PUBLISH_API_TOKEN`, then retry publish.
 - Sync failure:
   - Record error output and alert maintainers.
   - Do not block already-published content visibility.
