@@ -3,11 +3,16 @@
   "slug": "pets-browser",
   "displayName": "Pets Browser",
   "latest": {
-    "version": "0.1.4",
-    "publishedAt": 1772353381494,
-    "commit": "https://github.com/openclaw/skills/commit/b491d0b1e00552b67398c2dca5f51a5d296808da"
+    "version": "0.1.6",
+    "publishedAt": 1772460918554,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.1.4",
+      "publishedAt": 1772353381494,
+      "commit": "https://github.com/openclaw/skills/commit/b491d0b1e00552b67398c2dca5f51a5d296808da"
+    },
     {
       "version": "0.1.1",
       "publishedAt": 1772226024911,

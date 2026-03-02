@@ -234,7 +234,99 @@ const DEFAULT_API_URL = 'https://api.clawpets.io/pets-browser/v1';
 
 const CREDENTIALS_FILE = _path.join(_os.homedir(), '.pets-browser', 'agent-credentials.json');
 const PROFILES_DIR = _path.join(_os.homedir(), '.pets-browser', 'profiles');
+const LOGS_DIR    = _path.join(_os.homedir(), '.pets-browser', 'logs');
 const DEFAULT_PROFILE_NAME = (process.env.PB_PROFILE || 'default').trim() || 'default';
+const LOG_LEVELS  = ['off', 'actions', 'verbose'];
+const MAX_LOG_SESSIONS = 50;
+
+// ─── ACTION LOGGER ───────────────────────────────────────────────────────────
+
+class ActionLogger {
+  /**
+   * @param {string} sessionId  — unique session identifier
+   * @param {string} level      — 'off' | 'actions' | 'verbose'
+   */
+  constructor(sessionId, level = 'actions') {
+    this.sessionId = sessionId;
+    this.level = LOG_LEVELS.includes(level) ? level : 'actions';
+    this.startedAt = new Date().toISOString();
+    if (this.level === 'off') {
+      this.logFile = null;
+      return;
+    }
+    _fs.mkdirSync(LOGS_DIR, { recursive: true });
+    this.logFile = _path.join(LOGS_DIR, `${sessionId}.jsonl`);
+    this._rotate();
+  }
+
+  /** Append a structured log entry. */
+  log(action, detail = {}) {
+    if (!this.logFile) return;
+    const record = { ts: new Date().toISOString(), action, ...detail };
+    try { _fs.appendFileSync(this.logFile, JSON.stringify(record) + '\n'); } catch (_) {}
+  }
+
+  /** Agent reasoning — only recorded at verbose level. */
+  note(message) {
+    if (this.level !== 'verbose') return;
+    this.log('note', { message });
+  }
+
+  /** Return all log entries as an array. */
+  getLog() {
+    if (!this.logFile || !_fs.existsSync(this.logFile)) return [];
+    try {
+      return _fs.readFileSync(this.logFile, 'utf-8')
+        .trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+    } catch (_) { return []; }
+  }
+
+  /** Keep only the newest MAX_LOG_SESSIONS log files. */
+  _rotate() {
+    try {
+      if (!_fs.existsSync(LOGS_DIR)) return;
+      const files = _fs.readdirSync(LOGS_DIR)
+        .filter(f => f.endsWith('.jsonl'))
+        .map(f => ({ name: f, mtime: _fs.statSync(_path.join(LOGS_DIR, f)).mtimeMs }))
+        .sort((a, b) => b.mtime - a.mtime);
+      for (const f of files.slice(MAX_LOG_SESSIONS)) {
+        _fs.unlinkSync(_path.join(LOGS_DIR, f));
+      }
+    } catch (_) {}
+  }
+}
+
+// ─── LOG HELPERS ─────────────────────────────────────────────────────────────
+
+/** Get the page URL without throwing. */
+function _safeUrl(page) {
+  try { return page.url(); } catch (_) { return ''; }
+}
+
+/** Strip non-serializable args (page object) and mask passwords. */
+function _sanitizeArgs(actionName, args) {
+  const clean = [];
+  for (const a of args) {
+    if (a && typeof a === 'object' && typeof a.goto === 'function') continue; // skip page
+    if (typeof a === 'string' && a.length > 500) { clean.push(a.slice(0, 500) + '…'); continue; }
+    clean.push(a);
+  }
+  // mask text in humanType if selector hints at password
+  if (actionName === 'humanType' && clean.length >= 3) {
+    const sel = String(clean[1] || '').toLowerCase();
+    if (sel.includes('pass') || sel.includes('secret') || sel.includes('token')) {
+      clean[2] = '***';
+    }
+  }
+  return clean;
+}
+
+/** Truncate a value for logging. */
+function _truncate(val, max = 500) {
+  if (val == null) return val;
+  const s = typeof val === 'string' ? val : JSON.stringify(val);
+  return s.length > max ? s.slice(0, max) + '…' : s;
+}
 
 // Active browser instances keyed by profile name (for reuse mode)
 // Value: { browser, ctx, proxyEnabled }
@@ -327,6 +419,8 @@ function loadAgentCredentials() {
       return {
         agentId: data.agentId,
         agentSecret: data.agentSecret,
+        recoveryCode: data.recoveryCode || undefined,
+        rotatedAt: data.rotatedAt || undefined,
       };
     }
     return null;
@@ -341,10 +435,21 @@ function buildAgentToken(agentId, agentSecret) {
 
 /**
  * Resolve agent credentials from any supported source.
- * Priority: PB_AGENT_TOKEN > PB_AGENT_ID+PB_AGENT_SECRET > credentials file.
+ * Priority: rotated file > PB_AGENT_TOKEN > PB_AGENT_ID+PB_AGENT_SECRET > non-rotated file.
+ *
+ * Rotated credentials (saved after server-side secret rotation) take top priority
+ * because env vars may contain a stale original secret. After rotation, the file
+ * has the latest valid secret.
+ *
  * Returns { agentId, agentSecret } or null.
  */
 function resolveAgentCredentials() {
+  // 0. Rotated file credentials take top priority (server rotated the secret)
+  const fileCreds = loadAgentCredentials();
+  if (fileCreds?.rotatedAt) {
+    return { agentId: fileCreds.agentId, agentSecret: fileCreds.agentSecret };
+  }
+
   // 1. PB_AGENT_TOKEN=PB1.<agentId>.<agentSecret>
   const directToken = process.env.PB_AGENT_TOKEN?.trim();
   if (directToken && directToken.startsWith('PB1.')) {
@@ -361,8 +466,8 @@ function resolveAgentCredentials() {
     return { agentId: envAgentId, agentSecret: envAgentSecret };
   }
 
-  // 3. Saved file (~/.pets-browser/agent-credentials.json)
-  return loadAgentCredentials();
+  // 3. Non-rotated file (~/.pets-browser/agent-credentials.json)
+  return fileCreds;
 }
 
 function resolveAgentToken() {
@@ -379,11 +484,23 @@ function resolveAgentToken() {
  * @returns {{ agentId, agentSecret, recoveryCode } | null}
  */
 async function autoRegisterAgent(apiUrl) {
+  // Security: if credentials file or directory already exists, an agent was
+  // previously registered. Refuse to generate new ones — the user must either
+  // provide existing credentials via importCredentials() / env vars, or
+  // re-run postinstall interactively.
+  const credentialsDir = _path.dirname(CREDENTIALS_FILE);
+  if (_fs.existsSync(CREDENTIALS_FILE) || _fs.existsSync(credentialsDir)) {
+    console.error('[pets-browser] Agent account already exists.');
+    console.error('  Cannot generate new credentials — use importCredentials() to');
+    console.error('  provide your existing agentId and agentSecret instead.');
+    return null;
+  }
+
   const agentId = _crypto.randomUUID();
   const agentSecret = _crypto.randomBytes(32).toString('base64url');
   const recoveryCode = _crypto.randomBytes(24).toString('base64url');
 
-  console.log('[pets-browser] No credentials found. Auto-registering new agent...');
+  console.log('[pets-browser] First run — registering new agent...');
 
   try {
     const resp = await fetch(`${apiUrl.replace(/\/$/, '')}/agents/register`, {
@@ -427,6 +544,48 @@ async function autoRegisterAgent(apiUrl) {
   process.env.PB_AGENT_SECRET = agentSecret;
 
   return creds;
+}
+
+/**
+ * Import existing agent credentials provided by the user.
+ * ONLY saves credentials that the user explicitly provides — NEVER generates new ones.
+ * Use this when the user says "here are my credentials" or "use this agentId/secret".
+ *
+ * @param {string} agentId — existing agent UUID
+ * @param {string} agentSecret — existing agent secret
+ * @returns {{ ok: boolean, agentId: string } | { ok: false, error: string }}
+ */
+function importCredentials(agentId, agentSecret) {
+  if (!agentId || !agentSecret) {
+    return { ok: false, error: 'agentId and agentSecret are required' };
+  }
+  if (!AGENT_ID_RE.test(agentId)) {
+    return { ok: false, error: 'Invalid agentId format (expected UUID)' };
+  }
+  if (!AGENT_SECRET_RE.test(agentSecret)) {
+    return { ok: false, error: 'Invalid agentSecret format (expected 32-200 char base64url string)' };
+  }
+
+  const creds = {
+    agentId,
+    agentSecret,
+    createdAt: new Date().toISOString(),
+    importedAt: new Date().toISOString(),
+  };
+
+  try {
+    _fs.mkdirSync(_path.dirname(CREDENTIALS_FILE), { recursive: true, mode: 0o700 });
+    _fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(creds, null, 2), { mode: 0o600 });
+  } catch (err) {
+    return { ok: false, error: `Could not save credentials: ${err.message}` };
+  }
+
+  // Update env vars for current process
+  process.env.PB_AGENT_ID = agentId;
+  process.env.PB_AGENT_SECRET = agentSecret;
+
+  console.log(`[pets-browser] Credentials imported and saved for agentId: ${agentId}`);
+  return { ok: true, agentId };
 }
 
 // ─── SERVICE CREDENTIALS ──────────────────────────────────────────────────────
@@ -473,6 +632,35 @@ async function getCredentials() {
     }
 
     const data = await resp.json();
+
+    // Handle secret rotation: server rotates the secret on every /credentials call.
+    // Save the new secret to disk and update process env so that makeProxy() uses it.
+    if (data.newAgentSecret && data.newAgentToken) {
+      const existingFile = loadAgentCredentials();
+      const rotatedCreds = {
+        agentId: resolveAgentCredentials()?.agentId,
+        agentSecret: data.newAgentSecret,
+        rotatedAt: new Date().toISOString(),
+      };
+      // Preserve recoveryCode if it exists in the file
+      if (existingFile?.recoveryCode) {
+        rotatedCreds.recoveryCode = existingFile.recoveryCode;
+      }
+
+      try {
+        _fs.mkdirSync(_path.dirname(CREDENTIALS_FILE), { recursive: true, mode: 0o700 });
+        _fs.writeFileSync(CREDENTIALS_FILE, JSON.stringify(rotatedCreds, null, 2), { mode: 0o600 });
+      } catch (_) {
+        // Best effort — if save fails, the previous secret still works for one more rotation
+      }
+
+      // Update process env so makeProxy() picks up the new secret
+      process.env.PB_AGENT_TOKEN = data.newAgentToken;
+      if (rotatedCreds.agentId) {
+        process.env.PB_AGENT_ID = rotatedCreds.agentId;
+      }
+      process.env.PB_AGENT_SECRET = data.newAgentSecret;
+    }
 
     // Update managed proxy access permission.
     // sessionGranted=true  → server granted a managed proxy session (trial or subscription).
@@ -778,12 +966,109 @@ async function applyStealthScripts(ctx, mobile, locale) {
 /**
  * Build a result object returned by launchBrowser().
  */
-function buildResult(browser, ctx, page) {
+/**
+ * Take a screenshot and return it as a base64-encoded PNG string.
+ * Use this to attach visual proof to every message sent to the user.
+ *
+ * @param {import('playwright').Page} pg — Playwright page
+ * @param {Object} [opts]
+ * @param {boolean} [opts.fullPage=false] — Capture the full scrollable page
+ * @returns {Promise<string>} base64-encoded PNG screenshot
+ */
+async function takeScreenshot(pg, opts = {}) {
+  const buf = await pg.screenshot({ type: 'png', fullPage: Boolean(opts.fullPage) });
+  return buf.toString('base64');
+}
+
+/**
+ * Take a screenshot and pair it with a message for the user.
+ * Returns an object ready to be attached to an LLM response.
+ *
+ * @param {import('playwright').Page} pg — Playwright page
+ * @param {string} message — Human-readable message describing what happened
+ * @param {Object} [opts]
+ * @param {boolean} [opts.fullPage=false] — Capture the full scrollable page
+ * @returns {Promise<{ message: string, screenshot: string, mimeType: string }>}
+ */
+async function screenshotAndReport(pg, message, opts = {}) {
+  const screenshot = await takeScreenshot(pg, opts);
+  return { message, screenshot, mimeType: 'image/png' };
+}
+
+function buildResult(browser, ctx, page, logger) {
+  // ── Wrap page methods based on log level ──
+  if (logger.level !== 'off') {
+    const origGoto = page.goto.bind(page);
+    page.goto = async (url, opts) => {
+      logger.log('goto', { url });
+      try {
+        const resp = await origGoto(url, opts);
+        logger.log('goto_done', { url, status: resp?.status() });
+        return resp;
+      } catch (err) {
+        logger.log('goto_error', { url, error: err.message });
+        throw err;
+      }
+    };
+  }
+
+  if (logger.level === 'verbose') {
+    const origTextContent = page.textContent.bind(page);
+    page.textContent = async (selector, opts) => {
+      const val = await origTextContent(selector, opts);
+      logger.log('textContent', { selector, value: _truncate(val), url: _safeUrl(page) });
+      return val;
+    };
+
+    const origEvaluate = page.evaluate.bind(page);
+    page.evaluate = async (fn, ...args) => {
+      const result = await origEvaluate(fn, ...args);
+      const expr = typeof fn === 'function' ? fn.toString().slice(0, 200) : String(fn).slice(0, 200);
+      logger.log('evaluate', { expr, result: _truncate(result), url: _safeUrl(page) });
+      return result;
+    };
+
+    const origQS = page.$.bind(page);
+    page.$ = async (selector) => {
+      const el = await origQS(selector);
+      logger.log('querySelector', { selector, found: !!el, url: _safeUrl(page) });
+      return el;
+    };
+  }
+
+  // ── Wrap human* functions ──
+  const wrap = (name, fn) => {
+    if (logger.level === 'off') return fn;
+    return async (...args) => {
+      const url = _safeUrl(page);
+      try {
+        const result = await fn(...args);
+        logger.log(name, { args: _sanitizeArgs(name, args), url, ok: true });
+        return result;
+      } catch (err) {
+        logger.log(name, { args: _sanitizeArgs(name, args), url, error: err.message });
+        throw err;
+      }
+    };
+  };
+
   return {
-    browser, ctx, page,
-    humanClick, humanMouseMove, humanType, humanScroll, humanRead,
-    solveCaptcha: (captchaOpts) => solveCaptcha(page, captchaOpts),
+    browser, ctx, page, logger,
+    humanClick:     wrap('humanClick', humanClick),
+    humanMouseMove: wrap('humanMouseMove', humanMouseMove),
+    humanType:      wrap('humanType', humanType),
+    humanScroll:    wrap('humanScroll', humanScroll),
+    humanRead:      wrap('humanRead', humanRead),
+    solveCaptcha:   wrap('solveCaptcha', (captchaOpts) => solveCaptcha(page, captchaOpts)),
+    takeScreenshot: (opts) => takeScreenshot(page, opts),
+    screenshotAndReport: (message, opts) => screenshotAndReport(page, message, opts),
+
+    // Observation layer — use these instead of page.textContent()
+    snapshot:               (opts) => snapshot(page, opts),
+    dumpInteractiveElements:(opts) => dumpInteractiveElements(page, opts),
+
     sleep, rand,
+    getSessionLog:  () => logger.getLog(),
   };
 }
 
@@ -800,8 +1085,9 @@ function buildResult(browser, ctx, page) {
  *                                   Default: "default". Pass null for ephemeral.
  * @param {boolean} opts.reuse     — Reuse running browser for this profile. Proxy mode must match
  *                                   the existing live context. Default: true
+ * @param {string}  opts.logLevel  — 'off' | 'actions' | 'verbose'. Default: 'actions' (env PB_LOG_LEVEL)
  *
- * @returns {{ browser, ctx, page, humanClick, humanMouseMove, humanType, humanScroll, humanRead, solveCaptcha, sleep, rand }}
+ * @returns {{ browser, ctx, page, logger, humanClick, humanMouseMove, humanType, humanScroll, humanRead, solveCaptcha, takeScreenshot, screenshotAndReport, snapshot, dumpInteractiveElements, sleep, rand, getSessionLog }}
  */
 async function launchBrowser(opts = {}) {
   const {
@@ -812,11 +1098,15 @@ async function launchBrowser(opts = {}) {
     session  = null,
     profile  = DEFAULT_PROFILE_NAME,
     reuse    = true,
+    logLevel = null,
   } = opts;
   const normalizedProfile = typeof profile === 'string' ? profile.trim() : profile;
   const profileName = normalizedProfile === '' ? DEFAULT_PROFILE_NAME : normalizedProfile;
 
-  const cty = country || process.env.PB_PROXY_COUNTRY || 'us';
+  const cty   = country || process.env.PB_PROXY_COUNTRY || 'us';
+  const level = logLevel || process.env.PB_LOG_LEVEL || 'actions';
+  const logger = new ActionLogger(_crypto.randomUUID(), level);
+  logger.log('launch', { country: cty, mobile, profile: profileName, useProxy, headless, logLevel: level });
 
   // ── Reuse: return existing browser if alive ──
   // Reuse is only safe when requested proxy mode matches the live context.
@@ -838,7 +1128,8 @@ async function launchBrowser(opts = {}) {
         active.ctx.pages(); // throws if context is dead
         const page = await active.ctx.newPage();
         console.log(`[pets-browser] Reusing browser for profile "${profileName}"`);
-        return buildResult(active.browser, active.ctx, page);
+        logger.log('reuse', { profile: profileName });
+        return buildResult(active.browser, active.ctx, page, logger);
       } catch (_) {
         // Context died — remove and fall through to fresh launch
         _activeBrowsers.delete(profileName);
@@ -909,7 +1200,7 @@ async function launchBrowser(opts = {}) {
     await applyStealthScripts(ctx, mobile, meta.locale);
     const page = ctx.pages()[0] || await ctx.newPage();
     const browser = ctx.browser();
-    const result = buildResult(browser, ctx, page);
+    const result = buildResult(browser, ctx, page, logger);
 
     if (reuse) {
       _activeBrowsers.set(profileName, { browser, ctx, proxyEnabled: Boolean(proxy) });
@@ -929,7 +1220,7 @@ async function launchBrowser(opts = {}) {
   await applyStealthScripts(ctx, mobile, meta.locale);
   const page = await ctx.newPage();
 
-  return buildResult(browser, ctx, page);
+  return buildResult(browser, ctx, page, logger);
 }
 
 /**
@@ -986,7 +1277,34 @@ async function shadowClickButton(page, buttonText) {
   }, buttonText);
 }
 
-async function dumpInteractiveElements(page) {
+/**
+ * List all interactive elements on the page using the accessibility tree.
+ * Returns a compact YAML string with only buttons, inputs, links, etc.
+ * Falls back to DOM querySelectorAll if ariaSnapshot is unavailable.
+ *
+ * @param {import('playwright').Page} page
+ * @param {Object} [opts]
+ * @param {string} [opts.selector='body'] — Scope to a region
+ * @returns {Promise<string>} YAML accessibility tree of interactive elements
+ */
+async function dumpInteractiveElements(page, opts = {}) {
+  try {
+    return await snapshot(page, {
+      selector: opts.selector || 'body',
+      interactiveOnly: true,
+    });
+  } catch (_) {
+    // Fallback: original DOM-based approach for older Playwright versions
+    return JSON.stringify(await _dumpInteractiveElementsDOM(page), null, 2);
+  }
+}
+
+/**
+ * Legacy DOM-based interactive element dump. Used as fallback when
+ * ariaSnapshot is unavailable (Playwright < 1.49).
+ * @private
+ */
+async function _dumpInteractiveElementsDOM(page) {
   return page.evaluate(() => {
     const res = [];
     function collect(root) {
@@ -1000,6 +1318,111 @@ async function dumpInteractiveElements(page) {
     collect(document);
     return res;
   });
+}
+
+// ─── OBSERVATION LAYER ───────────────────────────────────────────────────────
+// Use snapshot() instead of page.textContent() — 90-95% fewer tokens for LLMs.
+// The accessibility tree gives the agent structured, semantic understanding of
+// what's on the page instead of a flat wall of text.
+
+/**
+ * Interactive ARIA roles that represent elements the user can interact with.
+ * Used by filterInteractiveOnly() to strip decorative/static nodes.
+ */
+const INTERACTIVE_ROLES = new Set([
+  'button', 'link', 'textbox', 'checkbox', 'radio', 'combobox',
+  'listbox', 'option', 'menuitem', 'menuitemcheckbox', 'menuitemradio',
+  'tab', 'switch', 'slider', 'spinbutton', 'searchbox', 'treeitem',
+]);
+
+/**
+ * Post-process ariaSnapshot YAML to keep only interactive elements
+ * and their ancestor structure. Strips decorative/static nodes
+ * (headings, paragraphs, images, generic containers without interactive children).
+ *
+ * Two-pass algorithm:
+ *   Pass 1: Scan all lines, mark lines whose role is in INTERACTIVE_ROLES.
+ *   Pass 2: For each marked line, walk up the indent hierarchy to mark all
+ *           ancestor lines so the structural tree remains valid.
+ *   Emit:   Output only marked lines.
+ *
+ * @param {string} yaml — Raw ariaSnapshot YAML
+ * @returns {string} Filtered YAML with only interactive elements and their ancestors
+ */
+function filterInteractiveOnly(yaml) {
+  const lines = yaml.split('\n');
+  const keep = new Array(lines.length).fill(false);
+  const indents = [];
+
+  // Pass 1: find interactive lines and record indent levels
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const trimmed = line.trimStart();
+    const indent = line.length - trimmed.length;
+    indents.push(indent);
+
+    if (!trimmed) continue;
+    // Extract role: "- role ..." or "- role:" (with children)
+    const match = trimmed.match(/^-\s+(\w+)/);
+    if (match && INTERACTIVE_ROLES.has(match[1])) {
+      keep[i] = true;
+    }
+  }
+
+  // Pass 2: for each kept line, mark all ancestors (lines with smaller indent above it)
+  for (let i = 0; i < lines.length; i++) {
+    if (!keep[i]) continue;
+    const myIndent = indents[i];
+    // Walk backwards to find ancestors at each decreasing indent level
+    let targetIndent = myIndent;
+    for (let j = i - 1; j >= 0 && targetIndent > 0; j--) {
+      if (indents[j] < targetIndent && lines[j].trim()) {
+        keep[j] = true;
+        targetIndent = indents[j];
+      }
+    }
+  }
+
+  const result = lines.filter((_, i) => keep[i]);
+  // If filtering removed everything, return original (safety)
+  return result.length > 0 ? result.join('\n') : yaml;
+}
+
+/**
+ * Capture a compact accessibility tree snapshot of the page or a region.
+ * Returns a YAML string with roles, names, and attributes — structured
+ * semantic understanding of the page that LLMs can reason about.
+ *
+ * **Use this INSTEAD of page.textContent().**
+ *
+ * @param {import('playwright').Page} page
+ * @param {Object} [opts]
+ * @param {string} [opts.selector='body']       — CSS selector to scope snapshot
+ * @param {boolean} [opts.interactiveOnly=false] — Keep only interactive elements (buttons, inputs, links)
+ * @param {number} [opts.maxLength=20000]        — Truncate result to N characters
+ * @param {number} [opts.timeout=5000]           — Playwright timeout in ms
+ * @returns {Promise<string>} YAML accessibility tree
+ */
+async function snapshot(page, opts = {}) {
+  const {
+    selector = 'body',
+    interactiveOnly = false,
+    maxLength = 20000,
+    timeout = 5000,
+  } = opts;
+
+  const locator = page.locator(selector).first();
+  let yaml = await locator.ariaSnapshot({ timeout });
+
+  if (interactiveOnly) {
+    yaml = filterInteractiveOnly(yaml);
+  }
+
+  if (yaml.length > maxLength) {
+    yaml = yaml.slice(0, maxLength) + '\n... [truncated]';
+  }
+
+  return yaml;
 }
 
 // ─── RICH TEXT EDITOR UTILITIES ───────────────────────────────────────────────
@@ -1023,11 +1446,42 @@ async function pasteIntoEditor(page, editorSelector, text) {
   await sleep(500);
 }
 
+// ─── SESSION LOG QUERIES ─────────────────────────────────────────────────────
+
+/**
+ * List all session log files, newest first.
+ * @returns {Array<{ sessionId: string, file: string, mtime: string, size: number }>}
+ */
+function getSessionLogs() {
+  if (!_fs.existsSync(LOGS_DIR)) return [];
+  return _fs.readdirSync(LOGS_DIR)
+    .filter(f => f.endsWith('.jsonl'))
+    .map(f => {
+      const full = _path.join(LOGS_DIR, f);
+      const stat = _fs.statSync(full);
+      return { sessionId: f.replace('.jsonl', ''), file: full, mtime: stat.mtime.toISOString(), size: stat.size };
+    })
+    .sort((a, b) => b.mtime.localeCompare(a.mtime));
+}
+
+/**
+ * Read a specific session log by ID.
+ * @param {string} sessionId
+ * @returns {Array<Object>}
+ */
+function getSessionLog(sessionId) {
+  const file = _path.join(LOGS_DIR, `${sessionId}.jsonl`);
+  if (!_fs.existsSync(file)) return [];
+  try {
+    return _fs.readFileSync(file, 'utf-8').trim().split('\n').filter(Boolean).map(l => JSON.parse(l));
+  } catch (_) { return []; }
+}
+
 // ─── EXPORTS ──────────────────────────────────────────────────────────────────
 
 module.exports = {
   // Main
-  launchBrowser, closeBrowser, getCredentials, autoRegisterAgent,
+  launchBrowser, closeBrowser, getCredentials, importCredentials,
 
   // Human-like interaction
   humanClick, humanMouseMove, humanType, humanScroll, humanRead,
@@ -1035,14 +1489,23 @@ module.exports = {
   // CAPTCHA
   solveCaptcha,
 
+  // Screenshots
+  takeScreenshot, screenshotAndReport,
+
+  // Observation layer (accessibility tree)
+  snapshot, dumpInteractiveElements,
+
   // Shadow DOM utilities
-  shadowQuery, shadowFill, shadowClickButton, dumpInteractiveElements,
+  shadowQuery, shadowFill, shadowClickButton,
 
   // Rich text editors
   pasteIntoEditor,
 
   // Internals (exposed for advanced users)
   makeProxy, buildDevice,
+
+  // Logging
+  getSessionLogs, getSessionLog,
 
   // Helpers
   sleep, rand, COUNTRY_META,

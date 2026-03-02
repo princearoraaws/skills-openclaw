@@ -1,6 +1,8 @@
-# Pets Browser
+<p align="center">
+  <img src="assets/clawnet-logo.png" alt="Clawnet logo" width="520" />
+</p>
 
-Stealth Chromium for AI agents. One install — anti-detection, residential proxies, CAPTCHA solving, human behavior.
+Internet for AI agents. One install — anti-detection, residential proxies, CAPTCHA solving, human behavior.
 
 ## The problem
 
@@ -55,7 +57,7 @@ AI agents that use Playwright or Puppeteer get blocked. Every major website runs
 
 A default Playwright browser fails **all of these simultaneously**. Setting `navigator.webdriver = false` alone doesn't help — sites check 50+ signals and flag inconsistencies between them.
 
-## How Pets Browser solves this
+## How Clawnet solves this
 
 ```
 clawhub install pets-browser
@@ -87,7 +89,7 @@ Two device profiles that are internally consistent across all signals:
 
 ### Residential proxies
 
-Datacenter IPs get flagged. Pets Browser routes through real residential IPs:
+Datacenter IPs get flagged. Clawnet routes through real residential IPs:
 
 ```
 ┌─────────────┬──────────────────────────────────────────┐
@@ -146,7 +148,7 @@ Many modern sites use Shadow DOM (web components). Standard `querySelector` can'
 // Standard — fails
 await page.$('#shadow-host >>> #inner-input');
 
-// Pets Browser — works
+// Clawnet — works
 await shadowFill(page, '#inner-input', 'value');
 await shadowClickButton(page, 'Submit');
 ```
@@ -167,7 +169,7 @@ On install:
 1. Downloads Chromium via Playwright
 2. Generates agent credentials (`agentId` + `agentSecret` + `recoveryCode`)
 3. Saves to `~/.pets-browser/agent-credentials.json`
-4. Registers with Pets Browser API (starts a 2-hour free trial on first launch)
+4. Registers with Clawnet API (starts a 2-hour free trial on first launch)
 
 Credential model:
 - `agentId` is stable and identifies the subscription owner.
