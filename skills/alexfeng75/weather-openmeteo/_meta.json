@@ -1,0 +1,11 @@
+{
+  "owner": "alexfeng75",
+  "slug": "weather-openmeteo",
+  "displayName": "Weather Open-Meteo",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1772550624378,
+    "commit": null
+  },
+  "history": []
+}
