@@ -25,17 +25,20 @@ LOG_FILE="$6"
 
 export OPENAI_BASE_URL="${OPENAI_BASE_URL:-http://152.53.52.170:3003/v1}"
 export OPENAI_API_KEY="${OPENAI_API_KEY:?需要设置 OPENAI_API_KEY（或 source ~/.profile）}"
+
+# 确保 python / node / git 等基础工具在 PATH 里（Codex 子进程继承）
+export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:$PATH"
 CODEX_MODEL="${CODEX_MODEL:-gpt-5.3-codex}"
 CODEX_BIN="${CODEX_BIN:-$HOME/.npm-global/bin/codex}"
 
 echo "[$(date '+%H:%M:%S')] $AGENT_NAME starting in $WORKTREE_PATH" | tee "$LOG_FILE"
 echo "[$(date '+%H:%M:%S')] $AGENT_NAME model=$CODEX_MODEL base=$OPENAI_BASE_URL" | tee -a "$LOG_FILE"
 
-# 通知展板有新任务（如果展板在运行）；静默失败不影响主流程
+# 向展板注册本 agent 的 log（追加，不覆盖其他 agent）；静默失败
 DASHBOARD_PORT="${DASHBOARD_PORT:-7789}"
-curl -s --max-time 1 -X POST "http://localhost:${DASHBOARD_PORT}/reload" \
+curl -s --max-time 1 -X POST "http://localhost:${DASHBOARD_PORT}/register" \
   -H "Content-Type: application/json" \
-  -d "{\"logs\":[\"$LOG_FILE\"]}" > /dev/null 2>&1 || true
+  -d "{\"log\":\"$LOG_FILE\"}" > /dev/null 2>&1 || true
 
 cd "$WORKTREE_PATH"
 
