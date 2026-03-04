@@ -3,9 +3,15 @@
   "slug": "agentpatch",
   "displayName": "Agentpatch",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1772233894127,
-    "commit": "https://github.com/openclaw/skills/commit/8b85cfd3a1e3420fb2c1332bd8bb4971c7100475"
+    "version": "1.0.1",
+    "publishedAt": 1772586508074,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1772233894127,
+      "commit": "https://github.com/openclaw/skills/commit/8b85cfd3a1e3420fb2c1332bd8bb4971c7100475"
+    }
+  ]
 }
