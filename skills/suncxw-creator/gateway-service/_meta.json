@@ -1,0 +1,11 @@
+{
+  "owner": "suncxw-creator",
+  "slug": "gateway-service",
+  "displayName": "Gateway Service",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1772573053212,
+    "commit": null
+  },
+  "history": []
+}
