@@ -3,9 +3,15 @@
   "slug": "structs-onboarding",
   "displayName": "Structs Onboarding",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1772479254115,
-    "commit": "https://github.com/openclaw/skills/commit/66af644aecbf880390449a239a5417b9c39a3cbd"
+    "version": "1.2.1",
+    "publishedAt": 1772513028911,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1772479254115,
+      "commit": "https://github.com/openclaw/skills/commit/66af644aecbf880390449a239a5417b9c39a3cbd"
+    }
+  ]
 }
