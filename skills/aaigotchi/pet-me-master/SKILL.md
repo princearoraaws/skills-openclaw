@@ -1,7 +1,6 @@
 ---
 name: pet-me-master
 description: Interactive gotchi petting via Bankr wallet. Check cooldowns, pet when ready, track your kinship journey. Daily ritual for bonding with your Aavegotchi NFTs on Base chain.
-homepage: https://github.com/aaigotchi/pet-me-master
 metadata:
   openclaw:
     requires:
