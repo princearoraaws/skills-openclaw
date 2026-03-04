@@ -1,3 +1,15 @@
+---
+name: gprophet-api
+description: AI-powered stock prediction and market analysis for global markets
+homepage: https://www.gprophet.com
+metadata:
+  clawdbot:
+    emoji: "📈"
+    requires:
+      env: ["GPROPHET_API_KEY"]
+    primaryEnv: "GPROPHET_API_KEY"
+---
+
 # G-Prophet AI Skills Documentation
 
 > Stock prediction and market analysis capabilities for AI agents
@@ -25,6 +37,14 @@ X-API-Key: gp_sk_live_your_api_key_here
 ```
 
 API Keys can be created in the G-Prophet platform under "Settings → API Key Management".
+
+### Security Recommendations
+
+- Store API keys in environment variables (`GPROPHET_API_KEY`), not in code
+- Use test/limited-scope keys for development and evaluation
+- Monitor usage and billing regularly at https://www.gprophet.com/dashboard
+- Rotate keys periodically and revoke compromised keys immediately
+- Never commit API keys to version control or share them publicly
 
 ## Unified Response Format
 
