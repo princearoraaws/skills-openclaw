@@ -1,7 +1,7 @@
 ---
 name: my-fitness-claw
-version: 1.6.0
-description: Your personal nutrition sidekick. Log meals in plain natural language, track macros (P/C/F) automatically, and visualize your progress on a beautiful real-time dashboard. Includes AI-driven health insights, common food memory, and daily progress tracking—all controlled via chat.
+version: 1.7.0
+description: Your personal nutrition sidekick. Log meals in plain natural language, track macros (P/C/F) automatically, and visualize your progress on a beautiful real-time dashboard. Version 1.7 adds automatic micronutrient tracking based on general 32-year-old male recommended daily intakes. Includes AI-driven health insights, common food memory, and daily progress tracking—all controlled via chat.
 requires:
   tools: [canvas, read, write, edit]
   paths: [nutrition/, canvas/, memory/]
@@ -9,22 +9,25 @@ requires:
 
 # MyFitnessClaw
 
-This skill manages your nutritional data and provides a visual dashboard for tracking macros using OpenClaw's native tools.
+This skill manages your nutritional data and provides a visual dashboard for tracking macros and micronutrients using OpenClaw's native tools.
 
 ## Core Files (Skill Assets)
 
 - `assets/nutrition/daily_macros.json`: The structured log of daily intake.
-- `assets/nutrition/targets.json`: Daily nutritional goals (calories, protein, carbs, fats).
+- `assets/nutrition/targets.json`: Daily nutritional goals (calories, protein, carbs, fats, and 10 essential micronutrients).
 - `assets/nutrition/insights.json`: AI-generated tips based on current progress.
-- `assets/nutrition/foods/common.md`: A reference list of frequently eaten foods and their macros.
+- `assets/nutrition/foods/common.md`: A reference list of frequently eaten foods and their macros/micros.
 - `assets/canvas/index.html`: The visual dashboard for the OpenClaw Canvas.
 
 ## Workflow: Logging Food
 
 When the user mentions eating something:
-1. **Estimate Macros**: If the user doesn't provide them, estimate calories, protein, carbs, and fats. Check `assets/nutrition/foods/common.md` first.
-2. **Update Daily Log (Canonical)**: Update `assets/nutrition/daily_macros.json`. This is the source of truth.
-3. **Update Offline Mirror**: Update `assets/canvas/offline_data.js` with the same data. 
+1. **Estimate Macros & Micros**: If the user doesn't provide them, estimate:
+   - Macros: Calories, protein, carbs, fats.
+   - Micros: Vitamin D3, Magnesium, Potassium, Zinc, Vitamin B6, Vitamin B12, Selenium, Vitamin C, Vitamin A, Vitamin E.
+   Check `assets/nutrition/foods/common.md` first.
+2. **Update Daily Log (Canonical)**: Update `assets/nutrition/daily_macros.json`. Include the `micros` object for both individual meals and the daily total.
+3. **Update Offline Mirror**: Update `assets/canvas/offline_data.js` with the same data, ensuring micronutrients are included.
    - Overwrite the file with: `window.__OFFLINE_DAILY_MACROS = [...]; window.__OFFLINE_TARGETS = {...}; window.__OFFLINE_INSIGHTS = {...};`
    - This ensures the dashboard works when opened via `file://` (offline/browser-first).
 4. **Update Memory**: Log the meal in the agent's current daily memory file (e.g., `memory/YYYY-MM-DD.md`).
@@ -48,4 +51,3 @@ Before publishing or sharing this skill:
 3. **Check Insights**: Clear `nutrition/insights.json` or reset to template tips.
 4. **Remove Personal Notes**: Scrub `nutrition/targets.json` and `memory/` of any sensitive info.
 5. **Verify Assets**: Ensure no private images or documents are in the `assets/` folder.
-

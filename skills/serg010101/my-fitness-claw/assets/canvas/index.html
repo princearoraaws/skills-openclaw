@@ -94,6 +94,13 @@
                 <div style="position: relative; margin: auto;">
                     <canvas id="macroChart"></canvas>
                 </div>
+                
+                <div id="microsSection" style="margin-top: 30px; text-align: left;">
+                    <h2 style="border-bottom: 1px solid #444; padding-bottom: 10px; margin-bottom: 15px;">Micronutrients for Today</h2>
+                    <div id="microsGrid" style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;">
+                        <!-- Micros injected here -->
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -283,34 +290,118 @@
                 goalBars.appendChild(container);
             });
 
+            // Micronutrients
+            const microsGrid = document.getElementById('microsGrid');
+            microsGrid.innerHTML = '';
+            const microList = [
+                { id: 'vit_d3', label: 'Vitamin D3', unit: 'mcg' },
+                { id: 'magnesium', label: 'Magnesium', unit: 'mg' },
+                { id: 'potassium', label: 'Potassium', unit: 'mg' },
+                { id: 'zinc', label: 'Zinc', unit: 'mg' },
+                { id: 'vit_b6', label: 'Vitamin B6', unit: 'mg' },
+                { id: 'vit_b12', label: 'Vitamin B12', unit: 'mcg' },
+                { id: 'selenium', label: 'Selenium', unit: 'mcg' },
+                { id: 'vit_c', label: 'Vitamin C', unit: 'mg' },
+                { id: 'vit_a', label: 'Vitamin A', unit: 'mcg' },
+                { id: 'vit_e', label: 'Vitamin E', unit: 'mg' }
+            ];
+
+            microList.forEach(m => {
+                const micros = latest.micros || {};
+                const val = micros[m.id] || latest[m.id] || 0;
+                const target = goals[m.id] || 0;
+                const pct = target > 0 ? (val / target) * 100 : 0;
+                
+                const item = document.createElement('div');
+                item.style.cssText = 'background: #1a1a1a; padding: 12px; border-radius: 8px; border: 1px solid #333; display: flex; flex-direction: column; gap: 8px;';
+                
+                item.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: baseline;">
+                        <div style="font-size: 0.75rem; font-weight: bold; color: #aaa; text-transform: uppercase;">${m.label}</div>
+                        <div style="font-size: 0.8rem; color: #666;">
+                            <span style="color: #fff; font-weight: bold;">${val.toFixed(1)}</span> / ${target}${m.unit}
+                        </div>
+                    </div>
+                    <div style="height: 6px; background: #333; border-radius: 3px; overflow: hidden; border: 1px solid #444;">
+                        <div style="height: 100%; background: #4caf50; width: ${Math.min(pct, 100)}%; transition: width 0.5s ease-out;"></div>
+                    </div>
+                `;
+                microsGrid.appendChild(item);
+            });
+
             // Today's Meals List
             const mealsContainer = document.getElementById('mealsContainer');
             mealsContainer.textContent = '';
             
             if (latest.meals && latest.meals.length > 0) {
+                // Group meals by category
+                const groups = {
+                    "Breakfast": [],
+                    "Lunch": [],
+                    "Dinner": [],
+                    "Snack": []
+                };
+
                 latest.meals.forEach(meal => {
-                    const mealDiv = document.createElement('div');
-                    mealDiv.className = 'meal-item';
-                    const infoDiv = document.createElement('div');
-                    infoDiv.className = 'meal-info';
-                    const cat = document.createElement('div');
-                    cat.className = 'meal-category';
-                    cat.textContent = getMealCategory(meal.time);
-                    const name = document.createElement('div');
-                    name.className = 'meal-name';
-                    name.textContent = meal.name;
-                    const meta = document.createElement('div');
-                    meta.className = 'meal-meta';
-                    meta.textContent = `${meal.time || '--:--'} • ${Math.round(meal.calories ?? 0)} kcal`;
-                    infoDiv.appendChild(cat);
-                    infoDiv.appendChild(name);
-                    infoDiv.appendChild(meta);
-                    const macros = document.createElement('div');
-                    macros.className = 'meal-macros';
-                    macros.textContent = `${Math.round(meal.protein ?? 0)}P / ${Math.round(meal.carbs ?? 0)}C / ${Math.round(meal.fats ?? 0)}F`;
-                    mealDiv.appendChild(infoDiv);
-                    mealDiv.appendChild(macros);
-                    mealsContainer.appendChild(mealDiv);
+                    const cat = getMealCategory(meal.time);
+                    const key = (cat === "Late Snack") ? "Snack" : cat;
+                    if (groups[key]) groups[key].push(meal);
+                    else groups["Snack"].push(meal);
+                });
+
+                // Render groups
+                Object.keys(groups).forEach(catName => {
+                    const groupMeals = groups[catName];
+                    if (groupMeals.length === 0) return;
+
+                    const groupDiv = document.createElement('div');
+                    groupDiv.style.marginBottom = '20px';
+                    
+                    const groupHeader = document.createElement('div');
+                    groupHeader.className = 'meal-category';
+                    groupHeader.style.fontSize = '0.8rem';
+                    groupHeader.style.borderBottom = '1px solid #333';
+                    groupHeader.style.paddingBottom = '5px';
+                    groupHeader.style.marginBottom = '10px';
+                    groupHeader.textContent = catName;
+                    groupDiv.appendChild(groupHeader);
+
+                    const listDiv = document.createElement('div');
+                    listDiv.style.display = 'flex';
+                    listDiv.style.flexDirection = 'column';
+                    listDiv.style.gap = '8px';
+
+                    groupMeals.forEach(meal => {
+                        const mealDiv = document.createElement('div');
+                        mealDiv.className = 'meal-item';
+                        mealDiv.style.borderLeft = 'none';
+                        mealDiv.style.padding = '10px 12px';
+                        
+                        const infoDiv = document.createElement('div');
+                        infoDiv.className = 'meal-info';
+                        
+                        const name = document.createElement('div');
+                        name.className = 'meal-name';
+                        name.textContent = meal.name;
+                        
+                        const meta = document.createElement('div');
+                        meta.className = 'meal-meta';
+                        meta.textContent = `${meal.time || '--:--'} • ${Math.round(meal.calories ?? 0)} kcal`;
+                        
+                        infoDiv.appendChild(name);
+                        infoDiv.appendChild(meta);
+                        
+                        const macros = document.createElement('div');
+                        macros.className = 'meal-macros';
+                        macros.textContent = `${Math.round(meal.protein ?? 0)}P / ${Math.round(meal.carbs ?? 0)}C / ${Math.round(meal.fats ?? 0)}F`;
+                        
+                        mealDiv.appendChild(infoDiv);
+                        mealDiv.appendChild(macros);
+                        listDiv.appendChild(mealDiv);
+                    });
+                    
+                    groupDiv.appendChild(listDiv);
+                    mealsContainer.appendChild(groupDiv);
                 });
             } else {
                 const empty = document.createElement('div');
