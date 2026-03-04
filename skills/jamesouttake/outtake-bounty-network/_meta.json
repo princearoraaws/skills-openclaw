@@ -3,11 +3,16 @@
   "slug": "outtake-bounty-network",
   "displayName": "Outtake Bounty Network",
   "latest": {
-    "version": "1.3.2",
-    "publishedAt": 1772229168731,
-    "commit": "https://github.com/openclaw/skills/commit/947b5a96a645b4b6f9cbab5ccae9bb7cffe3eebc"
+    "version": "1.3.3",
+    "publishedAt": 1772561144125,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.3.2",
+      "publishedAt": 1772229168731,
+      "commit": "https://github.com/openclaw/skills/commit/947b5a96a645b4b6f9cbab5ccae9bb7cffe3eebc"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1771443211055,

@@ -80,3 +80,7 @@ Fields: `name` (required), `email` (required), `wallet_address` (Ethereum — re
 ## Related Skills
 
 - **[domain-trust-check](https://clawhub.ai/skill/domain-trust-check)** — Scan URLs for phishing/malware/scam before visiting. Use trust-check to verify, then submit confirmed threats here. Same API key.
+
+## Support
+
+Questions or feedback? Email [bounty@outtake.ai](mailto:bounty@outtake.ai)
