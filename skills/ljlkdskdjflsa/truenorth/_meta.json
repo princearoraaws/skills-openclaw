@@ -1,11 +1,17 @@
 {
   "owner": "ljlkdskdjflsa",
   "slug": "truenorth",
-  "displayName": "TrueNorth",
+  "displayName": "Truenorth",
   "latest": {
-    "version": "0.2.0",
-    "publishedAt": 1772509666107,
-    "commit": "https://github.com/openclaw/skills/commit/5335fb5910e576d8eb7792471f2b68659df9fad6"
+    "version": "0.3.0",
+    "publishedAt": 1772526521071,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.2.0",
+      "publishedAt": 1772509666107,
+      "commit": "https://github.com/openclaw/skills/commit/5335fb5910e576d8eb7792471f2b68659df9fad6"
+    }
+  ]
 }
