@@ -3,11 +3,16 @@
   "slug": "prediction-trade-journal",
   "displayName": "Prediction Trade Journal",
   "latest": {
-    "version": "1.1.10",
-    "publishedAt": 1772187767697,
-    "commit": "https://github.com/openclaw/skills/commit/f73424cd9640319d1b47600ae031390535af6645"
+    "version": "1.1.11",
+    "publishedAt": 1772506401005,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.1.10",
+      "publishedAt": 1772187767697,
+      "commit": "https://github.com/openclaw/skills/commit/f73424cd9640319d1b47600ae031390535af6645"
+    },
     {
       "version": "1.1.9",
       "publishedAt": 1772164772149,
