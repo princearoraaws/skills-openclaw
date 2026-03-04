@@ -2,24 +2,33 @@
 
 ## Purpose
 
-Operate the OpenClaw Ansible plugin on a gateway through controlled task actions.
+Operate the mesh plugin on a gateway through controlled actions.
 
-## Install / Setup
+## Step 1: Preflight
 
-1. Use `setup-ansible-plugin` action.
-2. Prefer plugin-manager installation sources (`npm`, `github`, `path`).
-3. Run `openclaw ansible setup` and verify `openclaw ansible status`.
+Run `preflight` action first and verify:
 
-## Security Controls
+1. required binaries present
+2. caller allowlist set correctly
+3. global/per-action gates in expected state
 
-1. Set caller allowlist: `OPENCLAW_ALLOWED_CALLERS`.
-2. Keep high-risk actions disabled by default:
-  - `OPENCLAW_ALLOW_HIGH_RISK=0`
-  - `OPENCLAW_ALLOW_RUN_CMD=0`
-  - `OPENCLAW_ALLOW_DEPLOY_SKILL=0`
-3. Enable high-risk paths only for explicit maintenance windows.
+## Step 2: Setup / Repair
+
+Use `setup-ansible-plugin`:
+
+1. install plugin (npm/github/path)
+2. run `openclaw ansible setup`
+3. verify `openclaw ansible status`
+
+## High-Risk Gate Precedence
+
+1. Global high-risk gate (`OPENCLAW_ALLOW_HIGH_RISK=1`) must be on.
+2. Then action-specific gate must be on:
+  - `OPENCLAW_ALLOW_RUN_CMD=1` for run-cmd
+  - `OPENCLAW_ALLOW_DEPLOY_SKILL=1` for deploy-skill
+3. Caller must match `OPENCLAW_ALLOWED_CALLERS`.
 
 ## Side Effects
 
-This skill does not automatically register capabilities in shared Ansible state.
-Any capability lifecycle change must be invoked explicitly through plugin tools/CLI.
+1. No automatic capability registration in mesh state.
+2. `deploy-skill` writes to `/opt/openclaw/skills` and requires operator privileges.

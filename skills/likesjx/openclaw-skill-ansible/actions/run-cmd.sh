@@ -22,19 +22,19 @@ if [ "${OPENCLAW_ALLOW_RUN_CMD:-0}" != "1" ]; then
   exit 3
 fi
 
-ALLOWLIST=${OPENCLAW_RUN_CMD_ALLOWLIST:-"openclaw status,openclaw ansible status,openclaw gateway health,openclaw plugins list,openclaw agent --help"}
+ALLOWLIST=${OPENCLAW_RUN_CMD_ALLOWLIST:-"openclaw status;openclaw ansible status;openclaw gateway health;openclaw plugins list;openclaw agent --help"}
 ALLOWED=0
-IFS=',' read -r -a PREFIXES <<< "$ALLOWLIST"
-for p in "${PREFIXES[@]}"; do
-  TRIM=$(echo "$p" | sed 's/^ *//;s/ *$//')
-  if [ -n "$TRIM" ] && [[ "$CMD" == "$TRIM"* ]]; then
+IFS=';' read -r -a EXACT <<< "$ALLOWLIST"
+for item in "${EXACT[@]}"; do
+  ENTRY=$(echo "$item" | sed 's/^ *//;s/ *$//')
+  if [ -n "$ENTRY" ] && [ "$CMD" = "$ENTRY" ]; then
     ALLOWED=1
     break
   fi
 done
 
 if [ "$ALLOWED" -ne 1 ]; then
-  echo "Command blocked by allowlist: $CMD" >&2
+  echo "Command blocked by strict allowlist: $CMD" >&2
   exit 4
 fi
 
