@@ -69,7 +69,7 @@ node ~/.openclaw/workspace/skills/zerotier-remote-web/scripts/enable-remote.mjs
 
 脚本会：
 1. 备份当前配置 (`openclaw.json.backup-YYYYMMDD-HHMMSS`)
-2. 修改 Gateway 配置绑定到 ZeroTier IP
+2. 修改 Gateway 配置绑定到 `0.0.0.0`（所有网络接口）
 3. 重启 Gateway 服务
 4. 验证配置是否生效
 
@@ -103,6 +103,13 @@ nohup openclaw gateway > /tmp/openclaw-gateway.log 2>&1 &
 
 2. **访问 Control UI**
    ```
+   # 本地访问
+   http://localhost:1880
+   
+   # SSH 登录后访问
+   http://<服务器内网 IP>:1880
+   
+   # 远程 ZeroTier 访问
    http://<ZeroTier-IP>:1880
    例如：http://10.243.127.213:1880
    ```
@@ -119,7 +126,7 @@ nohup openclaw gateway > /tmp/openclaw-gateway.log 2>&1 &
   "port": 1880,
   "mode": "local",
   "bind": "custom",
-  "customBindHost": "10.243.127.213",
+  "customBindHost": "0.0.0.0",
   "controlUi": {
     "allowedOrigins": [
       "http://localhost:1880",
@@ -141,7 +148,7 @@ nohup openclaw gateway > /tmp/openclaw-gateway.log 2>&1 &
 | 字段 | 说明 |
 |------|------|
 | `bind: "custom"` | 使用自定义绑定地址 |
-| `customBindHost` | ZeroTier 虚拟 IP |
+| `customBindHost` | `0.0.0.0` 绑定所有网络接口（推荐） |
 | `port` | Gateway 端口 (默认 1880) |
 | `allowedOrigins` | 允许的访问来源 |
 

@@ -72,7 +72,7 @@ function updateConfig(configPath, ztIP) {
       port: 1880,
       mode: 'local',
       bind: 'custom',
-      customBindHost: ztIP,
+      customBindHost: '0.0.0.0',  // 绑定所有网络接口，支持本地和远程访问
       controlUi: {
         ...(config.gateway?.controlUi || {}),
         allowedOrigins: [
@@ -157,11 +157,12 @@ function printSummary(ztIP, configChanges) {
   log(COLORS.cyan, '\n📋 配置变更:');
   console.log(`  端口：${configChanges.oldPort} → ${configChanges.newPort}`);
   console.log(`  绑定：${configChanges.oldBind} → ${configChanges.newBind}`);
-  console.log(`  主机：- → ${configChanges.newHost}`);
+  console.log(`  主机：- → 0.0.0.0 (所有网络接口)`);
   
   log(COLORS.cyan, '\n🌐 访问地址:');
   log(COLORS.green, `  本地：http://localhost:1880`);
-  log(COLORS.green, `  远程：http://${ztIP}:1880`);
+  log(COLORS.green, `  SSH 登录后：http://<服务器内网 IP>:1880`);
+  log(COLORS.green, `  远程 ZeroTier: http://${ztIP}:1880`);
   
   log(COLORS.cyan, '\n🔐 认证 Token:');
   log(COLORS.yellow, `  ${configChanges.token}`);
