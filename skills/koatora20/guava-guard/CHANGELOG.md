@@ -1,3 +1,4 @@
+- Fetching skill
 # CHANGELOG
 
 ## v10.0.0 — Runtime-Only Final (2026-02-17)

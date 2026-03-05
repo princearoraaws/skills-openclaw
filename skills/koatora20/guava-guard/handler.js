@@ -1,3 +1,4 @@
+- Fetching skill
 /**
  * GuavaGuard Runtime Guard — before_tool_call Hook Handler (CJS)
  *

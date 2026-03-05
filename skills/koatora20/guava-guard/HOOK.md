@@ -1,3 +1,4 @@
+- Fetching skill
 # GuavaGuard Runtime Guard
 
 The Runtime Guard hook is in `hooks/guava-guard/`.

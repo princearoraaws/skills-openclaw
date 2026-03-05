@@ -1,3 +1,4 @@
+- Fetching skill
 ---
 name: guava-guard
 description: "GuavaGuard Runtime Guard — warns on dangerous tool call patterns in real-time"
