@@ -1,9 +1,12 @@
 ---
 name: skill-maker
 description: Create new agent skills from scratch. Use when: (1) Building a new skill for specific capabilities, (2) Converting workflows into reusable skills, (3) Designing skill structure and triggers, (4) Setting up skill resources (scripts, references, assets).
-version: 1.1.0
-changelog: "v1.1.0: Fresh approach with reasoning framework"
-metadata: {"clawdbot":{"emoji":"🔨","category":"creation"}}
+version: 1.1.1
+changelog: "v1.1.1: Fix metadata format, remove Quality Score"
+metadata:
+  openclaw:
+    emoji: "🔨"
+    category: "creation"
 ---
 
 # Skill Maker 🔨
@@ -351,52 +354,6 @@ metadata:
 - [ ] Is emoji appropriate for category?
 - [ ] Are requirements listed?
 - [ ] Is version correct?
-
----
-
-## Quality Score
-
-Evaluate your skill:
-
-| Factor | Score | Notes |
-|--------|-------|-------|
-| **Trigger Clarity** | | |
-| - Clear "Use when:" with 3+ triggers | ⭐⭐⭐ | |
-| - "Use when:" with 1-2 triggers | ⭐⭐ | |
-| - Vague or missing | ⭐ | |
-| **Structure** | | |
-| - Has reasoning framework | ⭐⭐⭐ | |
-| - Has workflow steps | ⭐⭐ | |
-| - No structure | ⭐ | |
-| **Decision Trees** | | |
-| - Multiple decision points | ⭐⭐⭐ | |
-| - One decision point | ⭐⭐ | |
-| - None | ⭐ | |
-| **Self-Checks** | | |
-| - Checklists at each major step | ⭐⭐⭐ | |
-| - Some self-checks | ⭐⭐ | |
-| - None | ⭐ | |
-| **Examples** | | |
-| - Working examples included | ⭐⭐⭐ | |
-| - Template only | ⭐⭐ | |
-| - Nothing | ⭐ | |
-| **Metadata** | | |
-| - Complete (emoji, category, requires) | ⭐⭐⭐ | |
-| - Partial | ⭐⭐ | |
-| - Missing | ⭐ | |
-
-### Quality Thresholds
-
-| Score | Rating | Action |
-|-------|--------|--------|
-| 15-18 | ⭐⭐⭐ Excellent | Ready to publish |
-| 10-14 | ⭐⭐ Good | Minor improvements |
-| 5-9 | ⭐ Needs Work | Major improvements needed |
-
-### Self-Check: Quality
-
-- [ ] Overall score calculated?
-- [ ] Below 10? Improve before publishing
 
 ---
 
