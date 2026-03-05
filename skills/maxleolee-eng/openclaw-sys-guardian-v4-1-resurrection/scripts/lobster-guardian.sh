@@ -33,9 +33,12 @@ run_maintenance() {
         /opt/homebrew/bin/openclaw security audit --fix >> "$LOG_FILE" 2>&1
         log "[MAINTENANCE] Security permissions hardened."
 
-        # 3. 僵死 Session 与缓存清理
-        /opt/homebrew/bin/openclaw sessions cleanup --enforce >> "$LOG_FILE" 2>&1
-        log "[MAINTENANCE] Dead sessions purged."
+        # 3. Session 优化清理逻辑
+        # 原逻辑：/opt/homebrew/bin/openclaw sessions cleanup --enforce (无差别清理)
+        # 修改后：仅清理超过 48 小时未活跃或故障的 Session
+        log "[MAINTENANCE] Conditional session purging started..."
+        /opt/homebrew/bin/openclaw sessions cleanup --inactive-hours 48 --clean-zombies >> "$LOG_FILE" 2>&1
+        log "[MAINTENANCE] Conditional session purging complete."
 
         # 4. 连通性测试 (轻量)
         /opt/homebrew/bin/openclaw status >> "$LOG_FILE" 2>&1

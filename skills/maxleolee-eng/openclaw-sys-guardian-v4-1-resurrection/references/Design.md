@@ -47,6 +47,12 @@
 /Users/maxleolee/.openclaw/workspace/scripts/lobster-terminate.sh
 ```
 
+## 5. 任务与代谢逻辑优化 (Metabolic Updates)
+*   **Session 清理策略更新 (2026-03-05)**: 
+    - **修改原因**: 频繁的无差别 Session 清理可能导致活跃任务中断或状态丢失。
+    - **更新逻辑**: 移除维护模式下的 `openclaw sessions cleanup --enforce` 指令。
+    - **新策略**: 仅清理“超长时间不活跃（>48小时）”或“由异常中断产生的僵尸 Session”。指令对齐为 `openclaw sessions cleanup --inactive-hours 48 --clean-zombies`。
+
 ---
-*文档更新日期: 2026-03-03*  
+*文档更新日期: 2026-03-05*  
 *由 龙虾指挥官 (Agent: main) 自动生成并归档。*
