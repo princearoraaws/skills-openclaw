@@ -1,0 +1,11 @@
+{
+  "owner": "nmadeleidev",
+  "slug": "browser-agent-bridge-cli",
+  "displayName": "Browser Agent Bridge CLI",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1772685452831,
+    "commit": null
+  },
+  "history": []
+}
