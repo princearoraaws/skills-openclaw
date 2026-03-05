@@ -3,11 +3,16 @@
   "slug": "web-search-plus",
   "displayName": "Web Search Plus",
   "latest": {
-    "version": "2.8.5",
-    "publishedAt": 1771603102076,
-    "commit": "https://github.com/openclaw/skills/commit/640518e84ac2d2342f90c7773f56307691962fb2"
+    "version": "2.8.6",
+    "publishedAt": 1772545057708,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.8.5",
+      "publishedAt": 1771603102076,
+      "commit": "https://github.com/openclaw/skills/commit/640518e84ac2d2342f90c7773f56307691962fb2"
+    },
     {
       "version": "2.8.4",
       "publishedAt": 1771595808436,
