@@ -1,0 +1,11 @@
+{
+  "owner": "bg1avd",
+  "slug": "model-queue",
+  "displayName": "task-queue-by-model-source",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1772681781398,
+    "commit": null
+  },
+  "history": []
+}
