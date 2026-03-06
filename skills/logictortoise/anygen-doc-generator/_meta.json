@@ -3,9 +3,15 @@
   "slug": "anygen-doc-generator",
   "displayName": "AI Document Generator",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1772638668333,
-    "commit": "https://github.com/openclaw/skills/commit/57405ce615cf5c7a093672402ce6a0be91258afa"
+    "version": "1.2.0",
+    "publishedAt": 1772793169482,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1772638668333,
+      "commit": "https://github.com/openclaw/skills/commit/57405ce615cf5c7a093672402ce6a0be91258afa"
+    }
+  ]
 }
