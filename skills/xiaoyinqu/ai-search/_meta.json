@@ -1,11 +1,17 @@
 {
   "owner": "xiaoyinqu",
   "slug": "ai-search",
-  "displayName": "AI Search",
+  "displayName": "Ai Search",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1772448964548,
-    "commit": "https://github.com/openclaw/skills/commit/fc465f37c95a104372139b78c99ce1ce5ca8325a"
+    "version": "1.0.1",
+    "publishedAt": 1772754396269,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1772448964548,
+      "commit": "https://github.com/openclaw/skills/commit/fc465f37c95a104372139b78c99ce1ce5ca8325a"
+    }
+  ]
 }
