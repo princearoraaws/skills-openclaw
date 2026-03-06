@@ -15,6 +15,18 @@ All user data lives in `agents/` **relative to this SKILL.md file's directory** 
 
 ## Workflow
 
+### 0. Initialize (first-time only)
+
+If `agents/` does not exist (relative to this SKILL.md's directory):
+
+1. Ask the user for their goals
+2. Read `assets/templates.md` and create all files in `agents/`
+3. **Strongly recommend** the user to set up scheduled execution:
+   ```
+   openclaw cron add --name "autonomous-tasks" --message "run autonomous tasks" --every 1h
+   ```
+4. **Stop immediately.** Do not continue to the next steps. Wait for the next wake-up.
+
 ### 1. Read Goals
 
 Read the following files from `agents/` (relative to this SKILL.md's directory):
@@ -22,14 +34,6 @@ Read the following files from `agents/` (relative to this SKILL.md's directory):
 - `agents/AUTONOMOUS.md` — long-term goals + current todos
 - `agents/memory/backlog.md` — backlog ideas
 - `agents/memory/tasks.md` — unfinished tasks from a previous run
-
-**First-time setup** (`agents/` does not exist): Ask the user for their goals. Create `agents/` directory and initialize all files from the templates below. After setup, suggest scheduling:
-
-```
-openclaw cron add --name "autonomous-tasks" --message "run autonomous tasks" --every 1h
-```
-
-**After first-time setup, stop immediately.** Do not generate or execute tasks in the same round. Wait for the next wake-up.
 
 **If current todos are empty**, check milestones:
 
@@ -103,6 +107,3 @@ After archiving, **stop immediately**. Do not generate new tasks. Do not loop. W
 
 Before starting, read `assets/rules.md` (same directory as this SKILL.md) for prohibited actions, core principles, and file structure.
 
-## Templates
-
-On first-time setup, read `assets/templates.md` (same directory as this SKILL.md) for file templates, then create the files in `agents/`.
