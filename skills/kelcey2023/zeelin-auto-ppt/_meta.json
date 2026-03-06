@@ -3,11 +3,16 @@
   "slug": "zeelin-auto-ppt",
   "displayName": "ZeeLin Auto-PPT",
   "latest": {
-    "version": "3.1.1",
-    "publishedAt": 1772720189476,
-    "commit": "https://github.com/openclaw/skills/commit/fbd47d7c9c87b5edd207507e249a031ca02f881f"
+    "version": "4.2.0",
+    "publishedAt": 1772758818465,
+    "commit": null
   },
   "history": [
+    {
+      "version": "3.1.1",
+      "publishedAt": 1772720189476,
+      "commit": "https://github.com/openclaw/skills/commit/fbd47d7c9c87b5edd207507e249a031ca02f881f"
+    },
     {
       "version": "2.1.0",
       "publishedAt": 1772638209200,

@@ -69,32 +69,40 @@ echo "  NotebookLM loaded"
 
 echo ""
 echo "=== Step 2/7: Creating new notebook ==="
-REF=$(find_ref "$SNAP" "新建笔记本\|New notebook\|Create new\|create_new")
+REF=$(find_button_ref "$SNAP" "新建笔记本\|[Nn]ew notebook")
 if [ -z "$REF" ]; then
-  REF=$(find_ref "$SNAP" "button.*[Nn]ew\|button.*新建\|add_circle\|新笔记")
-fi
-if [ -z "$REF" ]; then
-  echo "  Trying alternative: looking for any create/new button..."
-  SNAP2=$(wait_and_snap 2)
-  REF=$(find_ref "$SNAP2" "[Nn]ew\|新建\|[Cc]reate")
+  REF=$(find_button_ref "$SNAP" "新建\|[Cc]reate.*new")
 fi
 click_ref "$REF" "New notebook button"
-SNAP=$(wait_and_snap 4)
+SNAP=$(wait_and_snap 6)
 echo "  New notebook created"
 
 echo ""
-echo "=== Step 3/7: Adding text source ==="
-REF=$(find_button_ref "$SNAP" "添加来源\|[Aa]dd source")
-if [ -z "$REF" ]; then
-  REF=$(find_button_ref "$SNAP" "add\|添加")
-fi
-click_ref "$REF" "Add source"
-SNAP=$(wait_and_snap 4)
-
+echo "=== Step 3/7: Finding 'Copied text' option ==="
+# After creating a notebook, NotebookLM auto-opens a source dialog.
+# Look for "复制的文字" directly — do NOT click "添加来源" again.
 REF=$(find_button_ref "$SNAP" "复制的文字\|[Cc]opied text\|[Pp]aste text")
 if [ -z "$REF" ]; then
   REF=$(find_button_ref "$SNAP" "content_paste\|粘贴")
 fi
+
+# If dialog didn't auto-open, then click "添加来源"
+if [ -z "$REF" ]; then
+  echo "  Dialog not auto-opened, clicking Add source..."
+  ADD_REF=$(find_button_ref "$SNAP" "添加来源\|[Aa]dd source")
+  if [ -z "$ADD_REF" ]; then
+    ADD_REF=$(find_button_ref "$SNAP" "add\|添加")
+  fi
+  if [ -n "$ADD_REF" ]; then
+    click_ref "$ADD_REF" "Add source"
+    SNAP=$(wait_and_snap 4)
+    REF=$(find_button_ref "$SNAP" "复制的文字\|[Cc]opied text\|[Pp]aste text")
+    if [ -z "$REF" ]; then
+      REF=$(find_button_ref "$SNAP" "content_paste\|粘贴")
+    fi
+  fi
+fi
+
 click_ref "$REF" "Copied text option"
 SNAP=$(wait_and_snap 3)
 echo "  Text source dialog opened"
@@ -138,31 +146,58 @@ click_ref "$REF" "Generate presentation"
 echo "  Generating slides... (this may take 30-60 seconds)"
 
 READY=false
-for i in $(seq 1 12); do
-  sleep 5
-  SNAP=$(wait_and_snap 0)
-  if echo "$SNAP" | grep -qi "已准备就绪\|[Rr]eady\|[Oo]pen\|打开\|查看"; then
+for i in $(seq 1 30); do
+  sleep 10
+  SNAP=$($CLI snapshot 2>/dev/null)
+  # Check if generation is done: look for a presentation entry with timestamp, or "已准备就绪"
+  if echo "$SNAP" | grep -qi "已准备就绪\|幻灯片.*已准备"; then
     READY=true
-    echo "  Presentation ready!"
+    echo "  Presentation ready! (detected: 已准备就绪)"
     break
   fi
-  echo "  Still generating... (${i}0s elapsed)"
+  if echo "$SNAP" | grep -qi "button.*个来源.*前"; then
+    READY=true
+    echo "  Presentation ready! (detected: entry with timestamp)"
+    break
+  fi
+  # Check if still generating
+  if echo "$SNAP" | grep -qi "正在生成\|generating"; then
+    echo "  Still generating... ($((i*10))s elapsed)"
+  else
+    echo "  Waiting... ($((i*10))s elapsed)"
+  fi
 done
 
 if [ "$READY" = false ]; then
-  echo "WARNING: Generation may still be in progress. Taking snapshot..."
+  echo "WARNING: Timed out after 300s. Taking final snapshot..."
   SNAP=$($CLI snapshot 2>/dev/null)
 fi
 
 echo ""
 echo "=== Step 6/7: Opening presentation ==="
-REF=$(find_button_ref "$SNAP" "来源.*分钟\|source.*min\|来源.*刚刚\|来源.*秒")
+# Find the generated presentation entry in the Studio panel
+# Pattern 1: button with "个来源" and timestamp (e.g., "1 个来源 · 2 分钟前")
+REF=$(echo "$SNAP" | grep -i 'button.*个来源.*前\|button.*source.*ago' | grep -v "disabled\|正在生成\|generating" | grep -oE 'ref=e[0-9]+' | head -1 | sed 's/ref=//')
+# Pattern 2: button with "个来源" (without timestamp)
 if [ -z "$REF" ]; then
-  REF=$(find_button_ref "$SNAP" "OpenClaw\|演示文稿.*来源\|Presentation.*source")
+  REF=$(echo "$SNAP" | grep -i 'button.*个来源\|button.*source' | grep -v "disabled\|正在生成\|generating" | grep -oE 'ref=e[0-9]+' | head -1 | sed 's/ref=//')
 fi
+# Pattern 3: generic with cursor=pointer near Studio output area
 if [ -z "$REF" ]; then
-  REF=$(find_ref "$SNAP" "cursor=pointer.*来源\|cursor=pointer.*source")
+  REF=$(echo "$SNAP" | grep -i 'generic.*cursor=pointer.*个来源\|generic.*cursor=pointer.*source' | grep -oE 'ref=e[0-9]+' | head -1 | sed 's/ref=//')
 fi
+# Pattern 4: any clickable element mentioning "个来源"
+if [ -z "$REF" ]; then
+  REF=$(find_ref "$SNAP" "cursor=pointer.*个来源")
+fi
+
+if [ -z "$REF" ]; then
+  echo "WARNING: Could not find presentation entry. Trying to snap again..."
+  sleep 10
+  SNAP=$($CLI snapshot 2>/dev/null)
+  REF=$(echo "$SNAP" | grep -i 'button.*个来源' | grep -v "disabled\|正在生成" | grep -oE 'ref=e[0-9]+' | head -1 | sed 's/ref=//')
+fi
+
 click_ref "$REF" "Open presentation"
 SNAP=$(wait_and_snap 5)
 echo "  Presentation opened"
