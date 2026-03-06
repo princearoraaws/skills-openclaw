@@ -1,7 +1,7 @@
 ---
 name: hitpaw-image-enhancer
 description: Enhance images and videos using HitPaw's AI enhancement API
-version: 1.0.0
+version: "1.0.1"
 author: Nova (HitPaw-Official)
 type: cli
 entry: dist/cli.js
@@ -39,21 +39,183 @@ environment:
 
 A powerful OpenClaw skill that integrates HitPaw's state-of-the-art AI enhancement technology for both **images** and **videos**. Enhance, upscale, restore, and denoise with multiple AI models.
 
-## Features
+---
 
-### Image Enhancement
-- 🚀 **Upscale images 2x or 4x** without quality loss
-- 👤 **Face enhancement** with specialized models
-- 🌟 **Multiple models**: General, Face, High Fidelity, Denoise, Generative
-- 📊 **Real-time progress tracking** with polling
-- ⚙️ **Configurable DPI** and EXIF preservation
+## 🎯 Features
 
-### Video Enhancement
-- 🎬 **Upscale videos** to higher resolutions
-- 🤖 **Multiple AI models** for different use cases
-- 🎵 **Audio preservation** option
-- ⏱️ **Long-running job support** with extended polling
-- 📥 **Automatic download** when complete
+Based on the official [HitPaw API Documentation](https://developer.hitpaw.com/image/Introduction), this skill leverages industrial-grade AI models developed in-house by HitPaw's expert R&D team.
+
+### Core Strengths
+
+- **Quality**: Industry-defining quality fit for professional use cases, from commercial photography to archival restoration
+- **Fidelity**: Preserves the original details and identities in the source images, ensuring the output remains true to the input
+- **Efficiency**: Optimized for low latency and high throughput, capable of processing distinct enhancement tasks at scale
+
+---
+
+## 📸 Image Enhancement
+
+According to the [Image API Introduction](https://developer.hitpaw.com/image/Introduction), our image processing services offer world-class capabilities designed to handle a wide variety of restoration scenarios:
+
+### Key Capabilities
+
+- **Upscale**: Output high-resolution images from low-resolution input files using standard or high-fidelity models
+- **Face Recovery**: Ensure high-quality facial details, offering both "Clear" (soft/beauty) and "Natural" (textured/realistic) restoration options
+- **Sharpen & Denoise**: Bring images into focus by removing blur and sensor noise while preserving the original structure
+- **Generative Restoration**: Leverage Diffusion technology to reconstruct details in severely degraded portraits or general images
+
+### Model Classes
+
+The Image API offers two classes of AI models to suit different needs:
+
+- **Standard Models**: Fast and efficient, prioritizing preserving original fidelity and details. Recommended for most professional and general restoration use cases
+- **Generative Models**: Utilize Stable Diffusion to produce the highest quality outputs, capable of "imagining" missing details. Ideal for extremely low-quality inputs where traditional upscaling fails
+
+#### Standard Models
+
+As detailed in the [Available Models](https://developer.hitpaw.com/image/available-models) documentation:
+
+| Model | Multiplier | Description | Best For |
+|-------|------------|-------------|----------|
+| `general_2x` / `general_4x` | 2x / 4x | General Enhance Model | General photos, landscapes |
+| `face_2x` / `face_4x` | 2x / 4x | Portrait Model (Clear) | Soft/beauty style portrait enhancement |
+| `face_v2_2x` / `face_v2_4x` | 2x / 4x | Portrait Model (Natural) | Natural/realistic portrait enhancement |
+| `high_fidelity_2x` / `high_fidelity_4x` | 2x / 4x | High Fidelity Model | Professional photography, conservatively upscaling high-quality sources |
+| `sharpen_denoise_1x` | 1x | Sharp Denoise Model | Aggressive denoising with sharpening |
+| `detail_denoise_1x` | 1x | Detail Denoise Model | Gentle denoising with texture preservation |
+
+#### Generative Models
+
+Powered by Stable Diffusion technology:
+
+| Model | Multiplier | Description | Best For |
+|-------|------------|-------------|----------|
+| `generative_portrait_1x/2x/4x` | 1x/2x/4x | Generative Portrait Model | Extremely low-quality portraits, "re-imagines" details |
+| `generative_general_1x/2x/4x` | 1x/2x/4x | Generative Enhance Model | Heavily compressed or very low-resolution general images |
+
+**Technical Highlights**:
+- Generative models excel at texture generation and sharpening
+- They can fill in missing details that traditional upscalers cannot recover
+- Ideal for restoration tasks where source data is severely degraded
+
+#### Example Image Use Cases
+
+```bash
+# General photo upscaling (landscape, architecture)
+enhance-image -u landscape.jpg -m general_4x -o hd_landscape.jpg
+
+# Portrait beautification (soft skin)
+enhance-image -u selfie.jpg -m face_4x -o portrait_beautified.jpg
+
+# Professional archival restoration (natural look)
+enhance-image -u old_photo.png -m face_v2_2x -o restored.png --keep-exif
+
+# Denoise grainy low-light photo
+enhance-image -u night_photo.jpg -m sharpen_denoise_1x -o clean.jpg
+
+# Generative reconstruction for severely degraded image
+enhance-image -u blurry_face.jpg -m generative_portrait_2x -o ai_face.jpg
+```
+
+---
+
+## 🎬 Video Enhancement
+
+According to the [Video API Introduction](https://developer.hitpaw.com/video/Introduction), our video processing services provide industrial-grade solutions for restoring and upscaling video content:
+
+### Key Capabilities
+
+- **Video Upscale**: Convert SD or HD footage to 4K Ultra HD clarity using deep convolution and feature learning technologies
+- **Portrait Restoration**: Specialized models to detect, stabilize, and enhance faces in video streams, removing motion blur and noise while maintaining identity
+- **General Restoration**: A comprehensive solution based on GAN technology to de-noise, de-blur, and enhance details in general video content
+- **Generative Reconstruction**: Utilizing Stable Diffusion for video to reconstruct textures and details in extremely low-quality footage
+
+### Core Pillars
+
+- **Temporal Stability**: Unlike image-only models, our video engines ensure smooth transitions between frames, eliminating flickering and jitter
+- **Clarity**: Recovering fine details and removing compression artifacts common in streaming or legacy media
+- **Performance**: Optimized inference times to handle heavy video processing workloads efficiently
+
+### Model Classes
+
+- **Restoration & Upscale (Standard)**: Models like Ultra HD and General Restore focus on cleaning up the footage and increasing resolution without altering the fundamental content. They rely on pixel-perfect accuracy and temporal consistency
+- **Generative Video**: Uses advanced logic-based reconstruction. Designed for "impossible" restoration tasks where the source video lacks sufficient data, generating realistic textures and details to fill the gaps
+
+#### Available Video Models
+
+From the [Video Models Documentation](https://developer.hitpaw.com/video/available-models):
+
+| Model | Description | Use Case |
+|-------|-------------|----------|
+| `ultrahd_restore_2x` | Ultra HD Model | High-definition upscale; natural-looking 1080p→4K |
+| `general_restore_1x` / `2x` / `4x` | General Restore Model | General video restoration, de-noising, de-blurring |
+| `portrait_restore_1x` / `2x` | Portrait Restore Model | Multi-face restoration with temporal stability |
+| `face_soft_2x` | Video Face Soft Model | Facial beautification with consistent appearance |
+| `generative_1x` | Generative Video Model | Extreme restoration of heavily degraded footage |
+
+**Technical Highlights**:
+- Generates realistic textures and eliminates flickering via multi-frame SD architecture
+- Handles heavy compression, high-ISO noise, and complex motion blur
+- Maintains identity consistency across frames
+
+#### Example Video Use Cases
+
+```bash
+# Convert old 720p footage to 4K
+enhance-video -u old_clip.mp4 -m ultrahd_restore_2x -r 3840x2160 -o 4k_remastered.mp4
+
+# Restore grainy, noisy home video
+enhance-video -u home_movie.avi -m general_restore_2x -r 1920x1080 -o cleaned.mp4
+
+# Beautify faces in vlog/interview
+enhance-video -u interview.mp4 -m face_soft_2x -r 1920x1080 -o soft_faces.mp4
+
+# Stabilize and restore old family footage with multiple faces
+enhance-video -u family_reunion.mov -m portrait_restore_2x -r 1920x1080 -o restored.mp4
+
+# Generative AI restoration for severely degraded source
+enhance-video -u heavily_compressed.mp4 -m generative_1x -r 1920x1080 -o regenerated.mp4
+```
+
+---
+
+## 🚀 Why Choose HitPaw API?
+
+**Industry-Leading Quality**: Professional-grade output suitable for commercial photography, archival restoration, and broadcast-quality video remastering
+
+**Unparalleled Fidelity**: Strictly retains original details and subject identity, ensuring outputs remain true to inputs
+
+**Comprehensive Model Catalog**: 16 specialized models covering virtually every restoration scenario
+
+**Scalable Performance**: Optimized for low-latency, high-throughput workloads
+
+---
+
+## 📊 Quick Reference
+
+### Image Model Selection Guide
+
+| Scenario | Recommended Model |
+|----------|-------------------|
+| General photo upscale | `general_2x` or `general_4x` |
+| Portrait beautification | `face_2x` or `face_4x` |
+| Portrait natural look | `face_v2_2x` or `face_v2_4x` |
+| Professional archival | `high_fidelity_2x` / `high_fidelity_4x` |
+| Grainy low-light | `sharpen_denoise_1x` |
+| Subtle denoise | `detail_denoise_1x` |
+| Severely degraded | `generative_portrait_*` or `generative_general_*` |
+
+### Video Model Selection Guide
+
+| Scenario | Recommended Model |
+|----------|-------------------|
+| SD → 4K upscale | `ultrahd_restore_2x` |
+| General cleanup | `general_restore_2x` |
+| Interview/vlog beautification | `face_soft_2x` |
+| Old home movies (multiple faces) | `portrait_restore_2x` |
+| Severely compressed/ degraded | `generative_1x` |
+
+---
 
 ## Installation
 
@@ -76,6 +238,29 @@ HITPAW_API_KEY=your_api_key_here
 ```
 
 Get your API key at: https://playground.hitpaw.com/
+
+Test the API directly in the browser: [HitPaw Playground →](https://playground.hitpaw.com/)
+
+---
+
+## 📸 Examples & Gallery
+
+> **Note**: Place actual before/after screenshots in the `images/` folder. See `images/README.md` for guidelines.
+
+### Image Enhancement Examples
+
+| Scenario | Before | After |
+|----------|--------|-------|
+| General Upscale (2x) | ![Before](images/image-before.jpg) | ![After](images/image-after.jpg) |
+| Face Enhancement | ![Before](images/face-before.jpg) | ![After](images/face-after.jpg) |
+| Generative Portrait | ![Before](images/gen-before.jpg) | ![After](images/gen-after.jpg) |
+
+### Video Enhancement Examples
+
+| Scenario | Original Frame | Enhanced Frame |
+|----------|----------------|----------------|
+| General Restoration | ![Original](images/video-original.jpg) | ![Enhanced](images/video-enhanced.jpg) |
+| Portrait Restoration | ![Before](images/portrait-video-before.jpg) | ![After](images/portrait-video-after.jpg) |
 
 ---
 

@@ -34,7 +34,11 @@ program
     const { url, output, model, resolution, extension, original_resolution, pollInterval, timeout } = options;
 
     // Parse resolution strings
+<<<<<<< HEAD
+    const parseRes = (str: string): [number, number] => {
+=======
     const parseRes = (str) => {
+>>>>>>> 96b5b31 (docs: 丰富 HitPaw API 功能文档)
       const [w, h] = str.split('x').map(Number);
       if (!w || !h) throw new Error(`Invalid resolution format: ${str}. Use WxH (e.g., 1920x1080)`);
       return [w, h];
@@ -72,13 +76,21 @@ program
       spinner.succeed(chalk.green('Video enhancement complete!'));
       console.log(`Output: ${path.resolve(output)}`);
       console.log(`Coins consumed: ${result.coins}`);
+<<<<<<< HEAD
+    } catch (error: any) {
+=======
     } catch (error) {
+>>>>>>> 96b5b31 (docs: 丰富 HitPaw API 功能文档)
       spinner.fail(chalk.red('Video enhancement failed'));
       console.error(chalk.red(error.message || 'Unknown error'));
 
       if (error.response?.data?.error_code) {
         const code = error.response.data.error_code;
+<<<<<<< HEAD
+        const messages: Record<number, string> = {
+=======
         const messages = {
+>>>>>>> 96b5b31 (docs: 丰富 HitPaw API 功能文档)
           110400000: 'Invalid API key',
           110402000: 'Insufficient coins',
           110400005: 'Unsupported model',
