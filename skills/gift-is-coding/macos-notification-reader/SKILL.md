@@ -1,13 +1,14 @@
 # macOS Notification Reader
 
-Reads the macOS notification center database and exports recent notifications to markdown files. Useful for reviewing missed notifications, logging daily activity, or debugging notification issues.
+Reads the macOS notification center database and exports recent notifications to markdown files. Also supports automated **work notification summary** with filtering and delivery.
 
 ## Features
 
 - 📱 **Multi-app support**: WeChat, Teams, Outlook, Mail, iMessage, Calendar, Reminders, and more
 - ⏰ **Time filtering**: Fetch notifications from the last N minutes or hours
-- 📅 **Date-organized output**: Exports to `memory/YYYY-MM-DD/computer_io/notification/` 
+- 📅 **Date-organized output**: Exports to `memory/YYYY-MM-DD/computer_io/notification/`
 - 🤖 **Cron scheduling**: Designed for automated periodic exports
+- 📊 **Work notification summary**: Auto-filter work-related notifications (Teams/Outlook) and generate summaries
 - 🔒 **Privacy-friendly**: Reads from local database only, no cloud upload
 
 ## Quick Start
@@ -30,70 +31,96 @@ If it returns `FAIL`, follow these steps:
 
 > **Note**: If using a virtual environment, add the Python binary from that venv instead.
 
-### 2. Test the Script
+### 2. Test the Scripts
 
 ```bash
 # Navigate to the skill directory
 cd /path/to/macos-notification-reader
 
-# Read notifications from the last 35 minutes
+# Basic: Read notifications from the last 35 minutes
 python3 scripts/read_notifications.py --minutes 35
 
-# Read notifications from the last 24 hours
+# Basic: Read notifications from the last 24 hours
 python3 scripts/read_notifications.py --hours 24
 
-# Limit the number of results
-python3 scripts/read_notifications.py --hours 1 --limit 50
+# Advanced: Generate work notification summary (every 30 min)
+bash scripts/work-summary.sh
 ```
 
-### 3. Set Up Cron Job (Recommended)
+### 3. Set Up Cron Jobs (Recommended)
 
-To automatically export notifications every 30 minutes, add a cron job:
+#### Option A: Basic Notification Export (every 30 min)
 
 ```bash
 # Edit crontab
 crontab -e
 
-# Add this line (adjust paths as needed):
+# Add this line:
 */30 * * * * /path/to/macos-notification-reader/scripts/export-notification.sh
 ```
 
-Or use OpenClaw's built-in cron (if available):
+#### Option B: Work Notification Summary (every 30 min)
+
+This filters work-related notifications (Teams, Outlook) and generates a summary:
 
 ```bash
-openclaw cron add --schedule "*/30 * * *" --command "bash /path/to/macos-notification-reader/scripts/export-notification.sh"
+crontab -e
+
+# Add this line:
+*/30 * * * * /path/to/macos-notification-reader/scripts/work-summary.sh
 ```
 
-## Output Format
+Or use OpenClaw's built-in cron:
 
-The script exports to markdown table format:
+```bash
+openclaw cron add --name "Work Notification Summary" --every "30m" --message "Run work-summary.sh"
+```
+
+## Scripts
+
+| Script | Purpose |
+|--------|---------|
+| `read_notifications.py` | Core script - reads raw notifications from database |
+| `export-notification.sh` | Exports all notifications to markdown |
+| `work-summary.sh` | Filters work notifications and generates summary |
+
+## Work Notification Summary
+
+The `work-summary.sh` script does:
+
+1. **Filters work apps**: Teams, Outlook, WeChat (work-related)
+2. **Extracts action items**: Identifies pending tasks from message content
+3. **Generates summary**: Creates a structured markdown report
+4. **Saves to**: `memory/YYYY-MM-DD/computer_io/notification/work-summary-YYYYMMDD-HHMMSS.md`
+
+### Summary Output Format
 
 ```markdown
-# macOS Notifications Export
-- Date: 2026-03-05
-- Timestamp: 20260305-112000
-- Total: 15 items
+# 工作通知摘要
+- Lookback: 过去 35 分钟
+- 总工作通知: 5 条
 
-## Notifications
+## 渠道分布
+- Teams: 3
+- Outlook: 2
 
-| Time | App | Content |
-|------|-----|---------|
-| 2026-03-05 11:15:32 | WeChat | Contact Name: Hello message |
-| 2026-03-05 10:30:00 | Teams | Meeting reminder: Weekly Standup |
+## 待处理事项（自动提取）
+- [时间] (app) 消息内容摘要
+
+## 最近工作通知（去重后）
+- [时间] (app) 消息内容
 ```
 
-## Configuration
-
-### Output Directory
+## Output Directory
 
 By default, exports go to:
 ```
 ~/.openclaw/workspace/memory/YYYY-MM-DD/computer_io/notification/
 ```
 
-To customize, edit `export-notification.sh` and change the `OUTPUT_DIR` variable.
+To customize, edit the scripts and change the `OUTPUT_DIR` variable.
 
-### Supported Apps
+## Supported Apps
 
 The script recognizes these apps by default:
 
@@ -113,51 +140,50 @@ To add more apps, edit the `simplify_app_name()` function in `read_notifications
 
 - ⚠️ **macOS only**: This skill only works on macOS
 - ⚠️ **Full Disk Access required**: Must be granted manually (see above)
-- ⚠️ **Limited retention**: macOS automatically deletes notifications after ~3-7 days. This skill can only access notifications that still exist in the database
-- ⚠️ **Notification state**: Cannot read notifications that have been explicitly dismissed by the user
+- ⚠️ **Limited retention**: macOS automatically deletes notifications after ~3-7 days
+- ⚠️ **Notification state**: Cannot read notifications that have been dismissed
 
 ## File Structure
 
 ```
 macos-notification-reader/
-├── SKILL.md                  # This file
-├── _meta.json                # Skill metadata
+├── SKILL.md                       # This file
+├── _meta.json                     # Skill metadata
 ├── scripts/
-│   ├── read_notifications.py # Core script (file output)
-│   └── export-notification.sh # Wrapper for cron usage
+│   ├── read_notifications.py      # Core script (file output)
+│   ├── export-notification.sh     # Basic export wrapper
+│   └── work-summary.sh            # Work notification summary (NEW)
 └── references/
-    └── permission-setup.md   # Detailed permission guide
+    └── permission-setup.md        # Detailed permission guide
 ```
 
 ## Use Cases
 
-- 📊 **Review missed notifications**: Quickly see what you missed while away
+- 📊 **Review missed notifications**: See what you missed while away
 - 🔍 **Debug notification issues**: Check if a specific app sent a notification
-- 📝 **Daily logging**: Automatically archive notifications for later review
-- 🤖 **Automation**: Integrate with other tools via the markdown output
+- 📝 **Daily logging**: Automatically archive notifications
+- 💼 **Work summary**: Get incremental work notification summaries every 30 min
+- 🤖 **Automation**: Integrate with other tools via markdown output
 
 ## Troubleshooting
 
 ### "Permission denied" error
 
-You haven't granted Full Disk Access. See [references/permission-setup.md](references/permission-setup.md).
+Grant Full Disk Access. See [references/permission-setup.md](references/permission-setup.md).
 
 ### "Cannot find notification database"
 
-- Make sure you're on macOS 15.0 or later
-- Check if the database path exists:
-  ```bash
-  ls -la ~/Library/Group\ Containers/group.com.apple.usernoted/db2/
-  ```
+- Ensure macOS 15.0 or later
+- Check: `ls -la ~/Library/Group\ Containers/group.com.apple.usernoted/db2/`
 
 ### Notifications are empty
 
-- macOS may have already deleted old notifications
-- Try reducing the time window (e.g., `--minutes 10` instead of `--hours 24`)
+- macOS may have deleted old notifications
+- Try reducing time window: `--minutes 10`
 
 ---
 
 **Author**: OpenClaw Community  
-**Version**: 1.0.0  
+**Version**: 1.1.0  
 **Platform**: macOS 15.0+  
 **License**: MIT
