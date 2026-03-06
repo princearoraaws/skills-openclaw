@@ -1,12 +1,19 @@
 {
   "name": "email-subject-generator",
-  "version": "1.1.1",
+  "version": "1.1.2",
   "description": "AI-powered email subject line generator with Sloan agent",
   "main": "index.js",
   "bin": {
     "email-subject-generator": "./index.js"
   },
-  "keywords": ["email", "marketing", "copywriting", "ai", "openclaw", "skill"],
+  "keywords": [
+    "email",
+    "marketing",
+    "copywriting",
+    "ai",
+    "openclaw",
+    "skill"
+  ],
   "author": "Matt",
   "license": "MIT",
   "dependencies": {

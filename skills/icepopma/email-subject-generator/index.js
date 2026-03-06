@@ -25,12 +25,14 @@ ${options.purpose ? `- Purpose: ${options.purpose}` : ''}
 Return ONLY the subject lines, numbered 1-10, no explanations.`;
 
   const result = await new Promise((resolve, reject) => {
-    const child = spawn('openclaw', ['agent', '--agent', 'sloan', '-m', prompt], { encoding: 'utf-8', timeout: 60000 });
+    const child = spawn('openclaw', ['agent', '--agent', 'sloan', '-m', prompt], {
+      encoding: 'utf-8',
+      timeout: 60000
+    });
     let stdout = '';
     child.stdout.on('data', (d) => stdout += d);
-    child.on('close', (code) => code === 0 ? resolve(stdout) : reject(new Error('Agent failed')));`,
-    { encoding: 'utf-8', timeout: 60000, maxBuffer: 1024 * 1024 }
-  );
+    child.on('close', (code) => code === 0 ? resolve(stdout) : reject(new Error('Agent failed')));
+  });
   
   return { subjects: result.trim() };
 }
