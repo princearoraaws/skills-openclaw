@@ -1,7 +1,7 @@
 ---
 name: agentstead-deploy
-description: Deploy OpenClaw sub-agent APIs to AgentStead cloud hosting with production-ready OpenClaw setup. Use when a user wants to auto-deploy a sub-agent on AgentStead, connect Telegram/Discord, and launch quickly with billing via Stripe (card), crypto (USDC), or ASTD balance.
-version: 1.1.0
+description: Deploy OpenClaw AI agents to AgentStead cloud hosting. Use when a user wants to deploy a sub-agent on AgentStead, connect Telegram/Discord, and launch quickly with AgentStead-provided AI models.
+version: 1.2.0
 ---
 
 # AgentStead Deploy
@@ -21,10 +21,10 @@ Before calling any APIs, gather from the user:
 1. **Agent name** — What should the agent be called?
 2. **Personality/instructions** — System prompt or personality description
 3. **Channel** — Telegram (need bot token from @BotFather) or Discord (need bot token from Discord Developer Portal)
-4. **AI plan** — BYOK (bring your own API key, $0) or AgentStead Provided (PAYG, or 1K/3K/5K/10K ASTD/mo)
-5. **If BYOK** — Which provider and API key? (Anthropic, OpenAI, Google, OpenRouter, xAI, Groq, Mistral, Bedrock, Venice, and 10+ more)
+4. **AI credit plan** — Pay-as-you-go ($0 base), 1K ($10/mo), 3K ($30/mo), 5K ($50/mo), or 10K ($100/mo) ASTD/mo
+5. **AI model** — Claude 3.5 Haiku (fast), Claude Sonnet 4 (balanced), or Claude Opus 4.6 (most capable)
 6. **Hosting plan** — Starter $9/mo, Pro $19/mo, Business $39/mo, Enterprise $79/mo
-7. **Payment method** — ASTD Balance, Crypto (USDC), or Card (Stripe)
+7. **Payment method** — ASTD Balance, Crypto (USDC on Base/Polygon), or Card (Stripe)
 
 ## Step-by-Step Workflow
 
@@ -55,24 +55,27 @@ curl -X POST https://www.agentstead.com/api/v1/agents \
   -d '{
     "name": "MyAgent",
     "personality": "You are a helpful assistant...",
-    "plan": "starter",
-    "aiPlan": "byok",
-    "byokProvider": "anthropic",
-    "byokApiKey": "sk-ant-..."
+    "plan": "pro",
+    "aiPlan": "ASTD_5000",
+    "defaultModel": "anthropic/claude-sonnet-4-20250514"
   }'
 ```
 
-For AgentStead Provided AI (uses ASTD credits):
-```json
-{
-  "name": "MyAgent",
-  "personality": "You are a helpful assistant...",
-  "plan": "pro",
-  "aiPlan": "ASTD_5000"
-}
-```
+**Valid `aiPlan` values:**
+| Plan | Price | Description |
+|------|-------|-------------|
+| `PAYG` | $0 base | Pay-as-you-go, deducts from ASTD balance per use |
+| `ASTD_1000` | $10/mo | 1,000 ASTD monthly credits |
+| `ASTD_3000` | $30/mo | 3,000 ASTD monthly credits |
+| `ASTD_5000` | $50/mo | 5,000 ASTD monthly credits |
+| `ASTD_10000` | $100/mo | 10,000 ASTD monthly credits |
 
-Valid `aiPlan` values: `BYOK`, `PAYG`, `ASTD_1000`, `ASTD_3000`, `ASTD_5000`, `ASTD_10000`
+**Valid `defaultModel` values:**
+| Model | ID | Best For |
+|-------|----|----------|
+| Claude 3.5 Haiku | `anthropic/claude-haiku-3-5` | Fast, efficient responses |
+| Claude Sonnet 4 | `anthropic/claude-sonnet-4-20250514` | Balanced performance |
+| Claude Opus 4.6 | `anthropic/claude-opus-4-6` | Most capable reasoning |
 
 Response includes the agent `id` — save it for subsequent steps.
 
@@ -101,17 +104,17 @@ curl -X POST https://www.agentstead.com/api/v1/agents/<agent_id>/channels \
 curl -X POST https://www.agentstead.com/api/v1/billing/crypto/create-invoice \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"agentId": "<agent_id>", "plan": "starter", "aiPlan": "PAYG"}'
+  -d '{"agentId": "<agent_id>", "plan": "pro", "aiPlan": "ASTD_5000"}'
 ```
 
-Returns a payment address/URL. Guide user to send USDC (Base or Polygon chain).
+Returns a deposit address. Guide user to send USDC on Base or Polygon chain.
 
 **Stripe (card):**
 ```bash
 curl -X POST https://www.agentstead.com/api/v1/billing/checkout \
   -H "Authorization: Bearer <token>" \
   -H "Content-Type: application/json" \
-  -d '{"agentId": "<agent_id>", "plan": "starter", "aiPlan": "PAYG"}'
+  -d '{"agentId": "<agent_id>", "plan": "pro", "aiPlan": "ASTD_5000"}'
 ```
 
 Returns a Stripe checkout URL. Send to user to complete payment.
@@ -142,29 +145,23 @@ Check that `status` is `"RUNNING"`. If not, wait a few seconds and retry.
 | Business | $39/mo | t3.medium · 2 vCPU · 4GB RAM · 50GB storage |
 | Enterprise | $79/mo | t3.large · 2 vCPU · 8GB RAM · 100GB storage |
 
-### AI Plans
+### AI Credit Plans
 | Plan | Price | Description |
 |------|-------|-------------|
-| BYOK | $0 | Bring your own API key (20+ providers) |
 | PAYG | $0 base | Pay-as-you-go from ASTD balance |
 | ASTD_1000 | $10/mo | 1,000 ASTD monthly credits |
 | ASTD_3000 | $30/mo | 3,000 ASTD monthly credits |
 | ASTD_5000 | $50/mo | 5,000 ASTD monthly credits |
 | ASTD_10000 | $100/mo | 10,000 ASTD monthly credits |
 
-AgentStead Provided plans include: Claude 3.5 Haiku, Claude Sonnet 4, Claude Opus 4.6
+All plans include access to Claude 3.5 Haiku, Claude Sonnet 4, and Claude Opus 4.6.
 
-### Payment Methods
-- **ASTD Balance** — top up wallet, auto-deducted on billing cycle
-- **Stripe** — credit/debit card subscriptions
-- **USDC** — Base or Polygon chain crypto payments
-- **Apple IAP** — iOS app only
-
-**Supported BYOK Providers:** Anthropic, OpenAI, Google Gemini, OpenRouter, xAI, Groq, Mistral, AWS Bedrock, Together AI, Hugging Face, Venice AI, Z.AI, Moonshot/Kimi, Cerebras, MiniMax, Xiaomi, Custom Provider, and more.
+**ASTD conversion:** 100 ASTD = $1 USD. Platform fee: 4% on top of AI provider cost.
 
 ## Notes
 
 - Telegram bot tokens come from [@BotFather](https://t.me/BotFather)
 - Discord bot tokens come from the [Discord Developer Portal](https://discord.com/developers/applications)
 - Agents can be stopped with `POST /agents/:id/stop` and restarted anytime
+- Top up ASTD balance via the web dashboard or iOS app
 - See `references/api-reference.md` for full API documentation
