@@ -1,0 +1,11 @@
+{
+  "owner": "noir-hedgehog",
+  "slug": "session-recall",
+  "displayName": "Session回溯",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1772715762661,
+    "commit": null
+  },
+  "history": []
+}
