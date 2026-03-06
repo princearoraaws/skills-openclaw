@@ -1,0 +1,11 @@
+{
+  "owner": "jisuapi",
+  "slug": "epc",
+  "displayName": "汽车配件EPC查询 - EPC Query For Auto Parts",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1772598792397,
+    "commit": null
+  },
+  "history": []
+}
