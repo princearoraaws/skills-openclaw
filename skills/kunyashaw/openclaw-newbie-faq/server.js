@@ -28,7 +28,18 @@ const MIME_TYPES = {
 };
 
 const server = http.createServer((req, res) => {
-  let filePath = path.join(SKILL_DIR, 'web', req.url === '/' ? 'index.html' : req.url);
+  // 防止路径遍历攻击
+  let urlPath = req.url.split('?')[0]; // 去掉查询参数
+  urlPath = urlPath.replace(/\\/g, '/'); // 反斜杠转正斜杠
+  
+  // 阻止 ../ 攻击
+  if (urlPath.includes('..')) {
+    res.writeHead(403, { 'Content-Type': 'text/plain' });
+    res.end('Forbidden');
+    return;
+  }
+  
+  let filePath = path.join(SKILL_DIR, 'web', urlPath === '/' ? 'index.html' : urlPath);
   
   const ext = path.extname(filePath);
   const contentType = MIME_TYPES[ext] || 'application/octet-stream';

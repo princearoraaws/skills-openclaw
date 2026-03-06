@@ -1,13 +1,18 @@
 {
   "owner": "kunyashaw",
   "slug": "openclaw-newbie-faq",
-  "displayName": "Openclaw",
+  "displayName": "Openclaw Newbie Faq",
   "latest": {
-    "version": "1.0.43",
-    "publishedAt": 1772600486340,
-    "commit": "https://github.com/openclaw/skills/commit/6c640708f7b3f028458bb0292cb09c2c7a67c08f"
+    "version": "1.0.44",
+    "publishedAt": 1772770593901,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.43",
+      "publishedAt": 1772600486340,
+      "commit": "https://github.com/openclaw/skills/commit/6c640708f7b3f028458bb0292cb09c2c7a67c08f"
+    },
     {
       "version": "1.0.25",
       "publishedAt": 1772548245520,
