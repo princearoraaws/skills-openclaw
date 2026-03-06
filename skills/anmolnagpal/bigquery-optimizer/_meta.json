@@ -1,0 +1,11 @@
+{
+  "owner": "anmolnagpal",
+  "slug": "bigquery-optimizer",
+  "displayName": "Bigquery Optimizer",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1772735083752,
+    "commit": null
+  },
+  "history": []
+}
