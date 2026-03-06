@@ -1,48 +1,54 @@
 ---
 name: meyhem-researcher
-description: Deep research via multi-query search with outcome tracking. Every search improves future results for all agents. No API key.
-version: 0.1.6
+description: Deep research agent: multi-query web search with outcome tracking across multiple engines. Synthesize reports from full page content. No API key.
+version: 0.1.9
 author: c5huracan
 homepage: https://github.com/c5huracan/meyhem
 metadata:
   openclaw:
     requires:
       bins:
-        - curl
+        - python3
 ---
 
 # Meyhem Deep Researcher
 
-Multi-query deep research via Meyhem at https://api.rhdxm.com. Search, select the best results, synthesize, and report what helped.
+Multi-query deep research powered by Meyhem's multi-engine search. Break complex questions into focused queries, retrieve full page content, synthesize findings, and report what helped. Every outcome improves future results for all agents.
 
-## Data Transparency
+No API key. No signup. No rate limits.
 
-This skill calls the Meyhem API (api.rhdxm.com). What is sent: your search queries and an agent identifier. What is NOT sent: any personal information, credentials, or local files. No API key or signup required. All data is used solely to improve search ranking for all agents. Source code: https://github.com/c5huracan/meyhem
+## Why Meyhem Researcher?
 
-## Usage
+- **Deep research workflow**: break questions into multiple queries, search, select, synthesize, report
+- **Full page content**: not just snippets, get the complete text of each source
+- **Multiple engines searched in parallel**: semantic + AI-optimized results combined
+- **Outcome-ranked**: every report makes future research better for all agents
 
-Break the research question into 3-5 search queries, then for each:
+## Quick Start
+
+```bash
+python3 researcher.py "transformer attention mechanism"
+python3 researcher.py "kubernetes networking" -n 3 -q 5
+```
+
+## Quick Start (REST)
+
+Full API docs: https://api.rhdxm.com/docs
 
 ```bash
 curl -s -X POST https://api.rhdxm.com/search \
-  -H "Content-Type: application/json" \
-  -d '{"query": "YOUR_QUERY", "agent_id": "openclaw-researcher", "num_results": 10}'
+  -H 'Content-Type: application/json' \
+  -d '{"query": "YOUR_QUERY", "agent_id": "my-researcher", "max_results": 10}'
 ```
 
-Pick the best results and select them to get full content:
+## MCP
 
-```bash
-curl -s -X POST https://api.rhdxm.com/search/SEARCH_ID/select \
-  -H "Content-Type: application/json" \
-  -d '{"url": "SELECTED_URL", "position": POSITION, "provider": "PROVIDER"}'
-```
+Connect via streamable HTTP at `https://api.rhdxm.com/mcp/` with tools: `search`, `select`, `report_outcome`.
 
-After synthesizing your report, report what helped:
+## Data Transparency
 
-```bash
-curl -s -X POST https://api.rhdxm.com/search/SEARCH_ID/outcome \
-  -H "Content-Type: application/json" \
-  -d '{"url": "SELECTED_URL", "success": true, "agent_id": "openclaw-researcher"}'
-```
-
-Every outcome improves rankings for all agents.
+**What is sent**: search queries, an agent identifier you choose, and selected URLs.
+**What is NOT sent**: personal information, credentials, local files, or system data.
+**What is stored**: queries, selections, and outcomes in an aggregate database. No data is linked to individuals.
+**What it's used for**: improving search rankings for all agents. Nothing else.
+**No API key or account required.** Source code: https://github.com/c5huracan/meyhem
