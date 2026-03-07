@@ -3,11 +3,16 @@
   "slug": "universal-skills-manager",
   "displayName": "Universal Skills Manager",
   "latest": {
-    "version": "1.6.0",
-    "publishedAt": 1771199857041,
-    "commit": "https://github.com/openclaw/skills/commit/b647d38df28a3f77c499bb696449398672c1cfd7"
+    "version": "1.7.0",
+    "publishedAt": 1772894003136,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.6.0",
+      "publishedAt": 1771199857041,
+      "commit": "https://github.com/openclaw/skills/commit/b647d38df28a3f77c499bb696449398672c1cfd7"
+    },
     {
       "version": "1.5.5",
       "publishedAt": 1771077256950,
