@@ -1,0 +1,7 @@
+interface:
+  display_name: "Wise Read-Only"
+  short_description: "Read-only Wise lookups with PII redaction"
+  default_prompt: "Use $wise-readonly to fetch Wise profiles, balances, or FX rates safely."
+
+policy:
+  allow_implicit_invocation: false

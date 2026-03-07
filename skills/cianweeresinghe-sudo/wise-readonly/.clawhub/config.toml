@@ -1,0 +1,9 @@
+slug = "wise-readonly"
+name = "Wise Read-Only"
+version = "1.0.2"
+summary = "Read-only Wise API profile, balance, and FX lookup with default profile PII redaction."
+
+[secrets]
+required = ["WISE_API_TOKEN"]
+optional = []
+primary = "WISE_API_TOKEN"
