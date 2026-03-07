@@ -1,7 +1,7 @@
 ---
 name: resy-hunter
 description: "Monitor hard-to-get restaurant reservations on Resy, OpenTable, and Tock. Check availability, manage a watchlist, and get Telegram alerts when tables open up."
-version: 1.0.0
+version: 1.0.5
 metadata:
   openclaw:
     requires:

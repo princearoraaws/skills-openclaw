@@ -45,9 +45,8 @@ body=$(echo "$response" | sed '$d')
 
 if [[ "$http_code" != "200" ]]; then
   # Fallback: try the /4/find endpoint with location search
-  local future_date
   future_date=$(date -v+7d +%Y-%m-%d 2>/dev/null || date +%Y-%m-%d -d '+7 days')
-  local fallback_payload='{"lat":'"${LAT}"',"long":'"${LONG}"',"day":"'"${future_date}"'","party_size":2}'
+  fallback_payload='{"lat":'"${LAT}"',"long":'"${LONG}"',"day":"'"${future_date}"'","party_size":2}'
   response2=$(curl -s -w "\n%{http_code}" -X POST "https://api.resy.com/4/find" \
     -H "${auth_header}" \
     -H "Content-Type: application/json" \

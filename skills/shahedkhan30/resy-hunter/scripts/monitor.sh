@@ -188,7 +188,7 @@ jq --arg today "$TODAY" '
 ' "$STATE_FILE" > "${STATE_FILE}.tmp" && mv "${STATE_FILE}.tmp" "$STATE_FILE"
 
 # Output the report
-jq -n \
+report=$(jq -n \
   --arg ts "$TIMESTAMP" \
   --argjson results "$all_results" \
   --argjson checked "$total_checked" \
@@ -198,4 +198,28 @@ jq -n \
     new_availability: $results,
     total_checked: $checked,
     total_with_availability: $avail
-  }'
+  }')
+
+echo "$report"
+
+# Send Telegram notification if new availability was found
+new_count=$(echo "$all_results" | jq 'length')
+if [[ "$new_count" -gt 0 ]]; then
+  # Build a human-readable message
+  msg="🍽️ *New Availability Found!*"$'\n'
+  for j in $(seq 0 $((new_count - 1))); do
+    r_name=$(echo "$all_results" | jq -r ".[$j].restaurant")
+    r_platform=$(echo "$all_results" | jq -r ".[$j].platform")
+    r_date=$(echo "$all_results" | jq -r ".[$j].date")
+    r_party=$(echo "$all_results" | jq -r ".[$j].party_size")
+    r_url=$(echo "$all_results" | jq -r ".[$j].booking_url")
+    r_times=$(echo "$all_results" | jq -r "[.[$j].slots[].time_start] | join(\", \")")
+
+    msg="${msg}"$'\n'"*${r_name}* (${r_platform})"
+    msg="${msg}"$'\n'"📅 ${r_date} | 👥 ${r_party} people"
+    msg="${msg}"$'\n'"🕐 ${r_times}"
+    msg="${msg}"$'\n'"🔗 [Book now](${r_url})"$'\n'
+  done
+
+  bash "${SCRIPTS_DIR}/notify.sh" "$msg" 2>/dev/null || true
+fi
