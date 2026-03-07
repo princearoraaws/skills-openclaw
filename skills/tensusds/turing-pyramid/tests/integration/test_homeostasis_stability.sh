@@ -19,6 +19,8 @@ FIXTURES="$SCRIPT_DIR/../fixtures"
 
 # WORKSPACE required by run-cycle.sh
 export WORKSPACE="${WORKSPACE:-$HOME/.openclaw/workspace}"
+# Skip scans — this test validates priority/decay homeostasis, not scanner accuracy
+export SKIP_SCANS="true"
 
 # Backup current state
 cp "$STATE_FILE" "$STATE_FILE.homeostasis_backup"
@@ -35,19 +37,37 @@ done
 CYCLES=50
 MAX_FLOOR_CYCLES=35  # Fail if any need at floor for more than this (70%)
 
-echo "Running $CYCLES simulated cycles..."
+# Simulate realistic heartbeat intervals by rewinding decay timestamps
+# between cycles. Each cycle simulates HEARTBEAT_INTERVAL_HOURS of elapsed time.
+HEARTBEAT_INTERVAL_HOURS=1  # 1 hour between heartbeats (realistic)
+
+echo "Running $CYCLES simulated cycles (${HEARTBEAT_INTERVAL_HOURS}h intervals)..."
 
 for i in $(seq 1 $CYCLES); do
+    # Simulate time passing: rewind all last_decay_check timestamps
+    # This makes run-cycle.sh think HEARTBEAT_INTERVAL_HOURS have passed
+    jq --argjson hours "$HEARTBEAT_INTERVAL_HOURS" '
+      to_entries | map(
+        if .value.last_decay_check then
+          .value.last_decay_check = (
+            (.value.last_decay_check | sub("\\.[0-9]+Z$"; "Z") |
+             strptime("%Y-%m-%dT%H:%M:%SZ") | mktime) - ($hours * 3600) |
+            strftime("%Y-%m-%dT%H:%M:%SZ")
+          )
+        else . end
+      ) | from_entries
+    ' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+    
     # Run cycle and extract top ACTION need
     output=$("$RUN_CYCLE" 2>/dev/null)
     
-    # Get the first ACTION need
-    top_need=$(echo "$output" | grep -m1 "▶ ACTION:" | sed -E 's/.*ACTION: ([a-z]+).*/\1/')
+    # Get ALL ACTION needs (run-cycle generates up to MAX_ACTIONS per cycle)
+    action_needs=$(echo "$output" | grep "▶ ACTION:" | sed -E 's/.*ACTION: ([a-z]+).*/\1/')
     
-    if [[ -n "$top_need" ]]; then
-        # Simulate completing the action with medium impact
+    for top_need in $action_needs; do
+        # Simulate completing each action with medium impact
         "$MARK_SCRIPT" "$top_need" 1.5 > /dev/null 2>&1
-    fi
+    done
     
     # Check which needs are at floor (sat <= 0.5)
     for need in security integrity coherence closure autonomy connection competence understanding recognition expression; do

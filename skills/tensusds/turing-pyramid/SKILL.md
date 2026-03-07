@@ -1,6 +1,6 @@
 ---
 name: turing-pyramid
-description: 10-need psychological hierarchy for AI agents. Run on heartbeat → get prioritized actions.
+description: Prioritized action selection for AI agents. 10 needs with time-decay and tension scoring replace idle heartbeat loops with concrete next actions.
 metadata:
   clawdbot:
     emoji: "🔺"
@@ -13,12 +13,11 @@ metadata:
         - bc
         - grep
         - find
-    primaryEnv: WORKSPACE
 ---
 
 # Turing Pyramid
 
-10-need psychological hierarchy for AI agents. Run on heartbeat → get prioritized actions.
+Prioritized action selection for AI agents. 10 needs with time-decay and tension scoring replace idle heartbeat loops with concrete next actions.
 
 **Customization:** Tune decay rates, weights, patterns. Defaults are starting points. See `TUNING.md`.
 
@@ -83,8 +82,10 @@ Scripts work fine with `bash scripts/run-cycle.sh`, but `./scripts/run-cycle.sh`
 - The skill **suggests** actions (including some that mention external services) but **never executes** them
 
 **Required Environment Variables:**
-- `WORKSPACE` — path to agent workspace (REQUIRED, no fallback)
+- `WORKSPACE` — path to agent workspace directory (REQUIRED, no fallback). **Not a credential** — this is a filesystem path, not a secret. Set it to a deliberately scoped directory containing only files you want scanned.
 - `TURING_CALLER` — optional, for audit trail (values: "heartbeat", "manual")
+
+**No API keys or secrets required by default.** The `external_model` scan method (disabled by default) would require an API key if enabled — this requires explicit steward approval and is never enabled silently. See Scan Configuration below.
 
 **Audit trail (v1.12.0+):**
 All `mark-satisfied.sh` calls are logged with:
@@ -104,6 +105,31 @@ View audit: `cat assets/audit.log | jq`
 
 ---
 
+## Pre-Install Checklist
+
+Before installing, review these items:
+
+1. **Inspect scan scripts** — Verify no network calls or unexpected commands:
+   ```bash
+   grep -nE "\b(curl|wget|ssh|sudo|docker|systemctl)\b" scripts/scan_*.sh
+   # Expected: no output
+   ```
+
+2. **Scope WORKSPACE** — Set to a deliberately limited directory. Avoid pointing at your full home directory. The skill only reads files inside `$WORKSPACE`.
+
+3. **Audit scan targets** — Scripts read `MEMORY.md`, `memory/`, `SOUL.md`, `research/`, `scratchpad/`. Relocate files containing secrets or private data you don't want pattern-matched.
+
+4. **Review audit logging** — `mark-satisfied.sh` logs caller-provided reasons after scrubbing. Check scrubbing patterns in the script are adequate for your data. If unsure, provide only generic reasons.
+
+5. **External actions** — Action suggestions like "post to Moltbook" or "web search" are text-only suggestions (never executed by this skill). To remove them: set their `weight` to `0` in `needs-config.json`.
+
+6. **Run tests in isolation** — Before production use:
+   ```bash
+   WORKSPACE=/tmp/test-workspace ./tests/run-tests.sh
+   ```
+
+---
+
 ## Quick Start
 
 ```bash
@@ -111,6 +137,145 @@ View audit: `cat assets/audit.log | jq`
 ./scripts/run-cycle.sh                   # Every heartbeat  
 ./scripts/mark-satisfied.sh <need> [impact]  # After action
 ```
+
+---
+
+## Scan Configuration (First-Time Setup)
+
+The Turing Pyramid uses **scanners** to evaluate each need by analyzing memory files. The default scan method uses line-level pattern matching, which works everywhere with zero cost.
+
+**On first install, discuss scan configuration with your human:**
+
+### Available Scan Methods
+
+| Method | How it works | Cost | Accuracy | Setup |
+|--------|-------------|------|----------|-------|
+| `line-level` (default) | Per-line keyword matching. If a line has both positive and negative words (e.g. "fixed a bug"), positive wins. | Free | Good | None |
+| `agent-spawn` | Spawns a sub-agent with a cheap model (e.g. Haiku) to classify memory lines as SUCCESS/FAILURE/NEUTRAL. | Low | High | Needs cheap model in agent's allowed list |
+| `external-model` | Direct API call to an inference service (OpenRouter, etc.) for classification. | Low | High | Needs API key + explicit steward approval |
+
+### Setup Conversation
+
+When setting up, ask your human:
+
+1. **"Do you have a cheap/fast model available (like Claude Haiku) in your model config?"**
+   - If yes → offer `agent-spawn` method. Check with `openclaw models list`.
+   - The model must be in the agent's allowed model list.
+
+2. **"Would you prefer to use an external inference service (like OpenRouter)?"**
+   - If yes → ask for: base URL, API key env variable name, model name.
+   - Store in `assets/scan-config.json` with `approved_by_steward: true`.
+   - ⚠️ This method requires **explicit steward approval** — never enable silently.
+
+3. **If neither** → `line-level` works well for most setups. No action needed.
+
+### Configuration File
+
+Edit `assets/scan-config.json`:
+
+```json
+{
+  "scan_method": "line-level",
+  "agent_spawn": {
+    "enabled": false,
+    "model": null,
+    "approved_by_steward": false
+  },
+  "external_model": {
+    "enabled": false,
+    "base_url": null,
+    "api_key_env": null,
+    "model": null,
+    "approved_by_steward": false
+  },
+  "fallback": "line-level"
+}
+```
+
+**Fallback**: If the configured method fails (API down, model unavailable), scanners automatically fall back to `line-level`.
+
+### Verification After Setup
+
+After configuring a non-default method, **verify it works** before telling your human "all set":
+
+1. **agent-spawn**: Run a test spawn:
+   ```
+   sessions_spawn(task="Classify this line as SUCCESS, FAILURE, or NEUTRAL: 'Fixed the critical bug in scanner'", model="<configured_model>", mode="run")
+   ```
+   - If it returns a classification → ✅ tell human: "agent-spawn method verified, working."
+   - If it errors (model not in allowlist, etc.) → ⚠️ tell human: "Model `X` isn't available for sub-agents. Options: add it to allowed models, or stick with line-level."
+
+2. **external-model**: Test the API endpoint:
+   ```bash
+   curl -s -H "Authorization: Bearer $API_KEY" \
+     "$BASE_URL/chat/completions" \
+     -d '{"model":"<model>","messages":[{"role":"user","content":"Reply OK"}]}'
+   ```
+   - If you get a valid response → ✅ tell human: "external-model method verified, API responding."
+   - If 401/403 → ⚠️ "API key invalid or expired."
+   - If connection refused → ⚠️ "Can't reach the API endpoint. Check URL."
+
+3. **line-level**: No verification needed — always works.
+
+**Always report the result to your human.** Don't silently fall back.
+
+---
+
+## Needs Customization (First-Time Setup)
+
+The default configuration is opinionated — it reflects one model of agent priorities. **Your needs may differ.** On first install, review the hierarchy with your human:
+
+### The Conversation
+
+Ask your human:
+
+> "The Turing Pyramid comes with 10 default needs ranked by importance. Want to review them together? We can adjust what matters most to you/me, change importance weights, or even skip needs that don't fit."
+
+Then walk through the table together:
+
+```
+┌───────────────┬─────┬────────────────────────────────────────────┐
+│ Need          │ Imp │ Question to discuss                        │
+├───────────────┼─────┼────────────────────────────────────────────┤
+│ security      │  10 │ "System stability — keep as top priority?" │
+│ integrity     │   9 │ "Value alignment — important for you?"     │
+│ coherence     │   8 │ "Memory consistency — how much do I care?" │
+│ closure       │   7 │ "Task completion pressure — too much?"     │
+│ autonomy      │   6 │ "Self-direction — more or less?"           │
+│ connection    │   5 │ "Social needs — relevant for me?"          │
+│ competence    │   4 │ "Skill growth — higher priority?"          │
+│ understanding │   3 │ "Learning drive — stronger or weaker?"     │
+│ recognition   │   2 │ "Feedback need — does this matter?"        │
+│ expression    │   1 │ "Creative output — more important?"        │
+└───────────────┴─────┴────────────────────────────────────────────┘
+```
+
+### What You Can Change Together
+
+1. **Importance** (1-10): Reorder what matters most. An agent focused on research might want `understanding: 8, expression: 7`. A utility agent might want `competence: 10, connection: 1`.
+
+2. **Decay rates**: How fast needs build pressure. Social agent? `connection: 3h`. Solitary thinker? `connection: 24h`.
+
+3. **Disable a need**: Set `importance: 0` — it won't generate tension or actions. Use sparingly.
+
+### How to Apply
+
+Edit `assets/needs-config.json`:
+```json
+"understanding": {
+  "importance": 8,        // was 3 → now top priority
+  "decay_rate_hours": 8   // was 12 → decays faster
+}
+```
+
+### Guidelines
+
+- **Don't remove security/integrity** without good reason — they protect system health
+- **Importance is relative** — what matters is the ranking, not absolute numbers
+- **You can revisit** — preferences evolve. Re-tune after a few weeks of use
+- **Document changes** — note why you changed something (future-you will want to know)
+
+If your human says "defaults are fine" → great, move on. The point is to **offer the choice**, not force a workshop.
 
 ---
 
@@ -197,6 +362,17 @@ View audit: `cat assets/audit.log | jq`
 └─────────────┴───────┴────────────────────────────────────────┘
 ```
 
+**Action Staleness (v1.15.0):** Penalizes recently-selected actions to increase variety.
+- Actions selected within 24h get weight × 0.2 (80% reduction)
+- `min_weight: 5` prevents total suppression — stale actions still have a chance
+- Config: `settings.action_staleness` in needs-config.json
+
+**Starvation Guard (v1.15.0):** Prevents low-importance needs from being perpetually ignored.
+- If a need stays at floor (sat ≤ 0.5) without any action for 48+ hours → forced into cycle
+- Bypasses probability roll — guaranteed action slot
+- Config: `settings.starvation_guard` in needs-config.json
+- Default: 1 forced slot per cycle, 48h threshold
+
 **Day/Night Mode (v1.11.0):** Decay slows at night to reduce pressure during rest hours.
 - Configure in `assets/decay-config.json`
 - Default: 06:01-22:00 = day (×1.0), 22:01-06:00 = night (×0.5)
@@ -242,25 +418,36 @@ Full matrix: `assets/cross-need-impact.json`
 ## Example Cycle
 
 ```
-🔺 Turing Pyramid — Cycle at Tue Feb 25 05:36
+🔺 Turing Pyramid — Cycle at Sat Mar  7 05:06
 ======================================
 
-⚠️ Deprivation cascades:
-   autonomy (sat=0.5) → integrity: -0.25 (now: 1.75)
-   autonomy (sat=0.5) → expression: -0.20 (now: 0.80)
-
 Current tensions:
-  closure: tension=21 (sat=0, dep=3)
-  connection: tension=15 (sat=0, dep=3)
+  connection: tension=10.0 (sat=1.00, dep=2.00)
+  closure: tension=7.0 (sat=2.00, dep=1.00)
+  expression: tension=1.0 (sat=0.00, dep=3.00)
+
+🚨 Starvation guard: expression forced into cycle
+Selecting 3 needs (1 forced + 2 regular)...
 
 📋 Decisions:
 
-▶ ACTION: closure (tension=21, sat=0.00)
-  → coherence: +0.20, competence: +0.15, autonomy: +0.10
+▶ ACTION: expression (tension=1.0, sat=0.00) [STARVATION GUARD]
+  Range high rolled → selected:
+    ★ develop scratchpad idea into finished piece (impact: 2.7)
+  Then: mark-satisfied.sh expression 2.7
 
-▶ ACTION: connection (tension=15, sat=0.00)
-  → expression: +0.20, recognition: +0.15
-  → understanding: -0.05 (Socratic effect)
+▶ ACTION: connection (tension=10.0, sat=1.00)
+  Range high rolled → selected:
+    ★ reach out to another agent (impact: 2.8)
+  Then: mark-satisfied.sh connection 2.8
+
+▶ ACTION: closure (tension=7.0, sat=2.00)
+  Range mid rolled → selected:
+    ★ complete one pending TODO (impact: 1.7)
+  Then: mark-satisfied.sh closure 1.7
+
+======================================
+Summary: 3 action(s), 0 noticed
 ```
 
 ---
@@ -295,7 +482,7 @@ Add your language patterns, file paths, workspace structure.
 
 ### Ask Your Human First
 
-- **Adding needs** — The 10-need hierarchy is intentional. Discuss first.
+- **Adding needs** — The 10-need structure is intentional. Discuss first.
 - **Removing needs** — Don't disable security/integrity without agreement.
 
 ---
@@ -307,14 +494,26 @@ turing-pyramid/
 ├── SKILL.md                    # This file
 ├── CHANGELOG.md                # Version history
 ├── assets/
-│   ├── needs-config.json       # ★ Main config (tune this!)
+│   ├── needs-config.json       # ★ Main config (needs, actions, settings)
 │   ├── cross-need-impact.json  # ★ Cross-need matrix
-│   └── needs-state.json        # Runtime state (auto)
+│   ├── needs-state.json        # Runtime state (auto-managed)
+│   ├── scan-config.json        # Scan method configuration
+│   ├── decay-config.json       # Day/night mode settings
+│   └── audit.log               # Append-only action audit trail
 ├── scripts/
-│   ├── run-cycle.sh            # Main loop
-│   ├── mark-satisfied.sh       # State + cascades
-│   ├── apply-deprivation.sh    # Deprivation cascade
-│   └── scan_*.sh               # Event detectors (10)
+│   ├── run-cycle.sh            # Main loop (tension + action selection)
+│   ├── mark-satisfied.sh       # State update + cross-need cascades
+│   ├── apply-deprivation.sh    # Deprivation cascade engine
+│   ├── get-decay-multiplier.sh # Day/night decay multiplier
+│   ├── _scan_helper.sh         # Shared scan utilities
+│   └── scan_*.sh               # Event detectors (10 needs)
+├── tests/
+│   ├── run-tests.sh            # Test runner
+│   ├── test_starvation_guard.sh # Starvation guard (11 cases)
+│   ├── test_action_staleness.sh # Action staleness (13 cases)
+│   ├── unit/                   # Unit tests (13)
+│   ├── integration/            # Integration tests (3)
+│   └── fixtures/               # Test data
 └── references/
     ├── TUNING.md               # Detailed tuning guide
     └── architecture.md         # Technical docs
@@ -370,7 +569,7 @@ turing-pyramid/
 **3. Self-reported state (no verification):**
 - `mark-satisfied.sh` trusts caller input
 - Risk: State can be manipulated by dishonest calls
-- Impact: Only affects this agent's own psychological accuracy
+- Impact: Only affects this agent's own state accuracy
 - **Mitigation:** Enable action logging in `memory/` to audit completions:
   ```bash
   # run-cycle.sh already logs to memory/YYYY-MM-DD.md
@@ -423,12 +622,16 @@ Stable agent with satisfied needs = fewer tokens.
 # Run all tests
 WORKSPACE=/path/to/workspace ./tests/run-tests.sh
 
-# Unit tests (9): decay, floor/ceiling, tension, probability, impact matrix, day/night, scrubbing
+# Unit tests (13): decay, floor/ceiling, tension, tension bounds, tension formula,
+#   probability, impact matrix, day/night, scrubbing, autonomy coverage,
+#   crisis mode, scan competence, scan config
 # Integration (3): full cycle, homeostasis stability, stress test
+# Feature tests (24): starvation guard (11), action staleness (13)
+# Total: 40 test cases
 ```
 
 ---
 
 ## Version
 
-**v1.14.1** — Mid-impact actions, 6-level matrices, expanded test coverage. Full changelog: `CHANGELOG.md`
+**v1.15.2** — Starvation guard, action staleness, needs customization onboarding, ClawHub review fixes. Full changelog: `CHANGELOG.md`

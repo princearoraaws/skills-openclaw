@@ -1,56 +1,37 @@
 #!/bin/bash
-# scan_connection.sh - Check for social connection/interaction
-# Returns: 3=recent interaction, 2=some activity, 1=isolated, 0=disconnected
-# Event-sensitive: conversations, isolation
+# scan_connection.sh - Check for social interaction
+# Returns: 3=active conversations, 2=some interaction, 1=quiet, 0=isolated
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_scan_helper.sh"
 
 NEED="connection"
-# WORKSPACE validated by _scan_helper.sh
 MEMORY_DIR="$WORKSPACE/memory"
 TODAY=$(date +%Y-%m-%d)
 YESTERDAY=$(date -d "yesterday" +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d 2>/dev/null)
 
-# Get time-based satisfaction
 time_sat=$(calc_time_satisfaction "$NEED")
 
-# Always check events — interaction matters NOW
-interaction_signals=0
-isolation_signals=0
+POS_PATTERN="(chat|replied|discussed|conversation|talked|engaged|posted|commented|DM|messaged|interaction|connected|reached out|responded|mentioned)"
+NEG_PATTERN="(isolated|lonely|no response|ignored|silent|alone|nobody|no one replied|disconnected|radio silence)"
 
-# Scan memory for connection events (word count)
-scan_connection_events() {
-    local file="$1"
-    [[ ! -f "$file" ]] && return
-    
-    # Positive: chat, replied, discussed, conversation, engaged, posted, commented
-    # Add your steward's name to patterns if needed (see Localization in SKILL.md)
-    local pos=$(grep -oiE "(chat|replied|discussed|conversation|talked|engaged|posted|commented|DM|messaged|interaction|connected|reached out|responded|mentioned)" "$file" 2>/dev/null | wc -l) || pos=0
-    interaction_signals=$((interaction_signals + pos))
-    
-    # Negative: isolated, lonely, no response, ignored, silent, alone
-    local neg=$(grep -oiE "(isolated|lonely|no response|ignored|silent|alone|nobody|no one replied|disconnected|radio silence)" "$file" 2>/dev/null | wc -l) || neg=0
-    isolation_signals=$((isolation_signals + neg))
-}
+pos_signals=0
+neg_signals=0
+scan_lines_in_file "$MEMORY_DIR/$TODAY.md" "$POS_PATTERN" "$NEG_PATTERN"
+scan_lines_in_file "$MEMORY_DIR/$YESTERDAY.md" "$POS_PATTERN" "$NEG_PATTERN"
 
-scan_connection_events "$MEMORY_DIR/$TODAY.md"
-scan_connection_events "$MEMORY_DIR/$YESTERDAY.md"
+net=$((pos_signals - neg_signals))
 
-# Calculate net connection
-net_connection=$((interaction_signals - isolation_signals))
-
-# Calculate event satisfaction
-if [[ $isolation_signals -ge 3 ]]; then
-    event_sat=0  # Disconnected
-elif [[ $net_connection -ge 5 ]]; then
-    event_sat=3  # Active connection
-elif [[ $net_connection -ge 2 ]]; then
-    event_sat=2  # Some connection
-elif [[ $interaction_signals -ge 1 ]]; then
-    event_sat=1  # Minimal
+if [[ $neg_signals -gt $pos_signals ]] && [[ $neg_signals -gt 2 ]]; then
+    event_sat=0
+elif [[ $net -ge 3 ]]; then
+    event_sat=3
+elif [[ $net -ge 1 ]]; then
+    event_sat=2
+elif [[ $pos_signals -eq 0 ]]; then
+    event_sat=1
 else
-    event_sat=$time_sat  # Default to time-based
+    event_sat=$time_sat
 fi
 
 smart_satisfaction "$NEED" "$event_sat"

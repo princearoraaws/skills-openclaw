@@ -20,6 +20,8 @@ fi
 NEED=""
 IMPACT="3.0"
 REASON=""
+FOLLOWUP_WHAT=""
+FOLLOWUP_IN=""
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -29,6 +31,22 @@ while [[ $# -gt 0 ]]; do
             ;;
         --reason=*)
             REASON="${1#*=}"
+            shift
+            ;;
+        --followup)
+            FOLLOWUP_WHAT="$2"
+            shift 2
+            ;;
+        --followup=*)
+            FOLLOWUP_WHAT="${1#*=}"
+            shift
+            ;;
+        --in)
+            FOLLOWUP_IN="$2"
+            shift 2
+            ;;
+        --in=*)
+            FOLLOWUP_IN="${1#*=}"
             shift
             ;;
         *)
@@ -110,12 +128,13 @@ if (( $(echo "$NEW_SAT > 3.0" | bc -l) )); then
     NEW_SAT="3.00"
 fi
 
-# Update state: satisfaction, last_satisfied, last_decay_check, impact
+# Update state: satisfaction, last_satisfied, last_decay_check, impact, last_action_at
 jq --arg need "$NEED" --arg now "$NOW_ISO" --argjson impact "$IMPACT" --argjson sat "$NEW_SAT" '
   .[$need].satisfaction = $sat |
   .[$need].last_satisfied = $now |
   .[$need].last_decay_check = $now |
-  .[$need].last_impact = $impact
+  .[$need].last_impact = $impact |
+  .[$need].last_action_at = $now
 ' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
 
 echo "✅ $NEED marked as satisfied (impact: $IMPACT)"
@@ -185,4 +204,16 @@ if [[ -f "$CROSS_IMPACT_FILE" ]]; then
             
         done <<< "$IMPACTS"
     fi
+fi
+
+# Create follow-up if requested
+if [[ -n "$FOLLOWUP_WHAT" && -n "$FOLLOWUP_IN" ]]; then
+    echo ""
+    echo "📌 Creating follow-up..."
+    bash "$SKILL_DIR/scripts/create-followup.sh" \
+        --what "$FOLLOWUP_WHAT" \
+        --in "$FOLLOWUP_IN" \
+        --need "$NEED" \
+        --source auto \
+        --parent "$REASON"
 fi

@@ -84,22 +84,20 @@ for need in security integrity coherence closure autonomy connection competence 
     # Get satisfaction from state (float)
     sat=$(jq -r ".$need.satisfaction // 2" "$STATE_FILE")
     
-    # Round satisfaction to integer (same as code does with printf "%.0f")
-    sat_int=$(printf "%.0f" "$sat")
+    # Float deprivation (matches actual code: scale=2; 3 - satisfaction)
+    dep=$(echo "scale=2; 3 - $sat" | bc -l)
+    if (( $(echo "$dep < 0" | bc -l) )); then dep="0"; fi
+    # Float tension = importance × deprivation (matches code: scale=1)
+    expected=$(echo "scale=1; $imp * $dep" | bc -l)
     
-    # Calculate deprivation and expected tension
-    dep=$((3 - sat_int))
-    [[ $dep -lt 0 ]] && dep=0
-    expected=$((imp * dep))
-    
-    # Extract actual tension from output
-    need_line=$(echo "$output" | grep "$need:" | head -1)
-    actual=$(echo "$need_line" | sed -E 's/.*tension=([0-9]+).*/\1/')
+    # Extract actual tension from output (match tension line, not cascade)
+    need_line=$(echo "$output" | grep -E "^\s+$need: tension=" | head -1)
+    actual=$(echo "$need_line" | sed -E 's/.*tension=([0-9.]+).*/\1/')
     
     # Tension=0 needs are not shown in output
     if [[ -z "$actual" && "$expected" == "0" ]]; then
         echo "  $need: not shown (tension=0) — OK"
-    elif [[ "$actual" == "$expected" ]]; then
+    elif (( $(echo "${actual:-0} == $expected" | bc -l) )); then
         echo "  $need: tension=$actual — OK"
     else
         echo "  $need: tension=$actual (expected $expected, imp=$imp, sat=$sat→$sat_int, dep=$dep) — FAIL"
@@ -142,14 +140,14 @@ fi
 echo ""
 echo "Test 5: Tension sorting"
 
-# Extract tensions in order they appear
-tensions=$(echo "$output" | grep -E "^\s+\w+: tension=" | sed -E 's/.*tension=([0-9]+).*/\1/')
+# Extract tensions in order they appear (float values)
+tensions=$(echo "$output" | grep -E "^\s+\w+: tension=" | sed -E 's/.*tension=([0-9.]+).*/\1/')
 
-# Check they are in descending order
-prev=999
+# Check they are in descending order (numeric comparison)
+prev=9999
 sorted=true
 for t in $tensions; do
-    if [[ $t -gt $prev ]]; then
+    if (( $(echo "$t > $prev" | bc -l) )); then
         sorted=false
         break
     fi

@@ -32,7 +32,7 @@ output=$("$RUN_CYCLE" 2>&1)
 
 # Extract security tension from output
 # Format: "  security: tension=X (sat=Y, dep=Z)"
-security_line=$(echo "$output" | grep "security:" | head -1)
+security_line=$(echo "$output" | grep -E "^\s+security: tension=" | head -1)
 actual_tension=$(echo "$security_line" | sed -E 's/.*tension=([0-9.]+).*/\1/')
 
 # Get importance from config
@@ -45,7 +45,8 @@ expected_tension=$((importance * (3 - 2)))
 cp "$STATE_FILE.tension_backup" "$STATE_FILE"
 rm "$STATE_FILE.tension_backup"
 
-if [[ "$actual_tension" == "$expected_tension" ]]; then
+# Compare numerically (actual may be float "10.0", expected integer "10")
+if (( $(echo "$actual_tension == $expected_tension" | bc -l) )); then
     echo "  security (sat=2.0): tension=$actual_tension — OK"
 else
     echo "  security (sat=2.0): tension=$actual_tension (expected $expected_tension) — FAIL"
@@ -64,7 +65,7 @@ jq --arg t "$now_str" '.integrity.satisfaction = 0 | .integrity.last_decay_check
 
 output=$("$RUN_CYCLE" 2>&1)
 
-integrity_line=$(echo "$output" | grep "integrity:" | head -1)
+integrity_line=$(echo "$output" | grep -E "^\s+integrity: tension=" | head -1)
 actual_tension=$(echo "$integrity_line" | sed -E 's/.*tension=([0-9.]+).*/\1/')
 
 integrity_importance=$(jq -r '.needs.integrity.importance' "$CONFIG_FILE")
@@ -74,7 +75,7 @@ expected_tension=$((integrity_importance * 3))
 cp "$STATE_FILE.tension_backup" "$STATE_FILE"
 rm "$STATE_FILE.tension_backup"
 
-if [[ "$actual_tension" == "$expected_tension" ]]; then
+if (( $(echo "$actual_tension == $expected_tension" | bc -l) )); then
     echo "  integrity (sat=0): tension=$actual_tension — OK"
 else
     echo "  integrity (sat=0): tension=$actual_tension (expected $expected_tension) — FAIL"
@@ -95,9 +96,9 @@ output=$("$RUN_CYCLE" 2>&1)
 
 # sat=3.0 means tension=0, and tension=0 needs are NOT displayed (by design)
 # So we verify expression does NOT appear in the tensions list
-if echo "$output" | grep -q "expression:.*tension="; then
+if echo "$output" | grep -qE "^\s+expression: tension="; then
     # If it appears, it should only be with tension=0
-    expression_line=$(echo "$output" | grep "expression:" | head -1)
+    expression_line=$(echo "$output" | grep -E "^\s+expression: tension=" | head -1)
     actual_tension=$(echo "$expression_line" | sed -E 's/.*tension=([0-9.]+).*/\1/')
     if [[ "$actual_tension" == "0" ]]; then
         echo "  expression (sat=3.0): tension=0 shown — OK (edge case)"
@@ -134,10 +135,12 @@ for need in security integrity coherence closure autonomy connection competence 
     # sat=1.0 → sat_int=1 → deprivation=2 → tension=importance×2
     expected=$((imp * 2))
     
-    need_line=$(echo "$output" | grep "$need:" | head -1)
+    # Match tension output format exactly: "  need: tension=X.Y"
+    # Avoid matching deprivation cascade lines like "→ need: -0.25"
+    need_line=$(echo "$output" | grep -E "^\s+$need: tension=" | head -1)
     actual=$(echo "$need_line" | sed -E 's/.*tension=([0-9.]+).*/\1/')
     
-    if [[ "$actual" == "$expected" ]]; then
+    if (( $(echo "$actual == $expected" | bc -l) )); then
         echo "  $need: tension=$actual — OK"
     else
         echo "  $need: tension=$actual (expected $expected, imp=$imp) — FAIL"

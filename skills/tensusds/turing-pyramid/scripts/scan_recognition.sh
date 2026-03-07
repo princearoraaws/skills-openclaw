@@ -7,50 +7,32 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/_scan_helper.sh"
 
 NEED="recognition"
-# WORKSPACE validated by _scan_helper.sh
 MEMORY_DIR="$WORKSPACE/memory"
 TODAY=$(date +%Y-%m-%d)
 YESTERDAY=$(date -d "yesterday" +%Y-%m-%d 2>/dev/null || date -v-1d +%Y-%m-%d 2>/dev/null)
 
-# Get time-based satisfaction first
 time_sat=$(calc_time_satisfaction "$NEED")
 
-# Always check events — recognition matters NOW
-positive_signals=0
-negative_signals=0
+POS_PATTERN="(thanks|great work|helpful|appreciated|good job|liked|upvote|positive feedback|well done|nice work|proud|excellent|awesome|kudos|recognized|acknowledged|engagement|comment|replied|posted|karma|verified|discussion)"
+NEG_PATTERN="(wrong|bad|unhelpful|mistake|criticism|negative feedback|disappointed|not good|terrible|useless|failed you|let.*down)"
 
-# Scan memory for recognition events (word count)
-scan_recognition_events() {
-    local file="$1"
-    [[ ! -f "$file" ]] && return
-    
-    # Positive: thanks, great work, helpful, appreciated, good job, upvote, proud
-    # Add patterns in your language if needed (see Localization in SKILL.md)
-    local pos=$(grep -oiE "(thanks|great work|helpful|appreciated|good job|liked|upvote|positive feedback|well done|nice work|proud|excellent|awesome|kudos|recognized|acknowledged)" "$file" 2>/dev/null | wc -l) || pos=0
-    positive_signals=$((positive_signals + pos))
-    
-    # Negative: wrong, bad, unhelpful, mistake, criticism, disappointed
-    local neg=$(grep -oiE "(wrong|bad|unhelpful|mistake|criticism|negative feedback|disappointed|not good|terrible|useless|failed you|let.*down)" "$file" 2>/dev/null | wc -l) || neg=0
-    negative_signals=$((negative_signals + neg))
-}
+pos_signals=0
+neg_signals=0
+scan_lines_in_file "$MEMORY_DIR/$TODAY.md" "$POS_PATTERN" "$NEG_PATTERN"
+scan_lines_in_file "$MEMORY_DIR/$YESTERDAY.md" "$POS_PATTERN" "$NEG_PATTERN"
 
-scan_recognition_events "$MEMORY_DIR/$TODAY.md"
-scan_recognition_events "$MEMORY_DIR/$YESTERDAY.md"
+net=$((pos_signals - neg_signals))
 
-# Calculate net recognition
-net=$((positive_signals - negative_signals))
-
-# Calculate event satisfaction
-if [[ $negative_signals -gt $positive_signals ]] && [[ $negative_signals -gt 2 ]]; then
-    event_sat=0  # Net negative feedback
+if [[ $neg_signals -gt $pos_signals ]] && [[ $neg_signals -gt 2 ]]; then
+    event_sat=0
 elif [[ $net -ge 3 ]]; then
-    event_sat=3  # Good recognition
+    event_sat=3
 elif [[ $net -ge 1 ]]; then
-    event_sat=2  # Some engagement
-elif [[ $positive_signals -eq 0 ]]; then
-    event_sat=1  # Ignored/no feedback
+    event_sat=2
+elif [[ $pos_signals -eq 0 ]]; then
+    event_sat=1
 else
-    event_sat=$time_sat  # Default to time-based
+    event_sat=$time_sat
 fi
 
 smart_satisfaction "$NEED" "$event_sat"

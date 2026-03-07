@@ -107,11 +107,13 @@ calculate_tensions() {
             fi
         fi
         
-        # Round satisfaction for integer deprivation/tension calc
-        local sat_int=$(printf "%.0f" "$satisfaction")
-        local deprivation=$(( 3 - sat_int ))
-        [[ $deprivation -lt 0 ]] && deprivation=0
-        local tension=$(( importance * deprivation ))
+        # Float deprivation for smooth tension curves (v1.15.0)
+        local deprivation=$(echo "scale=2; 3 - $satisfaction" | bc -l)
+        # Clamp to 0-3
+        if (( $(echo "$deprivation < 0" | bc -l) )); then deprivation="0.00"; fi
+        if (( $(echo "$deprivation > 3" | bc -l) )); then deprivation="3.00"; fi
+        # Float tension = importance × deprivation
+        local tension=$(echo "scale=1; $importance * $deprivation" | bc -l)
         
         TENSIONS[$need]=$tension
         SATISFACTIONS[$need]=$satisfaction  # Keep float for display
@@ -166,7 +168,7 @@ roll_action() {
     # MAX_TENSION = max_importance × max_deprivation(3), calculated from config
     # This preserves importance weighting: higher importance = bigger bonus at same sat
     local max_bonus=50
-    local bonus=$(( (tension * max_bonus) / MAX_TENSION ))
+    local bonus=$(echo "scale=0; ($tension * $max_bonus) / $MAX_TENSION" | bc -l)
     
     # Final chance (capped at 100)
     local final_chance=$((base_chance + bonus))
@@ -230,7 +232,59 @@ get_actions_by_range() {
     esac
 }
 
-# Weighted random selection of action by impact range
+# Get effective weight for an action (applies staleness penalty if recently used)
+get_effective_weight() {
+    local need=$1
+    local action_name=$2
+    local base_weight=$3
+
+    local staleness_enabled=$(jq -r '.settings.action_staleness.enabled // false' "$CONFIG_FILE")
+    if [[ "$staleness_enabled" != "true" ]]; then
+        echo "$base_weight"
+        return
+    fi
+
+    local window_hours=$(jq -r '.settings.action_staleness.window_hours // 24' "$CONFIG_FILE")
+    local penalty=$(jq -r '.settings.action_staleness.penalty // 0.2' "$CONFIG_FILE")
+    local min_weight=$(jq -r '.settings.action_staleness.min_weight // 5' "$CONFIG_FILE")
+    local window_seconds=$(echo "$window_hours * 3600" | bc -l | cut -d. -f1)
+
+    # Check last time this action was selected
+    local last_selected=$(jq -r --arg n "$need" --arg a "$action_name" \
+        '.[$n].action_history[$a] // "1970-01-01T00:00:00Z"' "$STATE_FILE")
+    local last_epoch=$(date -d "$last_selected" +%s 2>/dev/null || echo 0)
+    local seconds_since=$((NOW - last_epoch))
+
+    if [[ $seconds_since -lt $window_seconds ]]; then
+        # Within staleness window — apply penalty
+        local penalized=$(echo "scale=0; $base_weight * $penalty / 1" | bc -l)
+        # Enforce minimum weight (never fully zero out)
+        if [[ $penalized -lt $min_weight ]]; then
+            penalized=$min_weight
+        fi
+        echo "$penalized"
+    else
+        echo "$base_weight"
+    fi
+}
+
+# Record selected action in state file (with cleanup of expired entries)
+record_action_selection() {
+    local need=$1
+    local action_name=$2
+
+    local window_hours=$(jq -r '.settings.action_staleness.window_hours // 24' "$CONFIG_FILE")
+    local cutoff_epoch=$((NOW - window_hours * 3600))
+    local cutoff_iso=$(date -u -d "@$cutoff_epoch" +"%Y-%m-%dT%H:%M:%SZ" 2>/dev/null || date -u +"%Y-%m-%dT%H:%M:%SZ")
+
+    jq --arg n "$need" --arg a "$action_name" --arg now "$NOW_ISO" --arg cutoff "$cutoff_iso" '
+        .[$n].action_history //= {} |
+        .[$n].action_history[$a] = $now |
+        .[$n].action_history = (.[$n].action_history | to_entries | map(select(.value >= $cutoff)) | from_entries)
+    ' "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+}
+
+# Weighted random selection of action by impact range (with staleness)
 select_weighted_action() {
     local need=$1
     local range=$2
@@ -255,21 +309,38 @@ select_weighted_action() {
         return
     fi
     
-    # Calculate total weight
-    local total_weight=$(echo "$actions_json" | jq '[.[].weight // 100] | add')
+    # Build effective weights (applying staleness penalties)
+    local effective_weights=()
+    local names=()
+    local total_weight=0
+    
+    for i in $(seq 0 $((count - 1))); do
+        local base_weight=$(echo "$actions_json" | jq -r ".[$i].weight // 100")
+        local name=$(echo "$actions_json" | jq -r ".[$i].name")
+        local eff_weight=$(get_effective_weight "$need" "$name" "$base_weight")
+        
+        effective_weights+=("$eff_weight")
+        names+=("$name")
+        total_weight=$((total_weight + eff_weight))
+    done
+    
+    if [[ $total_weight -le 0 ]]; then
+        # Shouldn't happen with min_weight, but safety
+        echo "${names[0]}"
+        return
+    fi
+    
     local roll=$((RANDOM % total_weight))
     
-    # Select based on cumulative weights
+    # Select based on cumulative effective weights
     local cumulative=0
     local selected=""
     
     for i in $(seq 0 $((count - 1))); do
-        local weight=$(echo "$actions_json" | jq -r ".[$i].weight // 100")
-        local name=$(echo "$actions_json" | jq -r ".[$i].name")
-        cumulative=$((cumulative + weight))
+        cumulative=$((cumulative + ${effective_weights[$i]}))
         
         if [[ $roll -lt $cumulative ]]; then
-            selected="$name"
+            selected="${names[$i]}"
             break
         fi
     done
@@ -303,9 +374,231 @@ log_action() {
     fi
 }
 
+# Starvation guard: detect needs stuck at floor without action
+# Returns space-separated list of starving need names (longest-starved first)
+detect_starving_needs() {
+    local sg_enabled=$(jq -r '.settings.starvation_guard.enabled // false' "$CONFIG_FILE")
+    if [[ "$sg_enabled" != "true" ]]; then
+        return
+    fi
+
+    local threshold_hours=$(jq -r '.settings.starvation_guard.threshold_hours // 48' "$CONFIG_FILE")
+    local sat_threshold=$(jq -r '.settings.starvation_guard.sat_threshold // 0.5' "$CONFIG_FILE")
+    local threshold_seconds=$(echo "$threshold_hours * 3600" | bc -l | cut -d. -f1)
+
+    local needs=$(jq -r '.needs | keys[]' "$CONFIG_FILE")
+    local starving=()
+
+    for need in $needs; do
+        # Skip disabled needs (importance=0)
+        local importance=$(jq -r ".needs.\"$need\".importance // 1" "$CONFIG_FILE")
+        if [[ "$importance" == "0" ]]; then
+            continue
+        fi
+
+        local sat=$(jq -r --arg n "$need" '.[$n].satisfaction // 2.0' "$STATE_FILE")
+
+        # Check if at or below threshold
+        if (( $(echo "$sat > $sat_threshold" | bc -l) )); then
+            continue
+        fi
+
+        # Check last_action_at — if missing, use epoch 0 (never acted)
+        local last_action=$(jq -r --arg n "$need" '.[$n].last_action_at // "1970-01-01T00:00:00Z"' "$STATE_FILE")
+        local last_action_epoch=$(date -d "$last_action" +%s 2>/dev/null || echo 0)
+        local seconds_since=$((NOW - last_action_epoch))
+
+        if [[ $seconds_since -ge $threshold_seconds ]]; then
+            # Store as "seconds_since:need" for sorting
+            starving+=("$seconds_since:$need")
+        fi
+    done
+
+    # Sort by starvation duration (longest first) and output need names
+    if [[ ${#starving[@]} -gt 0 ]]; then
+        printf '%s\n' "${starving[@]}" | sort -t: -k1 -rn | cut -d: -f2
+    fi
+}
+
+# ─── Follow-up System ────────────────────────────────────────────────────────
+FOLLOWUPS_FILE="$SKILL_DIR/assets/followups.jsonl"
+FOLLOWUP_MAX_DISPLAY=5
+FOLLOWUP_TTL_SECONDS=604800  # 1 week
+FOLLOWUP_FLOOD_THRESHOLD=10
+
+check_followups() {
+    if [[ ! -f "$FOLLOWUPS_FILE" ]]; then
+        return
+    fi
+    
+    local ripe_count=0
+    local ripe_entries=""
+    local steward_overdue=""
+    
+    # Collect ripe follow-ups (status=pending, check_at_epoch <= now)
+    while IFS= read -r line; do
+        local status=$(echo "$line" | jq -r '.status')
+        [[ "$status" != "pending" ]] && continue
+        
+        local check_epoch=$(echo "$line" | jq -r '.check_at_epoch // 0')
+        [[ "$check_epoch" -gt "$NOW" ]] && continue
+        
+        local age=$((NOW - check_epoch))
+        local source=$(echo "$line" | jq -r '.source')
+        local what=$(echo "$line" | jq -r '.what')
+        local need=$(echo "$line" | jq -r '.need')
+        local id=$(echo "$line" | jq -r '.id')
+        local parent=$(echo "$line" | jq -r '.parent_action // ""')
+        
+        # TTL check
+        if [[ $age -ge $FOLLOWUP_TTL_SECONDS ]]; then
+            if [[ "$source" == "steward" ]]; then
+                local days=$((age / 86400))
+                steward_overdue="${steward_overdue}  🔴 OVERDUE (${days}d): [$need] $what (id: $id)\n"
+                ((ripe_count++))
+            else
+                # Auto-expire self/auto follow-ups past TTL
+                local tmp_file=$(mktemp)
+                while IFS= read -r fline; do
+                    local fid=$(echo "$fline" | jq -r '.id')
+                    if [[ "$fid" == "$id" ]]; then
+                        echo "$fline" | jq -c ".status = \"expired\" | .expired_at = \"$NOW_ISO\"" >> "$tmp_file"
+                    else
+                        echo "$fline" >> "$tmp_file"
+                    fi
+                done < "$FOLLOWUPS_FILE"
+                mv "$tmp_file" "$FOLLOWUPS_FILE"
+                echo "  ⏰ Auto-expired follow-up (>7d): $what" >> "$LOGS_DIR/$TODAY-cycles.log" 2>/dev/null
+                continue
+            fi
+        else
+            ripe_entries="${ripe_entries}${line}\n"
+            ((ripe_count++))
+        fi
+    done < "$FOLLOWUPS_FILE"
+    
+    if [[ $ripe_count -eq 0 ]]; then
+        return
+    fi
+    
+    echo ""
+    
+    # Flood check
+    if [[ $ripe_count -gt $FOLLOWUP_FLOOD_THRESHOLD ]]; then
+        echo "⚠️  $ripe_count follow-ups overdue! Consider: resolve-followup.sh --bulk-expire"
+        echo ""
+    fi
+    
+    echo "📌 Follow-ups due ($ripe_count total, showing up to $FOLLOWUP_MAX_DISPLAY):"
+    
+    # Show steward overdue first (always)
+    if [[ -n "$steward_overdue" ]]; then
+        echo -e "$steward_overdue"
+    fi
+    
+    # Show ripe entries (oldest first, limited)
+    local shown=0
+    echo -e "$ripe_entries" | while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        [[ $shown -ge $FOLLOWUP_MAX_DISPLAY ]] && break
+        
+        local what=$(echo "$line" | jq -r '.what')
+        local need=$(echo "$line" | jq -r '.need')
+        local id=$(echo "$line" | jq -r '.id')
+        local parent=$(echo "$line" | jq -r '.parent_action // ""')
+        local source=$(echo "$line" | jq -r '.source')
+        local check_at=$(echo "$line" | jq -r '.check_at')
+        local age_hours=$(( (NOW - $(echo "$line" | jq -r '.check_at_epoch // 0')) / 3600 ))
+        
+        local parent_str=""
+        [[ -n "$parent" && "$parent" != "null" ]] && parent_str=" (from: $parent)"
+        local source_str=""
+        [[ "$source" == "steward" ]] && source_str=" [steward]"
+        
+        echo "  → [$need] $what${parent_str}${source_str}"
+        echo "    Due: ${age_hours}h ago | resolve-followup.sh $id [--impact N]"
+        
+        # Apply satisfaction penalty for ripe follow-up (gentle nudge: -0.3)
+        local current_sat=$(jq -r --arg n "$need" '.[$n].satisfaction // 2.0' "$STATE_FILE")
+        local nudge_sat=$(echo "scale=2; $current_sat - 0.3" | bc -l)
+        if (( $(echo "$nudge_sat < 0.5" | bc -l) )); then
+            nudge_sat="0.50"
+        fi
+        jq --arg n "$need" --argjson sat "$nudge_sat" '.[$n].satisfaction = $sat' \
+            "$STATE_FILE" > "$STATE_FILE.tmp" && mv "$STATE_FILE.tmp" "$STATE_FILE"
+        
+        ((shown++))
+    done
+    
+    echo ""
+}
+
+# Cleanup done/expired follow-ups older than 7 days
+cleanup_followups() {
+    if [[ ! -f "$FOLLOWUPS_FILE" ]]; then
+        return
+    fi
+    
+    local cleanup_cutoff=$((NOW - 604800))
+    local tmp_file=$(mktemp)
+    local cleaned=0
+    
+    exec 201>"$FOLLOWUPS_FILE.lock"
+    flock 201
+    
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        local status=$(echo "$line" | jq -r '.status')
+        if [[ "$status" == "done" || "$status" == "expired" ]]; then
+            local resolved_at=$(echo "$line" | jq -r '.resolved_at // .expired_at // .created')
+            local resolved_epoch=$(date -d "$resolved_at" +%s 2>/dev/null || echo "$NOW")
+            if [[ $resolved_epoch -lt $cleanup_cutoff ]]; then
+                ((cleaned++))
+                continue  # skip = remove
+            fi
+        fi
+        echo "$line" >> "$tmp_file"
+    done < "$FOLLOWUPS_FILE"
+    
+    mv "$tmp_file" "$FOLLOWUPS_FILE"
+    
+    if [[ $cleaned -gt 0 ]]; then
+        echo "🧹 Cleaned $cleaned old follow-ups" >> "$LOGS_DIR/$TODAY-cycles.log" 2>/dev/null
+    fi
+}
+
+# Check for auto-followup in selected action config
+create_auto_followup() {
+    local need=$1
+    local action_name=$2
+    
+    local auto_followup=$(jq -r --arg n "$need" --arg a "$action_name" '
+        .needs[$n].actions[] | select(.name == $a) | .auto_followup // empty
+    ' "$CONFIG_FILE")
+    
+    if [[ -n "$auto_followup" ]]; then
+        local template=$(echo "$auto_followup" | jq -r '.template')
+        local delay=$(echo "$auto_followup" | jq -r '.delay_hours')
+        local fu_need=$(echo "$auto_followup" | jq -r '.need // "'"$need"'"')
+        
+        bash "$SKILL_DIR/scripts/create-followup.sh" \
+            --what "$template" \
+            --in "${delay}h" \
+            --need "$fu_need" \
+            --source auto \
+            --parent "$action_name" 2>/dev/null
+        
+        echo "  📌 Auto follow-up: \"$template\" in ${delay}h"
+    fi
+}
+
 # Main execution
 echo "🔺 Turing Pyramid — Cycle at $(date)"
 echo "======================================"
+
+# Phase 0: Follow-up check (pre-scan, affects satisfaction)
+check_followups
+cleanup_followups
 
 # Apply cross-need deprivation effects first
 if [[ -x "$SCRIPTS_DIR/apply-deprivation.sh" ]]; then
@@ -317,7 +610,7 @@ calculate_tensions
 # Check if all satisfied
 all_satisfied=true
 for need in "${!TENSIONS[@]}"; do
-    if [[ ${TENSIONS[$need]} -gt 0 ]]; then
+    if (( $(echo "${TENSIONS[$need]} > 0" | bc -l) )); then
         all_satisfied=false
         break
     fi
@@ -332,15 +625,60 @@ fi
 echo ""
 echo "Current tensions:"
 for need in "${!TENSIONS[@]}"; do
-    if [[ ${TENSIONS[$need]} -gt 0 ]]; then
+    if (( $(echo "${TENSIONS[$need]} > 0" | bc -l) )); then
         echo "  $need: tension=${TENSIONS[$need]} (sat=${SATISFACTIONS[$need]}, dep=${DEPRIVATIONS[$need]})"
     fi
 done | sort -t'=' -k2 -rn
 
-# Select top needs
+# Select top needs (with starvation guard)
 echo ""
-echo "Selecting top $MAX_ACTIONS needs..."
-top_needs=$(get_top_needs $MAX_ACTIONS)
+
+# Phase 1: Detect starving needs
+forced_needs=()
+starving_list=$(detect_starving_needs)
+if [[ -n "$starving_list" ]]; then
+    local_max_forced=$(jq -r '.settings.starvation_guard.max_forced_per_cycle // 1' "$CONFIG_FILE")
+    forced_count=0
+    while IFS= read -r starving_need; do
+        if [[ $forced_count -ge $local_max_forced ]]; then
+            break
+        fi
+        forced_needs+=("$starving_need")
+        ((forced_count++))
+    done <<< "$starving_list"
+
+    echo "🚨 Starvation guard: ${forced_needs[*]} forced into cycle"
+fi
+
+# Phase 2: Fill remaining slots with top-N (excluding forced)
+remaining_slots=$((MAX_ACTIONS - ${#forced_needs[@]}))
+if [[ $remaining_slots -gt 0 ]]; then
+    # Get top needs, filter out forced ones
+    all_top=$(get_top_needs $((MAX_ACTIONS + ${#forced_needs[@]})))
+    regular_needs=()
+    for candidate in $all_top; do
+        # Skip if already forced
+        is_forced=false
+        for fn in "${forced_needs[@]}"; do
+            if [[ "$candidate" == "$fn" ]]; then
+                is_forced=true
+                break
+            fi
+        done
+        if ! $is_forced; then
+            regular_needs+=("$candidate")
+        fi
+        if [[ ${#regular_needs[@]} -ge $remaining_slots ]]; then
+            break
+        fi
+    done
+else
+    regular_needs=()
+fi
+
+# Combine: forced first, then regular
+top_needs_array=("${forced_needs[@]}" "${regular_needs[@]}")
+echo "Selecting ${#top_needs_array[@]} needs (${#forced_needs[@]} forced + ${#regular_needs[@]} regular)..."
 
 echo ""
 echo "📋 Decisions:"
@@ -348,12 +686,21 @@ echo "📋 Decisions:"
 action_count=0
 noticed_count=0
 
-for need in $top_needs; do
-    if [[ ${TENSIONS[$need]} -gt 0 ]]; then
+for need in "${top_needs_array[@]}"; do
+    if (( $(echo "${TENSIONS[$need]} > 0" | bc -l) )); then
         sat=${SATISFACTIONS[$need]}
         tension=${TENSIONS[$need]}
         
-        if roll_action $sat $tension; then
+        # Check if this need was forced by starvation guard
+        is_forced_need=false
+        for fn in "${forced_needs[@]}"; do
+            if [[ "$need" == "$fn" ]]; then
+                is_forced_need=true
+                break
+            fi
+        done
+        
+        if $is_forced_need || roll_action $sat $tension; then
             # Roll for impact range first
             impact_range=$(roll_impact_range "$need" "$sat")
             
@@ -368,6 +715,12 @@ for need in $top_needs; do
             # ACTION - weighted action selection
             ((action_count++))
             
+            # Mark forced actions
+            local_forced_label=""
+            if $is_forced_need; then
+                local_forced_label=" [STARVATION GUARD]"
+            fi
+            
             # Select specific action using weights within range
             selected_action=$(select_weighted_action "$need" "$impact_range")
             
@@ -378,11 +731,15 @@ for need in $top_needs; do
             fi
             
             echo ""
-            echo "▶ ACTION: $need (tension=$tension, sat=$sat)"
+            echo "▶ ACTION: $need (tension=$tension, sat=$sat)$local_forced_label"
             echo "  Range $impact_range rolled → selected:"
             
             if [[ -n "$selected_action" ]]; then
                 echo "    ★ $selected_action (impact: $actual_impact)"
+                # Record selection for staleness tracking
+                record_action_selection "$need" "$selected_action"
+                # Check for auto-followup
+                create_auto_followup "$need" "$selected_action"
             else
                 # Fallback: show all actions if no weighted selection
                 echo "  (no $impact_range actions, showing all):"
@@ -392,7 +749,11 @@ for need in $top_needs; do
             echo "  Then: mark-satisfied.sh $need $actual_impact"
             
             # Log to memory with selected action
-            log_action "$need" "$sat" "$tension"
+            if $is_forced_need; then
+                log_action "$need" "$sat" "$tension [FORCED]"
+            else
+                log_action "$need" "$sat" "$tension"
+            fi
         else
             # NON-ACTION - noticed but deferred
             ((noticed_count++))

@@ -1,5 +1,38 @@
 # Changelog
 
+## v1.15.2 (2026-03-07)
+- **ClawHub review fixes** — removed `primaryEnv` (WORKSPACE is not a credential), added Pre-Install Checklist, clarified no API keys required by default
+
+## v1.15.0 (2026-03-07)
+- **Starvation Guard** — prevents low-importance needs from being perpetually ignored
+  - Detects needs at satisfaction floor (≤ threshold) without action for N hours
+  - Forces starving needs into cycle, bypassing probability roll
+  - Reserves slots: forced needs first, remaining for top-N by tension
+  - Configurable: `settings.starvation_guard` in needs-config.json
+    - `enabled` (default: true)
+    - `threshold_hours` (default: 48) — how long at floor before forcing
+    - `sat_threshold` (default: 0.5) — satisfaction level considered "floor"
+    - `max_forced_per_cycle` (default: 1) — max forced actions per cycle
+  - `mark-satisfied.sh` now records `last_action_at` timestamp per need
+  - 8 new test cases in `tests/test_starvation_guard.sh`
+- **Action Staleness** — penalizes recently-selected actions to increase variety
+  - Tracks `action_history` per need in state file (action name → last selected timestamp)
+  - Actions selected within `window_hours` get weight × `penalty` multiplier
+  - `min_weight` floor prevents total suppression (always some chance)
+  - Configurable: `settings.action_staleness` in needs-config.json
+    - `enabled` (default: true)
+    - `window_hours` (default: 24) — how long an action stays "stale"
+    - `penalty` (default: 0.2) — weight multiplier for stale actions (80% reduction)
+    - `min_weight` (default: 5) — minimum effective weight
+  - 8 new test cases in `tests/test_action_staleness.sh` (statistical distribution tests)
+- **Needs Customization Onboarding** — guided conversation for agent + human to review/adjust need priorities, importance weights, and decay rates on first install
+
+## v1.14.7 (2026-03-06)
+- **Intention actions refactored** — better triggering in mid-range:
+  - Renamed "execute intention" → "work on intention from INTENTIONS.md" (impact 2.1→1.5)
+  - Added "continue progress on active intention" (impact 1.3, weight 35)
+  - Both now mid-range (1.0-1.9) for ~45% chance at sat=2.0
+
 ## v1.14.6 (2026-03-04)
 - **Post-install chmod instructions** — ClawHub doesn't preserve +x bits, added fix to SKILL.md
 

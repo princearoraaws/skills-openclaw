@@ -6,6 +6,21 @@
 
 ## ✅ COMPLETED
 
+### v1.15.0 (2026-03-07)
+- **Starvation Guard** — Forced action for needs stuck at floor too long
+  - Config: `settings.starvation_guard` (threshold_hours, sat_threshold, max_forced_per_cycle)
+  - State tracking: `last_action_at` per need (set by mark-satisfied.sh)
+  - Detection: scans all needs for sat ≤ threshold + no action for threshold_hours
+  - Forces starving needs into cycle, bypassing probability roll
+  - Reserved slot system: forced needs first, remaining slots for top-N
+  - 8 test cases (all pass): detection, disabled guard, threshold, recent action, state tracking, max_forced limit
+- **Action Staleness** — Penalize recently-selected actions for variety
+  - Config: `settings.action_staleness` (window_hours, penalty, min_weight)
+  - State tracking: `action_history` per need (action name → last selected timestamp)
+  - Weight reduction within window, min_weight floor prevents total suppression
+  - 8 test cases (all pass): recording, distribution shift, disabled, window expiry, min_weight, missing history
+- **Needs Customization Onboarding** — guided conversation in SKILL.md for reviewing hierarchy
+
 ### v1.14.x (2026-03-04)
 - **Test Infrastructure** — 12 tests (11 unit + 1 integration), all verify real code
 - **Rounding fix** — sat→0.5 rounding formula corrected

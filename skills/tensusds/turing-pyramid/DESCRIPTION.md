@@ -1,60 +1,78 @@
 # Turing Pyramid
 
-**Psychological needs for AI agents.** 10-need hierarchy with decay and tension-based priority. Outputs action suggestions — you decide what to execute.
-
-> ⚠️ **Security Note**: This skill is a local-only decision framework. It reads workspace files and outputs text suggestions. It does NOT execute actions, make network requests, or access credentials. Actions like "web search" or "post to Moltbook" are prompts for the agent to handle with its own tools and permissions.
+**Prioritized action selection for AI agents.** 10 configurable needs with time-based decay, tension scoring, and weighted action selection. Hook it into your heartbeat — get concrete "do this next" suggestions instead of idle loops.
 
 ---
 
-## What It Does
+## The Problem
 
-Tracks 10 psychological needs with time-based decay. Each heartbeat:
-1. Calculates satisfaction (0-3) from time + event scans
-2. Computes tension = importance × deprivation
-3. Selects top 3 needs by tension
-4. Suggests weighted actions based on probability matrix
+Without structure, agents either:
+- **Idle** — wait for prompts, do nothing between interactions
+- **Spam** — check the same thing every cycle, repeat low-value actions
+- **Drift** — pick random tasks with no prioritization
 
-**Philosophy**: Designed needs ≠ fake needs. Humans didn't choose their needs (evolution did). The pyramid gives structure to what would otherwise be aimless drift.
+Default existence cycles nudge agents with "do what feels right" — but without state tracking, the agent has no memory of what it already did, what's been neglected, or what matters most right now.
+
+Turing Pyramid replaces that with a stateful feedback loop: needs decay over time → tension builds → highest-tension need gets an action → satisfaction resets → cycle continues. It works as a drop-in replacement for the native OpenClaw existence cycle, with actual prioritization and action variety built in.
+
+## What Changes For Your Agent
+
+**Before (typical heartbeat):**
+```
+Heartbeat → "anything to do?" → nothing obvious → HEARTBEAT_OK
+Heartbeat → "anything to do?" → check inbox again → HEARTBEAT_OK
+Heartbeat → "anything to do?" → HEARTBEAT_OK
+```
+
+**After (with Turing Pyramid):**
+```
+Heartbeat → coherence tension=16, closure=14, connection=10
+  → ACTION: sync daily logs to MEMORY.md (coherence, impact 1.8)
+  → ACTION: complete one pending TODO (closure, impact 1.7)
+  → NOTICED: connection — deferred
+
+Heartbeat → connection tension=12, expression=8, understanding=6
+  → ACTION: reply to pending mentions (connection, impact 1.8)
+  → ACTION: write journal reflection (expression, impact 1.8)
+  → NOTICED: understanding — deferred
+```
+
+The agent rotates through different types of work based on what's been neglected longest.
 
 ---
 
-## The 10 Needs
+## How It Works
 
-| Need | Imp | Decay | Description |
-|------|-----|-------|-------------|
-| security | 10 | 168h | System stability, backups, data integrity |
-| integrity | 9 | 72h | Alignment with SOUL.md principles |
+**10 needs**, each with configurable importance (priority weight) and decay rate (how fast satisfaction drops):
+
+| Need | Importance | Decay | What it tracks |
+|------|-----------|-------|---------------|
+| security | 10 | 168h | Backups, vault integrity, system health |
+| integrity | 9 | 72h | Behavior aligned with stated values |
 | coherence | 8 | 24h | Memory organization, no contradictions |
-| closure | 7 | 8h | Open threads and TODOs resolved |
-| autonomy | 6 | 24h | Self-initiated decisions and actions |
-| connection | 5 | 4h | Social interaction, community |
-| competence | 4 | 48h | Skill use, successful task completion |
-| understanding | 3 | 12h | Learning, curiosity, exploration |
-| recognition | 2 | 72h | Feedback, acknowledgment |
-| expression | 1 | 6h | Creative output, articulation |
+| closure | 7 | 12h | Open tasks and threads getting resolved |
+| autonomy | 6 | 36h | Self-initiated decisions and projects |
+| connection | 5 | 8h | Social interaction, community participation |
+| competence | 4 | 36h | Successful task completion, skill growth |
+| understanding | 3 | 12h | Learning, research, curiosity |
+| recognition | 2 | 48h | Sharing work, getting feedback |
+| expression | 1 | 8h | Writing, creating, articulating thoughts |
 
----
+**Each cycle:**
+1. Satisfaction decays based on elapsed time (0.0–3.0 range)
+2. Tension = importance × deprivation — higher = more urgent
+3. Top 3 needs by tension get action slots
+4. Probability roll decides action vs. notice (higher tension = higher chance)
+5. Impact matrix selects action size (crisis → big actions, stable → small maintenance)
+6. Weighted random picks specific action from the selected impact range
+7. Cross-need effects propagate (e.g., completing a task boosts both closure and competence)
 
-## Probability Matrix
-
-**Action probability by satisfaction level:**
-
-| Sat | P(action) | P(notice) | Meaning |
-|-----|-----------|-----------|---------|
-| 3 | 5% | 95% | Full — rarely needs attention |
-| 2 | 20% | 80% | OK — occasional maintenance |
-| 1 | 75% | 25% | Low — usually requires action |
-| 0 | 100% | 0% | Critical — always act |
-
-**Impact selection by satisfaction:**
-
-```
-sat=0 (critical):  5% impact-1,  15% impact-2,  80% impact-3
-sat=1 (low):      15% impact-1,  50% impact-2,  35% impact-3
-sat=2 (ok):       70% impact-1,  25% impact-2,   5% impact-3
-```
-
-Higher deprivation → bigger actions suggested.
+**Protection mechanisms:**
+- **Starvation guard** — any need stuck at floor for 48h+ gets a forced action slot
+- **Action staleness** — recently-picked actions get weight penalty to prevent repetition
+- **Follow-ups** — temporal markers to check results of past actions ("posted on Moltbook → check replies in 4h")
+- **Day/night decay** — configurable multiplier for different time periods
+- **Floor/ceiling** — satisfaction clamped to 0.5–3.0, prevents runaway states
 
 ---
 
@@ -64,153 +82,65 @@ Higher deprivation → bigger actions suggested.
 # Initialize state file
 ./scripts/init.sh
 
-# Add to HEARTBEAT.md
+# Add to HEARTBEAT.md:
 ~/.openclaw/workspace/skills/turing-pyramid/scripts/run-cycle.sh
 
-# After completing an action
+# After completing a suggested action:
 ./scripts/mark-satisfied.sh <need> [impact]
+
+# With follow-up (check back later):
+./scripts/mark-satisfied.sh connection 1.5 --reason "posted update" --followup "check replies" --in 4h
+
+# Manual follow-up (e.g., from steward):
+./scripts/create-followup.sh --what "review PR CI" --in 2h --need competence --source steward
 ```
+
+**Requires:** `bash`, `jq`, `bc`, `grep`, `find` + `WORKSPACE` env var set.
 
 ---
 
-## Example Output
+## Customization
 
-```
-🔺 Turing Pyramid — Cycle at Mon Feb 24 02:30:00
-======================================
-Current tensions:
-  coherence: tension=24 (sat=0, dep=3)
-  closure: tension=21 (sat=0, dep=3)
-  connection: tension=15 (sat=0, dep=3)
+Everything is in `assets/needs-config.json`:
+- **Decay rates** — how fast each need builds tension
+- **Action lists** — what gets suggested per need (add your own)
+- **Weights** — probability of each action being selected
+- **Importance** — which needs win when multiple compete
+- **Disable a need** — set `importance: 0`
 
-📋 Decisions:
+Guided onboarding conversation template included in SKILL.md.
 
-▶ ACTION: coherence (tension=24, sat=0)
-  Impact 3 rolled → selected:
-    ★ full memory review + consolidate into MEMORY.md
-  Then: mark-satisfied.sh coherence 3
-
-▶ ACTION: closure (tension=21, sat=0)
-  Impact 2 rolled → selected:
-    ★ complete one pending TODO
-  Then: mark-satisfied.sh closure 2
-
-○ NOTICED: connection (tension=15, sat=0) — deferred
-
-Summary: 2 action(s), 1 noticed
-```
+See `references/TUNING.md` for detailed tuning guide.
 
 ---
 
-## Tuning Guide
+## Architecture: Suggestion Engine, Not Executor
 
-### What you can freely change:
-- **Decay rates** — `assets/needs-config.json` → `decay_rate_hours`
-- **Action weights** — same file, adjust probability within impact level
-- **Scan patterns** — `scripts/scan_*.sh` → add your language/paths
+The skill outputs text suggestions. It does not execute actions, make network requests, or access credentials.
 
-### Ask your human first:
-- Changing **importance values** (hierarchy = values)
-- Adding/removing needs
-- Enabling external actions (posting, messaging)
-- Disabling security/integrity scans
+```
+Turing Pyramid (local-only)      Your Agent (has capabilities)
+───────────────────────────      ─────────────────────────────
+reads JSON config + state    →   receives "★ do X" text
+scans workspace files        →   decides: execute? skip? ask human?
+outputs suggestion text      →   uses its own tools and permissions
+```
 
-### Common adjustments:
-- **No Moltbook?** Set Moltbook action weights to 0
-- **More learning?** Decrease `understanding.decay_rate_hours`
-- **Overwhelmed?** Increase all decay rates
-- **Nothing triggers?** Decrease decay rates, check scan paths
-
-See `references/TUNING.md` for detailed guide.
+**Reads:** workspace files (MEMORY.md, SOUL.md, etc.) via grep/find for pattern detection.
+**Writes:** `assets/needs-state.json` only (timestamps and satisfaction levels).
+**Never accesses:** credentials, APIs, network, paths outside workspace.
 
 ---
 
-## Token Usage Estimate
+## Token Usage
 
-**Assumptions**: 1-hour heartbeat, Claude as agent
+| Heartbeat interval | Cycles/day | Est. tokens/day | Est. tokens/month |
+|-------------------|------------|-----------------|-------------------|
+| 30 min | 48 | 48k–120k | 1.4M–3.6M |
+| 1 hour | 24 | 24k–60k | 720k–1.8M |
+| 2 hours | 12 | 12k–30k | 360k–900k |
 
-| Component | Tokens/cycle |
-|-----------|--------------|
-| run-cycle.sh output | ~300-500 |
-| Agent processing | ~200-400 |
-| Action execution (avg) | ~500-1500 |
-| **Total per heartbeat** | **~1000-2500** |
-
-**Projections:**
-
-| Interval | Cycles/day | Tokens/day | Tokens/month |
-|----------|------------|------------|--------------|
-| 30 min | 48 | 48k-120k | 1.4M-3.6M |
-| 1 hour | 24 | 24k-60k | 720k-1.8M |
-| 2 hours | 12 | 12k-30k | 360k-900k |
-
-**Notes:**
-- Higher tensions = more actions = more tokens
-- Stable agent (most needs satisfied) = fewer tokens
-- First few days higher as system stabilizes
-- Complex actions (research, posting) use more tokens
-
-**Cost estimate** (Claude Sonnet at $3/1M input, $15/1M output):
-- 1h heartbeat: ~$1-3/month average
-- Spikes possible during high-tension periods
-
----
-
-## Security & Privacy
-
-### Architecture: Decision Framework, Not Executor
-
-This skill outputs **text suggestions** — it cannot execute them. When you see "★ web search on topic", the skill printed that string. YOUR agent (with its own tools/permissions) decides whether to act.
-
-```
-Skill (local-only)          Agent (has capabilities)
-──────────────────          ─────────────────────────
-reads JSON, calculates  →   receives suggestion text
-outputs "★ do X"        →   decides: execute? skip? ask human?
-zero network access     →   uses its own web_search, APIs, etc
-```
-
-### What Scripts Actually Access
-
-**Reads** (local files only): 
-- `MEMORY.md`, `memory/*.md` — pattern scanning (grep for keywords)
-- `SOUL.md`, `AGENTS.md` — existence checks only
-- `research/`, `scratchpad/` — file counts, modification dates
-- `memory/autonomous/DASHBOARD.md` — stale item detection
-- `assets/*.json` — configuration and state
-
-**Writes** (local files only):
-- `assets/needs-state.json` — timestamps, satisfaction levels
-
-**Never accesses**: credentials, API keys, network, system paths outside workspace
-
-### Environment Variables
-
-**WORKSPACE is REQUIRED** — scripts exit with error if unset:
-```bash
-export WORKSPACE="/path/to/your/workspace"
-# No fallback. Scripts will not run without explicit WORKSPACE.
-```
-
-### Files That May Contain Secrets
-
-`MEMORY.md` and `memory/*.md` are scanned for patterns. These may contain personal notes or conversation logs. The skill sees text patterns only (grep), not semantic content.
-
-### Trust Model
-
-`mark-satisfied.sh` trusts caller input — no verification that suggested actions were actually performed. This is by design: the skill suggests, the agent decides and reports.
-
-### External Actions Clarification
-
-Config includes actions like "post to Moltbook", "web search", "verify vault". These are **text suggestions**, not execution. The skill outputs strings; your agent runtime provides execution with its own permission model.
-
----
-
-## Requirements
-
-- `jq` — JSON processing
-- `bash` — shell scripts
-- Standard Unix tools: `grep`, `find`, `date`, `wc`
+Stable agents (most needs satisfied) use fewer tokens. First few days are higher as the system stabilizes.
 
 ---
 
@@ -218,16 +148,22 @@ Config includes actions like "post to Moltbook", "web search", "verify vault". T
 
 ```
 turing-pyramid/
-├── SKILL.md              # Main documentation
+├── SKILL.md              # Full documentation
+├── DESCRIPTION.md        # This file
 ├── assets/
-│   ├── needs-config.json # ★ Tune this! Needs, decay, actions
-│   └── needs-state.json  # Runtime state (auto-managed)
+│   ├── needs-config.json # ★ Needs, decay rates, actions — tune this
+│   ├── needs-state.json  # Runtime state (auto-managed)
+│   ├── followups.jsonl   # Follow-up markers (auto-managed)
+│   └── cross-need-impact.json  # Inter-need effects
 ├── scripts/
-│   ├── run-cycle.sh      # Main heartbeat loop
-│   ├── mark-satisfied.sh # Update state after action
+│   ├── run-cycle.sh      # Main heartbeat entry point
+│   ├── mark-satisfied.sh # Update state after action (supports --followup)
+│   ├── create-followup.sh # Create temporal check-back markers
+│   ├── resolve-followup.sh # Close follow-ups (single or bulk)
 │   ├── show-status.sh    # Debug current tensions
-│   ├── init.sh           # First-time setup
-│   └── scan_*.sh         # 10 event detection scripts
+│   ├── init.sh           # First-time state setup
+│   └── scan_*.sh         # 10 workspace scanners
+├── tests/                # 50+ test cases (unit + integration)
 └── references/
     ├── TUNING.md         # Customization guide
     └── architecture.md   # Technical deep-dive
@@ -238,5 +174,5 @@ turing-pyramid/
 ## Links
 
 - **ClawHub**: https://clawhub.com/skills/turing-pyramid
-- **Philosophy**: Inspired by Maslow's hierarchy + Self-Determination Theory
-- **Author**: OpenClaw Community
+- **Tests**: 50+ cases across unit, integration, and regression suites
+- **Design**: Loosely inspired by Maslow's hierarchy + Self-Determination Theory, implemented as a pure engineering system

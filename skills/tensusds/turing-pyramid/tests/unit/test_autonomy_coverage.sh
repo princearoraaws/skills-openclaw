@@ -1,5 +1,5 @@
 #!/bin/bash
-# Test: autonomy need has actions across all impact ranges
+# Test: autonomy need has actions across all impact ranges + continuation capability
 
 set -e
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -12,9 +12,9 @@ mid=$(jq '[.needs.autonomy.actions[] | select(.impact >= 1 and .impact < 2)] | l
 high=$(jq '[.needs.autonomy.actions[] | select(.impact >= 2)] | length' "$CONFIG")
 total=$(jq '.needs.autonomy.actions | length' "$CONFIG")
 
-# Require at least 3 actions in each range
-if [ "$low" -lt 3 ]; then
-    echo "FAIL: autonomy has only $low low-impact actions (need ≥3)"
+# Require at least 2 actions in each range (consolidated from 3)
+if [ "$low" -lt 2 ]; then
+    echo "FAIL: autonomy has only $low low-impact actions (need ≥2)"
     exit 1
 fi
 
@@ -28,20 +28,19 @@ if [ "$high" -lt 3 ]; then
     exit 1
 fi
 
-# Check specific "continue work" actions exist
-continue_actions=(
-    "continue yesterday's unfinished task"
-    "push incremental progress on active project"
-    "complete a TODO item I added myself"
-    "review and iterate on recent output"
-)
+# Check continuation actions exist (consolidated names)
+continuation_found=$(jq '[.needs.autonomy.actions[] | select(.name | test("continue|refine|improve"))] | length' "$CONFIG")
+if [ "$continuation_found" -lt 2 ]; then
+    echo "FAIL: autonomy needs at least 2 continuation actions, found $continuation_found"
+    exit 1
+fi
 
-for action in "${continue_actions[@]}"; do
-    if ! jq -e ".needs.autonomy.actions[] | select(.name == \"$action\")" "$CONFIG" > /dev/null 2>&1; then
-        echo "FAIL: missing action '$action'"
-        exit 1
-    fi
-done
+# Check initiation actions exist
+initiation_found=$(jq '[.needs.autonomy.actions[] | select(.name | test("initiate|explore|new"))] | length' "$CONFIG")
+if [ "$initiation_found" -lt 2 ]; then
+    echo "FAIL: autonomy needs at least 2 initiation actions, found $initiation_found"
+    exit 1
+fi
 
 echo "autonomy coverage: low=$low, mid=$mid, high=$high (total=$total)"
-echo "all 'continue work' actions present"
+echo "continuation=$continuation_found, initiation=$initiation_found — balanced"

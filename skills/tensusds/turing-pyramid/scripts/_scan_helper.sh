@@ -101,6 +101,30 @@ exit_if_grace() {
     fi
 }
 
+# ─── LINE-LEVEL SCAN FUNCTION ──────────────────────────────────
+# Shared line-level scanner for all needs.
+# Analyzes each line: if BOTH positive and negative patterns present → positive wins.
+# Usage: scan_lines_in_file "file" "pos_pattern" "neg_pattern"
+# Sets global: pos_signals, neg_signals (caller must initialize to 0)
+scan_lines_in_file() {
+    local file="$1"
+    local pos_pattern="$2"
+    local neg_pattern="$3"
+    [[ ! -f "$file" ]] && return
+    
+    while IFS= read -r line; do
+        [[ -z "$line" || "$line" =~ ^#+ ]] && continue
+        local has_pos=0 has_neg=0
+        echo "$line" | grep -qiE "$pos_pattern" && has_pos=1
+        echo "$line" | grep -qiE "$neg_pattern" && has_neg=1
+        if [[ $has_pos -eq 1 ]]; then
+            pos_signals=$((pos_signals + 1))
+        elif [[ $has_neg -eq 1 ]]; then
+            neg_signals=$((neg_signals + 1))
+        fi
+    done < "$file"
+}
+
 # Smart satisfaction: combines time-based with event detection
 # Usage: smart_satisfaction "need_name" event_score
 # Returns: satisfaction that respects both time decay and events
