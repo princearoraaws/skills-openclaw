@@ -1,13 +1,18 @@
 {
   "owner": "bowen31337",
   "slug": "intelligent-router",
-  "displayName": "Intelligent Router",
+  "displayName": "Intelligent Model Router",
   "latest": {
-    "version": "3.2.0",
-    "publishedAt": 1772051840378,
-    "commit": "https://github.com/openclaw/skills/commit/3af2fc4cd663376436ef2cb9f76ae1b4de3474c7"
+    "version": "3.0.1",
+    "publishedAt": 1772659114603,
+    "commit": null
   },
   "history": [
+    {
+      "version": "3.2.0",
+      "publishedAt": 1772051840378,
+      "commit": "https://github.com/openclaw/skills/commit/3af2fc4cd663376436ef2cb9f76ae1b4de3474c7"
+    },
     {
       "version": "3.1.0",
       "publishedAt": 1771535609130,

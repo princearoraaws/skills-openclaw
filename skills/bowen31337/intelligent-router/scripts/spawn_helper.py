@@ -40,17 +40,88 @@ def load_config():
 
 
 _CODING_PATTERNS = [
-    r"\bimplement\b", r"\bwrite\s+\w+\s+(code|script|function|class|module|test)",
-    r"\bcode\b", r"\bfix\s+\w*(bug|error|issue|crash)", r"\brefactor\b",
-    r"\bdebug\b", r"\bunit\s+test", r"\bintegration\s+test", r"\btdd\b",
-    r"\bgo\s+module", r"\brust\b", r"\bpython\s+script", r"\btypescript\b",
-    r"\bapi\s+(client|server|endpoint)", r"\bmicroservice", r"\bwire\s+(up|into)",
-    r"\bpallet\b", r"\bsmart\s+contract", r"\bsolidity\b",
+    # direct fix/debug/implement verbs
+    r"\bimplement\b", r"\brefactor\b", r"\bdebug\b", r"\bfix\b",
+    r"\bwrite\s+\w+\s+(code|script|function|class|module|test)",
+    # code artifacts
+    r"\bcode\b", r"\bbugs?\b", r"\bunit\s+test", r"\bintegration\s+test",
+    r"\btdd\b", r"\btest\s+(coverage|suite|passing)\b",
+    r"\btests?\s+pass", r"\bpytest\b", r"\brspec\b",
+    # languages / ecosystems
+    r"\bpython\b", r"\btypescript\b", r"\bjavascript\b", r"\breact\b",
+    r"\brust\b", r"\bgolang\b", r"\bgo\s+module", r"\bpallet\b",
+    r"\bsmart\s+contract", r"\bsolidity\b",
+    # structural terms
+    r"\bapi\s+(client|server|endpoint)", r"\bmicroservice",
+    r"\bwire\s+(up|into)", r"\brepo\b", r"\brepository\b",
+    r"\bcoverage\b", r"\blint\b", r"\bmypy\b", r"\bruff\b",
+    r"\bpyproject\b", r"\bcargo\b", r"\bpackage\.json\b",
 ]
 
 def _is_coding_task(task_description: str) -> bool:
     """Return True if task description has clear coding intent."""
     import re
+    text = task_description.lower()
+    for pattern in _CODING_PATTERNS:
+        if re.search(pattern, text):
+            return True
+    return False
+
+# [llmfit-integration-start]
+# Hardware fitness filtering for fallback chains.
+# Added by: uv run python skills/llmfit/scripts/integrate.py
+# Do NOT remove the marker comments — they allow re-patching to be idempotent.
+import functools as _functools
+
+_HARDWARE_FITS_FILE = Path(__file__).parent.parent.parent / "llmfit" / "data" / "hardware_fits.json"
+_DEPRIORITIZE_FITS = {"marginal", "none"}  # fits to push to end of fallback chain
+
+
+@_functools.lru_cache(maxsize=1)
+def _load_hardware_fits() -> dict:
+    """Load llmfit hardware fitness cache (cached for process lifetime)."""
+    if not _HARDWARE_FITS_FILE.exists():
+        return {}
+    try:
+        with open(_HARDWARE_FITS_FILE) as _f:
+            return json.load(_f)
+    except Exception:
+        return {}
+
+
+def get_hardware_fit(model_id: str) -> str:
+    """
+    Return the canonical fit string for a model_id (e.g. "good", "marginal", "none").
+    Looks up the hardware_fit field added by integrate.py in config.json.
+    Falls back to "unknown" if not found.
+    """
+    try:
+        cfg = load_config()
+        for entry in cfg.get("models", []):
+            eid = entry.get("id", "")
+            provider = entry.get("provider", "")
+            # Match by full "provider/id" or bare "id"
+            full_id = f"{provider}/{eid}" if provider else eid
+            if model_id in (eid, full_id) or full_id.endswith(model_id):
+                hw = entry.get("hardware_fit", {})
+                return hw.get("fit", "unknown")
+    except Exception:
+        pass
+    return "unknown"
+
+
+def rerank_fallback_chain(chain: list) -> list:
+    """
+    Move models with fit="marginal" or fit="none" to the end of the fallback chain.
+    Models with unknown/good/perfect fit keep their original order.
+    This does NOT remove any models — just reranks for hardware awareness.
+    """
+    fits = [(model_id, get_hardware_fit(model_id)) for model_id in chain]
+    preferred = [mid for mid, fit in fits if fit not in _DEPRIORITIZE_FITS]
+    deprioritized = [mid for mid, fit in fits if fit in _DEPRIORITIZE_FITS]
+    return preferred + deprioritized
+# [llmfit-integration-end]
+
     text = task_description.lower()
     return any(re.search(p, text) for p in _CODING_PATTERNS)
 
@@ -149,6 +220,42 @@ def validate_payload(payload_json):
     return True, f"✅ Model set: {model}"
 
 
+def _health_check_and_reroute(model_id: str, config: dict, tier: str) -> str:
+    """
+    Proactive health-based routing.
+    If the chosen provider is rate-limited or has too many active sessions,
+    walk the fallback chain until we find a healthy one.
+    Returns the best healthy model_id available.
+    """
+    try:
+        from provider_health import is_healthy, pick_healthy
+    except ImportError:
+        sys.path.insert(0, str(SCRIPT_DIR))
+        try:
+            from provider_health import is_healthy, pick_healthy
+        except ImportError:
+            return model_id  # health module not available, pass through
+
+    healthy, reason = is_healthy(model_id)
+    if healthy:
+        return model_id
+
+    # Primary is degraded — walk fallback chain
+    rules = config.get("routing_rules", {}).get(tier, {})
+    fallback_chain = rules.get("fallback_chain", [])
+    candidates = [model_id] + fallback_chain
+
+    chosen = pick_healthy(candidates)
+    if chosen and chosen != model_id:
+        print(f"⚠️  {model_id.split('/')[0]} is degraded ({reason})", file=sys.stderr)
+        print(f"   → Rerouting to: {chosen}", file=sys.stderr)
+        return chosen
+
+    # All degraded — return original and let caller handle failure
+    print(f"⚠️  All providers degraded for tier {tier}, using {model_id} anyway", file=sys.stderr)
+    return model_id
+
+
 def main():
     args = sys.argv[1:]
 
@@ -176,6 +283,8 @@ def main():
         if not model_id:
             rules = config.get("routing_rules", {}).get(tier, {})
             model_id = rules.get("primary", "anthropic-proxy-4/glm-4.7")
+        # Health check — skip degraded providers proactively
+        model_id = _health_check_and_reroute(model_id, config, tier)
         print(model_id)
         sys.exit(0)
 
@@ -188,8 +297,12 @@ def main():
         rules = config.get("routing_rules", {}).get(tier, {})
         model_id = rules.get("primary", "anthropic-proxy-4/glm-4.7")
 
+    # Health check — skip degraded providers proactively
+    model_id = _health_check_and_reroute(model_id, config, tier)
+
     icon = TIER_COLORS.get(tier, "⚪")
     fallback_chain = config.get("routing_rules", {}).get(tier, {}).get("fallback_chain", [])
+    fallback_chain = rerank_fallback_chain(fallback_chain)  # [llmfit-rerank-applied]
 
     print(f"\n{icon} Task classified as: {tier} (confidence: {confidence})")
     print(f"💰 Recommended model: {model_id}")

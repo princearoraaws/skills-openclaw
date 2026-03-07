@@ -271,3 +271,15 @@ To preserve a model even if it fails discovery:
   "pinned": true  // Never remove during auto-update
 }
 ```
+
+## ⚠️ Known Gap — Proactive Health-Based Routing (2026-03-04)
+Current router is **reactive** not **proactive**:
+- Fallback only fires AFTER a 429 is received
+- No awareness of concurrent sessions on same proxy
+- No cooldown tracking after rate-limit events
+
+**Needed improvements:**
+1. Track last-429 timestamp per provider → skip if within cooldown window
+2. Track active concurrent spawns per provider → if >1 active, route to OAuth
+3. Before spawning N parallel agents, check if single provider can handle N concurrent
+4. Expose `router.get_best_available(n_concurrent=2)` API
