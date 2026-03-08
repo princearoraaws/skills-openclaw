@@ -7,13 +7,13 @@ homepage: https://www.healthclaw.ai
 source: https://github.com/avansaber/healthclaw-vet
 tier: 4
 category: healthcare
-requires: [healthclaw, erpclaw-setup, erpclaw-gl, erpclaw-selling]
+requires: [erpclaw, healthclaw]
 database: ~/.openclaw/erpclaw/data.sqlite
 user-invocable: true
 tags: [healthclaw, veterinary, vet, animal, boarding, kennel, dosing, weight, species, microchip, owner]
 scripts:
   - scripts/db_query.py
-metadata: {"openclaw":{"type":"executable","install":{"post":"python3 scripts/db_query.py --action status"},"requires":{"bins":["python3"],"env":[],"optionalEnv":["ERPCLAW_DB_PATH"]},"os":["darwin","linux"]}}
+metadata: {"openclaw":{"type":"executable","install":{"post":"python3 init_db.py && python3 scripts/db_query.py --action status"},"requires":{"bins":["python3"],"env":[],"optionalEnv":["ERPCLAW_DB_PATH"]},"os":["darwin","linux"]}}
 ---
 
 # healthclaw-vet
@@ -25,7 +25,7 @@ All animal data links to HealthClaw core patients. Financial transactions post t
 ## Security Model
 
 - **Local-only**: All data stored in `~/.openclaw/erpclaw/data.sqlite`
-- **No credentials required**: Uses erpclaw_lib shared library (installed by erpclaw-setup)
+- **No credentials required**: Uses erpclaw_lib shared library (installed by erpclaw)
 - **SQL injection safe**: All queries use parameterized statements
 - **Zero network calls**: No external API calls in any code path
 
