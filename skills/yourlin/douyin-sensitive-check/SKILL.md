@@ -1,6 +1,18 @@
 ---
 name: douyin-sensitive-check
 description: 抖音/短视频违禁词和敏感词检测（本地词库版，无需 API Key）。每天首次使用自动从 GitHub 开源词库更新本地缓存，离线检测文案合规性。支持多词库合并（广告极限词、平台限流词、暴恐、色情、涉枪涉爆等）。使用场景：(1) 生成短视频文案后自动检测违禁词，(2) 用户要求检查某段文字是否有问题，(3) 抖音/快手/B站内容合规审核，(4) 直播话术自查。触发词：违禁词、敏感词、检测、合规、抖音风控、限流词、能不能发。
+metadata:
+  openclaw:
+    emoji: "🚨"
+    requires:
+      bins: ["python3"]
+    platform: ["macos", "linux"]
+    data: ["data/"]
+    network:
+      description: "每天首次使用时从 raw.githubusercontent.com 拉取开源词库更新（3 个公开仓库），无数据上传。网络失败时自动降级为本地缓存，不影响使用。"
+      hosts: ["raw.githubusercontent.com"]
+      trigger: "daily-first-use"
+      optional: true
 ---
 
 # 抖音违禁词检测 Skill（开源词库版）

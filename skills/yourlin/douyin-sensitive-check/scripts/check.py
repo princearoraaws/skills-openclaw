@@ -186,8 +186,8 @@ def main():
         return
 
     if "--update" in sys.argv:
-        from update_words import update_words
-        update_words(force=True)
+        from update_words import update_words as _update_words
+        _update_words(force=True)
         return
 
     # 读取输入文案

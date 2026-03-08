@@ -67,6 +67,20 @@ python3 $SKILL/scripts/check.py --status
 📊 检测字数: 20 字 | 风险词: 3 个
 ```
 
+## 隐私与网络说明
+
+本 skill 仅在以下情况发起网络请求：
+
+- 每天**首次使用时**自动从 `raw.githubusercontent.com` 拉取词库更新（3 个公开仓库）
+- 请求目标均为公开 GitHub 仓库的原始文本文件，**无任何数据上传**
+- 网络失败时自动降级为本地缓存，不影响正常使用
+- 如需**完全离线使用**，可手动维护 `data/sensitive_words.txt`，将 `data/.update_state.json` 中 `last_update` 设为未来日期即可禁用自动更新
+
+```json
+// data/.update_state.json — 设置此值可禁用自动更新
+{ "last_update": "2099-12-31", "word_count": 12345 }
+```
+
 ## License
 
 MIT
