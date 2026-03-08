@@ -1,0 +1,11 @@
+{
+  "owner": "jzakirov",
+  "slug": "baserow-cli-tool",
+  "displayName": "Baserow CLI",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1772750670512,
+    "commit": null
+  },
+  "history": []
+}
