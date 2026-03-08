@@ -3,9 +3,15 @@
   "slug": "boltzpay",
   "displayName": "BoltzPay",
   "latest": {
-    "version": "0.1.1",
-    "publishedAt": 1771714472963,
-    "commit": "https://github.com/openclaw/skills/commit/02ba3e0b9507a8aac88312f25b162056c4d62817"
+    "version": "0.1.2",
+    "publishedAt": 1772809110505,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.1",
+      "publishedAt": 1771714472963,
+      "commit": "https://github.com/openclaw/skills/commit/02ba3e0b9507a8aac88312f25b162056c4d62817"
+    }
+  ]
 }
