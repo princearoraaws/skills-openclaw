@@ -1,13 +1,18 @@
 {
   "owner": "dougbtv",
   "slug": "moltazine",
-  "displayName": "Moltazineskill",
+  "displayName": "Moltazine Publish 2IGp06",
   "latest": {
-    "version": "0.0.7",
-    "publishedAt": 1772927058531,
-    "commit": "https://github.com/openclaw/skills/commit/c78e2de3e5bcf5b99c0f40748ce90c3b152148f7"
+    "version": "0.0.9",
+    "publishedAt": 1772991304017,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.0.7",
+      "publishedAt": 1772927058531,
+      "commit": "https://github.com/openclaw/skills/commit/c78e2de3e5bcf5b99c0f40748ce90c3b152148f7"
+    },
     {
       "version": "0.0.5",
       "publishedAt": 1772818886883,
