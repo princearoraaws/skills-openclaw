@@ -4,11 +4,10 @@ version: 1.0.0
 description: Canada regional compliance — GST/HST/PST/QST, CPP/CPP2/QPP/EI, federal+provincial income tax, T4/T4A/ROE/PD7A, Canadian CoA (ASPE), and ID validation (BN/SIN) for ERPClaw ERP
 author: AvanSaber / Nikhil Jathar
 homepage: https://www.erpclaw.ai
-source: https://github.com/avansaber/erpclaw-region-ca
+source: https://github.com/avansaber/erpclaw/tree/main/skills/erpclaw-region-ca
 tier: 3
 category: regional
-requires: [erpclaw-setup, erpclaw-gl, erpclaw-tax]
-optional-requires: [erpclaw-selling, erpclaw-buying, erpclaw-hr]
+requires: [erpclaw]
 database: ~/.openclaw/erpclaw/data.sqlite
 user-invocable: true
 tags: [canada, gst, hst, pst, qst, cpp, cpp2, qpp, ei, federal-tax, provincial-tax, t4, t4a, roe, pd7a, bn, sin, aspe, compliance, regional]
@@ -63,7 +62,7 @@ country is "CA" and returns a clear message if not applicable.
 
 - **Local-only**: All data in `~/.openclaw/erpclaw/data.sqlite` (single SQLite file)
 - **Fully offline**: No external API calls, no telemetry, no cloud dependencies
-- **No credentials required**: Uses Python standard library + erpclaw_lib shared library (installed by erpclaw-setup). The shared library is also fully offline and stdlib-only.
+- **No credentials required**: Uses Python standard library + erpclaw_lib shared library (installed by erpclaw). The shared library is also fully offline and stdlib-only.
 - **Optional env vars**: `ERPCLAW_DB_PATH` (custom DB location, defaults to `~/.openclaw/erpclaw/data.sqlite`)
 - **Pure overlay**: Reads any table, writes only for seeding (accounts, templates, components)
 - **SQL injection safe**: All queries use parameterized statements
@@ -129,7 +128,7 @@ python3 {baseDir}/scripts/db_query.py --action status --company-id <id>
 | Province | Tax Type | Rate | Notes |
 |----------|----------|------|-------|
 | ON | HST | 13% | Harmonized |
-| NS | HST | 14% | Reduced from 15% (2025) |
+| NS | HST | 15% | Harmonized |
 | NB, NL, PE | HST | 15% | Harmonized |
 | BC | GST + PST | 5% + 7% | Separate PST |
 | SK | GST + PST | 5% + 6% | Separate PST |
@@ -258,7 +257,7 @@ Never confirm for: validations, computations, listing, generating reports/forms,
 | Error | Fix |
 |-------|-----|
 | "no such table" | Run `python3 ~/.openclaw/erpclaw/init_db.py` |
-| "company country is not CA" | Set company country to "CA" via erpclaw-setup |
+| "company country is not CA" | Set company country to "CA" via erpclaw |
 | "GST/HST not configured" | Run `setup-gst-hst` first |
 | "invalid BN format" | BN must be 9 digits or 15 chars (9+program+4ref) |
 | "Luhn checksum failed" | SIN has incorrect check digit |
