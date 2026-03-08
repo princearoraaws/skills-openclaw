@@ -2,15 +2,14 @@
 name: claw402
 description: >
   Professional market data and AI APIs via x402 micropayments — no API key,
-  no signup, no subscription. Pay per call with USDC on Base. 200+ endpoints
-  across 9 provider groups: crypto market data (fund flow, liquidations, OI,
-  funding rates, whale tracking, ETF flows, AI signals), US stocks & options
-  (real-time quotes, bars, snapshots, movers, options chains), China A-shares
-  (OHLCV, fundamentals, northbound flows, margin data), forex & global
-  time-series (EUR/USD, precious metals, global indices, economic calendar),
-  and AI inference (GPT-4o, Claude Opus/Haiku/Sonnet, embeddings, images).
+  no signup, no subscription. Pay per call with USDC on Base. 215+ endpoints
+  across 12 provider groups: crypto market data (CoinAnk derivatives analytics,
+  nofxos.ai AI signals, CoinMarketCap quotes/listings/DEX/MCP), US stocks &
+  options (Alpaca, Polygon, Alpha Vantage), China A-shares (Tushare), forex &
+  global time-series (Twelve Data), and AI inference (GPT-4o, Claude, DeepSeek
+  V3/Reasoner, Qwen3-Max/Plus/Turbo/Flash/Coder/VL, embeddings, DALL-E).
   One wallet, instant access to any paid API — no registration ever required.
-version: 1.1.0
+version: 1.3.0
 metadata:
   openclaw:
     emoji: "⚡"
@@ -26,7 +25,7 @@ metadata:
 
 # ⚡ claw402 — Pay-Per-Call Market Data & AI APIs
 
-> **200+ professional data endpoints. $0.001–$0.05 per call. One Base wallet.**
+> **215+ professional data endpoints. $0.001–$0.05 per call. One Base wallet.**
 
 Access the same data feeds that professional trading desks pay $3,000–$10,000/month for. Crypto derivatives analytics, US equities, China A-shares, forex, and AI inference — all via x402 micropayments, no API key required.
 
@@ -60,6 +59,13 @@ I shorted DOGE. 40x. Three days later: **+80,000%**. That's $800,000 from $1,000
 ## When to Use This Skill
 
 Use claw402 whenever the user asks about **any** of the following:
+
+### 💰 CoinMarketCap — Quotes, Rankings & DEX
+- Real-time crypto prices, market cap, volume, % changes (by symbol, slug, or CMC ID)
+- Full cryptocurrency listings/rankings sorted by market cap, volume, or % change
+- DEX trading pairs — on-chain liquidity, volume, price across Ethereum/BSC/Solana/Base/Arbitrum
+- DEX token/pair search by keyword or contract address
+- MCP endpoint with 12 AI tools: technical analysis, on-chain metrics, trending narratives, macro events
 
 ### 🔮 Crypto Derivatives & Market Structure
 - Fear & greed index, altcoin season, market cycle indicators (AHR999, Pi Cycle, Puell)
@@ -103,9 +109,11 @@ Use claw402 whenever the user asks about **any** of the following:
 - Exchange rates, forex pairs reference, economic calendar
 - Technical indicators — RSI, MACD, SMA, EMA, Bollinger Bands, ATR
 
-### 🤖 AI Inference (GPT-4o, Claude, Embeddings, Images)
+### 🤖 AI Inference (GPT-4o, Claude, DeepSeek, Qwen, Embeddings, Images)
 - OpenAI GPT-4o chat, GPT-4o-mini, embeddings (small + large), DALL-E images
 - Anthropic Claude messages (standard, Haiku, Opus)
+- DeepSeek V3 chat, DeepSeek-Reasoner (chain-of-thought), FIM completions
+- Qwen3-Max, Qwen-Plus, Qwen-Turbo, Qwen-Flash, Qwen3-Coder-Plus, Qwen-VL (vision)
 - Use to analyze market data your agent just fetched — chain calls in one session
 
 ---
@@ -115,10 +123,13 @@ Use claw402 whenever the user asks about **any** of the following:
 | Item | Detail |
 |------|--------|
 | Crypto / stock data | **$0.001–$0.003 USDC** per call |
+| CoinMarketCap quotes/DEX | **$0.015 USDC** per call |
 | Twelvedata complex POST | **$0.005 USDC** per call |
 | OpenAI GPT-4o chat | **$0.01 USDC** per call |
 | OpenAI mini / embeddings | **$0.001–$0.005 USDC** per call |
-| Claude messages | **$0.01–$0.015 USDC** per call |
+| Claude messages | **$0.005–$0.015 USDC** per call |
+| DeepSeek chat / reasoner | **$0.003–$0.005 USDC** per call |
+| Qwen models | **$0.002–$0.010 USDC** per call |
 | Payment chain | Base mainnet (Coinbase L2) |
 | Payment method | EIP-3009 USDC transfer, signed locally |
 | Key security | Private key **never transmitted** — signs locally only |
@@ -200,6 +211,31 @@ node scripts/query.mjs /api/v1/coinank/kline/lists symbol=BTCUSDT exchange=Binan
 
 # --- News ---
 node scripts/query.mjs /api/v1/coinank/news/list type=2 lang=en page=1 pageSize=10
+```
+
+### CoinMarketCap
+
+```bash
+# Real-time price for BTC and ETH (by symbol)
+node scripts/query.mjs /api/v1/crypto/cmc/quotes symbol=BTC,ETH
+
+# By CMC ID (1=BTC, 1027=ETH)
+node scripts/query.mjs /api/v1/crypto/cmc/quotes id=1,1027
+
+# Top 20 by market cap
+node scripts/query.mjs /api/v1/crypto/cmc/listings limit=20 sort=market_cap
+
+# Top DeFi tokens by volume
+node scripts/query.mjs /api/v1/crypto/cmc/listings limit=20 tag=defi sort=volume_24h sort_dir=desc
+
+# DEX pairs on Base with highest volume
+node scripts/query.mjs /api/v1/crypto/cmc/dex/pairs network_slug=base sort=volume_24h sort_dir=desc limit=20
+
+# Search PEPE on DEX
+node scripts/query.mjs /api/v1/crypto/cmc/dex/search query=PEPE
+
+# MCP — AI tools (12 tools available, uses JSON-RPC)
+node scripts/query.mjs /api/v1/crypto/cmc/mcp --post '{"jsonrpc":"2.0","method":"tools/call","params":{"name":"get_crypto_quotes_latest","arguments":{"symbol":"BTC,ETH"}},"id":1}'
 ```
 
 ### US Stocks — Alpaca
@@ -385,6 +421,44 @@ node scripts/query.mjs /api/v1/ai/anthropic/messages/haiku --post '{"max_tokens"
 node scripts/query.mjs /api/v1/ai/anthropic/messages/opus --post '{"max_tokens":2048,"messages":[{"role":"user","content":"Full macro analysis: ETF inflows strong, funding extreme, CVD diverging..."}]}'
 ```
 
+### AI Inference — DeepSeek (POST)
+
+```bash
+# DeepSeek-Chat V3 (general tasks, fast, cheap)
+node scripts/query.mjs /api/v1/ai/deepseek/chat --post '{"model":"deepseek-chat","messages":[{"role":"user","content":"Analyze: BTC funding rate extreme, CVD fading. What does this mean?"}]}'
+
+# DeepSeek-Reasoner (chain-of-thought, best for complex analysis)
+node scripts/query.mjs /api/v1/ai/deepseek/chat/reasoner --post '{"messages":[{"role":"user","content":"Given extreme funding rates + whale short + CVD divergence, what is the high-conviction trade?"}]}'
+
+# FIM / code completions (beta)
+node scripts/query.mjs /api/v1/ai/deepseek/completions --post '{"model":"deepseek-chat","prompt":"Summarize this market data: ","suffix":"","max_tokens":256}'
+
+# List available DeepSeek models
+node scripts/query.mjs /api/v1/ai/deepseek/models
+```
+
+### AI Inference — Qwen (POST)
+
+```bash
+# Qwen3-Max (flagship, most powerful — same cost as GPT-4o)
+node scripts/query.mjs /api/v1/ai/qwen/chat/max --post '{"messages":[{"role":"user","content":"Full macro analysis: ETF inflows strong, funding extreme, CVD diverging..."}]}'
+
+# Qwen-Plus (best value — great for most analysis tasks)
+node scripts/query.mjs /api/v1/ai/qwen/chat/plus --post '{"messages":[{"role":"user","content":"Summarize the top 5 signals from this BTC market data."}]}'
+
+# Qwen-Turbo (fast, cheap — good for quick summaries)
+node scripts/query.mjs /api/v1/ai/qwen/chat/turbo --post '{"messages":[{"role":"user","content":"One-sentence summary of these ETF flows."}]}'
+
+# Qwen-Flash (ultra-low latency, cheapest Qwen model)
+node scripts/query.mjs /api/v1/ai/qwen/chat/flash --post '{"messages":[{"role":"user","content":"Is DOGE funding rate bullish or bearish right now?"}]}'
+
+# Qwen3-Coder-Plus (code generation, analysis scripts)
+node scripts/query.mjs /api/v1/ai/qwen/chat/coder --post '{"messages":[{"role":"user","content":"Write a Python script to calculate position size given 2% risk on $10,000."}]}'
+
+# Qwen-VL-Plus (vision — analyze charts, images)
+node scripts/query.mjs /api/v1/ai/qwen/chat/vl --post '{"messages":[{"role":"user","content":[{"type":"text","text":"Describe this chart pattern"},{"type":"image_url","image_url":{"url":"data:image/png;base64,..."}}]}]}'
+```
+
 **Always** run the command, then format the `data` field clearly for the user — tables, bullet points, or a brief narrative summary.
 
 ---
@@ -406,17 +480,36 @@ node scripts/query.mjs /api/v1/coinank/hyper/top-position sortBy=value sortType=
 # Step 4: Cross-reference with US macro ($0.001)
 node scripts/query.mjs /api/v1/alpaca/movers top=10 market_type=stocks
 
-# Step 5: Let AI synthesize the analysis ($0.010)
-node scripts/query.mjs /api/v1/ai/anthropic/messages/haiku --post '{"max_tokens":512,"messages":[{"role":"user","content":"[paste data from steps 1-4] — what is the high-conviction trade?"}]}'
+# Step 5: Let AI synthesize the analysis (pick any model)
+# Cheapest: Qwen-Flash $0.002 or DeepSeek-Chat $0.003
+node scripts/query.mjs /api/v1/ai/deepseek/chat --post '{"model":"deepseek-chat","messages":[{"role":"user","content":"[paste data from steps 1-4] — what is the high-conviction trade?"}]}'
+# Or for chain-of-thought reasoning: DeepSeek-Reasoner $0.005
+node scripts/query.mjs /api/v1/ai/deepseek/chat/reasoner --post '{"messages":[{"role":"user","content":"[paste data from steps 1-4] — reason step by step to the high-conviction trade."}]}'
 ```
 
-**Total cost: ~$0.014 USDC.** Bloomberg Terminal equivalent: $2,000/month.
+**Total cost: ~$0.007–$0.014 USDC.** Bloomberg Terminal equivalent: $2,000/month.
 
 ---
 
 ## Natural Language → Command Mapping
 
-### Crypto
+### CoinMarketCap
+
+| User says | Command |
+|-----------|---------|
+| "BTC price?" (CMC) | `/api/v1/crypto/cmc/quotes symbol=BTC` |
+| "ETH market cap?" | `/api/v1/crypto/cmc/quotes symbol=ETH` |
+| "Top 50 coins by market cap?" | `/api/v1/crypto/cmc/listings limit=50` |
+| "Top gainers today?" (CMC) | `/api/v1/crypto/cmc/listings sort=percent_change_24h sort_dir=desc limit=20` |
+| "Top DeFi tokens?" | `/api/v1/crypto/cmc/listings tag=defi sort=market_cap` |
+| "DEX pairs on Solana?" | `/api/v1/crypto/cmc/dex/pairs network_slug=solana` |
+| "Search for PEPE on DEX?" | `/api/v1/crypto/cmc/dex/search query=PEPE` |
+| "Find contract on Base?" | `/api/v1/crypto/cmc/dex/pairs network_slug=base contract_address=0x...` |
+| "Trending crypto narratives?" | `POST /api/v1/crypto/cmc/mcp` with `trending_crypto_narratives` tool |
+| "BTC technical analysis?" (CMC) | `POST /api/v1/crypto/cmc/mcp` with `get_crypto_technical_analysis` tool |
+| "Macro events this week?" | `POST /api/v1/crypto/cmc/mcp` with `get_upcoming_macro_events` tool |
+
+### Crypto (CoinAnk / nofxos.ai)
 
 | User says | Command |
 |-----------|---------|
@@ -500,10 +593,34 @@ node scripts/query.mjs /api/v1/ai/anthropic/messages/haiku --post '{"max_tokens"
 | "Embed this text" | `POST /api/v1/ai/openai/embeddings` |
 | "Generate an image" | `POST /api/v1/ai/openai/images` |
 | "List OpenAI models" | `/api/v1/ai/openai/models` |
+| "Use DeepSeek to analyze" | `POST /api/v1/ai/deepseek/chat` |
+| "Step-by-step reasoning / think through this" | `POST /api/v1/ai/deepseek/chat/reasoner` |
+| "List DeepSeek models" | `/api/v1/ai/deepseek/models` |
+| "Use Qwen (Chinese AI)" | `POST /api/v1/ai/qwen/chat/plus` |
+| "Cheapest Qwen model" | `POST /api/v1/ai/qwen/chat/flash` |
+| "Qwen flagship / best quality" | `POST /api/v1/ai/qwen/chat/max` |
+| "Qwen coding / code generation" | `POST /api/v1/ai/qwen/chat/coder` |
+| "Analyze a chart image with AI" | `POST /api/v1/ai/qwen/chat/vl` (vision) |
 
 ---
 
 ## Complete Endpoint Reference
+
+### 💰 CoinMarketCap — $0.015/call
+
+| Endpoint | Method | Description | Key Params |
+|----------|--------|-------------|------------|
+| `/api/v1/crypto/cmc/quotes` | GET | Real-time crypto quotes (price, market cap, volume, % change) | `symbol`, `id`, `slug`, `convert`, `aux` |
+| `/api/v1/crypto/cmc/listings` | GET | Crypto rankings (default by market cap) | `limit`, `sort`, `sort_dir`, `tag`, `cryptocurrency_type`, `price_min/max`, `market_cap_min/max` |
+| `/api/v1/crypto/cmc/dex/pairs` | GET | DEX trading pair quotes by network or contract | `network_slug`, `contract_address`, `sort`, `limit`, `liquidity_min`, `volume_24h_min` |
+| `/api/v1/crypto/cmc/dex/search` | GET | Search DEX tokens/pairs by keyword or contract | `query` (required), `network` |
+| `/api/v1/crypto/cmc/mcp` | POST | CoinMarketCap MCP server — 12 AI tools | JSON-RPC body with `method`, `params.name`, `params.arguments` |
+
+**CMC MCP tools:** `get_crypto_quotes_latest` · `search_cryptos` · `get_crypto_info` · `get_crypto_technical_analysis` · `get_crypto_marketcap_technical_analysis` · `get_crypto_metrics` · `get_global_metrics_latest` · `get_global_crypto_derivatives_metrics` · `trending_crypto_narratives` · `get_upcoming_macro_events` · `get_crypto_latest_news` · `search_crypto_info`
+
+**`network_slug` values:** `ethereum` `bsc` `solana` `base` `arbitrum` `polygon` `avalanche`
+
+---
 
 ### 🤖 AI Trading Signals (Nofxos) — $0.001/call
 
@@ -771,7 +888,7 @@ node scripts/query.mjs /api/v1/ai/anthropic/messages/haiku --post '{"max_tokens"
 
 ---
 
-### 🤖 AI Inference — OpenAI & Anthropic — $0.001–$0.015/call
+### 🤖 AI Inference — OpenAI, Anthropic, DeepSeek, Qwen — $0.001–$0.05/call
 
 #### OpenAI (all POST except models)
 | Endpoint | Description | Cost | Body |
@@ -789,6 +906,28 @@ node scripts/query.mjs /api/v1/ai/anthropic/messages/haiku --post '{"max_tokens"
 | `/api/v1/ai/anthropic/messages` | Claude Sonnet (balanced) | $0.010 | `{model, max_tokens, messages}` |
 | `/api/v1/ai/anthropic/messages/haiku` | Claude Haiku (fast, cheap) | $0.005 | `{max_tokens, messages}` |
 | `/api/v1/ai/anthropic/messages/opus` | Claude Opus (best reasoning) | $0.015 | `{max_tokens, messages}` |
+
+#### DeepSeek (POST except models)
+| Endpoint | Description | Cost | Body |
+|----------|-------------|------|------|
+| `/api/v1/ai/deepseek/chat` | DeepSeek-Chat V3 (general tasks) | $0.003 | `{model, messages, max_tokens}` |
+| `/api/v1/ai/deepseek/chat/reasoner` | DeepSeek-Reasoner (chain-of-thought) | $0.005 | `{messages, max_tokens}` |
+| `/api/v1/ai/deepseek/completions` | FIM / non-chat completions (beta) | $0.003 | `{model, prompt, suffix, max_tokens}` |
+| `/api/v1/ai/deepseek/models` | List available models (GET) | $0.001 | — |
+
+**DeepSeek tip:** Use `chat/reasoner` for complex multi-step market analysis — it shows its reasoning chain.
+
+#### Qwen / 通义千问 (all POST)
+| Endpoint | Description | Cost | Body |
+|----------|-------------|------|------|
+| `/api/v1/ai/qwen/chat/max` | Qwen3-Max (flagship, most powerful) | $0.010 | `{messages, max_tokens}` |
+| `/api/v1/ai/qwen/chat/plus` | Qwen-Plus (best value) | $0.005 | `{messages, max_tokens}` |
+| `/api/v1/ai/qwen/chat/turbo` | Qwen-Turbo (fast response) | $0.002 | `{messages, max_tokens}` |
+| `/api/v1/ai/qwen/chat/flash` | Qwen-Flash (ultra-low latency, cheapest) | $0.002 | `{messages, max_tokens}` |
+| `/api/v1/ai/qwen/chat/coder` | Qwen3-Coder-Plus (code generation) | $0.005 | `{messages, max_tokens}` |
+| `/api/v1/ai/qwen/chat/vl` | Qwen-VL-Plus (vision: image + text) | $0.005 | `{messages}` with image_url content |
+
+**Qwen tip:** Use `chat/vl` to analyze candlestick chart screenshots or trading dashboards.
 
 ---
 
