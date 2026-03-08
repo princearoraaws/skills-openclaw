@@ -1,0 +1,11 @@
+{
+  "owner": "gora050",
+  "slug": "databricks",
+  "displayName": "Databricks",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1772978563327,
+    "commit": null
+  },
+  "history": []
+}
