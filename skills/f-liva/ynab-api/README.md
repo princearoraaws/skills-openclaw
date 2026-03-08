@@ -1,101 +1,48 @@
-# YNAB Budget Management Skill
+# YNAB API Skill for Claude Code
 
-Complete automation toolkit for YNAB (You Need A Budget) with goal tracking, spending analysis, and daily budget reports.
+Manage your [YNAB](https://www.ynab.com/) budget directly from Claude Code. Add transactions, track goals, monitor spending, create transfers, and generate reports.
 
-## Features
+## Installation
 
-- 📊 **Goal Progress Tracking** with visual bars
-- 📅 **Scheduled Transaction Alerts** (never miss bills)
-- 💰 **Age of Money Monitoring** (financial health)
-- 📈 **Month-over-Month Comparison** (spot trends)
-- ⚠️ **Overspending Alerts** (stay on budget)
-- 🔄 **Automated Daily Check** (morning WhatsApp summary)
-- 🎯 **Smart Categorization** (learn from history)
-- 💸 **Real Transfer Support** (properly linked)
-
-## Quick Start
-
-1. Install the skill:
 ```bash
 clawhub install ynab-api
 ```
 
-2. Get your YNAB API token: https://app.ynab.com/settings/developer
+## Configuration
 
-3. Create config file `~/.config/ynab/config.json`:
+Get your API token from https://app.ynab.com/settings/developer and create `~/.config/ynab/config.json`:
+
 ```json
 {
-  "api_key": "YOUR_TOKEN_HERE",
+  "api_key": "YOUR_YNAB_TOKEN",
   "budget_id": "YOUR_BUDGET_ID"
 }
 ```
 
-4. Test it:
-```bash
-/home/node/clawd/skills/ynab-api/scripts/goals-progress.sh
-```
+Or set `YNAB_API_KEY` and `YNAB_BUDGET_ID` environment variables.
 
-5. Set up automated reports (recommended):
-```bash
-# One-command setup - creates all recommended cron jobs
-/home/node/clawd/skills/ynab-api/scripts/setup-automation.sh
+## What it does
 
-# Preview first (dry run)
-/home/node/clawd/skills/ynab-api/scripts/setup-automation.sh --dry-run
-```
+Once installed, Claude Code can:
 
-This creates:
-- Daily Budget Check (7:15 AM)
-- Weekly Spending Review (Monday 8 AM)
-- Mid-Month Goal Check (15th, 9 AM)
-- Upcoming Bills Alert (10 AM daily)
+- **Add transactions** -- "add a 10 euro expense at Coffee Shop"
+- **Check budget** -- "how much did I spend this month?" / "check my budget"
+- **Track goals** -- "how are my budget goals doing?"
+- **Upcoming bills** -- "what bills are coming up?"
+- **Compare months** -- "compare this month vs last month"
+- **Create transfers** -- properly linked between YNAB accounts
 
-## Available Scripts
+## Included Scripts
 
-All scripts in `scripts/` directory:
+- `daily-budget-check.sh` -- Morning budget overview
+- `goals-progress.sh` -- Visual goal progress bars
+- `scheduled-upcoming.sh` -- Upcoming scheduled transactions
+- `month-comparison.sh` -- Month-over-month spending analysis
+- `transfer.sh` -- Properly linked account transfers
+- `ynab-helper.sh` -- General helper (search, categories, etc.)
 
-- `goals-progress.sh` - Show goal progress with visual bars
-- `scheduled-upcoming.sh` - List upcoming scheduled transactions
-- `month-comparison.sh` - Compare spending month-over-month
-- `transfer.sh` - Create proper account transfers
-- `daily-budget-check.sh` - Comprehensive morning report
-
-## Full Documentation
-
-See `SKILL.md` for:
-- Complete API best practices
-- Transfer transaction guide (critical!)
-- Automation setup examples
-- Troubleshooting
-- Security tips
-
-## Example Daily Report
-
-```
-☀️ BUDGET CHECK MATTUTINO
-
-💰 Age of Money: 141 giorni ✅
-
-📅 Prossime uscite (7gg)
-• Domani: Netflix €12.99
-
-⚠️ Alert Budget Superato
-• Eating Out: €178 / €150 (+€28)
-
-🎯 Obiettivi in ritardo
-• Gym: 8% (€22/€270)
-```
+All scripts output to stdout and can be scheduled with any cron/scheduler.
 
 ## License
 
-MIT License - Free to use and modify
-
-## Support
-
-- YNAB API Docs: https://api.ynab.com
-- ClawHub: https://clawhub.com
-- Issues: Open on GitHub
-
----
-
-Made with ❤️ for the OpenClaw community
+MIT

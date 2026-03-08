@@ -3,11 +3,16 @@
   "slug": "ynab-api",
   "displayName": "Ynab Api",
   "latest": {
-    "version": "2.1.1",
-    "publishedAt": 1771752228914,
-    "commit": "https://github.com/openclaw/skills/commit/cf4ab96c2e15be53dd75bff17e52c7e16184e9c4"
+    "version": "2.3.0",
+    "publishedAt": 1772807760548,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.1.1",
+      "publishedAt": 1771752228914,
+      "commit": "https://github.com/openclaw/skills/commit/cf4ab96c2e15be53dd75bff17e52c7e16184e9c4"
+    },
     {
       "version": "2.1.0",
       "publishedAt": 1771675327209,

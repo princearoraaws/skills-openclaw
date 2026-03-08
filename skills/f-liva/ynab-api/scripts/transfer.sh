@@ -4,15 +4,15 @@
 
 set -e
 
-# Load config
-if [ -f ~/.config/ynab/config.json ]; then
-  API_KEY=$(jq -r '.api_key' ~/.config/ynab/config.json)
-  BUDGET_ID=$(jq -r '.budget_id // "last-used"' ~/.config/ynab/config.json)
-elif [ -f /home/node/clawd/config/ynab.json ]; then
-  API_KEY=$(jq -r '.api_key' /home/node/clawd/config/ynab.json)
-  BUDGET_ID="${YNAB_BUDGET_ID:-last-used}"
+# Load config - env vars take priority, then config file
+if [ -n "${YNAB_API_KEY:-}" ] && [ -n "${YNAB_BUDGET_ID:-}" ]; then
+  API_KEY="$YNAB_API_KEY"
+  BUDGET_ID="$YNAB_BUDGET_ID"
+elif [ -f "${YNAB_CONFIG:-$HOME/.config/ynab/config.json}" ]; then
+  API_KEY=$(jq -r .api_key "${YNAB_CONFIG:-$HOME/.config/ynab/config.json}")
+  BUDGET_ID=$(jq -r ".budget_id // "last-used"" "${YNAB_CONFIG:-$HOME/.config/ynab/config.json}")
 else
-  echo "Error: YNAB config not found" >&2
+  echo "Error: YNAB config not found. Set YNAB_API_KEY+YNAB_BUDGET_ID or create ~/.config/ynab/config.json" >&2
   exit 1
 fi
 
