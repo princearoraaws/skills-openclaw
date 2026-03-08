@@ -50,32 +50,36 @@ node {baseDir}/skills/signalgrid-push/signalgrid-push.js --title "Attention" --b
 
 ## When to use
 
-Use this skill when the user asks to:
-
--   send a notification
--   notify me
--   send a push
--   push a message
--   alert me
--   send a signalgrid notification
--   notify my phone
+Use this skill when the user asks to:  
+&nbsp;  
+&nbsp;o   &nbsp;send a notification  
+&nbsp;o   &nbsp;notify me  
+&nbsp;o   &nbsp;send a push  
+&nbsp;o   &nbsp;push a message  
+&nbsp;o   &nbsp;alert me  
+&nbsp;o   &nbsp;send a signalgrid notification  
+&nbsp;o   &nbsp;notify my phone
 
 ## Notes
 
 -   Requires a Signalgrid account: https://web.signalgrid.co/
+&nbsp;  
+&nbsp;  
 -   Install the skill:
 
 ``` bash
 clawdhub --workdir ~/.openclaw install signalgrid-push
 ```
 
--   Ensure your OpenClaw **Tool Profile** is set to `full`  
--   Configure environment variables:
+-   And ensure your OpenClaw **Tool Profile** is set to `full`  ( Config -> Tools -> Tool Profile )  
+&nbsp;  
+-   Configure environment variables ( Config -> Environment -> Environment Variables Overrides + Add Entry):
 
 ```
-    SIGNALGRID_CLIENT_KEY=your_client_key_here
-    SIGNALGRID_CHANNEL=your_channel_name_here
+SIGNALGRID_CLIENT_KEY=your_client_key_here
+SIGNALGRID_CHANNEL=your_channel_name_here
 ````
 
+&nbsp;  
 -   Signalgrid notifications do **not** require a phone number or
     message target.
