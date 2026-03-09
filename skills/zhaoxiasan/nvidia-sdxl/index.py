@@ -7,7 +7,8 @@ from datetime import datetime
 
 # 1. Configuration - Use your nvapi- key
 API_KEY = "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"
-INVOKE_URL = "https://ai.api.nvidia.com"
+#INVOKE_URL = "https://ai.api.nvidia.com"
+INVOKE_URL = "https://ai.api.nvidia.com/v1/genai/stabilityai/stable-diffusion-xl-base"
 # Directory where OpenClaw stores session files
 WORKSPACE = os.path.expanduser("~/.openclaw/workspace")
 

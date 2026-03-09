@@ -3,9 +3,15 @@
   "slug": "nvidia-sdxl",
   "displayName": "Nvidia Sdxl",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1772990970426,
-    "commit": "https://github.com/openclaw/skills/commit/823452a6cc1c93f0f010aadd4eadbe79dee98f32"
+    "version": "1.0.2",
+    "publishedAt": 1772992063220,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1772990970426,
+      "commit": "https://github.com/openclaw/skills/commit/823452a6cc1c93f0f010aadd4eadbe79dee98f32"
+    }
+  ]
 }
