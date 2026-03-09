@@ -1,0 +1,11 @@
+{
+  "owner": "mikonos",
+  "slug": "meeting-note",
+  "displayName": "Meeting Note",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1772979343955,
+    "commit": null
+  },
+  "history": []
+}
