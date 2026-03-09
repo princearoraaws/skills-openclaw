@@ -1,0 +1,11 @@
+{
+  "owner": "palxislabs",
+  "slug": "arta",
+  "displayName": "ARTA: Agentic Real-Time Awareness",
+  "latest": {
+    "version": "0.3.0",
+    "publishedAt": 1772984581967,
+    "commit": null
+  },
+  "history": []
+}
