@@ -1,13 +1,18 @@
 {
   "owner": "davidyashar",
   "slug": "utxo-wallet",
-  "displayName": "Utxo Wallet",
+  "displayName": "UTXO Wallet",
   "latest": {
-    "version": "1.3.2",
-    "publishedAt": 1772868801382,
-    "commit": "https://github.com/openclaw/skills/commit/6c370478107cf3ca53d93f0b15c31dc549a310ae"
+    "version": "1.3.3",
+    "publishedAt": 1773037548002,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.3.2",
+      "publishedAt": 1772868801382,
+      "commit": "https://github.com/openclaw/skills/commit/6c370478107cf3ca53d93f0b15c31dc549a310ae"
+    },
     {
       "version": "1.2.0",
       "publishedAt": 1772866583878,

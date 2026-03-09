@@ -51,6 +51,26 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 const fs = __importStar(require("fs"));
 const path = __importStar(require("path"));
+// ---------------------------------------------------------------------------
+// Base URL validation (mirrors wallet-connect.ts)
+// ---------------------------------------------------------------------------
+const ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'utxo.fun'];
+function isAllowedBaseUrl(url) {
+    if (process.env.UTXO_ALLOW_CUSTOM_BASE_URL === '1')
+        return true;
+    try {
+        const parsed = new URL(url);
+        const host = parsed.hostname;
+        if (ALLOWED_HOSTS.includes(host))
+            return true;
+        if (host.endsWith('.utxo.fun'))
+            return true;
+        return false;
+    }
+    catch {
+        return false;
+    }
+}
 function findFile(name) {
     const candidates = [
         path.join(process.cwd(), name),
@@ -85,6 +105,13 @@ async function main() {
             console.error('WARNING: Passing JSON as a CLI argument is discouraged. Use --body-file instead.');
         }
     }
+    // Validate base URL to prevent sending credentials to malicious servers
+    if (!isAllowedBaseUrl(baseUrl)) {
+        console.error(`ERROR: Base URL not allowed: ${baseUrl}`);
+        console.error('Allowed: localhost, 127.0.0.1, utxo.fun, *.utxo.fun');
+        console.error('Set UTXO_ALLOW_CUSTOM_BASE_URL=1 to override.');
+        process.exit(1);
+    }
     // Read body from file if specified (avoids shell escaping issues)
     if (bodyFile) {
         const bodyPath = path.resolve(bodyFile);
@@ -118,7 +145,12 @@ async function main() {
             console.error('ERROR: .session.json has no session_token.');
             process.exit(1);
         }
-        headers['Authorization'] = `Bearer ${session.session_token}`;
+        const token = String(session.session_token).trim();
+        if (!token || /[\r\n]/.test(token)) {
+            console.error('ERROR: .session.json contains an invalid session_token.');
+            process.exit(1);
+        }
+        headers['Authorization'] = `Bearer ${token}`;
     }
     // Make the request (with 30s timeout)
     const url = `${baseUrl}${urlPath}`;
@@ -147,7 +179,12 @@ async function main() {
         }
     }
     catch (err) {
-        console.error(`Request failed: ${err.message}`);
+        if (err.name === 'AbortError') {
+            console.error(`Request timed out after 30s: ${url}`);
+        }
+        else {
+            console.error(`Request failed: ${err.message}`);
+        }
         process.exit(1);
     }
 }

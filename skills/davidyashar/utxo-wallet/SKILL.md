@@ -1,6 +1,7 @@
 ---
 name: utxo_wallet
 description: Full UTXO Exchange agent skill — wallet connect, deposit, explore trending tokens, token launch, swap (buy/sell). Everything an AI agent needs.
+license: MIT
 metadata:
   openclaw:
     emoji: "🔐"
@@ -17,7 +18,7 @@ metadata:
           description: "AES-256-GCM decryption key for .wallet.json"
           sensitive: true
         - path: .session.json
-          description: "Session token + connected address (expires after 30 min idle)"
+          description: "Session token + connected address (expires after 15 min idle)"
           sensitive: true
 ---
 
@@ -82,7 +83,7 @@ Before any operation, the agent needs an active session.
    ├─ NO  → Run wallet-connect.js --provision (creates a NEW wallet + connects)
    ├─ YES → Does .session.json exist?
               ├─ NO  → Run wallet-connect.js (reconnects existing wallet)
-              ├─ YES → Is connected_at less than 25 minutes ago?
+              ├─ YES → Is connected_at less than 12 minutes ago?
                          ├─ YES → Session active, proceed
                          ├─ NO  → Run wallet-connect.js to refresh
 ```
@@ -135,23 +136,23 @@ Response:
 
 See what is hot on UTXO Exchange. Returns tokens in three categories:
 
-- **new** (New Pairs) — Recently launched tokens, still on the bonding curve
-- **stretch** (Migrating) — Tokens past 55% bonding progress, approaching migration to full AMM
-- **graduated** (Migrated) — Tokens that completed the bonding curve and trade on the full AMM
+- **new_pairs** (New Pairs) — Recently launched tokens, still on the bonding curve
+- **migrating** (Migrating) — Tokens past 55% bonding progress, approaching migration to full AMM
+- **migrated** (Migrated) — Tokens that completed the bonding curve and trade on the full AMM
 
 ```
 exec node skills/utxo_wallet/scripts/api-call.js GET "/api/agent/trending?category=all&limit=10"
 ```
 
 Parameters (query string):
-- `category`: `new` | `stretch` | `graduated` | `all` (default: `all`)
+- `category`: `new_pairs` | `migrating` | `migrated` | `all` (default: `all`)
 - `limit`: 1 to 25 (default: 10)
 - `sort`: `default` | `volume` | `tvl` | `gainers` | `losers` (default: `default`)
 
 Default sort per category (when `sort=default`):
-- `new` — newest first (by creation time)
-- `stretch` — closest to migrating first (by bonding progress)
-- `graduated` — highest liquidity first (by TVL)
+- `new_pairs` — newest first (by creation time)
+- `migrating` — closest to migrating first (by bonding progress)
+- `migrated` — highest liquidity first (by TVL)
 
 Sort options:
 - `volume` — highest 24h trading volume first
@@ -161,8 +162,8 @@ Sort options:
 
 Examples:
 ```
-exec node skills/utxo_wallet/scripts/api-call.js GET "/api/agent/trending?category=graduated&sort=volume&limit=5"
-exec node skills/utxo_wallet/scripts/api-call.js GET "/api/agent/trending?category=new&sort=gainers&limit=10"
+exec node skills/utxo_wallet/scripts/api-call.js GET "/api/agent/trending?category=migrated&sort=volume&limit=5"
+exec node skills/utxo_wallet/scripts/api-call.js GET "/api/agent/trending?category=new_pairs&sort=gainers&limit=10"
 ```
 
 Response fields per token:
@@ -366,7 +367,7 @@ Response:
 
 ## Session Rules
 
-- **Idle timeout**: 30 minutes with no API calls → session expires
+- **Idle timeout**: 15 minutes with no API calls → session expires
 - **One session per agent**: Connecting again replaces the previous session
 - **Server restart**: All sessions are cleared — just reconnect
 - **401 = reconnect**: If any API returns 401, run wallet-connect.js and retry

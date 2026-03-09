@@ -381,7 +381,7 @@ async function doProvision(
     spark_address: data.spark_address,
     network: data.network,
     connected_at: new Date().toISOString(),
-    idle_timeout_minutes: data.session_info?.idle_timeout_minutes || 30,
+    idle_timeout_minutes: data.session_info?.idle_timeout_minutes || 15,
     base_url: baseUrl,
   };
 
@@ -481,7 +481,7 @@ async function doConnect(
     spark_address: connectData.spark_address,
     network: connectData.network,
     connected_at: new Date().toISOString(),
-    idle_timeout_minutes: connectData.session_info?.idle_timeout_minutes || 30,
+    idle_timeout_minutes: connectData.session_info?.idle_timeout_minutes || 15,
     base_url: baseUrl,
   };
 
