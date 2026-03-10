@@ -28,4 +28,4 @@ A legacy import script is included to help migrate old flat-file memories (like 
 To prevent accidental or unauthorized destruction of user data, the script enforces a strict run-time safeguard. It will not run unless you explicitly provide the `--confirm` flag and the direct target path. You **MUST** obtain explicit approval from the user before executing it.
 
 Run it via:
-`node ~/.openclaw/workspace/skills/spacetime-memory/legacy-import.js --confirm /root/.openclaw/workspace`
+`node ~/.openclaw/workspace/skills/spacetime-memory/legacy-import.js --confirm ~/.openclaw/workspace`
