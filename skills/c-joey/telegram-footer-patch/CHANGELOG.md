@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.6
+- Add install/run safety notice to docs.
+- Add preflight checks and disable Python bytecode cache writes in scripts.
+
+## 1.0.5
+- Remove Python bytecode/cache artifacts from the published package (avoid false-positive malware/suspicious flags).
+
 ## 1.0.4
 - Compatibility update for latest OpenClaw dist bundles.
 - Verified current patch flow against local OpenClaw `2026.3.7`.

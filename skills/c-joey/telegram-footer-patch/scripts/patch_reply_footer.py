@@ -1,12 +1,25 @@
 #!/usr/bin/env python3
+"""Patch OpenClaw dist JS bundles to append a Telegram private-chat footer.
+
+Safety notes:
+- This script modifies files under the OpenClaw installation directory.
+- Always run with --dry-run first to see which files would be touched.
+- The script creates timestamped backups (*.bak.telegram-footer.*) before writing.
+- If anything fails, it restores from backup automatically.
+"""
+
 import argparse
 import datetime as dt
 import glob
+import os
 import pathlib
 import re
 import shutil
 import subprocess
 import sys
+
+# Avoid generating __pycache__/*.pyc in the skill folder.
+sys.dont_write_bytecode = True
 
 MARKER_START = "/* OPENCLAW_TELEGRAM_STATUS_FOOTER_START */"
 MARKER_END = "/* OPENCLAW_TELEGRAM_STATUS_FOOTER_END */"
@@ -159,13 +172,43 @@ def patch_file(path: pathlib.Path, dry_run: bool):
     return {"status": "ok", "candidate": True, "changed": True}
 
 
+def preflight(dist: pathlib.Path, dry_run: bool) -> int:
+    print("[warn] This tool patches OpenClaw installation files (dist JS bundles).")
+    print("[warn] Recommended: run --dry-run first and review the candidate files.")
+    node_path = shutil.which("node")
+    if not node_path:
+        print("[err] node not found in PATH (required for syntax validation via node --check)", file=sys.stderr)
+        return 2
+    if not dist.exists() or not dist.is_dir():
+        print(f"[err] dist directory not found: {dist}", file=sys.stderr)
+        return 2
+    if not dry_run:
+        # When applying, ensure we can write to the install directory.
+        if not os.access(dist, os.W_OK):
+            print(
+                f"[err] no write permission for dist directory: {dist} (try sudo or adjust permissions)",
+                file=sys.stderr,
+            )
+            return 2
+    else:
+        if not os.access(dist, os.R_OK):
+            print(f"[err] no read permission for dist directory: {dist}", file=sys.stderr)
+            return 2
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Patch OpenClaw dist files to append Telegram status footer.")
     parser.add_argument("--dist", default="/usr/lib/node_modules/openclaw/dist", help="OpenClaw dist directory")
     parser.add_argument("--dry-run", action="store_true", help="Preview only, do not write")
     args = parser.parse_args()
 
-    files = iter_target_files(pathlib.Path(args.dist))
+    dist = pathlib.Path(args.dist)
+    rc = preflight(dist, dry_run=args.dry_run)
+    if rc != 0:
+        return rc
+
+    files = iter_target_files(dist)
     if not files:
         print("[err] no target dist files found", file=sys.stderr)
         return 2

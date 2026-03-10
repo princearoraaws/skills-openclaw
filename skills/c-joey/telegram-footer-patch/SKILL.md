@@ -23,6 +23,24 @@ spdx: MIT
 
 当前实现：自动探测并修改当前版本实际可能命中的 dist 文件（`reply-*.js`、`compact-*.js`、`pi-embedded-*.js`），自动备份，可重复覆盖更新，可回滚。
 
+## What to consider before installing / 安装前需要考虑的事项
+
+This skill does what it says (patches OpenClaw dist JS files to append a Telegram footer), but it **writes into your OpenClaw installation directory** and requires **Node.js + Python 3**.
+
+Before installing/running:
+1) Inspect the scripts yourself and run `--dry-run` to see which files would be touched.
+2) Ensure `node` is installed and you have a plan for filesystem permissions (consider a staging instance/container).
+3) Confirm backups are created (`*.bak.telegram-footer.*`) and test the revert script.
+4) Only run the patch on systems you control and trust.
+
+这项技能的功能正如其名（修改 OpenClaw 分发目录中的 JS 文件，添加 Telegram 页脚），但它会**写入 OpenClaw 安装目录**，并且需要 **Node.js + Python 3**。
+
+安装/运行前：
+1) 请自行检查脚本，并运行 `--dry-run` 先预览将会修改哪些文件。
+2) 确保已安装 `node`，并规划好文件系统权限（建议先在测试环境/容器中跑）。
+3) 确认已创建备份（查找 `*.bak.telegram-footer.*`）并测试还原脚本。
+4) 仅在你控制且信任的系统上运行；不确定就先上 staging。
+
 ## 使用
 
 ### 1) 预览

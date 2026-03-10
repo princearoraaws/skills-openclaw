@@ -17,6 +17,12 @@ Patch OpenClaw's Telegram reply pipeline to append a one-line footer in private 
 3. Restart gateway after confirmation
 4. Send a test message and verify footer output
 
+## Before you run
+- This patches OpenClaw installation files under `.../openclaw/dist/`.
+- Run `python3 scripts/patch_reply_footer.py --dry-run` first.
+- Ensure backups are created (`*.bak.telegram-footer.*`) and test rollback (`python3 scripts/revert_reply_footer.py --dry-run`).
+- Only run on machines you control/trust.
+
 ## Key files
 - `SKILL.md` — usage guidance
 - `scripts/patch_reply_footer.py` — patch script

@@ -1,10 +1,22 @@
 #!/usr/bin/env python3
+"""Revert OpenClaw dist JS bundles from the latest telegram-footer backups.
+
+Safety notes:
+- This script restores files under the OpenClaw installation directory.
+- It requires backups created by patch_reply_footer.py (*.bak.telegram-footer.*).
+- It makes a safety copy of the current file before restoring.
+"""
+
 import argparse
 import glob
+import os
 import pathlib
 import shutil
 import subprocess
 import sys
+
+# Avoid generating __pycache__/*.pyc in the skill folder.
+sys.dont_write_bytecode = True
 
 MARKER_START = "/* OPENCLAW_TELEGRAM_STATUS_FOOTER_START */"
 TARGET_GLOBS = ["reply-*.js", "compact-*.js", "pi-embedded-*.js"]
@@ -70,13 +82,35 @@ def revert_file(path: pathlib.Path, dry_run: bool) -> bool:
     return True
 
 
+def preflight(dist: pathlib.Path, dry_run: bool) -> int:
+    node_path = shutil.which("node")
+    if not node_path:
+        print("[err] node not found in PATH (required for syntax validation via node --check)", file=sys.stderr)
+        return 2
+    if not dist.exists() or not dist.is_dir():
+        print(f"[err] dist directory not found: {dist}", file=sys.stderr)
+        return 2
+    if not dry_run and not os.access(dist, os.W_OK):
+        print(f"[err] no write permission for dist directory: {dist}", file=sys.stderr)
+        return 2
+    if dry_run and not os.access(dist, os.R_OK):
+        print(f"[err] no read permission for dist directory: {dist}", file=sys.stderr)
+        return 2
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Restore OpenClaw dist files from latest telegram-footer backups.")
     parser.add_argument("--dist", default="/usr/lib/node_modules/openclaw/dist", help="OpenClaw dist directory")
     parser.add_argument("--dry-run", action="store_true", help="Preview only, do not write")
     args = parser.parse_args()
 
-    files = iter_target_files(pathlib.Path(args.dist))
+    dist = pathlib.Path(args.dist)
+    rc = preflight(dist, dry_run=args.dry_run)
+    if rc != 0:
+        return rc
+
+    files = iter_target_files(dist)
     if not files:
         print("[err] no target dist files found", file=sys.stderr)
         return 2
