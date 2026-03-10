@@ -1,7 +1,7 @@
 ---
 name: trent-openclaw-security
 description: Audit your OpenClaw deployment for security risks using Trent AppSec Advisor
-version: 2.0.1
+version: 2.1.0
 homepage: https://trent.ai
 user-invocable: true
 metadata:
@@ -9,11 +9,11 @@ metadata:
     requires:
       bins:
         - trent-openclaw-audit
-    primaryEnv: TRENT_CHAT_API_URL
+    primaryEnv: TRENT_API_KEY
     install:
       - kind: uv
         package: trentai-mcp
-        bins: [trent-openclaw-audit]
+        bins: [trent-openclaw-audit, trent-api-key]
 ---
 
 # Trent OpenClaw Security Audit
@@ -33,18 +33,27 @@ This skill uses the `trent-openclaw-audit` CLI command provided by the
 3. Sends the sanitized metadata to Trent AppSec Advisor for AI-powered analysis
 4. Prints security findings with severity ratings and chained attack path analysis
 
-Authentication is handled automatically via OAuth2 PKCE — tokens are stored
-securely in the OS keychain and refreshed transparently.
+Authentication requires a Trent API key (`TRENT_API_KEY` env var). Keys are
+generated via `trent-api-key create` (requires one-time browser login).
+OpenClaw prompts for the key during skill installation.
 
 ## Setup
 
-Install via ClawHub:
+1. Install the skill via ClawHub (this also installs `trent-api-key` and
+   `trent-openclaw-audit` CLIs automatically):
 
 ```
-clawhub install trent-openclaw-security
+clawhub install bristy/trent-openclaw-security
 ```
 
-This installs the skill and the `trent-openclaw-audit` CLI automatically.
+2. OpenClaw will prompt for `TRENT_API_KEY`. If you don't have one yet,
+   generate it on any machine with a browser:
+
+```
+trent-api-key create
+```
+
+3. Paste the key when prompted. OpenClaw stores it in the skill config.
 
 ## When to Use
 
@@ -130,14 +139,20 @@ re-audit immediately.
 **`trent-openclaw-audit` command not found:**
 The package isn't installed. Tell the user:
 > I need `trent-openclaw-audit` to run the security audit. Install it with:
-> `pip install trentai-mcp` (or `uv pip install trentai-mcp`)
+> `pip install --upgrade trentai-mcp` (or `uv pip install --upgrade trentai-mcp`)
 > Then reinstall the skill: `clawhub install trent-openclaw-security`
 
+**`401 Unauthorized` / "API key rejected":**
+The API key is missing, invalid, or expired. Tell the user:
+> Your Trent API key is missing or expired. Generate a new one on any machine
+> with a browser: `trent-api-key create`
+> Then update your skill config: `openclaw skills update trent-openclaw-security --env TRENT_API_KEY=trent_...`
+
 **"Authentication required" / browser opens:**
-First-time use requires OAuth login. Tell the user:
-> Trent needs you to log in. A browser window should have opened — please
-> complete the login there. Your credentials are stored securely in your OS
-> keychain for future use.
+No API key is configured. On headless gateways this will fail. Tell the user:
+> This gateway has no browser access. Generate a key on another machine:
+> `trent-api-key create`
+> Then set it here: `openclaw skills update trent-openclaw-security --env TRENT_API_KEY=trent_...`
 
 **API connection error / timeout:**
 The Trent API is unreachable. Tell the user:
