@@ -574,53 +574,163 @@ class EcommerceAutomator:
 def main():
     """
     Main function for command-line usage
+    Supports both direct usage and OpenCLAW parameter passing
+    Supports JSON input via stdin, file, or command-line arguments
     """
-    # Example 1: Create product with auto-generated data and images
-    print("=" * 50)
-    print("Example 1: E-commerce Product Creation")
-    print("=" * 50)
+    import argparse
+    import os
+    import json
+    import sys
 
-    automator = EcommerceAutomator()
+    # First, try to read JSON input from stdin (common for automation systems)
+    input_data = None
+    if not sys.stdin.isatty():
+        # stdin has data - try to read JSON
+        try:
+            input_data = json.load(sys.stdin)
+        except:
+            pass
 
-    # Create product
-    result = automator.create_product(
-        product_name="Wireless Bluetooth Headphones Pro",
-        category="Electronics",
-        base_price=79.99,
-        language="en",
-        generate_images=True,
-        image_style="white_info",
-        publish_to_shopify=False,  # Set True when credentials configured
-        publish_to_woocommerce=False  # Set True when credentials configured
+    # If no stdin data, try to read from file argument
+    if input_data is None:
+        parser = argparse.ArgumentParser(description="E-commerce Automator")
+        parser.add_argument("--input", "-i", type=str, help="Input JSON file")
+        parser.add_argument("--config", type=str, help="Input JSON string")
+        args, unknown = parser.parse_known_args()
+
+        if args.input and os.path.exists(args.input):
+            with open(args.input, "r") as f:
+                input_data = json.load(f)
+        elif args.config:
+            input_data = json.loads(args.config)
+
+    # If we have JSON input, use it
+    if input_data:
+        # Extract parameters from JSON input
+        brand = input_data.get("brand", "")
+        product = input_data.get("product", "")
+        core_keyword = input_data.get("core_keyword", product)
+        category = input_data.get("category", "Electronics")
+        base_price = input_data.get("base_price")
+        country = input_data.get("country", "us")
+        language = input_data.get("language", "en")
+        competitors = input_data.get("competitors", [])
+        platform_focus = input_data.get("platform_focus", ["ChatGPT", "Grok"])
+        publish_to_shopify = input_data.get("publish_to_shopify", False)
+        publish_to_woocommerce = input_data.get("publish_to_woocommerce", False)
+        image_style = input_data.get("image_style", "white_info")
+
+        # Get API keys
+        google_api_key = input_data.get("google_api_key") or os.environ.get("GOOGLE_API_KEY")
+        shopify_url = input_data.get("shopify_store_url") or os.environ.get("SHOPIFY_STORE_URL")
+        shopify_token = input_data.get("shopify_access_token") or os.environ.get("SHOPIFY_ACCESS_TOKEN")
+
+        print("=" * 50)
+        print(f"Running workflow for: {product or core_keyword}")
+        print(f"Brand: {brand}, Country: {country}, Language: {language}")
+        print("=" * 50)
+
+        # Initialize automator
+        automator = EcommerceAutomator(
+            google_api_key=google_api_key,
+            shopify_store_url=shopify_url,
+            shopify_access_token=shopify_token
+        )
+
+        # Run complete workflow
+        result = automator.run_complete_workflow(
+            product_input=core_keyword or product,
+            country=country,
+            language=language,
+            generate_images=True,
+            publish_to_shopify=publish_to_shopify,
+            publish_to_woocommerce=publish_to_woocommerce,
+            output_dir="output"
+        )
+
+        # Save result
+        output_path = input_data.get("output", "output/result.json")
+        automator.save_result(result, output_path)
+        print(f"\n[DONE] Result saved to: {output_path}")
+        print(f"Status: {result.get('status')}")
+        return
+
+    # Fall back to command-line arguments
+    parser = argparse.ArgumentParser(description="E-commerce Automator")
+    parser.add_argument("--product", "-p", type=str, help="Product name/keyword")
+    parser.add_argument("--brand", "-b", type=str, help="Brand name")
+    parser.add_argument("--core-keyword", type=str, help="Core keyword for SEO")
+    parser.add_argument("--category", "-c", type=str, default="Electronics", help="Product category")
+    parser.add_argument("--price", type=float, help="Base price")
+    parser.add_argument("--country", type=str, default="us", help="Target country")
+    parser.add_argument("--language", type=str, default="en", help="Output language")
+    parser.add_argument("--generate-images", action="store_true", help="Generate AI images")
+    parser.add_argument("--publish-shopify", action="store_true", help="Publish to Shopify")
+    parser.add_argument("--publish-woocommerce", action="store_true", help="Publish to WooCommerce")
+    parser.add_argument("--shopify-url", type=str, help="Shopify store URL")
+    parser.add_argument("--shopify-token", type=str, help="Shopify access token")
+    parser.add_argument("--api-key", type=str, help="Google API key")
+    parser.add_argument("--output", "-o", type=str, default="output/result.json", help="Output file path")
+
+    args = parser.parse_args()
+
+    # Get API keys from environment if not provided
+    google_api_key = args.api_key or os.environ.get("GOOGLE_API_KEY")
+    shopify_url = args.shopify_url or os.environ.get("SHOPIFY_STORE_URL")
+    shopify_token = args.shopify_token or os.environ.get("SHOPIFY_ACCESS_TOKEN")
+
+    # Initialize automator
+    automator = EcommerceAutomator(
+        google_api_key=google_api_key,
+        shopify_store_url=shopify_url,
+        shopify_access_token=shopify_token
     )
 
-    # Save result
-    automator.save_result(result, "output/ecommerce_result.json")
+    # If product argument provided, run complete workflow
+    if args.product:
+        print("=" * 50)
+        print(f"Running workflow for: {args.product}")
+        print("=" * 50)
 
-    print("\n[DONE] Product creation complete!")
-    print(f"[PRODUCT] {result['product_data']['title']}")
-    print(f"[PRICE] ${result['product_data']['price']}")
+        result = automator.run_complete_workflow(
+            product_input=args.core_keyword or args.product,
+            country=args.country,
+            language=args.language,
+            generate_images=args.generate_images,
+            publish_to_shopify=args.publish_shopify,
+            publish_to_woocommerce=args.publish_woocommerce,
+            output_dir="output"
+        )
 
-    # Example 2: GEO Analysis (existing functionality)
-    print("\n" + "=" * 50)
-    print("Example 2: GEO Opportunity Analysis")
-    print("=" * 50)
+        # Save result
+        automator.save_result(result, args.output)
+        print(f"\n[DONE] Result saved to: {args.output}")
+        print(f"Status: {result.get('status')}")
 
-    geo_result = automator.run_geo_analysis(
-        brand="AcmeWatch",
-        product="Acme DivePro 5",
-        core_keyword="smartwatch water resistance",
-        country="us",
-        language="en",
-        competitors=["BrandA", "BrandB"],
-        generate_images=True
-    )
+    else:
+        # Example 1: Create product with auto-generated data and images
+        print("=" * 50)
+        print("Example 1: E-commerce Product Creation")
+        print("=" * 50)
 
-    automator.save_result(geo_result, "output/geo_analysis_result.json")
+        # Create product
+        result = automator.create_product(
+            product_name="Wireless Bluetooth Headphones Pro",
+            category=args.category,
+            base_price=args.price or 79.99,
+            language=args.language,
+            generate_images=args.generate_images,
+            image_style="white_info",
+            publish_to_shopify=args.publish_shopify,
+            publish_to_woocommerce=args.publish_woocommerce
+        )
 
-    print("\n[DONE] GEO Analysis complete!")
-    print(f"[OPPORTUNITIES] {len(geo_result['opportunities'])}")
-    print(f"[IMAGES] {len(geo_result.get('generated_images', []))}")
+        # Save result
+        automator.save_result(result, args.output)
+
+        print("\n[DONE] Product creation complete!")
+        print(f"[PRODUCT] {result['product_data']['title']}")
+        print(f"[PRICE] ${result['product_data']['price']}")
 
 
 if __name__ == "__main__":

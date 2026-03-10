@@ -2,7 +2,7 @@
 # Version: 3.0.0
 # Author: Tim (sales@dageno.ai)
 
-# Core dependencies - Using new google-genai package for Gemini 2.0 Flash image generation
+# Core dependencies - Using new google-genai package for Gemini 2.5 Flash image generation
 google-genai>=0.1.0
 
 # Legacy package (for compatibility)

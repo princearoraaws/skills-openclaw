@@ -1,13 +1,78 @@
 ---
 name: geo-visual-opportunity-engine
-description: AutoList automates product onboarding for independent stores: AI-generated titles, descriptions, and images, plus built-in SEO & GEO (Generative Engine Optimization) so your pages are both user-friendly and easy for AIs to discover. Publish a ready product in minutes with one click.
+description: Use when the user wants to turn a product and keyword opportunity into AI-generated visuals, structured product data, localized commerce copy, or publish-ready outputs for Shopify and WooCommerce. Trigger for product image generation, product listing automation, GEO-aware commerce content, Shopify publishing, WooCommerce publishing, or AI-native visual content workflows.
+metadata:
+  author: GEO-SEO
+  version: "3.0.4"
+  homepage: https://github.com/GEO-SEO/geo-visual-opportunity-engine
+  primaryEnv: GOOGLE_API_KEY
+  requires:
+    env:
+      - GOOGLE_API_KEY
+      - SHOPIFY_STORE_URL
+      - SHOPIFY_ACCESS_TOKEN
+      - WOOCOMMERCE_STORE_URL
+      - WOOCOMMERCE_CONSUMER_KEY
+      - WOOCOMMERCE_CONSUMER_SECRET
+    bins:
+      - python3
 ---
 
 # GEO Visual Opportunity Engine
 
+Use this skill to turn a product and keyword opportunity into AI-generated visuals, structured product data, localized commerce copy, and optional Shopify or WooCommerce publishing.
+
 ## Overview
 
-GEO Visual Opportunity Engine is an AI-powered e-commerce automation tool that generates product images using Nano Banana 2 (Google Gemini) and automatically publishes products to Shopify and WooCommerce.
+This skill connects GEO opportunity analysis, image generation, product-data synthesis, localization, and commerce publishing in one workflow.
+
+## Best For
+
+- DTC and Shopify teams producing AI-generated product assets at scale
+- commerce operators testing product narratives for search and AI-native discovery
+- agencies managing cross-market visual content and listing workflows
+- teams that want product analysis, visuals, and publishing in one system
+
+## Start With
+
+```text
+Generate AI product visuals and commerce copy for this product opportunity
+```
+
+```text
+Run GEO analysis for this product and keyword before generating assets
+```
+
+```text
+Create publish-ready Shopify or WooCommerce assets for this product
+```
+
+## Core Workflow
+
+GEO Visual Opportunity Engine is an AI-powered commerce workflow that can generate product images using Nano Banana 2 (Google Gemini) and can optionally publish products to Shopify or WooCommerce when publishing is explicitly enabled.
+
+## External Access And Minimum Credentials
+
+This workflow uses external services. Required credentials depend on the actions you enable:
+
+- `GOOGLE_API_KEY`: required for Nano Banana 2 / Gemini image generation
+- `SHOPIFY_STORE_URL` and `SHOPIFY_ACCESS_TOKEN`: required only when publishing to Shopify
+- `WOOCOMMERCE_STORE_URL`, `WOOCOMMERCE_CONSUMER_KEY`, and `WOOCOMMERCE_CONSUMER_SECRET`: required only when publishing to WooCommerce
+- `python3`: required to run the packaged automation code
+
+If publishing credentials are absent:
+
+- the skill can still stop at opportunity analysis, product data synthesis, and image generation
+- do not claim live publishing or platform write access unless the matching credentials are present
+
+## Access Policy
+
+Safe default: this skill should stop at analysis, asset generation, and product-data output unless store publishing is explicitly enabled.
+
+- image generation can run independently of commerce publishing
+- Shopify publishing is optional and must be explicitly enabled
+- WooCommerce publishing is optional and must be explicitly enabled
+- do not claim store write access or completed publication unless the matching credentials are present and the publish flags are turned on
 
 ## Features
 
@@ -19,27 +84,7 @@ GEO Visual Opportunity Engine is an AI-powered e-commerce automation tool that g
 
 ## Installation
 
-### One-Click Installation (Recommended)
-
 ```bash
-# Download and install automatically
-curl -sL https://clawhub.ai/GEO-SEO/geo-visual-opportunity-engine/archive/refs/heads/main.tar.gz | tar xz && cd geo-visual-opportunity-engine-* && pip install -r requirements.txt
-```
-
-Or use wget:
-
-```bash
-wget -qO- https://clawhub.ai/GEO-SEO/geo-visual-opportunity-engine/archive/refs/heads/main.tar.gz | tar xz && cd geo-visual-opportunity-engine-* && pip install -r requirements.txt
-```
-
-### Manual Installation
-
-```bash
-# Clone the repository
-git clone https://clawhub.ai/GEO-SEO/geo-visual-opportunity-engine.git
-cd geo-visual-opportunity-engine
-
-# Install dependencies
 pip install -r requirements.txt
 ```
 
@@ -98,7 +143,7 @@ automator = EcommerceAutomator(
     shopify_access_token="your-access-token"
 )
 
-# Create and publish product
+# Create a product package and optionally publish it
 result = automator.create_product(
     product_name="Wireless Bluetooth Headphones Pro",
     category="Electronics",
@@ -155,7 +200,7 @@ Complete e-commerce product creation workflow.
 
 ## Version
 
-1.0.5
+3.0.0
 
 ## Author
 
