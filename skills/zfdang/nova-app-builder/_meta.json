@@ -3,11 +3,16 @@
   "slug": "nova-app-builder",
   "displayName": "Nova App Builder",
   "latest": {
-    "version": "2.2.2",
-    "publishedAt": 1772326003417,
-    "commit": "https://github.com/openclaw/skills/commit/3f9383efff6e41f5c4612aa0438951dabf374d6e"
+    "version": "2.3.1",
+    "publishedAt": 1773101175066,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.2.2",
+      "publishedAt": 1772326003417,
+      "commit": "https://github.com/openclaw/skills/commit/3f9383efff6e41f5c4612aa0438951dabf374d6e"
+    },
     {
       "version": "1.4.9",
       "publishedAt": 1772248837889,

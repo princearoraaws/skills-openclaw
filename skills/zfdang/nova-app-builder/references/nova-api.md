@@ -29,7 +29,7 @@ curl -sX POST https://sparsity.cloud/api/auth/login \
 The complete lifecycle has **two phases**: off-chain setup and on-chain registration.
 
 ```
-CREATE APP ──► TRIGGER BUILD ──► DEPLOY
+CREATE APP ──► NEW VERSION (BUILD) ──► DEPLOY THIS VERSION
                     │
                     ▼
              [on-chain flow]
@@ -159,6 +159,8 @@ enable_helios_rpc + !kms_enabled → helios_chains must have ≥1 business chain
   "name": "my-app",
   "description": "My Nova app",
   "repo_url": "https://github.com/your-org/your-repo",
+  "metadata_uri": "",
+  "app_contract_addr": "",
   "advanced": {
     "directory": "/",
     "app_listening_port": 8080,
@@ -193,7 +195,9 @@ Response: `{ "id": 42, "sqid": "abc123", ... }` — use `sqid` in all subsequent
 
 ---
 
-### 2. Trigger Build
+### 2. New Version (Build)
+
+> In portal: **Versions → + New Version**. Repo URL comes from the app record (set at creation) — not repeated here.
 
 ```
 POST /api/apps/{app_sqid}/builds
@@ -210,15 +214,35 @@ Response includes `id` (build_id), `pcr0/pcr1/pcr2` (after success).
 
 ---
 
-### 3. Create Deployment
+### 3. Deploy this Version
+
+> In portal: **Versions → [select successful version] → Deploy this version**. Choose region and tier in the modal. No environment-variable input section in the deploy UI.
 
 ```
 POST /api/apps/{app_sqid}/deployments
 ```
 
 ```json
-{ "build_id": 123 }
+{
+  "build_id": 123,
+  "region": "ap-south-1",
+  "tier": "standard",
+  "app_contract_addr": "",
+  "advanced": {}
+}
 ```
+
+**`region`** — valid values (default: `ap-south-1`):
+| Value | Location |
+|---|---|
+| `ap-south-1` | Asia Pacific (default) |
+| `us-east-1` | US East |
+| `us-west-1` | US West |
+| `eu-west-1` | Europe |
+
+**`tier`** — `"standard"` (2 vCPU, 5 GiB) or `"performance"` (6 vCPU, 13 GiB). Default: `standard`.
+
+`app_contract_addr` and `advanced` are optional.
 
 Poll: `GET /api/deployments/{deployment_id}/status`
 
@@ -280,13 +304,19 @@ Returns everything in one call:
 
 | Field | Description |
 |---|---|
+| `latest_build_id` | Latest build ID |
 | `latest_build_status` | Current build status |
+| `latest_build_version` | Build semantic version |
+| `latest_build_github_run_id` | GitHub Actions run link |
 | `latest_build_error_message` | Build error if any |
 | `latest_onchain_version_id` | Enrolled version ID |
 | `latest_onchain_version_status` | On-chain version status |
+| `latest_deployment_id` | Latest deployment ID |
 | `latest_deployment_state` | Deployment state |
 | `latest_deployment_message` | Deployment message |
 | `latest_proof_status` | ZK proof status |
+| `latest_proof_succinct_uri` | Proof URI (after proved) |
+| `latest_proof_s3_uri` | Proof S3 URI |
 | `latest_onchain_instance_id` | Instance ID after registration |
 | `latest_onchain_instance_status` | On-chain instance status |
 | `onchain_app_id` | App on-chain ID |
@@ -345,16 +375,21 @@ Alternatively poll via deployment: `GET /api/deployments/{deployment_id}/status`
 
 ### 8. Register Instance On-Chain
 
-After `proof_status = "proved"`, register the instance on-chain.
+After `proof_status = "proved"`, manually register the instance on-chain.
+
+> ⚠️ **Auto-registration has been removed.** You must call this endpoint explicitly.
 
 ```
-POST /api/zkproof/onchain/register
-{ "deployment_id": 456 }
+POST /api/apps/{app_sqid}/instance/register
 ```
+
+No body required (deployment_id resolved from app's latest deployment).
 
 Poll result: `GET /api/deployments/{deployment_id}/status` → check `onchain_instance_id` is set and `onchain_instance_status` is active.
 
 Or use unified view: `GET /api/apps/{app_sqid}/status` → `latest_onchain_instance_id`.
+
+> Legacy alias (still available): `POST /api/zkproof/onchain/register` with `{ "deployment_id": 456 }`
 
 ---
 
@@ -367,12 +402,137 @@ POST /api/deployments/{deployment_id}/action
 
 ---
 
+## Instance Management
+
+```
+POST /api/apps/{app_sqid}/instance/register     # Manual on-chain registration (auto removed)
+POST /api/apps/{app_sqid}/instance/deactivate   # Deactivate instance on-chain
+GET  /api/apps/{app_sqid}/instance/sync-status  # Sync instance status from chain
+POST /api/apps/{app_sqid}/sync-onchain          # Sync entire app state from on-chain registry
+POST /api/apps/{app_sqid}/onchain-status        # Activate/Deactivate app on-chain
+```
+
+---
+
+## Portal Helper Endpoints
+
+These are used by the portal UI to pre-fill app creation form from the repo's `enclaver.yaml`. Not needed for direct API usage.
+
+```
+POST /api/apps/clone-repo
+{ "repo_url": "https://github.com/...", "depth": 2 }
+→ { "directories": [...], "repo_path": "..." }
+
+POST /api/apps/get-enclaver-config
+{ "repo_url": "https://github.com/...", "directory": "/" }
+→ { "app_listening_port": 8000, "directory": "/" }
+```
+
+> The `get-enclaver-config` endpoint only extracts `app_listening_port` from `enclaver.yaml` — this is how the portal auto-fills the port field when you provide a repo URL. Everything else is configured via `advanced`.
+
+---
+
+## Build Management
+
+```
+DELETE /api/apps/{app_sqid}/builds/{build_id}               # Delete a build
+POST   /api/apps/{app_sqid}/builds/{build_id}/enroll        # Enroll version on-chain
+POST   /api/apps/{app_sqid}/builds/{build_id}/sync          # Sync build status
+POST   /api/apps/{app_sqid}/builds/{build_id}/retry         # Retry a failed build
+GET    /api/apps/{app_sqid}/builds                          # List all builds
+GET    /api/apps/{app_sqid}/builds/{build_id}               # Get single build
+PATCH  /api/apps/{app_sqid}                                 # Update app metadata
+```
+
+---
+
 ## App Detail & Logs
 
 ```
 GET /api/apps/{app_sqid}/detail
 ```
 Returns `app`, `deployments[]`, `logs[]`. The `app.hostname` field has the live URL.
+
+---
+
+## Paid Deployment
+
+Create a paid deployment — requires a `Payment-Signature` header in addition to `Authorization: Bearer`.
+
+```
+POST /api/apps/{app_sqid}/deployments/paid
+Payment-Signature: <signature>
+```
+
+Body is identical to the standard `POST /api/apps/{app_sqid}/deployments` request.
+
+---
+
+## Public App Explorer (No Auth Required)
+
+These endpoints are public — no `Authorization` header needed. Used by the App Explorer UI and for on-chain verifier integrations.
+
+```
+GET /api/apps/public/by-tee-wallet/{tee_wallet_address}
+```
+Look up an app by its TEE wallet address (the enclave's Ethereum address returned by Odyn `/v1/eth/address`). Returns the app's public info.
+
+```
+GET /api/apps/public/id/{onchain_app_id}
+```
+Look up an app by its on-chain app ID. Returns app info regardless of enclave state (running, stopped, or deleted). If multiple enclaves exist for the same ID, returns the latest one.
+
+```
+GET /api/apps/public/batch?onchain_app_ids=1,2,3
+```
+Batch fetch by a comma-separated list of on-chain app IDs. Returns `PublicAppBatchResponse`.
+
+---
+
+## Auth Management
+
+### Wallet Login (SIWE)
+
+```
+POST /api/auth/wallet-login/nonce
+```
+Request a nonce for Sign-In with Ethereum (SIWE). Body: `{ "address": "0x..." }` (optional). Returns `{ "nonce": "..." }`.
+
+```
+POST /api/auth/wallet-login
+```
+Authenticate via SIWE signature. Body: `{ "message": "...", "signature": "0x..." }`. Returns JWT tokens.
+
+### API Key Management
+
+```
+GET  /api/auth/api-keys                # List API keys (last_used_at is best-effort)
+POST /api/auth/api-keys                # Create a new API key
+DELETE /api/auth/api-keys/{api_key_id} # Revoke an API key (204 No Content)
+```
+
+### Profile
+
+```
+GET /api/auth/profile   # Get current user's profile
+PUT /api/auth/profile   # Update editable profile fields
+```
+
+### Password & Email Verification
+
+```
+POST /api/auth/change-password        # Change password (requires old password)
+POST /api/auth/send-verification      # Send verification code to email (code NOT in response)
+POST /api/auth/confirm-verification   # Confirm code: { "code": "123456" }
+```
+
+### Token Refresh
+
+```
+POST /api/auth/refresh
+{ "refresh_token": "..." }
+```
+Returns new `access_token` AND new `refresh_token` (sliding-window rotation).
 
 ---
 

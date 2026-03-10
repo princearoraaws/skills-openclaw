@@ -8,18 +8,20 @@ It provides signing, attestation, encryption, storage, and KMS via an internal H
 Ports are fixed by the platform (configured via `advanced` at app creation):
 
 ```
-Primary API:   http://127.0.0.1:18000   (full access)
-Auxiliary API: http://127.0.0.1:18001   (restricted subset)
+Primary API:   http://localhost:18000   (full access)
+Auxiliary API: http://localhost:18001   (restricted subset)
 ```
 
-**Inside the enclave**: `http://127.0.0.1:18000`
+**Inside the enclave**: `http://localhost:18000`
 **Local dev mock**: `http://odyn.sparsity.cloud:18000` (set `IN_ENCLAVE=false`)
 
 ```python
 import os
 IN_ENCLAVE = os.getenv("IN_ENCLAVE", "false").lower() == "true"
-ODYN_BASE = "http://127.0.0.1:18000" if IN_ENCLAVE else "http://odyn.sparsity.cloud:18000"
+ODYN_BASE = "http://localhost:18000" if IN_ENCLAVE else "http://odyn.sparsity.cloud:18000"
 ```
+
+> **Odyn SDK**: Use the `Odyn` class from [echo-vault/enclave/odyn.py](https://github.com/sparsity-xyz/sparsity-nova-examples/blob/main/echo-vault/enclave/odyn.py) instead of raw HTTP calls. Copy it into your project as-is. Note: the SDK uses `requests` (not `httpx`) for Odyn calls — this is fine since Odyn is localhost. Use `httpx` only for external outbound calls.
 
 ---
 
