@@ -1,13 +1,18 @@
 {
   "owner": "imwyvern",
   "slug": "codex-autopilot",
-  "displayName": "Clawhub Test",
+  "displayName": "Codex Autopilot",
   "latest": {
-    "version": "0.5.1",
-    "publishedAt": 1772593900512,
-    "commit": "https://github.com/openclaw/skills/commit/3d0cd822a410a9cc98cca5660468d79c30fce319"
+    "version": "0.6.0",
+    "publishedAt": 1773114245298,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.5.1",
+      "publishedAt": 1772593900512,
+      "commit": "https://github.com/openclaw/skills/commit/3d0cd822a410a9cc98cca5660468d79c30fce319"
+    },
     {
       "version": "0.4.0",
       "publishedAt": 1772515361120,
