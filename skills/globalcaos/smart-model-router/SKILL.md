@@ -1,6 +1,12 @@
 ---
-name: model-router
-description: Automatic LLM model selection for sub-agent tasks. Classifies tasks by complexity and type, then routes to the optimal model (cost vs capability). Use when spawning sub-agents, choosing models for cron jobs, or deciding which model to use for any task. Eliminates manual model specification by providing a decision tree and optional cheap-model classifier for ambiguous cases.
+name: smart-model-router
+version: 1.2.0
+description: "Stop sending 'format this JSON' to Opus. Stop sending 'redesign the auth system' to Haiku. Smart Model Router picks the right brain for every task — decision tree, cost tiers, and an optional cheap-model classifier for the ambiguous ones."
+metadata:
+  openclaw:
+    emoji: "🧭"
+    notes:
+      security: "No network calls. Decision tree logic only — reads task description, outputs model recommendation."
 ---
 
 # Model Router
@@ -258,3 +264,13 @@ This follows the progressive disclosure principle: 7 lines always loaded, full s
 - ❌ Putting the full routing table in bootstrap files (wastes tokens every prompt)
 - ❌ Not routing cron sub-agents (they spend tokens too)
 - ❌ Self-reviewing output (use a different model for review)
+
+## Pairs Well With
+
+- [model-prompt-adapter](https://clawhub.com/globalcaos/model-prompt-adapter) — once Router picks the model, Adapter fixes its quirks
+- [subagent-overseer](https://clawhub.com/globalcaos/subagent-overseer) — monitor the sub-agents you're routing models for
+- [agent-superpowers](https://clawhub.com/globalcaos/agent-superpowers) — the full engineering pipeline these routed agents should follow
+
+👉 **https://github.com/globalcaos/tinkerclaw**
+
+_Clone it. Fork it. Break it. Make it yours._
