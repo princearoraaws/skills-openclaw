@@ -3,11 +3,16 @@
   "slug": "mikrotik",
   "displayName": "Mikrotik",
   "latest": {
-    "version": "1.8.4",
-    "publishedAt": 1772945736132,
-    "commit": "https://github.com/openclaw/skills/commit/ab883e470a7782fbb7b6ea0ee7488529000c9def"
+    "version": "1.8.5",
+    "publishedAt": 1773038259525,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.8.4",
+      "publishedAt": 1772945736132,
+      "commit": "https://github.com/openclaw/skills/commit/ab883e470a7782fbb7b6ea0ee7488529000c9def"
+    },
     {
       "version": "1.8.3",
       "publishedAt": 1772793012003,
