@@ -1,0 +1,11 @@
+{
+  "owner": "willificent",
+  "slug": "off-peak-compute",
+  "displayName": "Compute during Off-Peak Hours for Complex Jobs",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1773166947245,
+    "commit": null
+  },
+  "history": []
+}
