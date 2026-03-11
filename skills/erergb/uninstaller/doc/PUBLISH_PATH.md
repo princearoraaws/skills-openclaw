@@ -90,7 +90,7 @@ npx sundial-hub push .       # Run after each release
 | GitHub Copilot | Clone repo — skill in `.github/skills/uninstaller/` (symlink) |
 | Cursor (personal) | `./scripts/install-personal.sh` — symlink to repo |
 | Sundial | `npx sundial-hub add uninstaller` (if published) |
-| ghcr.io | `skr install ghcr.io/ERerGB/openclaw-uninstall:latest` |
+| ghcr.io | `skr install ghcr.io/erergb/openclaw-uninstall:latest` |
 
 ---
 
