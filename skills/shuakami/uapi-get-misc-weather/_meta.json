@@ -1,0 +1,11 @@
+{
+  "owner": "shuakami",
+  "slug": "uapi-get-misc-weather",
+  "displayName": "UAPI 查询天气 接口",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773074879090,
+    "commit": null
+  },
+  "history": []
+}
