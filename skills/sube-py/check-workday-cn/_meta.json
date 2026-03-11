@@ -1,0 +1,11 @@
+{
+  "owner": "sube-py",
+  "slug": "check-workday-cn",
+  "displayName": "Check Workday CN",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773122821906,
+    "commit": null
+  },
+  "history": []
+}
