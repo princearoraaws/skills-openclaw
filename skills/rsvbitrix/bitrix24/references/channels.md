@@ -190,6 +190,8 @@ Comments on channel posts are a UI feature not exposed via REST API. When readin
 
 To discover new channels, users must use the Bitrix24 UI. Once subscribed, the channel appears in `im.recent.list`.
 
+These limitations are current as of March 2026. Check the MCP documentation server (`https://mcp-dev.bitrix24.tech/mcp`) for updates — use `bitrix-search` with queries like `im thread`, `im channel list` to see if new methods have appeared.
+
 ## Good MCP Queries
 
 - `im chat add`

@@ -18,12 +18,12 @@ All REST calls go through a single webhook URL stored in `~/.config/bitrix24-ski
 ## Key Files
 
 - `SKILL.md` — **the most important file**. Agent entrypoint: frontmatter (metadata, tags, MCP config), user interaction rules, technical rules, domain reference index. This is what the bot reads to know how to behave.
-- `scripts/bitrix24_call.py` — REST caller. Usage: `python3 scripts/bitrix24_call.py <method> --param 'key=value' --json`
+- `scripts/bitrix24_call.py` — REST caller with operation safety, auto-pagination, dry-run. Usage: `python3 scripts/bitrix24_call.py <method> --param 'key=value' --json`. Supports `--params-file`, `--iterate`, `--dry-run`, `--confirm-write`, `--confirm-destructive`.
 - `scripts/bitrix24_batch.py` — batch caller for multi-method requests. Usage: `python3 scripts/bitrix24_batch.py --cmd 'name=method?params' --cmd '...' --json`
 - `scripts/bitrix24_config.py` — shared config module: `load_url()`, `validate_url()`, `persist_url_to_config()`, `get_cached_user()`
 - `scripts/save_webhook.py` — save webhook to config with optional `--check` verification
 - `scripts/check_webhook.py` — diagnostics: format → DNS → HTTP probe of `user.current.json`
-- `references/*.md` — 16 domain reference files with exact method names, parameters, filter syntax, examples
+- `references/*.md` — 18 domain reference files with exact method names, parameters, filter syntax, examples
 - `docs/index.html` — GitHub Pages landing site (5 languages: EN/RU/ZH/ES/FR, auto-detects browser language)
 - `agents/openai.yaml` — OpenAI/OpenClaw agent metadata
 
@@ -33,6 +33,19 @@ All REST calls go through a single webhook URL stored in `~/.config/bitrix24-ski
 # Make a REST call
 python3 scripts/bitrix24_call.py user.current --json
 python3 scripts/bitrix24_call.py crm.deal.list --param 'select[]=ID' --param 'select[]=TITLE' --json
+
+# Auto-paginate (collect all pages)
+python3 scripts/bitrix24_call.py crm.deal.list --param 'select[]=ID' --iterate --json
+
+# Params from JSON file (for complex queries)
+echo '{"filter": {">=DATE_CREATE": "2025-01-01"}, "select": ["ID", "TITLE"]}' > /tmp/p.json
+python3 scripts/bitrix24_call.py crm.deal.list --params-file /tmp/p.json --json
+
+# Dry-run (preview without executing)
+python3 scripts/bitrix24_call.py crm.deal.add --param 'fields[TITLE]=Test' --dry-run --json
+
+# Write operations require --confirm-write
+python3 scripts/bitrix24_call.py crm.deal.add --param 'fields[TITLE]=Test' --confirm-write --json
 
 # Save webhook (first-time setup)
 python3 scripts/bitrix24_call.py user.current --url "https://portal.bitrix24.ru/rest/1/secret/" --json
@@ -62,11 +75,30 @@ ssh slon-mac "export PATH=\$HOME/.nvm/versions/node/*/bin:/opt/homebrew/bin:/usr
 
 ## Publishing Workflow
 
+### Quick publish (recommended)
+
+```bash
+# 1. Update CHANGELOG.md with new version entry
+# 2. Run the publish script:
+bash scripts/publish.sh X.Y.Z
+```
+
+This script automatically:
+- Updates version in `docs/index.html` footer
+- Generates `docs/changelog.json` from CHANGELOG.md
+- Commits, pushes, and publishes to ClawHub
+
+### Manual steps (if needed)
+
 1. Commit and push to `origin/main` (`https://github.com/rsvbitrix/bitrix24-skill.git`)
 2. `npx clawhub publish . --version X.Y.Z` — publishes to ClawHub, triggers security scan (~1-2 min)
 3. Wait ~90 seconds for scan to pass before installing (check with `npx clawhub inspect bitrix24`)
 4. On slon-mac: `npx clawhub install bitrix24 --version X.Y.Z --force` (needs full PATH, see Common Commands)
 5. Restart OpenClaw gateway: `openclaw gateway restart`
+
+### Auto-update
+
+A scheduled task (`bitrix24-auto-update`) checks ClawHub every 2 hours and auto-installs new versions on slon-mac. Manual install is only needed if you want it immediately.
 
 **Known issue:** ClawHub rate-limits install requests. If you get `Rate limit exceeded`, wait 2-3 minutes and retry.
 

@@ -7,6 +7,8 @@ description: >
   Calendar — "расписание", "встречи", "календарь", "schedule", "meetings", "events";
   Chat — "чаты", "сообщения", "уведомления", "написать", "notifications", "messages";
   Channels — "каналы", "канал", "объявления", "подписчики", "channels", "announcements", "subscribers";
+  Open Lines — "открытые линии", "поддержка", "обращения", "клиентские чаты", "операторы",
+  "омниканал", "виджет чата", "open lines", "support", "customer chat", "helpdesk", "operator";
   Projects — "проекты", "рабочие группы", "projects", "workgroups";
   Time — "рабочее время", "кто на работе", "учёт времени", "timeman", "work status";
   Drive — "файлы", "документы", "диск", "files", "documents", "drive";
@@ -78,6 +80,15 @@ metadata:
       - предложения
       - invoices
       - счета
+      - open lines
+      - openlines
+      - imopenlines
+      - открытые линии
+      - поддержка
+      - обращения
+      - операторы
+      - омниканал
+      - helpdesk
       - landing
       - sites
       - сайты
@@ -400,6 +411,57 @@ python3 scripts/bitrix24_call.py crm.deal.list \
   --json
 ```
 
+### Parameters from JSON file
+
+For complex parameters (nested objects, arrays, multi-file uploads), use `--params-file` instead of multiple `--param` flags. This avoids shell escaping issues:
+
+```bash
+echo '{"filter": {">=DATE_CREATE": "2025-01-01", "%TITLE": "client"}, "select": ["ID", "TITLE"]}' > /tmp/params.json
+python3 scripts/bitrix24_call.py crm.deal.list --params-file /tmp/params.json --json
+```
+
+### Auto-pagination
+
+For `.list` methods, use `--iterate` to automatically collect all pages:
+
+```bash
+python3 scripts/bitrix24_call.py crm.deal.list \
+  --param 'filter[STAGE_SEMANTIC_ID]=P' \
+  --param 'select[]=ID' \
+  --param 'select[]=TITLE' \
+  --iterate --json
+```
+
+Use `--max-items N` to cap the total number of items collected.
+
+### Dry-run mode
+
+Preview what would be called without executing:
+
+```bash
+python3 scripts/bitrix24_call.py crm.deal.add \
+  --param 'fields[TITLE]=Test' \
+  --dry-run --json
+```
+
+### Operation safety
+
+Methods are automatically classified by suffix:
+
+| Type | Suffixes | Required flag |
+|------|----------|---------------|
+| Read | `.list`, `.get`, `.current`, `.fields` | — |
+| Write | `.add`, `.update`, `.set`, `.start`, `.complete`, `.attach`, `.send` | `--confirm-write` |
+| Destructive | `.delete`, `.remove`, `.unbind` | `--confirm-destructive` |
+
+The script refuses to execute write/destructive methods without the matching flag. This prevents accidental data changes. When writing scenarios, always include the flag:
+
+```bash
+python3 scripts/bitrix24_call.py crm.deal.add \
+  --param 'fields[TITLE]=New deal' \
+  --confirm-write --json
+```
+
 If calls fail, read `references/troubleshooting.md` and run `scripts/check_webhook.py --json`.
 
 ## Batch Calls (Multiple Methods in One Request)
@@ -414,6 +476,23 @@ python3 scripts/bitrix24_batch.py \
 ```
 
 Results are returned under `body.result.result` keyed by command name. Use batch whenever you need data from 2+ domains.
+
+### Cross-command references ($result)
+
+In batch, use `$result[name]` to pass the output of one command into another. This allows chaining — e.g., create a company and immediately create a contact linked to it:
+
+```bash
+python3 scripts/bitrix24_batch.py \
+  --cmd 'company=crm.company.add?fields[TITLE]=Acme Corp' \
+  --cmd 'contact=crm.contact.add?fields[NAME]=John&fields[COMPANY_ID]=$result[company]' \
+  --cmd 'deal=crm.deal.add?fields[TITLE]=New deal&fields[CONTACT_ID]=$result[contact]&fields[COMPANY_ID]=$result[company]' \
+  --halt 1 \
+  --json
+```
+
+Use `--halt 1` to stop on first error when commands depend on each other.
+
+**Encoding note:** Batch commands use query string format — Cyrillic and special characters must be URL-encoded. For complex values, prefer `--params-file` with the regular `bitrix24_call.py` instead of batch.
 
 ## User ID and Timezone Cache
 
@@ -447,8 +526,10 @@ Then read the domain reference that matches the task:
 - `references/tasks.md`
 - `references/chat.md`
 - `references/channels.md`
+- `references/openlines.md`
 - `references/calendar.md`
 - `references/drive.md`
+- `references/files.md`
 - `references/users.md`
 - `references/projects.md`
 - `references/feed.md`
@@ -471,6 +552,20 @@ These rules are for the agent internally, not for user-facing output.
 - When a call fails, run `scripts/check_webhook.py --json` before asking the user.
 - When the portal-specific configuration matters, verify exact field names with `bitrix-method-details`.
 
+## API Module Restrictions
+
+Not all Bitrix24 REST modules work as expected through a webhook. Some methods exist only for external system integration. Before using methods from these modules, understand their limitations:
+
+- **Telephony (`voximplant.*`, `telephony.*`):** Does NOT make real calls. `telephony.externalcall.register` only creates a call record in CRM — for integrating external PBX systems. Tell the user the REST API cannot initiate voice connections.
+- **Mail services (`mailservice.*`):** Configures SMTP/IMAP server settings, cannot send or read emails. No REST API exists for actual email operations.
+- **SMS providers (`messageservice.*`):** Registers SMS providers, does not send messages directly. Requires a pre-configured external provider.
+- **Connectors (`imconnector.*`):** Infrastructure for connecting external messengers to Open Lines. Requires an external server handler. Useless without a configured integration.
+- **Widget embedding (`placement.*`, `userfieldtype.*`):** Registers UI widgets and custom field types. Only works in Marketplace application context, not via webhook.
+- **Event handlers (`event.*`):** Registers webhook handlers for events. Requires an external HTTP server to receive notifications.
+- **Business processes (`bizproc.*`):** `bizproc.workflow.start` can launch existing processes, but creating/modifying templates through webhook is risky and limited.
+
+If the user requests something from these modules — do not refuse. Explain what the method actually does and what it does NOT do. Let the user decide.
+
 ## Domain References
 
 - `references/access.md` — webhook setup, OAuth, install callbacks.
@@ -483,8 +578,10 @@ These rules are for the agent internally, not for user-facing output.
 - `references/tasks.md` — tasks, checklists, comments, planner.
 - `references/chat.md` — im, imbot, notifications, dialog history.
 - `references/channels.md` — channels (каналы), announcements, subscribers, broadcast messaging.
+- `references/openlines.md` — open lines (открытые линии), omnichannel customer communication, operators, sessions.
 - `references/calendar.md` — sections, events, attendees, availability.
 - `references/drive.md` — storage, folders, files, external links.
+- `references/files.md` — file uploads: base64 inline for CRM, disk+attach for tasks.
 - `references/users.md` — users, departments, org-structure, subordinates.
 - `references/projects.md` — workgroups, projects, scrum, membership.
 - `references/feed.md` — activity stream, feed posts, comments.

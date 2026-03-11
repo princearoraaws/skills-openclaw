@@ -3,11 +3,16 @@
   "slug": "bitrix24",
   "displayName": "Bitrix24",
   "latest": {
-    "version": "0.15.2",
-    "publishedAt": 1773094554119,
-    "commit": "https://github.com/openclaw/skills/commit/83fae71ba2925c6fe07e008da38c65beb9498f32"
+    "version": "0.15.5",
+    "publishedAt": 1773265717732,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.15.2",
+      "publishedAt": 1773094554119,
+      "commit": "https://github.com/openclaw/skills/commit/83fae71ba2925c6fe07e008da38c65beb9498f32"
+    },
     {
       "version": "0.5.4",
       "publishedAt": 1772989826523,

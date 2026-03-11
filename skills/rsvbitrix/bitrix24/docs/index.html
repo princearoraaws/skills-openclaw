@@ -256,6 +256,75 @@
     font-family: 'SF Mono', monospace;
   }
 
+  /* CHANGELOG */
+  .changelog-section {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 60px 20px;
+  }
+  .changelog-section h2 {
+    font-size: 28px;
+    text-align: center;
+    margin-bottom: 8px;
+  }
+  .changelog-version-badge {
+    text-align: center;
+    margin-bottom: 32px;
+  }
+  .changelog-version-badge span {
+    display: inline-block;
+    background: rgba(47,198,246,0.1);
+    border: 1px solid rgba(47,198,246,0.3);
+    color: var(--b24-blue);
+    font-size: 14px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 16px;
+    font-family: 'SF Mono', SFMono-Regular, Consolas, monospace;
+  }
+  .changelog-release {
+    margin-bottom: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+  .changelog-release-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+  .changelog-release-header h3 {
+    font-size: 18px;
+    color: var(--b24-blue);
+  }
+  .changelog-release-header .date {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .changelog-item {
+    padding: 4px 0;
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--text);
+  }
+  .changelog-item .item-title {
+    font-weight: 600;
+    color: var(--b24-green);
+  }
+  .changelog-item .item-desc {
+    color: var(--muted);
+  }
+  .changelog-more {
+    text-align: center;
+    margin-top: 16px;
+  }
+  .changelog-more a {
+    font-size: 14px;
+    color: var(--muted);
+  }
+
   footer {
     text-align: center; padding: 40px 20px;
     color: var(--muted); font-size: 14px;
@@ -901,12 +970,29 @@
   </div>
 </div>
 
+<section class="changelog-section" id="changelog">
+  <h2 data-lang="en">What's New</h2>
+  <h2 data-lang="ru">Что нового</h2>
+  <h2 data-lang="zh">更新日志</h2>
+  <h2 data-lang="es">Novedades</h2>
+  <h2 data-lang="fr">Nouveautés</h2>
+  <div class="changelog-version-badge"><span id="current-version">...</span></div>
+  <div id="changelog-entries"></div>
+  <div class="changelog-more">
+    <a href="https://github.com/rsvbitrix/bitrix24-skill/blob/main/CHANGELOG.md" target="_blank" data-lang="en">Full changelog on GitHub →</a>
+    <a href="https://github.com/rsvbitrix/bitrix24-skill/blob/main/CHANGELOG.md" target="_blank" data-lang="ru">Полный лог изменений на GitHub →</a>
+    <a href="https://github.com/rsvbitrix/bitrix24-skill/blob/main/CHANGELOG.md" target="_blank" data-lang="zh">完整更新日志 →</a>
+    <a href="https://github.com/rsvbitrix/bitrix24-skill/blob/main/CHANGELOG.md" target="_blank" data-lang="es">Registro completo en GitHub →</a>
+    <a href="https://github.com/rsvbitrix/bitrix24-skill/blob/main/CHANGELOG.md" target="_blank" data-lang="fr">Journal complet sur GitHub →</a>
+  </div>
+</section>
+
 <footer>
   <p>
     <a href="https://github.com/rsvbitrix/bitrix24-skill" target="_blank">GitHub</a> &middot;
     <a href="https://clawhub.com/skills/bitrix24" target="_blank">ClawHub</a> &middot;
     <a href="https://openclaw.com" target="_blank">OpenClaw</a> &middot;
-    Bitrix24 Skill v0.14.0
+    Bitrix24 Skill v0.15.5
   </p>
   <p style="margin-top: 12px;" data-lang="en">
     Created by <b>Sergey R.</b> &middot; Feedback &amp; suggestions: <a href="mailto:sergey.r@me.com">sergey.r@me.com</a>
@@ -937,6 +1023,40 @@ function copyInstall() {
   document.querySelectorAll('.copy-icon').forEach(el => { el.textContent = '✅'; });
   setTimeout(() => document.querySelectorAll('.copy-icon').forEach(el => { el.textContent = '📋'; }), 2000);
 }
+// Load changelog
+(function() {
+  fetch('changelog.json')
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      var badge = document.getElementById('current-version');
+      if (badge) badge.textContent = 'v' + data.version;
+      var container = document.getElementById('changelog-entries');
+      if (!container || !data.entries) return;
+      var html = '';
+      var shown = data.entries.slice(0, 5);
+      shown.forEach(function(release) {
+        html += '<div class="changelog-release">';
+        html += '<div class="changelog-release-header">';
+        html += '<h3>v' + release.version + '</h3>';
+        html += '<span class="date">' + release.date + '</span>';
+        html += '</div>';
+        release.items.forEach(function(item) {
+          html += '<div class="changelog-item">';
+          if (item.title) {
+            html += '<span class="item-title">' + item.title + '</span> — ';
+          }
+          // Strip markdown backticks for display
+          var desc = item.description.replace(/`([^`]+)`/g, '$1');
+          html += '<span class="item-desc">' + desc + '</span>';
+          html += '</div>';
+        });
+        html += '</div>';
+      });
+      container.innerHTML = html;
+    })
+    .catch(function() {});
+})();
+
 // Auto-detect browser language
 (function() {
   var supported = ['en', 'ru', 'zh', 'es', 'fr'];
