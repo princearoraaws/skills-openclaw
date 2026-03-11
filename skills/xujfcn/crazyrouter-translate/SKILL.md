@@ -1,6 +1,6 @@
 ---
 name: crazyrouter-translate
-description: AI-powered translation via Crazyrouter. Translate text between any languages using GPT-5, Claude, DeepSeek, or Qwen. Supports file translation and multi-model comparison. Use when user asks to translate text, documents, or compare translations.
+description: AI-powered translation via Crazyrouter. Translate text between any languages using GPT-5, Claude, DeepSeek, or Qwen. Supports file translation and multi-model comparison. Use when user asks to translate text, documents, or compare translations. Requires environment variable CRAZYROUTER_API_KEY (get at https://crazyrouter.com).
 ---
 
 # AI Translation via Crazyrouter
@@ -11,31 +11,36 @@ Translate text between any languages using the best AI models through [Crazyrout
 
 **Agent Execution**:
 1. `SKILL_DIR` = this SKILL.md file's directory
-2. Script path = `${SKILL_DIR}/scripts/main.ts`
+2. Script path = `${SKILL_DIR}/scripts/main.mjs`
 
 ## Step 0: Check API Key ⛔ BLOCKING
 
 ```bash
-echo "${CRAZYROUTER_API_KEY:-not_set}"
+[ -n "${CRAZYROUTER_API_KEY}" ] && echo "key_present" || echo "not_set"
 ```
+
+| Result | Action |
+|--------|--------|
+| `key_present` | Continue |
+| `not_set` | Ask user to set `CRAZYROUTER_API_KEY`. Get key at https://crazyrouter.com |
 
 ## Usage
 
 ```bash
 # Basic translation
-npx -y bun ${SKILL_DIR}/scripts/main.ts --text "Hello world" --to zh
+node ${SKILL_DIR}/scripts/main.mjs --text "Hello world" --to zh
 
 # Translate file
-npx -y bun ${SKILL_DIR}/scripts/main.ts --input article.md --to ja --output article_ja.md
+node ${SKILL_DIR}/scripts/main.mjs --input article.md --to ja --output article_ja.md
 
 # Use specific model
-npx -y bun ${SKILL_DIR}/scripts/main.ts --text "Bonjour le monde" --to en --model deepseek-r1
+node ${SKILL_DIR}/scripts/main.mjs --text "Bonjour le monde" --to en --model deepseek-r1
 
 # Specify source language
-npx -y bun ${SKILL_DIR}/scripts/main.ts --text "你好世界" --from zh --to ko
+node ${SKILL_DIR}/scripts/main.mjs --text "你好世界" --from zh --to ko
 
 # Keep formatting (Markdown)
-npx -y bun ${SKILL_DIR}/scripts/main.ts --input README.md --to ja --output README_ja.md --format markdown
+node ${SKILL_DIR}/scripts/main.mjs --input README.md --to ja --output README_ja.md --format markdown
 ```
 
 ### Options

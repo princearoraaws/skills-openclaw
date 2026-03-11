@@ -3,9 +3,15 @@
   "slug": "crazyrouter-translate",
   "displayName": "Crazyrouter Translate",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1772980265756,
-    "commit": "https://github.com/openclaw/skills/commit/3325c8868ceacd5d37c8fa290d59108c51f2e89e"
+    "version": "1.1.0",
+    "publishedAt": 1773147978336,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1772980265756,
+      "commit": "https://github.com/openclaw/skills/commit/3325c8868ceacd5d37c8fa290d59108c51f2e89e"
+    }
+  ]
 }
