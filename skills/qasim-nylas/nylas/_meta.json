@@ -1,0 +1,11 @@
+{
+  "owner": "qasim-nylas",
+  "slug": "nylas",
+  "displayName": "Nylas Email, Calendar & Contacts",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773203580314,
+    "commit": null
+  },
+  "history": []
+}
