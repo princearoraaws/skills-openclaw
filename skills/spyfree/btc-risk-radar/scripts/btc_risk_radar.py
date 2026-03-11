@@ -8,10 +8,18 @@ from typing import Dict, List, Optional, Tuple
 
 import requests
 
+SKILL_VERSION = "0.1.1"
 DERIBIT = "https://www.deribit.com/api/v2/public"
 BINANCE = "https://api.binance.com/api/v3"
 OKX = "https://www.okx.com/api/v5"
 BYBIT = "https://api.bybit.com/v5"
+PUBLIC_SOURCES = [
+    "Deribit Public API: /public/get_instruments, /public/get_order_book, /public/get_book_summary_by_currency, /public/get_index_price, /public/get_book_summary_by_instrument",
+    "Coinbase Public API: /v2/prices/BTC-USD/spot",
+    "Binance Public API (optional): /api/v3/ticker/price",
+    "OKX Public API: /api/v5/market/ticker, /api/v5/public/funding-rate",
+    "Bybit Public API: /v5/market/tickers",
+]
 
 
 @dataclass
@@ -162,33 +170,42 @@ def compute_deribit_core() -> Dict:
 
 
 def fetch_cross_exchange() -> Dict:
-    data = {"spot": {}, "funding": {}, "availability": {"spot_sources": 0, "funding_sources": 0}}
+    data = {
+        "spot": {},
+        "funding": {},
+        "availability": {"spot_sources": 0, "funding_sources": 0},
+        "data_gaps": [],
+    }
 
     try:
         t = get(f"{BINANCE}/ticker/price", {"symbol": "BTCUSDT"})
         data["spot"]["binance"] = float(t.get("price"))
     except Exception:
-        pass
+        data["data_gaps"].append("binance_spot_unavailable")
 
     try:
         cb = get("https://api.coinbase.com/v2/prices/BTC-USD/spot")
         data["spot"]["coinbase"] = float(cb["data"]["amount"])
     except Exception:
-        pass
+        data["data_gaps"].append("coinbase_spot_unavailable")
 
     try:
         okx_t = get(f"{OKX}/market/ticker", {"instId": "BTC-USDT"})
         if okx_t and isinstance(okx_t.get("data"), list) and okx_t["data"]:
             data["spot"]["okx"] = float(okx_t["data"][0]["last"])
+        else:
+            data["data_gaps"].append("okx_spot_unavailable")
     except Exception:
-        pass
+        data["data_gaps"].append("okx_spot_unavailable")
 
     try:
         okx_f = get(f"{OKX}/public/funding-rate", {"instId": "BTC-USDT-SWAP"})
         if okx_f and isinstance(okx_f.get("data"), list) and okx_f["data"]:
             data["funding"]["okx"] = float(okx_f["data"][0]["fundingRate"])
+        else:
+            data["data_gaps"].append("okx_funding_unavailable")
     except Exception:
-        pass
+        data["data_gaps"].append("okx_funding_unavailable")
 
     try:
         by_t = get(f"{BYBIT}/market/tickers", {"category": "linear", "symbol": "BTCUSDT"})
@@ -197,8 +214,12 @@ def fetch_cross_exchange() -> Dict:
             data["spot"]["bybit"] = float(item["lastPrice"])
             if item.get("fundingRate") is not None:
                 data["funding"]["bybit"] = float(item["fundingRate"])
+            else:
+                data["data_gaps"].append("bybit_funding_unavailable")
+        else:
+            data["data_gaps"].append("bybit_spot_unavailable")
     except Exception:
-        pass
+        data["data_gaps"].append("bybit_spot_unavailable")
 
     data["availability"]["spot_sources"] = len(data["spot"])
     data["availability"]["funding_sources"] = len(data["funding"])
@@ -210,7 +231,9 @@ def fetch_cross_exchange() -> Dict:
         data["spot_dispersion_bp"] = round(spread_bp, 2)
     else:
         data["spot_dispersion_bp"] = None
+        data["data_gaps"].append("insufficient_spot_sources_for_dispersion")
 
+    data["data_gaps"] = sorted(set(data["data_gaps"]))
     return data
 
 
@@ -334,7 +357,14 @@ def confidence_score(metrics: Dict) -> Dict:
     signal_count += 1 if metrics.get("funding_regime", {}).get("regime") == "bearish" else 0
     score += 20 if signal_count >= 3 else 10 if signal_count >= 2 else 0
 
-    score = min(100, score)
+    if metrics.get("degraded_mode"):
+        score -= 10
+    if avail.get("spot_sources", 0) < 2:
+        score -= 10
+    if avail.get("funding_sources", 0) == 0:
+        score -= 10
+
+    score = max(0, min(100, score))
     level = "high" if score >= 75 else "medium" if score >= 50 else "low"
     return {"score": score, "level": level}
 
@@ -369,8 +399,12 @@ def beginner_explain(lang: str, payload: Dict) -> str:
     m = payload["metrics"]
     plan = payload["validation_72h"]
     label = payload["risk_label"]
+    gaps = payload.get("data_gaps", [])
+    degraded = payload.get("degraded_mode")
 
     if lang == "zh":
+        tail = f" 数据缺口: {', '.join(gaps)}。" if gaps else ""
+        deg = " 当前为降级模式。" if degraded else ""
         return (
             "【小白解读】\n"
             f"1) 当前市场温度：{label}。可以理解成红绿灯里的“{label}灯”。\n"
@@ -379,8 +413,11 @@ def beginner_explain(lang: str, payload: Dict) -> str:
             f"Put占比代理 {m.get('put_buy_share_proxy')}%（越高越偏防守）。\n"
             f"3) 接下来72小时：5个风控检查触发了 {plan.get('fired')}/5。\n"
             f"4) 实操建议（非投资建议）：{plan.get('suggested_action')}。若你是小白，优先控制仓位，不要满仓抄底。"
+            f"{deg}{tail}"
         )
 
+    tail = f" Data gaps: {', '.join(gaps)}." if gaps else ""
+    deg = " Degraded mode is active." if degraded else ""
     return (
         "[Beginner Explainer]\n"
         f"1) Market temperature: {label} (traffic-light style risk state).\n"
@@ -389,6 +426,7 @@ def beginner_explain(lang: str, payload: Dict) -> str:
         f"put-flow proxy {m.get('put_buy_share_proxy')}% (higher = more defensive positioning).\n"
         f"3) Next 72h: {plan.get('fired')}/5 risk checks are active.\n"
         f"4) Practical stance (not investment advice): {plan.get('suggested_action')}. For beginners, prioritize smaller size and avoid all-in bottom fishing."
+        f"{deg}{tail}"
     )
 
 
@@ -402,22 +440,28 @@ def narrative(lang: str, payload: Dict) -> str:
     conf = payload["confidence"]
     plan = payload["validation_72h"]
     reasons = payload["reasons"]
+    degraded = payload.get("degraded_mode")
+    gaps = payload.get("data_gaps", [])
 
     if lang == "zh":
+        tail = f" 数据缺口: {', '.join(gaps)}。" if gaps else ""
+        deg = " 当前为降级模式。" if degraded else ""
         return (
             f"风险灯号: {label}（置信度 {conf['score']}/100, {conf['level']}）。"
             f"ATM IV={m.get('atm_iv_pct')}%，RR25={m.get('rr_25d')}，RR15={m.get('rr_15d')}，"
             f"Put占比代理={m.get('put_buy_share_proxy')}%，资金费率状态={m.get('funding_regime',{}).get('regime')}。"
             f"72小时验证触发 {plan['fired']}/5，建议: {plan['suggested_action']}。"
-            f"触发原因: {', '.join(reasons) if reasons else '无'}。"
+            f"触发原因: {', '.join(reasons) if reasons else '无'}。{deg}{tail}"
         )
 
+    tail = f" Data gaps: {', '.join(gaps)}." if gaps else ""
+    deg = " Degraded mode is active." if degraded else ""
     return (
         f"Risk label: {label} (confidence {conf['score']}/100, {conf['level']}). "
         f"ATM IV={m.get('atm_iv_pct')}%, RR25={m.get('rr_25d')}, RR15={m.get('rr_15d')}, "
         f"put-volume proxy={m.get('put_buy_share_proxy')}%, funding regime={m.get('funding_regime',{}).get('regime')}. "
         f"72h validation fired {plan['fired']}/5, action: {plan['suggested_action']}. "
-        f"Triggers: {', '.join(reasons) if reasons else 'none'}."
+        f"Triggers: {', '.join(reasons) if reasons else 'none'}.{deg}{tail}"
     )
 
 
@@ -429,7 +473,22 @@ def main():
     ap.add_argument("--event-mode", choices=["normal", "high-alert"], default="normal")
     ap.add_argument("--audience", choices=["pro", "beginner"], default="pro")
     ap.add_argument("--json", action="store_true", help="Output JSON only")
+    ap.add_argument("--sources", action="store_true", help="Print public data sources and exit")
+    ap.add_argument("--version", action="store_true", help="Print script version and exit")
     args = ap.parse_args()
+
+    if args.version:
+        print(SKILL_VERSION)
+        return
+
+    if args.sources:
+        print(json.dumps({
+            "version": SKILL_VERSION,
+            "read_only": True,
+            "authenticated": False,
+            "public_sources": PUBLIC_SOURCES,
+        }, ensure_ascii=False, indent=2))
+        return
 
     points = load_option_points()
     surface = compute_surface_metrics(points)
@@ -439,6 +498,8 @@ def main():
 
     metrics = {**surface, **vols, **deribit_core, **cross}
     metrics["funding_regime"] = summarize_funding_regime(metrics.get("deribit_funding_8h"), metrics.get("funding", {}))
+    degraded_mode = bool(metrics.get("data_gaps"))
+    metrics["degraded_mode"] = degraded_mode
 
     label, reasons, score = risk_label(metrics, event_mode=args.event_mode)
     plan = build_72h_plan(metrics, horizon_hours=args.horizon_hours, event_mode=args.event_mode)
@@ -447,18 +508,18 @@ def main():
 
     payload = {
         "as_of_utc": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
-        "sources": [
-            "Deribit Public API: options/perp/index",
-            "Coinbase Public API: spot",
-            "Binance Public API: optional spot",
-            "OKX Public API: spot+funding",
-            "Bybit Public API: linear ticker/funding field",
-        ],
+        "version": SKILL_VERSION,
+        "read_only": True,
+        "authenticated": False,
+        "sources": PUBLIC_SOURCES,
         "notes": [
             "put_buy_share_proxy uses volume split, not signed aggressor flow",
             "RR metrics are front-expiry delta-nearest approximations",
             "cross-venue endpoints may be regionally unavailable",
+            "partial venue failures reduce confidence and activate degraded_mode",
         ],
+        "degraded_mode": degraded_mode,
+        "data_gaps": metrics.get("data_gaps", []),
         "risk_label": label,
         "risk_score": score,
         "confidence": conf,
