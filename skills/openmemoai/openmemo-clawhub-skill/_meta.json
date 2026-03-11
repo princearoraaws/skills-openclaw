@@ -1,0 +1,11 @@
+{
+  "owner": "openmemoai",
+  "slug": "openmemo-clawhub-skill",
+  "displayName": "OpenMemo Memory – Persistent Memory for OpenClaw Agents",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1773213545718,
+    "commit": null
+  },
+  "history": []
+}
