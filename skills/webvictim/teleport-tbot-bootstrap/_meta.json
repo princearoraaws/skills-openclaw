@@ -1,0 +1,11 @@
+{
+  "owner": "webvictim",
+  "slug": "teleport-tbot-bootstrap",
+  "displayName": "Teleport Machine ID tbot Bootstrap (MacOS LaunchAgent)",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773257204004,
+    "commit": null
+  },
+  "history": []
+}
