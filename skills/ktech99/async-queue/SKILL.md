@@ -1,11 +1,12 @@
 ---
 name: async-queue
-description: "Schedule delayed or async tasks between OpenClaw agents via a file-backed queue daemon. Use when you need to set a timed reminder or follow-up, send a delayed task to an agent, or queue any work that should fire after a delay rather than immediately. NOT for cron-style recurring jobs (use openclaw cron) or immediate actions."
-version: 1.0.3
+description: "Schedule delayed tasks between OpenClaw agents — set reminders, chain tasks, coordinate agents on a delay. File-backed, no infra needed. NOT for cron-style recurring jobs (use openclaw cron) or immediate actions."
+version: 1.0.6
 security_disclosure: |
   This skill installs a background daemon (macOS launchd) that polls a local queue file every 30s.
-  It uses child_process.execSync to invoke the openclaw CLI when firing tasks.
-  Files are written to ~/.openclaw/queue/ and ~/.openclaw/extensions/.
+  daemon.js uses Node's built-in http module to POST to the local queue-wake plugin endpoint (127.0.0.1 only) — no execSync or shell invocations.
+  Files are written to ~/.openclaw/queue/ (queue state) and ~/.openclaw/extensions/queue-wake/ (plugin).
+  Agent targets are user-configured via ~/.openclaw/queue/targets.json — no hard-coded agent names.
   The install.sh script must be run manually — nothing runs automatically on skill install.
   All code is open source and auditable in this skill package.
 ---
