@@ -2,7 +2,7 @@
 
 Base URL: `http://localhost:3847` (configurable via `config.json` or `PORT` env)
 
-All endpoints return JSON. CORS enabled (`*`).
+All endpoints return JSON. GET-only. Server binds to `127.0.0.1` by default — no cross-origin requests are served.
 
 ## Endpoints
 
@@ -113,13 +113,13 @@ Detailed breakdown for a single agent, including per-call messages.
       "cacheWriteCost": 0,
       "toolCallCount": 3,
       "toolNames": ["exec", "read", "write"],
-      "userPrompt": "Help me fix the build error"
+      "userPrompt": "[redacted]"
     }
   ]
 }
 ```
 
-**`userPrompt`:** The user message that triggered this assistant response. Extracted from session files with Feishu/system envelope stripped. `null` if no user message found. Truncated to 300 chars.
+**`userPrompt`:** Redacted by default (shows `"[redacted]"`). When `showPrompts` is enabled in config, shows the user message that triggered this response (truncated to 300 chars). Extracted from session files with Feishu/system envelope stripped. `null` if no user message found.
 
 ---
 
@@ -231,3 +231,10 @@ Optional:
 - `assets/` — served at `/assets/*` (images, CSS, JS)
 
 The theme fetches all data from the API endpoints above. See `themes/default/` for reference implementation.
+
+### Security
+
+- HTML responses include a `Content-Security-Policy` header restricting `connect-src` and `font-src` to `'self'` only — themes cannot make external network requests.
+- Static file serving is sandboxed to the theme directory (path traversal protected).
+- The default theme makes zero external requests (system fonts only, no CDN loads).
+- Review any custom or third-party theme before enabling.

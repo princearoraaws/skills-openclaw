@@ -1,6 +1,28 @@
 ---
 name: token-burn-monitor
-description: "Real-time token consumption monitoring dashboard for OpenClaw agents. Tracks per-agent token usage, cost breakdown by model, cache hit rates, cron job status, and 30-day historical trends. Use when setting up cost monitoring, checking daily token burn, debugging which prompts cost the most, or reviewing cron job health. Features swappable themes and expandable user prompt tracking in per-call breakdowns."
+description: "Real-time token consumption monitoring dashboard for OpenClaw agents. Tracks per-agent token usage, cost breakdown by model, cache hit rates, cron job status, and 30-day historical trends. Use when setting up cost monitoring, checking daily token burn, or reviewing cron job health. User prompts are redacted by default."
+env:
+  OPENCLAW_AGENTS_DIR:
+    description: "Path to OpenClaw agents directory"
+    default: "/home/node/.openclaw/agents"
+    required: false
+  OPENCLAW_HOME:
+    description: "Path to OpenClaw home directory (for cron data)"
+    default: "/home/node/.openclaw"
+    required: false
+  PORT:
+    description: "Server port"
+    default: "3847"
+    required: false
+permissions:
+  filesystem:
+    read:
+      - "$OPENCLAW_AGENTS_DIR/*/sessions/*.jsonl"
+      - "$OPENCLAW_HOME/cron/jobs.json"
+  network:
+    listen: "127.0.0.1:$PORT"
+    outbound: none
+  shell: none
 ---
 
 # Token Burn Monitor
@@ -62,7 +84,7 @@ The default theme (`themes/default/`) is a full reference implementation.
 
 ## API Overview
 
-All endpoints return JSON. Full docs in `API.md`.
+All endpoints return JSON. GET-only. Server binds to localhost. Full docs in `API.md`.
 
 | Endpoint | Description |
 |---|---|
@@ -71,8 +93,17 @@ All endpoints return JSON. Full docs in `API.md`.
 | `GET /api/agent/:id?date=` | Single agent with per-call breakdown |
 | `GET /api/history?days=` | 30-day cost history |
 | `GET /api/pricing` | Model pricing table |
-| `GET /api/crons` | Scheduled jobs |
+| `GET /api/crons` | Scheduled jobs (read from filesystem) |
 | `GET /api/cron/:id/runs` | Job run history |
+
+## Security
+
+- Server binds to `127.0.0.1` by default (localhost only)
+- No shell execution — all data read from filesystem
+- No outbound network requests — default theme uses system fonts
+- User prompts redacted by default (`[redacted]`), opt-in via `showPrompts: true` in config
+- HTML responses include CSP: `connect-src 'self'; font-src 'self'`
+- GET-only — all other HTTP methods rejected
 
 ## Troubleshooting
 

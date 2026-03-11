@@ -1,24 +1,25 @@
 #!/usr/bin/env node
 /**
- * Token Burn Monitor v5.0
+ * Token Burn Monitor v5.3
  * Modular OpenClaw Skill — Core API + Swappable Themes
  * - Auto-discovers agents from AGENTS_DIR
- * - Configurable via config.json
- * - Theme system: themes/<name>/ served as static files
- * - API-first: all data via JSON endpoints
+ * - Reads cron schedule from filesystem (no shell execution)
+ * - Theme system: themes/<name>/ served as static files with CSP
+ * - API-first: all data via JSON endpoints, GET-only, localhost-bound
  */
 
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const SKILL_DIR = path.dirname(require.main.filename || __filename);
 const AGENTS_DIR = process.env.OPENCLAW_AGENTS_DIR || '/home/node/.openclaw/agents';
+const OPENCLAW_HOME = process.env.OPENCLAW_HOME || '/home/node/.openclaw';
+const CRON_JOBS_FILE = path.join(OPENCLAW_HOME, 'cron', 'jobs.json');
 
 // Load config
 function loadConfig() {
-  const defaults = { port: 3847, theme: 'default', agents: {}, modelPricing: {} };
+  const defaults = { port: 3847, theme: 'default', showPrompts: false, agents: {}, modelPricing: {} };
   const configPath = path.join(SKILL_DIR, 'config.json');
   try {
     if (fs.existsSync(configPath)) {
@@ -26,6 +27,7 @@ function loadConfig() {
       return {
         port: userConfig.port || defaults.port,
         theme: userConfig.theme || defaults.theme,
+        showPrompts: userConfig.showPrompts !== undefined ? userConfig.showPrompts : defaults.showPrompts,
         agents: { ...defaults.agents, ...userConfig.agents },
         modelPricing: { ...defaults.modelPricing, ...userConfig.modelPricing }
       };
@@ -144,6 +146,13 @@ function cronToHuman(expr) {
   }
   
   return expr;
+}
+
+function redactPrompt(text) {
+  if (!text) return null;
+  const showPrompts = process.env.SHOW_PROMPTS === '1' || CONFIG.showPrompts === true;
+  if (!showPrompts) return '[redacted]';
+  return text.slice(0, 300) + (text.length > 300 ? '...' : '');
 }
 
 function getProvider(model) {
@@ -290,7 +299,7 @@ function parseSessionFileSync(filePath, targetDate) {
             inputCost, outputCost, cacheReadCost, cacheWriteCost,
             toolCallCount,
             toolNames,
-            userPrompt: lastUserPrompt ? lastUserPrompt.text : null
+            userPrompt: lastUserPrompt ? redactPrompt(lastUserPrompt.text) : null
           });
           
           stats.latestStatus = {
@@ -439,8 +448,8 @@ function getHistory(days = 30) {
 
 function getCronJobs() {
   try {
-    const result = execSync('openclaw cron list --json 2>/dev/null', { encoding: 'utf8', timeout: 5000 });
-    const data = JSON.parse(result);
+    if (!fs.existsSync(CRON_JOBS_FILE)) return [];
+    const data = JSON.parse(fs.readFileSync(CRON_JOBS_FILE, 'utf8'));
     return data.jobs || [];
   } catch (e) {
     return [];
@@ -448,19 +457,41 @@ function getCronJobs() {
 }
 
 function getCronRuns(jobId) {
+  if (!/^[\w\-]+$/.test(jobId)) {
+    return { runs: [], error: 'Invalid job ID' };
+  }
   try {
-    const result = execSync(`openclaw cron runs --id ${jobId} 2>/dev/null`, { encoding: 'utf8', timeout: 5000 });
-    const data = JSON.parse(result);
-    return { runs: data.entries || [], total: data.total || 0 };
+    const jobs = getCronJobs();
+    const job = jobs.find(j => j.id === jobId);
+    if (!job) return { runs: [], error: 'Job not found' };
+    const state = job.state || {};
+    const runs = [];
+    if (state.lastRunAtMs) {
+      runs.push({
+        runAtMs: state.lastRunAtMs,
+        status: state.lastRunStatus || 'unknown',
+        durationMs: state.lastDurationMs || 0,
+        nextRunAtMs: state.nextRunAtMs || null
+      });
+    }
+    return { runs, total: runs.length };
   } catch (e) {
     return { runs: [], error: e.message };
   }
 }
 
 function serveStatic(res, filePath, contentType) {
-  fs.readFile(filePath, (err, data) => {
+  const resolved = path.resolve(filePath);
+  if (!resolved.startsWith(path.resolve(THEME_DIR))) {
+    res.writeHead(403); res.end('Forbidden'); return;
+  }
+  fs.readFile(resolved, (err, data) => {
     if (err) { res.writeHead(404); res.end('Not found'); return; }
-    res.writeHead(200, { 'Content-Type': contentType });
+    const headers = { 'Content-Type': contentType };
+    if (contentType === 'text/html') {
+      headers['Content-Security-Policy'] = `default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; font-src 'self'`;
+    }
+    res.writeHead(200, headers);
     res.end(data);
   });
 }
@@ -468,10 +499,7 @@ function serveStatic(res, filePath, contentType) {
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
   
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  
-  if (req.method === 'OPTIONS') { res.writeHead(204); res.end(); return; }
+  if (req.method !== 'GET') { res.writeHead(405); res.end('Method not allowed'); return; }
 
   if (url.pathname === '/api/config') {
     const agentConfig = getAgentConfig();
@@ -629,9 +657,10 @@ const server = http.createServer((req, res) => {
   res.end('Not found');
 });
 
-server.listen(PORT, '0.0.0.0', () => {
+const BIND_HOST = process.env.BIND_HOST || '127.0.0.1';
+server.listen(PORT, BIND_HOST, () => {
   const agentCount = Object.keys(getAgentConfig()).length;
-  console.log(`🔥 Token Burn Monitor v5.0 running at http://localhost:${PORT}`);
+  console.log(`🔥 Token Burn Monitor v5.3 running at http://${BIND_HOST}:${PORT}`);
   console.log(`   Theme: ${CONFIG.theme} (${THEME_DIR})`);
   console.log(`   Discovered ${agentCount} agents from ${AGENTS_DIR}`);
 });

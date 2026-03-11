@@ -3,9 +3,15 @@
   "slug": "token-burn-monitor",
   "displayName": "Token Burn Monitor",
   "latest": {
-    "version": "5.0.0",
-    "publishedAt": 1773200360191,
-    "commit": "https://github.com/openclaw/skills/commit/4d768ba8665d23d65d16718bd03c596779ac2c9e"
+    "version": "5.3.1",
+    "publishedAt": 1773218294210,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "5.0.0",
+      "publishedAt": 1773200360191,
+      "commit": "https://github.com/openclaw/skills/commit/4d768ba8665d23d65d16718bd03c596779ac2c9e"
+    }
+  ]
 }
