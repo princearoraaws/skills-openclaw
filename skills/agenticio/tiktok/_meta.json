@@ -3,9 +3,15 @@
   "slug": "tiktok",
   "displayName": "TikTok",
   "latest": {
-    "version": "2.0.0",
-    "publishedAt": 1772975499252,
-    "commit": "https://github.com/openclaw/skills/commit/7a4f23d4de7acf9dbb4c823168ba67caa175ed22"
+    "version": "2.1.0",
+    "publishedAt": 1773065748804,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "2.0.0",
+      "publishedAt": 1772975499252,
+      "commit": "https://github.com/openclaw/skills/commit/7a4f23d4de7acf9dbb4c823168ba67caa175ed22"
+    }
+  ]
 }
