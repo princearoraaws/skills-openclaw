@@ -1,0 +1,11 @@
+{
+  "owner": "lyuns",
+  "slug": "aigc",
+  "displayName": "gen-joke",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773162719184,
+    "commit": null
+  },
+  "history": []
+}
