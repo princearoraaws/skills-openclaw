@@ -1,0 +1,11 @@
+{
+  "owner": "loopintoai",
+  "slug": "gateway-validator",
+  "displayName": "Gateway Validator",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773144828455,
+    "commit": null
+  },
+  "history": []
+}
