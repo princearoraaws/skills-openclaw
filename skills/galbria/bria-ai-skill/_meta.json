@@ -1,0 +1,11 @@
+{
+  "owner": "galbria",
+  "slug": "bria-ai-skill",
+  "displayName": "Image generation, editing and remove background",
+  "latest": {
+    "version": "1.2.5",
+    "publishedAt": 1773223898032,
+    "commit": null
+  },
+  "history": []
+}
