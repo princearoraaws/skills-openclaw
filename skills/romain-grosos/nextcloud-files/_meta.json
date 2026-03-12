@@ -1,13 +1,18 @@
 {
   "owner": "romain-grosos",
   "slug": "nextcloud-files",
-  "displayName": "Nextcloud",
+  "displayName": "Nextcloud Files",
   "latest": {
-    "version": "1.2.2",
-    "publishedAt": 1772059008347,
-    "commit": "https://github.com/openclaw/skills/commit/63d1541b05b0f560a208037021a8e60e46f526fd"
+    "version": "1.2.3",
+    "publishedAt": 1773344686319,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.2.2",
+      "publishedAt": 1772059008347,
+      "commit": "https://github.com/openclaw/skills/commit/63d1541b05b0f560a208037021a8e60e46f526fd"
+    },
     {
       "version": "1.0.6",
       "publishedAt": 1771839563238,
