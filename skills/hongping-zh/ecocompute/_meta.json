@@ -1,13 +1,18 @@
 {
   "owner": "hongping-zh",
   "slug": "ecocompute",
-  "displayName": "EcoCompute - LLM Energy Efficiency Advisor",
+  "displayName": "EcoCompute — LLM Energy Efficiency Advisor",
   "latest": {
-    "version": "2.0.0",
-    "publishedAt": 1771312974166,
-    "commit": "https://github.com/openclaw/skills/commit/fa11963708347d6e2fe36296d1077de87297b8a2"
+    "version": "2.2.0",
+    "publishedAt": 1773217079618,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.0.0",
+      "publishedAt": 1771312974166,
+      "commit": "https://github.com/openclaw/skills/commit/fa11963708347d6e2fe36296d1077de87297b8a2"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1771229518434,
