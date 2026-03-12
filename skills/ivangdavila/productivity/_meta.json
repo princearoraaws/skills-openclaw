@@ -3,11 +3,16 @@
   "slug": "productivity",
   "displayName": "Productivity",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1771438424932,
-    "commit": "https://github.com/openclaw/skills/commit/eb6745fe39e841378eadd0f672e179d091636826"
+    "version": "1.0.4",
+    "publishedAt": 1773250749518,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1771438424932,
+      "commit": "https://github.com/openclaw/skills/commit/eb6745fe39e841378eadd0f672e179d091636826"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1771184118783,

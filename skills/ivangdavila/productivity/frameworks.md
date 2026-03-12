@@ -14,9 +14,9 @@ Time is finite. Energy fluctuates. Match tasks to energy:
 | Medium | Meetings, email, routine tasks |
 | Low | Admin, organizing, easy mechanical work |
 
-Track YOUR patterns:
+Ask yourself:
 - When do you feel most alert?
-- When do you crash?
+- When do you typically crash?
 - What activities drain vs. restore you?
 
 ---

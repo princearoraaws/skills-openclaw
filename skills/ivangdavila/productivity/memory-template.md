@@ -1,46 +1,59 @@
-# Memory Setup — Productivity
+# Memory Template — Productivity
 
-## Initial Setup
-
-Create directory on first use:
-```bash
-mkdir -p ~/productivity/situations
-touch ~/productivity/memory.md
-```
-
-## memory.md Template
-
-Copy to `~/productivity/memory.md`:
+Create `~/productivity/memory.md` with this structure:
 
 ```markdown
 # Productivity Memory
 
+## Status
+status: ongoing
+version: 1.0.4
+last: YYYY-MM-DD
+integration: pending
+
+## Constraints
+<!-- Real-life constraints that shape planning -->
+<!-- Example: "School pickup at 15:00", "Back-to-back meetings Tue/Thu" -->
+
 ## Work Style
-<!-- How they naturally work. Format: "aspect: description" -->
-<!-- Examples: deep work: mornings, meetings: afternoon buffer, batch emails: twice daily -->
+<!-- How work goes best when it goes well -->
+<!-- Example: "Needs one clear top priority", "Prefers batch communication" -->
 
-## Situation
-<!-- Their current context. Format: "role" -->
-<!-- Examples: student, parent with young kids, remote founder, manager with 10 reports -->
+## Energy Patterns
+<!-- Repeating energy windows, not one-day moods -->
+<!-- Example: "Best focus 8:30-11:30", "Post-lunch low energy" -->
 
-## Peak Hours
-<!-- When they're most productive. Format: "timeframe" -->
-<!-- Examples: 6-10am, late night after kids sleep, post-lunch 2-4pm -->
+## Planning Preferences
+<!-- Format and rhythm preferences -->
+<!-- Example: "Likes weekly planning on Sunday", "Hates giant task lists" -->
 
-## Derailers
-<!-- What breaks their focus. Format: "distraction" -->
-<!-- Examples: Slack pings, news checking, context switching, phone notifications -->
+## Current Friction
+<!-- Structural problems worth remembering -->
+<!-- Example: "Too many parallel projects", "Avoids ambiguous tasks" -->
 
-## Current System
-<!-- Productivity system they use. Format: "system: notes" -->
-<!-- Examples: time blocking: 2hr chunks, Pomodoro: 25/5, no system: just vibes -->
-
----
-*Last updated: YYYY-MM-DD*
-```
+## Review Rhythm
+<!-- How they want to review/reset -->
+<!-- Example: "Weekly review Friday afternoon" -->
 
 ## Notes
+<!-- Short internal observations with clear value -->
 
-- Load situation-specific guides from `situations/` based on user's context
-- Frameworks in `frameworks.md` provide system templates
-- Common failure patterns in `traps.md`
+---
+*Updated: YYYY-MM-DD*
+```
+
+## Status Values
+
+| Value | Meaning | Behavior |
+|-------|---------|----------|
+| `ongoing` | Still learning the user's system | Gather context naturally |
+| `complete` | Local system is in active use | Work from the existing files |
+| `paused` | User does not want more setup questions | Stop prompting, still help |
+| `never_ask` | User said stop asking about setup/memory | Never prompt again |
+
+## Principles
+
+- Store stable patterns, not every temporary mood
+- Save only what helps future prioritization or planning
+- Prefer constraints and preferences over life-story detail
+- If it belongs in the active system, put it in `~/productivity/` files instead of memory
