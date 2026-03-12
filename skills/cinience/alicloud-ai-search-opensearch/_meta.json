@@ -3,11 +3,16 @@
   "slug": "alicloud-ai-search-opensearch",
   "displayName": "Alicloud Ai Search Opensearch",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1770973182484,
-    "commit": "https://github.com/openclaw/skills/commit/19d3b800651cd0400cc8efd6001bb16297815607"
+    "version": "1.0.3",
+    "publishedAt": 1773221882992,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1770973182484,
+      "commit": "https://github.com/openclaw/skills/commit/19d3b800651cd0400cc8efd6001bb16297815607"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1770768447575,
