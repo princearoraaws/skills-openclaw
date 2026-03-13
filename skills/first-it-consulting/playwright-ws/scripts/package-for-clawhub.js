@@ -6,7 +6,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const skillPath = process.argv[2] || '.';
 const outputFile = process.argv[3] || 'playwright.skill';
@@ -77,10 +76,12 @@ function copyRecursive(src, dest) {
   }
 }
 
-// Create zip
+// Create zip — use array args to avoid shell injection
+const { spawnSync } = require('child_process');
 process.chdir(tempDir);
 try {
-  execSync(`zip -r "${path.resolve(outputFile)}" "${skillName}"`, { stdio: 'inherit' });
+  const result = spawnSync('zip', ['-r', path.resolve(outputFile), skillName], { stdio: 'inherit' });
+  if (result.status !== 0) throw new Error(`zip exited with code ${result.status}`);
   console.log(`\n✅ Created: ${outputFile}`);
 } catch (err) {
   console.error('❌ Failed:', err.message);

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-03-13
+
+### Fixed
+- Standardize on `PLAYWRIGHT_WS` env var across all scripts — `test-runner.js` was inconsistently using `PLAYWRIGHT_SERVER`; `PW_TEST_CONNECT_WS_ENDPOINT` is now set directly to the WebSocket URL
+- Fix `README.md` requirements section to reference `PLAYWRIGHT_WS`
+
+## [1.0.1] - 2026-03-13
+
+### Fixed
+- Security: replace `execSync` string concatenation with `spawnSync` array args in `test-runner.js`, `package-skill.js`, and `package-for-clawhub.js` to prevent shell injection (RCE)
+
+## [1.0.0] - 2026-03-11
+
+### Fixed
+- Security: replace `execSync` string concatenation with `spawnSync` array args in `test-runner.js`, `package-skill.js`, and `package-for-clawhub.js` to prevent shell injection (RCE)
+
 ## [1.0.0] - 2026-03-08
 
 ### Added
@@ -26,5 +42,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `test-runner.js` - Execute Playwright tests on remote server
 - WebSocket connection support via `PLAYWRIGHT_WS` environment variable
 
-[Unreleased]: https://github.com/first-it-consulting/playwright-skill/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/first-it-consulting/playwright-skill/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/first-it-consulting/playwright-skill/compare/v1.0.1...v1.0.2
+[1.0.1]: https://github.com/first-it-consulting/playwright-skill/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/first-it-consulting/playwright-skill/releases/tag/v1.0.0

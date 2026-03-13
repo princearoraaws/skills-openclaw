@@ -48,7 +48,7 @@ node scripts/test-runner.js --headed --project=chromium
 
 - Node.js 18+
 - Remote Playwright server running
-- Environment variable `PLAYWRIGHT_SERVER` set
+- Environment variable `PLAYWRIGHT_WS` set
 
 ## 🔧 Installation
 

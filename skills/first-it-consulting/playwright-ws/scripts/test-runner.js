@@ -1,6 +1,9 @@
-const { execSync } = require('child_process');
+const { spawnSync } = require('child_process');
 
-const PLAYWRIGHT_SERVER = process.env.PLAYWRIGHT_SERVER || 'http://localhost:3000';
+const PLAYWRIGHT_WS = process.env.PLAYWRIGHT_WS || 'ws://localhost:3000';
+
+// Allowed values for reporter to prevent injection
+const ALLOWED_REPORTERS = ['list', 'line', 'dot', 'json', 'junit', 'html', 'github', 'blob', 'null'];
 
 function runTests(options = {}) {
   const {
@@ -13,26 +16,34 @@ function runTests(options = {}) {
     workers = undefined
   } = options;
 
+  // Validate inputs to prevent injection
+  const safeRetries = Math.max(0, Math.floor(Number(retries) || 0));
+  const safeWorkers = workers !== undefined ? Math.max(1, Math.floor(Number(workers) || 1)) : undefined;
+  const safeReporter = ALLOWED_REPORTERS.includes(reporter) ? reporter : 'list';
+
   // Set server endpoint for Playwright to use remote browser
   const env = {
     ...process.env,
-    PLAYWRIGHT_SERVER,
-    PW_TEST_CONNECT_WS_ENDPOINT: `${PLAYWRIGHT_SERVER}/ws`
+    PLAYWRIGHT_WS,
+    PW_TEST_CONNECT_WS_ENDPOINT: PLAYWRIGHT_WS
   };
 
-  let cmd = 'npx playwright test';
-  
-  if (testPattern) cmd += ` ${testPattern}`;
-  if (headed) cmd += ' --headed';
-  if (debug) cmd += ' --debug';
-  if (project) cmd += ` --project=${project}`;
-  if (reporter) cmd += ` --reporter=${reporter}`;
-  if (retries > 0) cmd += ` --retries=${retries}`;
-  if (workers !== undefined) cmd += ` --workers=${workers}`;
+  // Build args array — never concatenate user input into a shell string
+  const args = ['playwright', 'test'];
 
-  console.log(`Running tests via server: ${PLAYWRIGHT_SERVER}`);
-  console.log(`Command: ${cmd}`);
-  execSync(cmd, { stdio: 'inherit', cwd: process.cwd(), env });
+  if (testPattern) args.push(testPattern);
+  if (headed) args.push('--headed');
+  if (debug) args.push('--debug');
+  if (project) args.push(`--project=${project}`);
+  if (safeReporter) args.push(`--reporter=${safeReporter}`);
+  if (safeRetries > 0) args.push(`--retries=${safeRetries}`);
+  if (safeWorkers !== undefined) args.push(`--workers=${safeWorkers}`);
+
+  console.log(`Running tests via server: ${PLAYWRIGHT_WS}`);
+  console.log(`Args: ${args.join(' ')}`);
+
+  const result = spawnSync('npx', args, { stdio: 'inherit', cwd: process.cwd(), env });
+  if (result.status !== 0) throw new Error(`Tests failed with exit code ${result.status}`);
 }
 
 // CLI usage

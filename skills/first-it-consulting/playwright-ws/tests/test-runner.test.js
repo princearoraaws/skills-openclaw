@@ -29,6 +29,6 @@ describe('Test Runner Script', () => {
       'utf8'
     );
     expect(script).toContain('PW_TEST_CONNECT_WS_ENDPOINT');
-    expect(script).toContain('PLAYWRIGHT_SERVER');
+    expect(script).toContain('PLAYWRIGHT_WS');
   });
 });

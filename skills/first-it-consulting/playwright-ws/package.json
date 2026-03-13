@@ -1,6 +1,6 @@
 {
   "name": "playwright-skill",
-  "version": "1.0.0",
+  "version": "1.0.2",
   "description": "Remote Playwright browser automation for screenshots and PDFs",
   "main": "scripts/screenshot.js",
   "scripts": {

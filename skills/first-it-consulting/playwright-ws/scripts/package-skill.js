@@ -6,7 +6,6 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
 
 const skillPath = path.resolve(process.argv[2] || '.');
 const outputDir = path.resolve(process.argv[3] || '.');
@@ -66,10 +65,12 @@ function copyDir(src, dest) {
 
 copyDir(skillPath, path.join(tempDir, skillName));
 
-// Create zip
+// Create zip — use array args to avoid shell injection
+const { spawnSync } = require('child_process');
 process.chdir(tempDir);
 try {
-  execSync(`zip -r "${outputFile}" "${skillName}"`, { stdio: 'inherit' });
+  const result = spawnSync('zip', ['-r', outputFile, skillName], { stdio: 'inherit' });
+  if (result.status !== 0) throw new Error(`zip exited with code ${result.status}`);
   console.log(`\n✅ Skill packaged: ${outputFile}`);
 } catch (err) {
   console.error('❌ Failed to create zip:', err.message);
