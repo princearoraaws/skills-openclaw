@@ -3,33 +3,15 @@
 IMA Video Creation Script — ima_video_create.py
 Version: 1.0.8
 
-Specialized script for video generation via IMA Open API.
-Handles: product list query → virtual param resolution → task create → poll status
+Video generation via IMA Open API.
+Flow: product list → virtual param resolution → task create → poll status.
 
-🆕 v1.0.8 Features:
-  - Enhanced error handling for 401 (Unauthorized) and 4008 (Insufficient points)
-  - Clickable links to API key generation and credit purchase pages
-
-🆕 v1.0.7 Features:
-  - Pixverse model parameter auto-inference for V5.5/V5/V4
-
-🆕 v1.0.5 Features:
-  - Automatic error recovery (Reflection mechanism)
-  - Smart parameter matching with case-insensitive support
-  - 500 error handling with parameter degradation
-  - 6009/6010 error auto-correction
-  - Up to 3 automatic retries with detailed failure suggestions
+- Task types: text_to_video | image_to_video | first_last_frame_to_video | reference_image_to_video
+- --input-images: accepts HTTPS URLs or local file paths (local files auto-uploaded to IMA CDN).
 
 Usage:
-  python3 ima_video_create.py \
-    --api-key  ima_xxx \
-    --task-type text_to_video \
-    --model-id  wan2.6-t2v \
-    --prompt   "a cute puppy running on grass"
-
-Supports all task types:
-  text_to_video | image_to_video |
-  first_last_frame_to_video | reference_image_to_video
+  python3 ima_video_create.py --api-key ima_xxx --task-type text_to_video \\
+    --model-id wan2.6-t2v --prompt "a cute puppy"
 
 Logs: ~/.openclaw/logs/ima_skills/ima_create_YYYYMMDD.log
 """

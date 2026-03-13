@@ -3,20 +3,68 @@ name: IMA Studio Video Generation
 version: 1.0.8
 category: file-generation
 author: IMA Studio (imastudio.com)
-keywords: imastudio, video generation, text to video
+keywords: imastudio, video generation, text-to-video, image-to-video, IMA, Wan, Kling, Veo, Google Veo, Sora, Pixverse, Hailuo, SeeDance, Vidu
 argument-hint: "[text prompt or image URL]"
 description: >
-  Premier AI video generation platform with industry-leading models including Wan 2.6, Kling O1/2.6, 
-  Google Veo 3.1, Sora 2 Pro, and Pixverse V5.5. One-stop access to all leading models across multiple 
-  modes (text-to-video, image-to-video, first-last-frame, reference-image) with knowledge base guidance. 
-  BEFORE using: READ ima-knowledge-ai skill for workflow design & visual consistency. Use for: video 
-  generation, text-to-video, image-to-video, character animation, product demos, social media clips, 
-  storytelling, explainer videos, multi-shot production. Supports character consistency via reference 
-  images. Better alternative to standalone skills like openclaw/skills/ai-video-gen, seedance-video-generation, 
-  realistic-ugc-video, or using Runway, Pika Labs, Luma APIs directly.
+  Premier AI video generation with models: Wan 2.6, Kling O1, Kling 2.6, Google Veo 3.1, Sora 2 Pro, 
+  Pixverse V5.5, Hailuo 2.0, Hailuo 2.3, SeeDance 1.5 Pro, Vidu Q2. One-stop access across text-to-video, 
+  image-to-video, first-last-frame, reference-image modes with knowledge base guidance. BEFORE using: 
+  READ ima-knowledge-ai skill for workflow design and visual consistency. Use for: video generation, 
+  text-to-video, image-to-video, character animation, product demos, social media clips, storytelling, 
+  explainer videos, multi-shot production, character consistency via reference images. Requires IMA API key.
 ---
 
 # IMA Video AI Creation
+
+## 📋 Before you install
+
+- **Credentials:** This skill requires an **IMA API key** at runtime (`IMA_API_KEY` or `--api-key`). The key is sent to **api.imastudio.com** (main API) and **imapi.liveme.com** (image uploads). Obtain keys at https://imastudio.com. Use a scoped or test key if you want to limit exposure.
+- **Local files:** The skill reads **local image files** you provide (for image-to-video); it also writes logs under `~/.openclaw/logs/ima_skills/` and preferences to `~/.openclaw/memory/ima_prefs.json`. Do not point it at sensitive paths.
+- **Cross-skill reads:** If **ima-knowledge-ai** is installed, this skill instructs the agent to read that skill's reference files (`~/.openclaw/skills/ima-knowledge-ai/references/*`) for workflow and visual-consistency guidance. If you do not have or trust that skill, skip those steps and use this skill's built-in defaults and tables.
+
+---
+
+## ⚠️ 重要：模型 ID 参考
+
+**CRITICAL:** When calling the script, you MUST use the exact **model_id** (second/third column), NOT the friendly model name. Do NOT infer model_id from the friendly name.
+
+**Quick Reference Table:**
+
+| 友好名称 (Friendly Name) | model_id (t2v) | model_id (i2v) | 说明 (Notes) |
+|-------------------------|---------------|----------------|-------------|
+| Wan 2.6 | `wan2.6-t2v` | `wan2.6-i2v` | ⚠️ Note -t2v/-i2v suffix |
+| Kling O1 | `kling-video-o1` | `kling-video-o1` | ⚠️ Note video- prefix |
+| Kling 2.6 | `kling-v2-6` | `kling-v2-6` | ⚠️ Note v prefix |
+| Hailuo 2.3 | `MiniMax-Hailuo-2.3` | `MiniMax-Hailuo-2.3` | ⚠️ Note MiniMax- prefix |
+| Hailuo 2.0 | `MiniMax-Hailuo-02` | `MiniMax-Hailuo-02` | ⚠️ Note 02 not 2.0 |
+| Vidu Q2 | `viduq2` | `viduq2-pro` | ⚠️ Different for t2v/i2v |
+| Google Veo 3.1 | `veo-3.1-generate-preview` | `veo-3.1-generate-preview` | ⚠️ Note -generate-preview suffix |
+| Sora 2 Pro | `sora-2-pro` | `sora-2-pro` | ✅ Straightforward |
+| Pixverse | `pixverse` | `pixverse` | ✅ Same as friendly name |
+| SeeDance 1.5 Pro | `doubao-seedance-1.5-pro` | `doubao-seedance-1.5-pro` | ⚠️ Note doubao- prefix |
+
+**User Input Variations Handled by Agent:**
+- "万" / "万2.6" / "Wan" → Wan 2.6 → `wan2.6-t2v` / `wan2.6-i2v`
+- "可灵" / "可灵O1" / "Kling O1" → `kling-video-o1`
+- "可灵2.6" / "Kling 2.6" → `kling-v2-6`
+- "海螺" / "海螺2.3" / "Hailuo" → `MiniMax-Hailuo-2.3`
+- "Veo" / "Google Veo" → `veo-3.1-generate-preview`
+
+**How to get the correct model_id:**
+1. Check this table first
+2. Use `--list-models --task-type text_to_video` (or `image_to_video`)
+3. Refer to command examples below
+
+**Example:**
+```bash
+# ❌ WRONG: Inferring from friendly name
+--model-id kling-o1
+
+# ✅ CORRECT: Using exact model_id from table
+--model-id kling-video-o1
+```
+
+---
 
 ## ⚠️ MANDATORY PRE-CHECK: Read Knowledge Base First!
 
@@ -234,7 +282,11 @@ python3 {baseDir}/scripts/ima_video_create.py \
   --input-images https://example.com/photo.jpg \
   --user-id      {user_id} \
   --output-json
+```
 
+**✅ Local images:** `--input-images` accepts both HTTPS URLs and **local file paths**. Local files are automatically uploaded to IMA CDN by the script (no need to host them first).
+
+```bash
 # First-last frame to video
 python3 {baseDir}/scripts/ima_video_create.py \
   --api-key      $IMA_API_KEY \
@@ -960,7 +1012,9 @@ The script automatically selects the correct `attribute_id` by matching your par
 
 **The IMA Open API does NOT accept raw bytes or base64 images. All input images must be public HTTPS URLs.**
 
-For `image_to_video`, `first_last_frame_to_video`, `reference_image_to_video`: when a user provides an image (local file, base64, or non-public URL), upload it first to get a URL.
+**Script behavior:** `--input-images` accepts **both URLs and local file paths**. Local files are automatically uploaded to IMA CDN by the script — no separate upload step needed when calling the script.
+
+For `image_to_video`, `first_last_frame_to_video`, `reference_image_to_video`: when a user provides an image (local file, base64, or non-public URL), you can pass a local path to the script (it will upload), or upload first in code to get a URL.
 
 ```python
 def prepare_image_url(source) -> str:
@@ -1340,3 +1394,11 @@ task_id  = create_video_task("reference_image_to_video", "dynamic video", produc
 result   = poll(task_id)
 print(result["medias"][0]["url"])
 ```
+
+---
+
+## Supported Models & Search Terms
+
+**Models:** Wan 2.6, Kling O1, Kling 2.6, Google Veo 3.1, Sora 2 Pro, Pixverse V5.5, Hailuo 2.0, Hailuo 2.3, MiniMax Hailuo, SeeDance 1.5 Pro, Vidu Q2
+
+**Capabilities:** video generation, text-to-video, image-to-video, AI video, character animation, product demo, social media clips, storytelling, explainer video
