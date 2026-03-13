@@ -1,5 +1,19 @@
 ---
 name: smart-updater
+version: 1.1.0
+changelog:
+  - version: 1.1.0
+    date: 2026-03-12
+    changes:
+      - "feat: SkillHub (腾讯国内镜像) integration — scan uses SkillHub index for batch version check (single request, no rate limit); upgrade downloads from SkillHub COS first, falls back to clawhub"
+      - "perf: ClawHub skills in SkillHub top-50 are checked instantly without clawhub inspect calls"
+      - "fix: scan result now includes inSkillHub flag for each clawhub update entry"
+  - version: 1.0.0
+    date: 2026-03-11
+    changes:
+      - "Initial release: inventory/scan/upgrade three-script system with Three Gates safety framework"
+      - "Supports npm (core + extensions), ClawHub skills, GitHub-cloned skills"
+      - "HITL mode: changelog analysis before any upgrade, user approval required"
 description: "Intelligent upgrade management for OpenClaw skills, extensions, and core. HITL (Human-in-the-Loop) mode: scan installed assets, read changelogs, analyze risk, recommend upgrades, then execute only what the user approves. Use when: (1) user asks to check for updates or 检查升级, (2) user asks what's installed or 装了什么, (3) user wants to upgrade a specific skill/extension/plugin, (4) user mentions update/upgrade/版本/新版本, (5) periodic upgrade check via cron. Covers npm packages, ClawHub skills, GitHub-cloned skills, and OpenClaw core."
 ---
 

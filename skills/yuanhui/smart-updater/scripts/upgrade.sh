@@ -174,17 +174,54 @@ if $DRY_RUN; then
 else
   case "$ASSET_SOURCE" in
     clawhub)
-      log "  Running: clawhub update $ASSET_NAME"
-      CLAWHUB_OUTPUT=$(clawhub update "$ASSET_NAME" 2>&1)
-      UPGRADE_RC=$?
-      echo "$CLAWHUB_OUTPUT" >> "$LOG_FILE"
+      # Try SkillHub (腾讯国内镜像) first — faster download, no rate limit
+      SKILLHUB_ZIP_URL="https://skillhub-1388575217.cos.ap-guangzhou.myqcloud.com/skills/${ASSET_NAME}.zip"
+      SKILLHUB_TMP=$(mktemp -d)
+      SKILLHUB_OK=false
+
+      log "  Trying SkillHub mirror: $SKILLHUB_ZIP_URL"
+      HTTP_CODE=$(curl -s -o "${SKILLHUB_TMP}/${ASSET_NAME}.zip" -w "%{http_code}" --connect-timeout 5 --max-time 30 "$SKILLHUB_ZIP_URL" 2>>"$LOG_FILE")
       
-      # clawhub may exit 0 even when it refuses to update due to local changes
-      if echo "$CLAWHUB_OUTPUT" | grep -qi "local changes\|no match\|Use --force"; then
-        log "  ⚠️ clawhub detected local modifications, retrying with --force"
-        CLAWHUB_OUTPUT=$(clawhub update "$ASSET_NAME" --force 2>&1)
+      if [ "$HTTP_CODE" = "200" ] && [ -s "${SKILLHUB_TMP}/${ASSET_NAME}.zip" ]; then
+        log "  ✅ SkillHub download success (HTTP $HTTP_CODE), extracting..."
+        # Extract zip over existing install dir
+        EXTRACT_TMP=$(mktemp -d)
+        if unzip -q "${SKILLHUB_TMP}/${ASSET_NAME}.zip" -d "$EXTRACT_TMP" 2>>"$LOG_FILE"; then
+          # Find the skill dir inside the zip (usually first subdirectory)
+          SKILL_SUBDIR=$(find "$EXTRACT_TMP" -maxdepth 1 -mindepth 1 -type d | head -1)
+          if [ -n "$SKILL_SUBDIR" ] && [ -f "$SKILL_SUBDIR/SKILL.md" ]; then
+            # Replace contents of INSTALLED_AT
+            rm -rf "${INSTALLED_AT:?}"/*
+            cp -r "$SKILL_SUBDIR"/. "$INSTALLED_AT/"
+            SKILLHUB_OK=true
+            log "  ✅ SkillHub install complete"
+            UPGRADE_RC=0
+          else
+            log "  ⚠️ SkillHub zip has unexpected structure (no SKILL.md), falling back"
+          fi
+        else
+          log "  ⚠️ SkillHub zip extraction failed, falling back"
+        fi
+        rm -rf "$EXTRACT_TMP"
+      else
+        log "  ⚠️ SkillHub unavailable (HTTP $HTTP_CODE), falling back to clawhub"
+      fi
+      rm -rf "$SKILLHUB_TMP"
+
+      # Fallback: clawhub update
+      if ! $SKILLHUB_OK; then
+        log "  Running: clawhub update $ASSET_NAME"
+        CLAWHUB_OUTPUT=$(clawhub update "$ASSET_NAME" 2>&1)
         UPGRADE_RC=$?
         echo "$CLAWHUB_OUTPUT" >> "$LOG_FILE"
+        
+        # clawhub may exit 0 even when it refuses to update due to local changes
+        if echo "$CLAWHUB_OUTPUT" | grep -qi "local changes\|no match\|Use --force"; then
+          log "  ⚠️ clawhub detected local modifications, retrying with --force"
+          CLAWHUB_OUTPUT=$(clawhub update "$ASSET_NAME" --force 2>&1)
+          UPGRADE_RC=$?
+          echo "$CLAWHUB_OUTPUT" >> "$LOG_FILE"
+        fi
       fi
       ;;
     npm)

@@ -155,9 +155,28 @@ for asset in assets:
             })
             log(f"  🆕 {current_commit[:8]} → {remote_head[:8]}")
 
-# --- Check clawhub skills individually via inspect ---
-log("🔍 Checking ClawHub skills...")
+# --- Check clawhub skills: SkillHub index first, clawhub inspect as fallback ---
+log("🔍 Checking ClawHub skills (via SkillHub index + clawhub fallback)...")
 clawhub_assets = [a for a in assets if a.get("source") == "clawhub"]
+
+# Step 1: Try to fetch SkillHub index in one shot (fast, no rate limit)
+SKILLHUB_INDEX_URL = "https://skillhub-1388575217.cos.ap-guangzhou.myqcloud.com/skills.json"
+skillhub_index = {}  # {slug: {version, changelog_url, ...}}
+try:
+    import urllib.request
+    req = urllib.request.urlopen(SKILLHUB_INDEX_URL, timeout=5)
+    sh_data = json.loads(req.read().decode())
+    for skill in sh_data.get("skills", []):
+        slug = skill.get("slug", "")
+        if slug:
+            skillhub_index[slug] = {
+                "version": skill.get("version", ""),
+                "name": skill.get("name", slug),
+                "description": skill.get("description", ""),
+            }
+    log(f"  ✅ SkillHub index loaded: {len(skillhub_index)} skills")
+except Exception as e:
+    log(f"  ⚠️ SkillHub index unavailable ({e}), falling back to clawhub inspect for all")
 
 for asset in clawhub_assets:
     aname = asset["name"]
@@ -170,32 +189,41 @@ for asset in clawhub_assets:
         if local_skill_ver and local_skill_ver != current_v:
             log(f"  ⚠️ Version mismatch: clawhub list says {current_v}, SKILL.md says {local_skill_ver} — using SKILL.md")
             current_v = local_skill_ver
-    log(f"🔍 Checking {aname} (clawhub)...")
-    
-    # Use clawhub inspect to get remote version
-    inspect_output = run(f"clawhub inspect {aname} 2>/dev/null", timeout=15)
-    time.sleep(0.3)  # rate limit
-    
-    if not inspect_output:
-        unreachable.append({"name": aname, "source": "clawhub", "reason": "clawhub inspect failed"})
-        log(f"  ⚠️ {aname} (unreachable — inspect failed)")
-        continue
-    
-    # Parse "Latest: X.Y.Z" or "Tags: latest=X.Y.Z" from inspect output
+
+    # Step 2: Check SkillHub index first (no rate limit, fast)
     remote_v = None
-    for line in inspect_output.split("\n"):
-        line = line.strip()
-        if line.startswith("Latest:"):
-            remote_v = line.split(":", 1)[1].strip()
-            break
-        if "latest=" in line:
-            m = re.search(r'latest=(\S+)', line)
-            if m:
-                remote_v = m.group(1)
+    changelog_lines = []
+    changelog_url = f"https://clawhub.ai/search?q={aname}"
+
+    if aname in skillhub_index:
+        sh_entry = skillhub_index[aname]
+        remote_v = sh_entry.get("version", "")
+        log(f"🔍 {aname} (skillhub)...")
+    
+    # Step 3: Fall back to clawhub inspect if not in SkillHub
+    if not remote_v:
+        log(f"🔍 {aname} (clawhub inspect)...")
+        inspect_output = run(f"clawhub inspect {aname} 2>/dev/null", timeout=15)
+        time.sleep(0.3)  # rate limit
+        
+        if not inspect_output:
+            unreachable.append({"name": aname, "source": "clawhub", "reason": "not in SkillHub + clawhub inspect failed"})
+            log(f"  ⚠️ {aname} (unreachable)")
+            continue
+        
+        for line in inspect_output.split("\n"):
+            line = line.strip()
+            if line.startswith("Latest:"):
+                remote_v = line.split(":", 1)[1].strip()
+                break
+            if "latest=" in line:
+                m = re.search(r'latest=(\S+)', line)
+                if m:
+                    remote_v = m.group(1)
     
     if not remote_v:
-        unreachable.append({"name": aname, "source": "clawhub", "reason": "could not parse remote version"})
-        log(f"  ⚠️ {aname} (unreachable — no version found)")
+        unreachable.append({"name": aname, "source": "clawhub", "reason": "could not determine remote version"})
+        log(f"  ⚠️ {aname} (no remote version found)")
         continue
     
     if current_v == remote_v:
@@ -207,16 +235,20 @@ for asset in clawhub_assets:
             up_to_date.append({"name": aname, "version": current_v})
             log(f"  ✅ {aname}@{current_v}")
         else:
-            # Fetch version history for changelog
-            versions_output = run(f"clawhub inspect {aname} --versions --limit 5 2>/dev/null", timeout=15)
-            changelog_lines = []
-            if versions_output:
-                for vline in versions_output.split("\n"):
-                    vline = vline.strip()
-                    # Match version lines like "0.5.2  2026-03-10T...  description"
-                    vm = re.match(r'^(\d+\.\d+\.\d+)\s+\S+\s+(.*)', vline)
-                    if vm:
-                        changelog_lines.append(f"{vm.group(1)}: {vm.group(2)}")
+            # Fetch changelog: try SkillHub description first, then clawhub inspect --versions
+            if not changelog_lines and aname in skillhub_index:
+                desc = skillhub_index[aname].get("description", "")
+                if desc:
+                    changelog_lines = [f"{remote_v}: {desc[:120]}"]
+            
+            if not changelog_lines:
+                versions_output = run(f"clawhub inspect {aname} --versions --limit 5 2>/dev/null", timeout=15)
+                if versions_output:
+                    for vline in versions_output.split("\n"):
+                        vline = vline.strip()
+                        vm = re.match(r'^(\d+\.\d+\.\d+)\s+\S+\s+(.*)', vline)
+                        if vm:
+                            changelog_lines.append(f"{vm.group(1)}: {vm.group(2)}")
             
             updates.append({
                 "name": aname,
@@ -226,7 +258,8 @@ for asset in clawhub_assets:
                 "latest": remote_v,
                 "changeType": change,
                 "changelog": changelog_lines[:5] if changelog_lines else [],
-                "changelogUrl": f"https://clawhub.com/search?q={aname}"
+                "changelogUrl": changelog_url,
+                "inSkillHub": aname in skillhub_index,
             })
             log(f"  🆕 {aname}: {current_v} → {remote_v} ({change})")
 
