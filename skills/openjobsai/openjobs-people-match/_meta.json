@@ -1,0 +1,11 @@
+{
+  "owner": "openjobsai",
+  "slug": "openjobs-people-match",
+  "displayName": "Openjobs People Match",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1773212890003,
+    "commit": null
+  },
+  "history": []
+}
