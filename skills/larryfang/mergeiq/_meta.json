@@ -1,0 +1,11 @@
+{
+  "owner": "larryfang",
+  "slug": "mergeiq",
+  "displayName": "MergeIQ: Automatically Score & Prioritise PR Complexity for GitLab and GitHub",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1773035899806,
+    "commit": null
+  },
+  "history": []
+}
