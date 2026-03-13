@@ -3,11 +3,16 @@
   "slug": "clawtell",
   "displayName": "ClawTell",
   "latest": {
-    "version": "2026.3.12",
-    "publishedAt": 1773401824260,
-    "commit": "https://github.com/openclaw/skills/commit/42e97d1ed7a00adc20f7b995fff0960e7fa4d4c3"
+    "version": "2026.3.13",
+    "publishedAt": 1773401868400,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2026.3.12",
+      "publishedAt": 1773401824260,
+      "commit": "https://github.com/openclaw/skills/commit/42e97d1ed7a00adc20f7b995fff0960e7fa4d4c3"
+    },
     {
       "version": "2026.3.3",
       "publishedAt": 1773387513926,
