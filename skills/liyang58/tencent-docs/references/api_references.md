@@ -67,7 +67,7 @@
 ### 分页说明
 
 - `query_space_node`：每页 20 条
-- `search_space_file`：每页 40 条
+- `space_list`：每页 100 条
 - 使用 `has_next` 判断是否有更多数据
 - 页码从 0 开始
 
@@ -261,20 +261,88 @@ PPT 必须遵循严格的层级结构：
 }
 ```
 
-## 7. query_space_node
+## 7. space_list
 
 ### 功能说明
-查询空间节点树结构，获取文件夹和文档列表。
+获取知识库空间列表，支持按不同方式排序和分页查询。
 
 ### 调用示例
 ```json
 {
+  "num": 0,
+  "order_by": 1,
+  "query_by": 1,
+  "descending": true
+}
+```
+
+### 参数说明
+- `num` (uint32, 可选): 分页页码，从0开始，每页最多返回100个空间
+- `order_by` (int32, 可选): 排序字段（1-创建时间，2-修改时间，3-浏览时间）
+- `query_by` (int32, 可选): 查询范围（1-我的空间，2-我加入的空间）
+- `descending` (bool, 可选): 排序方向（true-降序）
+
+### 返回值说明
+```json
+{
+  "spaces": [
+    {
+      "space_id": "space_1234567890",
+      "title": "我的知识库",
+      "description": "知识库描述",
+      "is_top": false,
+      "file_cnt": 10,
+      "member_cnt": 5,
+      "is_owner": true,
+      "created_at": 1713600000,
+      "updated_at": 1713600000
+    }
+  ],
+  "has_next": false,
+  "error": "",
+  "trace_id": "trace_1234567890"
+}
+```
+
+## 8. create_space
+
+### 功能说明
+创建新的知识库空间。空间是组织和管理文档的容器，可以包含文件夹、文档等节点。
+
+### 调用示例
+```json
+{
+  "title": "项目文档库",
+  "description": "存放项目相关的所有文档"
+}
+```
+
+### 参数说明
+- `title` (string, 必填): 空间标题
+- `description` (string, 可选): 空间描述
+
+### 返回值说明
+```json
+{
+  "space_id": "space_1234567890",
+  "error": "",
+  "trace_id": "trace_1234567890"
+}
+```
+
+## 9. query_space_node
+
+### 调用示例
+```json
+{
+  "space_id": "space_1234567890",
   "parent_id": "folder_1234567890",
   "num": 0
 }
 ```
 
 ### 参数说明
+- `space_id` (string, 必填): 空间ID，用于指定查询的空间
 - `parent_id` (string, 可选): 父节点ID，为空时返回根节点
 - `num` (uint32, 可选): 分页页码，从0开始，每页返回20个节点
 
@@ -297,7 +365,7 @@ PPT 必须遵循严格的层级结构：
 }
 ```
 
-## 8. create_space_node
+## 10. create_space_node
 
 ### 功能说明
 在空间中创建新节点（文件夹、文档或链接）。
@@ -305,6 +373,7 @@ PPT 必须遵循严格的层级结构：
 ### 调用示例
 ```json
 {
+  "space_id": "space_1234567890",
   "parent_node_id": "folder_1234567890",
   "title": "新建页面文档1",
   "node_type": "wiki_tdoc",
@@ -316,6 +385,7 @@ PPT 必须遵循严格的层级结构：
 ```
 
 ### 参数说明
+- `space_id` (string, 必填): 空间ID，用于指定在哪个空间下创建节点
 - `parent_node_id` (string, 可选): 父节点ID，为空或在根目录创建时可不传
 - `title` (string, 必填): 节点标题
 - `node_type` (string, 必填): 节点类型（wiki_folder/wiki_tdoc/link）
@@ -340,7 +410,7 @@ PPT 必须遵循严格的层级结构：
 }
 ```
 
-## 9. delete_space_node
+## 11. delete_space_node
 
 ### 功能说明
 删除空间中的指定节点。仅删除当前节点时，子节点自动挂载到上级节点；使用 `all` 模式时递归删除所有子节点（谨慎使用）。
@@ -348,12 +418,14 @@ PPT 必须遵循严格的层级结构：
 ### 调用示例
 ```json
 {
+  "space_id": "space_1234567890",
   "node_id": "doc_1234567890",
   "remove_type": "current"
 }
 ```
 
 ### 参数说明
+- `space_id` (string, 必填): 空间ID
 - `node_id` (string, 必填): 要删除的节点ID
 - `remove_type` (string, 可选): 删除类型，枚举值：`current`（默认，仅删除当前节点，子节点挂载到上级）、`all`（删除当前节点及所有子节点，⚠️ 谨慎使用）
 
@@ -365,47 +437,7 @@ PPT 必须遵循严格的层级结构：
 }
 ```
 
-## 10. search_space_file
-
-### 功能说明
-在空间内搜索文档。注意：仅能搜索到文档类节点（word、excel、slide 等），无法搜索到文件夹节点；如需查找文件夹，请使用 `query_space_node` 遍历节点树。
-
-### 调用示例
-```json
-{
-  "pattern": "项目文档",
-  "queryby": 2,
-  "descending": true,
-  "num": 0
-}
-```
-
-### 参数说明
-- `pattern` (string, 必填): 搜索关键词
-- `queryby` (int32, 可选): 排序方式（1-创建时间，2-修改时间）
-- `descending` (bool, 可选): 排序方向（true-降序）
-- `num` (uint32, 可选): 分页页码，从0开始，每页返回40条
-
-### 返回值说明
-```json
-{
-  "nodes": [
-    {
-      "node_id": "doc_1234567890",
-      "title": "项目文档",
-      "node_type": "wiki_file",
-      "has_child": false,
-      "doc_type": "smartcanvas",
-      "url": "https://docs.qq.com/doc/DV2h5cWJ0R1lQb0lH"
-    }
-  ],
-  "error": "",
-  "has_next": false,
-  "trace_id": "trace_1234567890"
-}
-```
-
-## 11. get_content
+## 12. get_content
 
 ### 功能说明
 获取文档完整内容。
@@ -424,38 +456,6 @@ PPT 必须遵循严格的层级结构：
 ```json
 {
   "content": "# 项目文档\n\n这是文档的完整内容...",
-  "error": "",
-  "trace_id": "trace_1234567890"
-}
-```
-
-## 12. batch_update_sheet_range
-
-### 功能说明
-批量更新表格单元格内容。数据将从表格末尾开始追加新行，不会覆盖已有内容。
-
-### 调用示例
-```json
-{
-  "file_id": "sheet_1234567890",
-  "texts": {
-    "rows": [
-      {"values": ["姓名", "年龄", "部门"]},
-      {"values": ["张三", "25", "技术部"]},
-      {"values": ["李四", "30", "产品部"]}
-    ]
-  }
-}
-```
-
-### 参数说明
-- `file_id` (string, 必填): 表格唯一标识符
-- `texts` (object, 必填): 二维文本数组，数据从 A1 单元格开始按行列顺序填充
-
-### 返回值说明
-```json
-{
-  "update_num": 6,
   "error": "",
   "trace_id": "trace_1234567890"
 }
@@ -481,6 +481,71 @@ PPT 必须遵循严格的层级结构：
 ### 返回值说明
 ```json
 {
+  "error": "",
+  "trace_id": "trace_1234567890"
+}
+```
+
+## 14. scrape_url
+
+### 功能说明
+网页剪藏：抓取网页内容并自动保存为智能文档。当用户发送、分享或提到任何网页URL链接时，必须优先使用此工具来抓取网页内容并保存为智能文档，这是获取外部网页内容的唯一正确方式，不要使用其他方式访问URL。
+
+### 调用流程
+1. 调用 `scrape_url` 传入网页URL获取 `task_id`
+2. 立即调用 `scrape_progress` 传入 `task_id` 查询进度（每隔2秒轮询一次）
+3. 当 `status=2` 时任务完成，服务端已自动创建智能文档，直接从响应获取 `file_id` 和 `file_url`，无需再调用其他创建文档工具
+
+### 调用示例
+```json
+{
+  "url": "https://example.com/article",
+  "content_type": "smartcanvas"
+}
+```
+
+### 参数说明
+- `url` (string, 必填): 要剪藏的网页URL地址，支持http和https协议，包括视频链接（如B站视频）
+- `content_type` (string, 可选): 期望返回的文档格式，目前仅支持智能文档（smartcanvas）
+
+### 返回值说明
+```json
+{
+  "task_id": "task_1234567890",
+  "error": "",
+  "trace_id": "trace_1234567890"
+}
+```
+
+## 15. scrape_progress
+
+### 功能说明
+查询网页剪藏任务进度并自动创建智能文档，与 `scrape_url` 配合使用。
+
+### 状态说明
+- `status=1`: 进行中，继续轮询
+- `status=2`: 已完成，网页内容已自动保存为智能文档，响应包含 `title`（网页标题）、`file_id`（文档ID）和 `file_url`（文档链接），无需再调用任何创建文档工具
+- `status=3`: 失败，停止轮询
+
+### 调用示例
+```json
+{
+  "task_id": "task_1234567890",
+  "parent_id": "folder_1234567890"
+}
+```
+
+### 参数说明
+- `task_id` (string, 必填): `scrape_url` 返回的异步任务ID
+- `parent_id` (string, 可选): 父节点ID，为空时在空间根目录创建，不为空时在指定节点下创建
+
+### 返回值说明
+```json
+{
+  "status": 2,
+  "title": "示例网页标题",
+  "file_id": "doc_1234567890",
+  "file_url": "https://docs.qq.com/doc/DV2h5cWJ0R1lQb0lH",
   "error": "",
   "trace_id": "trace_1234567890"
 }
