@@ -1,0 +1,11 @@
+{
+  "owner": "googleworkspace-bot",
+  "slug": "recipe-create-gmail-filter",
+  "displayName": "Recipe Create Gmail Filter",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1772929600600,
+    "commit": null
+  },
+  "history": []
+}
