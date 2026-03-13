@@ -2,6 +2,7 @@
 name: Meme Coin Scanner
 version: 1.0.0
 description: Scan new meme coins for risks and opportunities — honeypot detection, liquidity analysis, holder concentration, and rug pull indicators using DexScreener and CoinGecko APIs.
+runtime: python3
 ---
 
 # Meme Coin Scanner
