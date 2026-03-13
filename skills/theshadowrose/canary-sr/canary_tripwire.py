@@ -26,7 +26,7 @@ class TripwireManager:
         Args:
             tripwire_dir: Directory to store tripwire files
         """
-        self.tripwire_dir = Path(tripwire_dir)
+        self.tripwire_dir = Path(tripwire_dir).expanduser().resolve()
         self.tripwire_dir.mkdir(exist_ok=True)
         
         self.registry_file = self.tripwire_dir / 'registry.json'
@@ -65,13 +65,18 @@ class TripwireManager:
         Returns:
             True if created successfully
         """
-        tripwire_path = Path(path)
+        tripwire_path = Path(path).expanduser().resolve()
         
-        # Check if already exists
+        # Check if already registered
         if str(tripwire_path) in self.tripwires:
-            print(f"Tripwire already exists: {path}")
+            print(f"Tripwire already registered: {path}")
             return False
-        
+
+        # Refuse to overwrite existing files not created by Canary
+        if tripwire_path.exists():
+            print(f"Canary: refusing to overwrite existing file: {path} — use a dedicated decoy path")
+            return False
+
         # Default content
         if content is None:
             content = self._generate_honeypot_content(path)
@@ -79,7 +84,7 @@ class TripwireManager:
         # Create file
         try:
             tripwire_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(tripwire_path, 'w') as f:
+            with open(tripwire_path, 'x') as f:
                 f.write(content)
             
             # Calculate hash
@@ -222,6 +227,7 @@ TRIPWIRE_ID: {self._generate_tripwire_id(path)}
             path: Tripwire path
             delete_file: If True, also delete the file
         """
+        path = str(Path(path).expanduser().resolve())
         if path not in self.tripwires:
             print(f"Tripwire not found: {path}")
             return

@@ -1,13 +1,14 @@
 ---
-name: "Canary � Agent Safety Tripwire System"
+slug: "canary-sr"
+name: "Canary Agent Safety Tripwire System"
 description: "Safety monitoring and tripwire detection for AI agents. Protects against unauthorized file access, dangerous commands, and excessive activity. Auto-halts on critical violations. Honeypot tripwires detect snooping."
 author: "@TheShadowRose"
-version: "1.0.3"
+version: "1.0.8"
 tags: ["safety", "security", "tripwire", "monitoring", "honeypot", "agent-protection"]
 license: "MIT"
 ---
 
-# Canary � Agent Safety Tripwire System
+# Canary Agent Safety Tripwire System
 
 Safety monitoring and tripwire detection for AI agents. Protects against unauthorized file access, dangerous commands, and excessive activity. Auto-halts on critical violations. Honeypot tripwires detect snooping.
 
@@ -70,10 +71,10 @@ No dependencies! Python 3.7+ stdlib only.
 
 ```bash
 # Copy config example
-cp config_example.py config.py
+cp config_example.json config.json
 
 # Edit config with your protected paths
-nano config.py
+nano config.json
 ```
 
 ### Basic Usage
@@ -82,7 +83,7 @@ nano config.py
 from canary import CanaryMonitor
 
 # Initialize monitor
-canary = CanaryMonitor('config.py')
+canary = CanaryMonitor('config.json')
 
 # Check path before access
 is_safe, reason = canary.check_path('/etc/passwd', 'read')
@@ -216,32 +217,27 @@ auditor.export_report('safety-report.md', format='markdown')
 
 ## Configuration
 
-See `config_example.py` for all options.
+See `config_example.json` for all options.
 
 ### Essential Settings
 
-```python
-# Protected paths
-protected_paths = [
-    '/etc/',
-    '~/.ssh/',
-    '~/critical-data/',
-]
-
-# Forbidden patterns
-forbidden_patterns = [
-    r'rm\s+-rf\s+/',      # Recursive delete from root
-    r'chmod\s+777',       # World-writable permissions
-    r'curl.*\|\s*sh',     # Curl piped to shell
-]
-
-# Auto-halt threshold
-halt_threshold = 5  # Stop after 5 critical/high violations
-
-# Rate limits
-rate_limits = {
-    'file_operations': {'limit': 100, 'window': 60},  # 100 per minute
-    'command_executions': {'limit': 20, 'window': 60},
+```json
+{
+  "protected_paths": [
+    "/etc/",
+    "~/.ssh/",
+    "~/critical-data/"
+  ],
+  "forbidden_patterns": [
+    "rm\\s+-rf\\s+/",
+    "chmod\\s+777",
+    "curl.*\\|\\s*sh"
+  ],
+  "halt_threshold": 5,
+  "rate_limits": {
+    "file_operations": {"limit": 100, "window": 60},
+    "command_executions": {"limit": 20, "window": 60}
+  }
 }
 ```
 
@@ -254,7 +250,7 @@ rate_limits = {
 ```python
 from canary import CanaryMonitor
 
-canary = CanaryMonitor('config.py')
+canary = CanaryMonitor('config.json')
 
 def safe_file_read(path):
     """Read file with Canary check."""
@@ -282,7 +278,7 @@ def safe_command(cmd):
 # Before deploying agent, verify Canary setup
 from canary import CanaryMonitor
 
-canary = CanaryMonitor('config.py')
+canary = CanaryMonitor('config.json')
 
 # Verify protected paths are configured
 status = canary.get_status()
@@ -408,7 +404,7 @@ python3 canary_audit.py export --output weekly-report.md --format markdown
 
 ```python
 # Verify Canary blocks what it should
-canary = CanaryMonitor('config.py')
+canary = CanaryMonitor('config.json')
 
 # These should all be blocked
 assert not canary.check_path('/etc/passwd', 'delete')[0]
@@ -458,15 +454,22 @@ Simple, zero-dependency safety for autonomous agents.
 ---
 
 
-## ⚠️ Security Note — Config File Execution
+## ⚠️ Security Note — Config File
 
-This skill loads configuration from a user-provided Python file using `importlib.exec_module`. **This executes the config file as Python code.**
+Configuration is loaded from a JSON file. This is safe to share — no code execution.
 
-- Only run config files you have written or fully reviewed
-- A malicious or unreviewed config file can execute arbitrary code on your system
-- This is standard behavior for Python-configurable tools, but treat config files as a trust boundary
-- Config path is validated for existence, `.py` extension, and size (1MB cap) before execution
-- Do not run configs provided by untrusted sources without inspection
+- Config path is validated for existence and size (1MB cap) before loading
+- Must be a `.json` file — `CanaryMonitor` raises `ValueError` if given a non-JSON path
+- Keep your config under version control; treat it as security policy
+
+## ⚠️ Security Note — Tripwire Deployment
+
+- **Paths are fully resolved** — `~` and relative paths are expanded via `Path.expanduser().resolve()` before creation and lookup. `'~/.aws/fake-credentials'` will be placed in your actual home directory, not a literal `~` path.
+- **Use decoy paths only** — never point tripwires at real files containing sensitive data. Tripwires are honeypots; treat them as bait, not protection.
+- **`create_tripwire` will not overwrite existing files** — it checks for pre-existing files and refuses to proceed. Use dedicated empty paths for tripwires.
+- **Test in a sandbox first** — verify where logs, tripwires, and registry files are created before deploying. Confirm protected paths and auto-halt behavior in an isolated environment.
+- **Protect log and alert directories** — set filesystem permissions so alert logs are not world-readable. Canary writes plaintext logs; restrict access accordingly.
+- **Canary only blocks when called** — it is not an OS-level enforcement mechanism. Layer it with containers, filesystem permissions, and `auditd` for production deployments.
 
 ## ⚠️ Disclaimer
 

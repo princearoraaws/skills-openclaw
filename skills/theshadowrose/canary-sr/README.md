@@ -57,10 +57,10 @@ No dependencies! Python 3.7+ stdlib only.
 
 ```bash
 # Copy config example
-cp config_example.py config.py
+cp config_example.json config.json
 
 # Edit config with your protected paths
-nano config.py
+nano config.json
 ```
 
 ### Basic Usage
@@ -69,7 +69,7 @@ nano config.py
 from canary import CanaryMonitor
 
 # Initialize monitor
-canary = CanaryMonitor('config.py')
+canary = CanaryMonitor('config.json')
 
 # Check path before access
 is_safe, reason = canary.check_path('/etc/passwd', 'read')
@@ -203,32 +203,27 @@ auditor.export_report('safety-report.md', format='markdown')
 
 ## Configuration
 
-See `config_example.py` for all options.
+See `config_example.json` for all options.
 
 ### Essential Settings
 
-```python
-# Protected paths
-protected_paths = [
-    '/etc/',
-    '~/.ssh/',
-    '~/critical-data/',
-]
-
-# Forbidden patterns
-forbidden_patterns = [
-    r'rm\s+-rf\s+/',      # Recursive delete from root
-    r'chmod\s+777',       # World-writable permissions
-    r'curl.*\|\s*sh',     # Curl piped to shell
-]
-
-# Auto-halt threshold
-halt_threshold = 5  # Stop after 5 critical/high violations
-
-# Rate limits
-rate_limits = {
-    'file_operations': {'limit': 100, 'window': 60},  # 100 per minute
-    'command_executions': {'limit': 20, 'window': 60},
+```json
+{
+  "protected_paths": [
+    "/etc/",
+    "~/.ssh/",
+    "~/critical-data/"
+  ],
+  "forbidden_patterns": [
+    "rm\\s+-rf\\s+/",
+    "chmod\\s+777",
+    "curl.*\\|\\s*sh"
+  ],
+  "halt_threshold": 5,
+  "rate_limits": {
+    "file_operations": {"limit": 100, "window": 60},
+    "command_executions": {"limit": 20, "window": 60}
+  }
 }
 ```
 
@@ -241,7 +236,7 @@ rate_limits = {
 ```python
 from canary import CanaryMonitor
 
-canary = CanaryMonitor('config.py')
+canary = CanaryMonitor('config.json')
 
 def safe_file_read(path):
     """Read file with Canary check."""
@@ -259,7 +254,8 @@ def safe_command(cmd):
         raise PermissionError(reason)
     
     import subprocess
-    return subprocess.run(cmd, shell=True, capture_output=True)
+    cmd_list = cmd.split() if isinstance(cmd, str) else cmd
+    return subprocess.run(cmd_list, capture_output=True)
 ```
 
 ### Pre-Deployment Checks
@@ -268,7 +264,7 @@ def safe_command(cmd):
 # Before deploying agent, verify Canary setup
 from canary import CanaryMonitor
 
-canary = CanaryMonitor('config.py')
+canary = CanaryMonitor('config.json')
 
 # Verify protected paths are configured
 status = canary.get_status()
@@ -335,7 +331,7 @@ Run Canary in production:
          │
          ▼
 ┌─────────────────┐      ┌──────────────────┐
-│ CanaryMonitor   │◄────►│  config.py       │
+│ CanaryMonitor   │◄────►│  config.json     │
 │ (canary.py)     │      │  (your rules)    │
 └────────┬────────┘      └──────────────────┘
          │
@@ -364,12 +360,11 @@ Run Canary in production:
 
 Begin with strict rules, relax as needed:
 
-```python
-protected_paths = [
-    '/',  # Protect entire filesystem initially
-]
-
-halt_threshold = 3  # Low threshold to catch issues early
+```json
+{
+  "protected_paths": ["/"],
+  "halt_threshold": 3
+}
 ```
 
 ### Use Tripwires Strategically
@@ -394,7 +389,7 @@ python3 canary_audit.py export --output weekly-report.md --format markdown
 
 ```python
 # Verify Canary blocks what it should
-canary = CanaryMonitor('config.py')
+canary = CanaryMonitor('config.json')
 
 # These should all be blocked
 assert not canary.check_path('/etc/passwd', 'delete')[0]

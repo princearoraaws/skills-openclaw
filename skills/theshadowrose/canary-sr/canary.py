@@ -44,25 +44,14 @@ class CanaryMonitor:
         self.halted = False
     
     def _load_config(self, config_path: Optional[str]) -> Dict:
-        """Load configuration from file or use defaults."""
+        """Load configuration from a JSON file or use defaults."""
         if config_path and Path(config_path).exists():
-            # Security: validate path before executing config file
-            if not config_path.endswith(".py"):
-                raise ValueError(f"Config must be a .py file: {config_path}")
+            if not config_path.endswith(".json"):
+                raise ValueError(f"Config must be a .json file: {config_path}")
             if os.path.getsize(config_path) > 1_000_000:
                 raise ValueError(f"Config file too large (>1MB): {config_path}")
-            # Import config module
-            import importlib.util
-            spec = importlib.util.spec_from_file_location("config", config_path)
-            config_module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(config_module)
-            
-            # Extract config as dictionary
-            return {
-                key: getattr(config_module, key)
-                for key in dir(config_module)
-                if not key.startswith('_')
-            }
+            with open(config_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
         
         # Default config
         return {
