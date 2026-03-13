@@ -5,10 +5,10 @@ metadata:
   openclaw:
     requires:
       env:
-        - ENGAGELAB_SMS_DEV_KEY
-        - ENGAGELAB_SMS_DEV_SECRET
-        - ENGAGELAB_WA_DEV_KEY
-        - ENGAGELAB_WA_DEV_SECRET
+        - ENGAGELAB_SMS_KEY
+        - ENGAGELAB_SMS_SECRET
+        - ENGAGELAB_WA_KEY
+        - ENGAGELAB_WA_SECRET
         - ENGAGELAB_EMAIL_API_USER
         - ENGAGELAB_EMAIL_API_KEY
 ---

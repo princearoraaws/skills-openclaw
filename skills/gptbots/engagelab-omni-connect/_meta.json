@@ -3,11 +3,16 @@
   "slug": "engagelab-omni-connect",
   "displayName": "EngageLab Omni Connect",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1773051774785,
-    "commit": "https://github.com/openclaw/skills/commit/ec9d9a9ac4ce74fac14e062e9bdd98f5786feec8"
+    "version": "1.0.2",
+    "publishedAt": 1773051904445,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1773051774785,
+      "commit": "https://github.com/openclaw/skills/commit/ec9d9a9ac4ce74fac14e062e9bdd98f5786feec8"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1773051438057,
