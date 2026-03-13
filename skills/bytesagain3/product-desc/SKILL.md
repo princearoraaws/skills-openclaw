@@ -1,11 +1,6 @@
 ---
 name: product-desc
-version: 1.0.0
-description: "产品描述生成器。产品文案撰写、SEO优化、卖点提炼、竞品对比、多语言本地化。Product description writer with SEO, bullet points, comparison, localization. 产品描述、产品文案、卖点、电商文案。Use when writing product descriptions."
-author: BytesAgain <hello@bytesagain.com>
-homepage: https://bytesagain.com
-tags: [product, description, copywriting, seo, ecommerce, 产品描述, 产品文案, 电商]
-category: ecommerce
+description: "产品描述生成器。产品文案撰写、SEO优化、卖点提炼、竞品对比、多语言本地化。Product description writer with SEO, bullet points, comparison, localization. 产品描述、产品文案、卖点、电商文案。Use when writing product descriptions. Triggers on: product desc."
 ---
 # product-desc
 
@@ -35,3 +30,6 @@ category: ecommerce
 
 ---
 *product-desc by BytesAgain*
+---
+💬 Feedback & Feature Requests: https://bytesagain.com/feedback
+Powered by BytesAgain | bytesagain.com

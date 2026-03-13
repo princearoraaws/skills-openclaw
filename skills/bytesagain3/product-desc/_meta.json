@@ -1,11 +1,17 @@
 {
   "owner": "bytesagain3",
   "slug": "product-desc",
-  "displayName": "product-desc",
+  "displayName": "Product Desc",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773235823073,
-    "commit": "https://github.com/openclaw/skills/commit/ff3667a231cc20ac44db79207bcbeae79de49f0c"
+    "version": "2.2.0",
+    "publishedAt": 1773444876732,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773235823073,
+      "commit": "https://github.com/openclaw/skills/commit/ff3667a231cc20ac44db79207bcbeae79de49f0c"
+    }
+  ]
 }
