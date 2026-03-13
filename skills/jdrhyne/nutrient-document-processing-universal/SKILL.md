@@ -1,10 +1,10 @@
 ---
 name: nutrient-document-processing
 description: >-
-  Universal (non-OpenClaw) Nutrient document processing skill for Agent Skills-compatible products.
-  Best for Claude Code, Codex CLI, Gemini CLI, Cursor, Windsurf, OpenCode, and Copilot environments
-  that do not expose OpenClaw `nutrient_*` tools. Supports PDF conversion, OCR, text/table extraction,
-  PII redaction, watermarking, digital signatures, form fill, merge/split/reorder pages, and API usage
+  Universal (non-OpenClaw) Nutrient DWS document-processing skill for Agent Skills-compatible products.
+  Best for Claude Code, Codex CLI, Gemini CLI, Cursor, Windsurf, OpenCode, and Copilot environments.
+  Supports full workflows: convert PDF/Office/images, OCR, extract text/tables/key-values, redact PII
+  (pattern + AI), watermark, digitally sign, form fill, merge/split/reorder pages, and API usage/credit
   checks. Prefers MCP server mode, with direct API/curl fallback. Activates on keywords: PDF, document,
   convert, extract, OCR, redact, watermark, sign, merge, split, compress, form fill, document processing, MCP.
 homepage: https://www.nutrient.io/api/
