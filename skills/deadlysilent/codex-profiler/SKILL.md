@@ -1,7 +1,10 @@
 ---
 name: codex-profiler
-description: Combined Codex profile operations skill: usage checks + OAuth auth refresh for OpenAI Codex profiles via Telegram commands /codex_usage and /codex_auth.
+description: Maintained Codex operations skill: unified /codex_usage + /codex_auth path. Standalone codex-usage/codex-auth are deprecated.
 ---
+
+> ✅ **Maintained path:** use `codex-profiler` for all Codex profile operations.
+> Standalone `codex-usage` and `codex-auth` skills are deprecated.
 
 This skill consolidates both scripts:
 - `scripts/codex_usage.py` (usage/limits)
@@ -26,6 +29,10 @@ This skill consolidates both scripts:
 ## UX requirements (cross-channel)
 For `/codex_usage`, send immediate progress message first as a separate message:
 - "Running Codex usage checks now…"
+
+Delivery rule:
+- If progress is sent through channel message tool path, send final result through the same path (same target/session), then return `NO_REPLY`.
+- Avoid mixed delivery (tool progress + plain reply final).
 
 For queued auth apply, warn before restart behavior:
 - "Gateway restart will be performed by background apply job. Avoid long-running tasks."

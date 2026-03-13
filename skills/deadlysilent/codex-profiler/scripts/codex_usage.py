@@ -313,19 +313,28 @@ def parse_codex_usage(payload):
     pw = rl.get("primary_window") or {}
     sw = rl.get("secondary_window") or {}
 
+    def infer_window_label(secs, fallback_label):
+        if not isinstance(secs, (int, float)) or secs <= 0:
+            return fallback_label
+        secs_i = int(secs)
+        if secs_i % 86400 == 0:
+            days = secs_i // 86400
+            if days == 7:
+                return "Week"
+            return f"{days}d"
+        if secs_i % 3600 == 0:
+            return f"{secs_i // 3600}h"
+        if secs_i >= 86400:
+            return f"{round(secs_i / 86400)}d"
+        return f"{round(secs_i / 3600)}h"
+
     def win(obj, fallback_label):
         if not obj:
             return None
         secs = obj.get("limit_window_seconds")
         reset = obj.get("reset_at")
         reset_after = obj.get("reset_after_seconds")
-        label = fallback_label
-        try:
-            if isinstance(secs, (int, float)) and secs > 0:
-                hours = round(float(secs) / 3600)
-                label = f"{hours}h" if hours < 24 else ("Week" if hours >= 168 else "Day")
-        except Exception:
-            pass
+        label = infer_window_label(secs, fallback_label)
         used = obj.get("used_percent")
         remaining = None
         if isinstance(used, (int, float)):
@@ -337,6 +346,7 @@ def parse_codex_usage(payload):
             "reset_in": format_reset_in(reset_after),
             "reset_at": format_reset_at(reset),
             "reset_after_seconds": reset_after,
+            "limit_window_seconds": secs,
         }
 
     windows = []
@@ -369,39 +379,75 @@ def build_template_line(profile_report):
     remote = profile_report.get("remote_usage") or {}
     windows = remote.get("windows") or []
 
-    five_hour = {"remaining": "n/a", "reset_at": "n/a", "time_left": "n/a"}
-    week = {"remaining": "n/a", "reset_at": "n/a", "time_left": "n/a"}
-
-    for w in windows:
-        label = str(w.get("label") or "").lower()
-        row = {
+    def to_row(w):
+        return {
             "remaining": format_pct(w.get("remaining_percent")),
+            "remaining_raw": w.get("remaining_percent"),
             "reset_at": w.get("reset_at") or "n/a",
             "time_left": format_duration_dhm(w.get("reset_after_seconds")),
+            "secs": w.get("limit_window_seconds"),
+            "label": str(w.get("label") or "Window"),
         }
-        if label in {"5h", "5", "5-hour", "5 hours"}:
-            five_hour = row
-        elif "week" in label or label in {"7d", "168h"}:
-            week = row
 
-    usable = remote.get("allowed")
-    limited = remote.get("limit_reached")
+    def derive_usage_state(remote_usage, win_rows, fallback_ok):
+        # Prefer explicit WHAM booleans, but guard with window evidence to avoid stale-looking output.
+        allowed = remote_usage.get("allowed")
+        limit_reached = remote_usage.get("limit_reached")
 
-    if usable is None:
-        usable = bool(profile_report.get("remote_usage_ok"))
-    if limited is None:
-        limited = False
+        max_window = None
+        for w in win_rows:
+            secs = w.get("secs")
+            if isinstance(secs, (int, float)):
+                if max_window is None or int(secs) > int(max_window.get("secs") or 0):
+                    max_window = w
+
+        max_window_exhausted = False
+        if max_window and isinstance(max_window.get("remaining_raw"), (int, float)):
+            max_window_exhausted = float(max_window.get("remaining_raw")) <= 0.0
+
+        if isinstance(limit_reached, bool):
+            limited = limit_reached or max_window_exhausted
+        elif max_window is not None:
+            limited = max_window_exhausted
+        else:
+            limited = False
+
+        if isinstance(allowed, bool):
+            usable = allowed and not limited
+        else:
+            usable = bool(fallback_ok) and not limited
+
+        return usable, limited
+
+    short = {"label": "5h", "remaining": "not reported", "reset_at": "not reported", "time_left": "not reported", "secs": None, "remaining_raw": None}
+    longw = {"label": "Week", "remaining": "not reported", "reset_at": "not reported", "time_left": "not reported", "secs": None, "remaining_raw": None}
+
+    rows = []
+    for w in windows:
+        row = to_row(w)
+        rows.append(row)
+        secs = row.get("secs")
+        # Prefer nearest short window around 5h; otherwise any <= 24h.
+        if isinstance(secs, (int, float)) and secs <= 86400:
+            if short.get("secs") is None or abs(int(secs) - 18000) < abs(int(short.get("secs") or 18000) - 18000):
+                short = row
+        # Long window = largest window > 24h.
+        if isinstance(secs, (int, float)) and secs > 86400:
+            if longw.get("secs") is None or int(secs) > int(longw.get("secs") or 0):
+                longw = row
+
+    usable, limited = derive_usage_state(remote, rows, profile_report.get("remote_usage_ok"))
 
     return (
         f"Profile: {profile_report.get('profile')}\n"
         f"  Usable: {format_bool_icon(usable)}\n"
         f"  Limited: {format_bool_icon(limited)}\n"
-        f"  5h Left: {five_hour['remaining']}\n"
-        f"  5h Reset: {five_hour['reset_at']}\n"
-        f"  5h Time left: {five_hour['time_left']}\n"
-        f"  Week Left: {week['remaining']}\n"
-        f"  Week Reset: {week['reset_at']}\n"
-        f"  Week Time left: {week['time_left']}"
+        f"  {short['label']} Left: {short['remaining']}\n"
+        f"  {short['label']} Reset: {short['reset_at']}\n"
+        f"  {short['label']} Time left: {short['time_left']}\n"
+        f"  {longw['label']} Left: {longw['remaining']}\n"
+        f"  {longw['label']} Reset: {longw['reset_at']}\n"
+        f"  {longw['label']} Time left: {longw['time_left']}"
     )
 
 
@@ -637,7 +683,7 @@ def main():
         "remote_endpoint_enabled": include_remote,
         "profiles": reports,
         "progress_message": "Running Codex usage checks now…",
-        "response_template": "Profile: %name%\nUsable: ✅/❌\nLimited: ✅/❌\n5h Left: %remaining left\n5h Reset: dd/mm/yyyy, hh:mm\n5h Time left: x Days, y Hours, z Minutes\nWeek Left: %remaining left\nWeek Reset: dd/mm/yyyy, hh:mm\nWeek Time left: x Days, y Hours, z Minutes",
+        "response_template": "Profile: %name%\nUsable: ✅/❌\nLimited: ✅/❌\n<short window> Left: %remaining left\n<short window> Reset: dd/mm/yyyy, hh:mm\n<short window> Time left: x Days, y Hours, z Minutes\n<long window> Left: %remaining left\n<long window> Reset: dd/mm/yyyy, hh:mm\n<long window> Time left: x Days, y Hours, z Minutes",
     }
     if endpoint_reason:
         out["remote_endpoint_note"] = endpoint_reason
