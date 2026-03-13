@@ -1,13 +1,18 @@
 {
   "owner": "zihaofeng2001",
   "slug": "agent-architecture-guide",
-  "displayName": "OpenClaw Agent Architecture Patterns",
+  "displayName": "Agent Architecture Guide",
   "latest": {
-    "version": "3.4.2",
-    "publishedAt": 1772958124286,
-    "commit": "https://github.com/openclaw/skills/commit/90c80c82c6894f72196cdd3cad9aa6ba4bbbf362"
+    "version": "4.0.3",
+    "publishedAt": 1773380769869,
+    "commit": null
   },
   "history": [
+    {
+      "version": "3.4.2",
+      "publishedAt": 1772958124286,
+      "commit": "https://github.com/openclaw/skills/commit/90c80c82c6894f72196cdd3cad9aa6ba4bbbf362"
+    },
     {
       "version": "3.1.1",
       "publishedAt": 1772746873747,

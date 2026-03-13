@@ -276,6 +276,131 @@ All three layers get indexed:
 
 **Result:** Compression covers the frequently accessed 80-90%; vector search catches the long tail without manual pointer-tracing.
 
+### 15. CJK Query Rewrite (Multilingual Memory Retrieval)
+
+**Problem:** Short Chinese/Japanese/Korean queries (≤4 characters) consistently miss in vector search. Embedding models encode short CJK text poorly — cosine similarity falls below threshold even when the chunk exists.
+
+**Root cause (verified):** The chunk is in the index, but similarity scores land at 0.22-0.25 vs a 0.3 minScore threshold. This is a fundamental embedding model limitation, not an indexing bug.
+
+**Solution:** Expand short CJK queries before calling `memory_search` using pattern-based rewriting.
+
+| Original pattern | Expand to | Example |
+|-----------------|-----------|---------|
+| "X了吗" / "X过吗" | Remove particles, search X itself | "装了吗" → "安装 配置 setup" |
+| "怎么Y" | Y + method/flow/steps | "怎么部署" → "部署 流程 步骤" |
+| "X叫什么" / "X英文" | X + English name | "豆腐英文" → "豆腐 tofu English name" |
+| "为什么X" | X + reason | "为什么失败" → "失败 原因 error reason" |
+| Pure CJK ≤3 chars | Add English synonym or context | "日志" → "日志 log file 记录" |
+| "X停了吗" | X + stopped/paused/status | "服务停了吗" → "service 停止 status 状态" |
+
+**Execution:** Not a tool modification — the agent expands the query string before calling `memory_search`. If expanded query still misses, retry with original (double attempt).
+
+**Measured impact:** Queries like "怎么重启" went from miss (0 results) to direct hit (score 0.67) after combining with Pattern #16 (Ops Index).
+
+### 16. Ops Index (Canonical Operational Knowledge)
+
+**Problem:** Operational knowledge (restart flows, channel routing, tool configs) is scattered across daily logs, correction logs, and MEMORY.md. Hard to retrieve because the same fact exists in fragments across multiple files.
+
+**Solution:** Create a single `docs/ops-index.md` that consolidates operational knowledge with search-friendly aliases.
+
+**Structure:**
+```markdown
+# Operational Index
+
+## Gateway Restart Flow
+<!-- aliases: restart, how to restart, restart steps -->
+1. Update NOW.md
+2. Send notification + set recovery cron
+3. Restart → verify exit code
+
+## Discord Channel Routing
+<!-- aliases: which channel, message routing -->
+| Content | Target | Channel ID |
+|---------|--------|------------|
+| Stocks  | #stocks | 123... |
+```
+
+**Key design decisions:**
+- **Aliases in HTML comments** — `<!-- aliases: ... -->` gets indexed by both FTS5 and vector search
+- **One source of truth** — don't duplicate in MEMORY.md; MEMORY.md points here
+- **Add to memorySearch extraPaths** — so it gets chunked and indexed
+
+**Measured impact:** Ops/Config category went from ~60% to 83% recall rate.
+
+### 17. Bilingual Anchor Convention (Cross-Language Recall)
+
+**Problem:** User asks in Chinese, content is stored in English (or vice versa). Embedding models handle cross-language semantic matching poorly for short phrases.
+
+**Solution:** When writing daily logs, always include both languages inline for any fact that bridges Chinese and English.
+
+```markdown
+✅ 豆腐 (tofu) — firm tofu works best for stir-fry
+✅ Docker 部署 (deployment) — port 8080, nginx reverse proxy
+✅ 温度设置 (temperature setting) 定时调节 — schedule via app
+
+❌ 豆腐 — 炒菜用老豆腐（missing English）
+❌ Deployed Docker container（missing Chinese 部署）
+```
+
+**Principle:** User asks in Chinese → content might be in English. User searches English → content might be in Chinese. Bilingual anchors make both directions work.
+
+**Cost:** Zero. It's a writing habit, not infrastructure.
+
+### 18. Entity Registry (Alias Resolution)
+
+**Problem:** Same entity has multiple names across languages and contexts (MU = Micron = 美光, 白萝卜 = daikon, 鹅鸭杀 = Goose Goose Duck). Search only finds one form.
+
+**Solution:** Maintain `memory/entities.json` mapping canonical names to all known aliases.
+
+```json
+{
+  "tools": {
+    "Docker": ["容器", "docker-compose", "container"],
+    "Nginx": ["反向代理", "reverse proxy", "web server"]
+  },
+  "food": {
+    "tofu": ["豆腐", "bean curd", "firm tofu"]
+  },
+  "concepts": {
+    "deployment": ["部署", "上线", "deploy", "release"]
+  }
+}
+```
+
+**Usage:** When a search query contains a known alias, also search the canonical form (and vice versa). The registry itself doesn't need to be indexed — the agent reads it at query time.
+
+### 19. Anti-Overfit Eval Discipline
+
+**Problem:** After building a memory benchmark (N queries with known answers), it's tempting to add keywords to source files that directly match the failing queries. This inflates the score without improving the system.
+
+**Solution:** Strict separation between eval set and optimization targets.
+
+**Rules:**
+- ❌ **Content overfit:** Adding "how to fix" to a troubleshooting section because "怎么修" was a failing query
+- ✅ **Structural improvement:** Creating an ops-index that consolidates operational knowledge (helps ALL ops queries, not just the ones in the eval set)
+- ✅ **Language-pattern improvement:** Query rewrite rules based on Chinese grammar patterns (helps ALL Chinese queries)
+- ✅ **Writing convention:** Bilingual anchors (helps ALL cross-language retrieval)
+
+**Eval set is for observation, not optimization.**
+
+If you catch yourself copying a failing query's keywords into the source material — stop. That's overfitting. Find a structural fix instead.
+
+### 20. Output Gating (Selective Memory Loading)
+
+**Problem:** Agent loads all memory files at session start, burning context tokens on information that's irrelevant to the current task.
+
+**Solution:** Load only what the task needs. Use `memory_search` for precision retrieval instead of reading entire files.
+
+| Scenario | Action |
+|----------|--------|
+| User asks "how did we do X last time" | `memory_search` → `memory_get` specific lines |
+| User mentions a ticker/tool/project | `memory_search(entity:XXX)` |
+| Need last 24h context | Read NOW.md highlights section |
+| Heartbeat check | Only HEARTBEAT.md + state file |
+| Sub-agent / cron task | Zero memory loading unless task explicitly needs it |
+
+**Core principle:** If `memory_search` can pull it precisely, don't `read` the entire file. Every read consumes context — less waste = longer effective conversations.
+
 ## Credits
 
 - **[proactive-agent](https://clawhub.ai/halthelobster/proactive-agent)** by halthelobster
@@ -285,3 +410,7 @@ All three layers get indexed:
 ---
 
 *Built from real production experience. Strong defaults, not dogma.*
+
+## License
+
+This work is licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). You are free to share and adapt, with attribution and same-license requirement.
