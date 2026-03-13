@@ -5,7 +5,7 @@
 API: POST https://www.2fun.live/api/pan/search
     { kw: "关键词", res: "merge" }
 
-限速: 10次/分钟（按IP）
+限速: 60次/分钟（按IP）
 
 Usage:
   python3 search.py "流浪地球2"
@@ -21,7 +21,8 @@ import urllib.parse
 import argparse
 
 API_BASE_URL = os.getenv("API_URL", "https://www.2fun.live").rstrip("/")
-API_URL = f"{API_BASE_URL}/api/pan/search"
+SEARCH_API_URL = os.getenv("PAN_SEARCH_API_URL", "https://s.2fun.live/api/search").rstrip("/")
+SEARCH_API_ORIGIN = "{uri.scheme}://{uri.netloc}".format(uri=urllib.parse.urlparse(SEARCH_API_URL))
 
 # 云盘显示名称及优先级（用户友好度）
 DRIVE_PRIORITY = ["aliyun", "quark", "115", "baidu", "pikpak", "uc", "xunlei", "123", "tianyi", "mobile", "magnet", "ed2k", "other"]
@@ -60,29 +61,92 @@ def search(
     page: int = 1,
     page_size: int = None,
 ) -> dict:
+    page = max(1, int(page or 1))
+    page_size = max(1, min(100, int(page_size or 20)))
     use_paged_results = bool(cloud_types) or page > 1 or page_size is not None
-    payload = {"kw": keyword, "res": "results" if use_paged_results else "merge"}
-    if cloud_types:
-        payload["cloud_types"] = cloud_types
-    if refresh:
-        payload["refresh"] = True
-    if use_paged_results:
-        payload["page"] = max(1, int(page or 1))
-        payload["page_size"] = max(1, min(100, int(page_size or 20)))
+    headers = {
+        "Referer": f"{SEARCH_API_ORIGIN}/",
+        "User-Agent": "Mozilla/5.0",
+    }
 
-    data = json.dumps(payload).encode("utf-8")
-    req = urllib.request.Request(
-        API_URL,
-        data=data,
-        headers={
-            "Content-Type": "application/json",
-            "Referer": f"{API_BASE_URL}/",
-            "User-Agent": "Mozilla/5.0",
-        },
-        method="POST",
-    )
+    if SEARCH_API_URL.endswith("/api/search"):
+        query = {
+            "q": keyword,
+            "page": page,
+            "pageSize": page_size,
+        }
+        if cloud_types:
+            query["cloud"] = ",".join(cloud_types)
+
+        url = f"{SEARCH_API_URL}?{urllib.parse.urlencode(query)}"
+        req = urllib.request.Request(url, headers=headers, method="GET")
+    else:
+        payload = {"kw": keyword, "res": "results" if use_paged_results else "merge"}
+        if cloud_types:
+            payload["cloud_types"] = cloud_types
+        if refresh:
+            payload["refresh"] = True
+        if use_paged_results:
+            payload["page"] = page
+            payload["page_size"] = page_size
+
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            SEARCH_API_URL,
+            data=data,
+            headers={
+                **headers,
+                "Content-Type": "application/json",
+            },
+            method="POST",
+        )
+
     resp = urllib.request.urlopen(req, timeout=30)
-    return json.loads(resp.read().decode("utf-8"))
+    raw = json.loads(resp.read().decode("utf-8"))
+    return normalize_result(raw, keyword, page, page_size)
+
+
+def normalize_result(raw: dict, keyword: str, page: int, page_size: int) -> dict:
+    if "merged_by_type" in raw:
+        return raw
+
+    if "total_count" in raw and "results" in raw:
+        return raw
+
+    if "total" in raw and "results" in raw:
+        results = []
+        drive_counts = {}
+
+        for item in raw.get("results", []):
+            drive_type = item.get("netdiskType", "other")
+            normalized_item = {
+                "type": drive_type,
+                "url": item.get("url", ""),
+                "note": item.get("title", ""),
+                "datetime": item.get("createdAt", ""),
+                "source": item.get("source", "PanSou"),
+            }
+            results.append(normalized_item)
+            drive_counts[drive_type] = drive_counts.get(drive_type, 0) + 1
+
+        total = int(raw.get("total", len(results)) or 0)
+        total_pages = max(1, (total + page_size - 1) // page_size) if total > 0 else 1
+
+        return {
+            "keyword": raw.get("query", keyword),
+            "total_count": total,
+            "results": results,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "has_more": page < total_pages,
+            "drive_counts": drive_counts,
+            "from_cache": raw.get("fromCache", raw.get("from_cache", False)),
+            "cache_status": raw.get("cacheStatus", raw.get("cache_status")),
+            "stale": raw.get("stale", False),
+        }
+
+    return raw
 
 
 def format_results(result: dict, max_per_type: int = 3) -> str:
@@ -145,7 +209,7 @@ def format_results(result: dict, max_per_type: int = 3) -> str:
             lines.append(f"➡️ 还有更多结果，继续翻到第 {page + 1} 页查看")
             lines.append("")
 
-        lines.append(f"🌐 完整搜索：<{API_BASE_URL}/pan?kw={urllib.parse.quote(keyword)}>")
+        lines.append(f"🌐 完整搜索：<{SEARCH_API_ORIGIN}/pan?kw={urllib.parse.quote(keyword)}>")
         return "\n".join(lines)
 
     by_type = result.get("merged_by_type", {})
@@ -189,7 +253,7 @@ def format_results(result: dict, max_per_type: int = 3) -> str:
             lines.append(f"  … 还有 {len(links) - max_per_type} 个，去 2fun.live 查看全部")
         lines.append("")
 
-    lines.append(f"🌐 完整搜索：<{API_BASE_URL}/pan?kw={urllib.parse.quote(keyword)}>")
+    lines.append(f"🌐 完整搜索：<{SEARCH_API_ORIGIN}/pan?kw={urllib.parse.quote(keyword)}>")
     return "\n".join(lines)
 
 

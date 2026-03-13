@@ -13,10 +13,16 @@ Search PanSou resources via 2fun.live.
 python3 ~/.openclaw/workspace/skills/2fun-pansou/scripts/search.py "关键词"
 ```
 
-可通过环境变量覆盖默认入口：
+默认走 `s.2fun.live` 的搜索接口；也可以通过环境变量覆盖：
 
 ```bash
 API_URL=https://www.2fun.live python3 ~/.openclaw/workspace/skills/2fun-pansou/scripts/search.py "关键词"
+```
+
+也可以直接指定完整搜索 endpoint：
+
+```bash
+PAN_SEARCH_API_URL=https://s.2fun.live/api/search python3 ~/.openclaw/workspace/skills/2fun-pansou/scripts/search.py "关键词"
 ```
 
 ## 支持的云盘类型
@@ -34,8 +40,11 @@ python3 search.py "流浪地球2"
 # 限定云盘类型
 python3 search.py "权游 第四季" --types aliyun quark
 
-# 服务端分页（适合翻页/切换云盘）
+# 服务端分页（主站 POST API）
 API_URL=https://www.2fun.live python3 search.py "流浪地球2" --types aliyun --page 2 --page-size 10
+
+# 直接走 s.2fun.live 的 GET 搜索接口
+PAN_SEARCH_API_URL=https://s.2fun.live/api/search python3 search.py "流浪地球2" --types aliyun --page 2 --page-size 10
 
 # 指定每种类型显示更多结果
 python3 search.py "复仇者联盟" --max 5
@@ -49,14 +58,15 @@ python3 search.py "流浪地球2" --json
 
 ## API 说明
 
-- 接口：`POST ${API_URL:-https://www.2fun.live}/api/pan/search`
-- 请求体：
-  - 聚合模式：`{ kw: "关键词", res: "merge" }`
-  - 分页模式：`{ kw: "关键词", res: "results", page: 1, page_size: 10, cloud_types: ["aliyun"] }`
-- 限速：10次/分钟（按 IP，公开访问无需登录）
+- 默认接口：`GET https://s.2fun.live/api/search`
+- 完整 endpoint 覆盖：`PAN_SEARCH_API_URL=...`
+- 请求方式：
+  - 主站接口：`POST /api/pan/search`
+  - `s.2fun.live` 接口：`GET /api/search?q=关键词&page=1&pageSize=10&cloud=aliyun`
+- 限速：60次/分钟（按 IP，公开访问无需登录）
 - 缓存：服务端 Redis 缓存 5 分钟
-- `API_URL` 可覆盖，便于灰度切换到其他 2fun 搜索入口
-- 分页模式由服务端完成分页，避免每次翻页都重新拉整份 merge 结果
+- `API_URL` 主要用于生成站点链接；`PAN_SEARCH_API_URL` 用于指定真实搜索 endpoint
+- 脚本会自动识别主站 POST 接口和 `s.2fun.live` GET 接口，并归一化结果格式
 
 ## 结果格式
 

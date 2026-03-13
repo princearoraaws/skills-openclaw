@@ -3,11 +3,16 @@
   "slug": "2fun-pansou",
   "displayName": "2fun Pansou",
   "latest": {
-    "version": "2026.3.13",
-    "publishedAt": 1773395873853,
-    "commit": "https://github.com/openclaw/skills/commit/a1ec191a209458147465680e423ce8abbaa754fc"
+    "version": "2026.3.13-3",
+    "publishedAt": 1773398579365,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2026.3.13",
+      "publishedAt": 1773395873853,
+      "commit": "https://github.com/openclaw/skills/commit/a1ec191a209458147465680e423ce8abbaa754fc"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1772851036120,
