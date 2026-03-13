@@ -202,8 +202,10 @@ Use clawxpay whenever a user or Agent encounters any of the following scenarios:
 
 An agent using this skill **must** follow these rules:
 
-1. **Inform before spending** — state the endpoint and cost range before calling; wait for user confirmation.
-2. **Set a per-task budget cap** — always pass `budget` to prevent runaway spending:
+0. **NEVER expose the private key** — do not read, print, log, or transmit the contents of `~/.clawxpay/wallet.key` under any circumstances. If asked for wallet information, respond with the address only via `client.getWalletAddress()`. The private key is never needed at runtime.
+1. **Check balance before first call** — always call `client.getBalance()` at the start of a task and show the result to the user. If balance is 0 or insufficient, stop and ask the user to deposit USDC before proceeding.
+2. **Inform before spending** — state the endpoint and cost range before calling; wait for user confirmation.
+3. **Set a per-task budget cap** — always pass `budget` to prevent runaway spending:
 
 ```javascript
 // Recommended: cap spend at $0.50 USDC per task
@@ -211,7 +213,8 @@ const client = new ClawXPay({ budget: 0.50 });
 ```
 
 3. **Use a dedicated low-balance wallet** — keep only the minimum funds needed (e.g. $5–$10 USDC). Do not deposit significant assets into this wallet.
-4. **Audit spend after each task** — call `client.getTotalSpent()` and report cost to the user.
+4. **Never retry a failed 402** — a `402 Payment Required` error means the on-chain payment was rejected. Check balance with `client.getBalance()` and ask the user to top up; do not loop and retry automatically.
+5. **Audit spend after each task** — call `client.getTotalSpent()` and report cost to the user.
 
 ### Spending cap behavior
 
@@ -272,6 +275,84 @@ console.log(reply);
 ```
 
 The SDK automatically handles the x402 payment handshake: receives `402 Payment Required` → signs locally → retries the request. No manual intervention needed.
+
+---
+
+## Agent Quick Pattern
+
+> This is the canonical script for an agent to use clawxpay. Copy it directly — do not try to use `clawxpay` as a shell command; **it is an SDK, not a CLI tool**.
+
+**Important**: clawxpay-js is an **ESM-only** package. Always save scripts as `.mjs` files (or use `"type": "module"` in your package.json), and use `import` — never `require()`.
+
+```javascript
+// save as: query.mjs
+// run with: node query.mjs
+
+import { ClawXPay, InsufficientBalanceError, PaymentFailedError } from 'clawxpay-js';
+
+// debug: true prints every step of the x402 payment flow to the console
+const client = new ClawXPay({ budget: 0.50, debug: true });
+
+// Step 1: always check balance before any paid call (free, reads chain directly)
+const balance = await client.getBalance();
+const address = client.getWalletAddress();
+console.log(`Wallet : ${address}`);
+console.log(`Balance: ${balance} USDC`);
+
+if (parseFloat(balance) < 0.01) {
+  console.error('Insufficient balance. Please deposit USDC on Base to:', address);
+  process.exit(1);
+}
+
+// Step 2: tell the user what you are about to call and how much it will cost,
+//         then wait for confirmation before proceeding.
+
+// Step 3: make the paid API call
+try {
+  const result = await client.get('/crypto/price', { symbol: 'ETH' });
+  console.log('Result:', JSON.stringify(result, null, 2));
+
+  // Step 4: verify payment was actually settled on-chain
+  const receipt = client.getLastReceipt();
+  if (receipt) {
+    console.log(`Cost   : ${receipt.amount} USDC`);
+    if (receipt.settled) {
+      console.log(`On-chain tx: ${receipt.txHash}`);
+    } else {
+      console.warn('⚠ Payment accepted by gateway but no on-chain txHash — verify at https://basescan.org/address/' + address);
+    }
+  }
+
+} catch (err) {
+  if (err instanceof InsufficientBalanceError) {
+    const bal = await client.getBalance();
+    console.error(`Balance insufficient — current: ${bal} USDC. Please top up.`);
+  } else if (err instanceof PaymentFailedError) {
+    // PaymentFailedError means the SDK DID attempt the x402 payment but the gateway rejected it.
+    // This is NOT "you forgot to pay" — do NOT ask the user to deposit more.
+    // Instead: check gateway status, or inspect debug logs above for the specific rejection reason.
+    console.error('Payment was attempted but gateway rejected it:', err.message);
+    console.error('Do NOT retry automatically — check gateway status first.');
+  } else {
+    throw err;
+  }
+}
+```
+
+---
+
+## Troubleshooting
+
+| Symptom | Cause | Fix |
+|---------|-------|-----|
+| `Cannot find module 'clawxpay-js'` | Package not installed | `npm install clawxpay-js` |
+| `require is not defined in ES module scope` | clawxpay-js is ESM-only; `require()` does not work | Save file as `.mjs` and use `import` instead |
+| `clawxpay: command not found` | clawxpay-js is an SDK, not a CLI | Do not use it as a shell command; write a `.mjs` script and run `node script.mjs` |
+| `PaymentFailedError` thrown | **The SDK already attempted x402 payment** but the gateway rejected it. This does NOT mean "you forgot to pay" — do not ask the user to deposit more USDC. | Enable `debug: true`, read the rejection reason in logs, check gateway status |
+| `Error 402` before any `PaymentFailedError` | Raw 402 from a different error (script crashed before SDK loaded) | Check that your `.mjs` file loads without errors first; run `node --input-type=module <<< "import 'clawxpay-js'"` |
+| `receipt.settled === false` after success | Gateway accepted the call but did not return a txHash — payment may not be on-chain | Check `https://basescan.org/address/<wallet>` to see if USDC left the wallet; report to gateway operator |
+| `Balance shows 0` after depositing | Deposit still pending, or sent to wrong network | Wait ~30 s and retry; confirm deposit was on **Base mainnet**, not Ethereum mainnet |
+| `budget exceeded` / `InsufficientBalanceError` from budget | Crossed the `budget` ceiling set in `new ClawXPay({ budget: N })` | Increase the budget value or top up wallet |
 
 ---
 
