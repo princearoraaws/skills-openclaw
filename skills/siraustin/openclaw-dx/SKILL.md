@@ -1,6 +1,6 @@
 ---
 name: openclaw-dx
-version: 1.4.0
+version: 1.7.0
 license: MIT
 description: Diagnose and fix openclaw gateway issues. Use when the gateway is stuck, not starting, crash-looping, or rejecting connections. Covers main and --profile vesper gateways. Runs triage, applies fixes, writes incident report to ~/clawd/inbox.
 ---
@@ -66,6 +66,20 @@ openclaw memory status
 
 # 11. Check OPENCLAW_GATEWAY_TOKEN env var (multi-profile foot-gun)
 echo "OPENCLAW_GATEWAY_TOKEN=${OPENCLAW_GATEWAY_TOKEN:-unset}"
+
+# 12. Session token counts (context overflow check)
+for dir in ~/.openclaw ~/.openclaw-vesper; do
+  f="$dir/agents/main/sessions/sessions.json"
+  [ -f "$f" ] && echo "=== $(basename $dir) ===" && python3 -c "
+import json
+data=json.load(open('$f'))
+for k,v in data.items():
+    t=v.get('contextTokens',0)
+    pct=t/200000*100
+    flag=' ⚠️ BLOATED' if pct>75 else ''
+    print(f'  {k}: {t:,} tokens ({pct:.0f}%){flag}')
+"
+done
 
 # 12. Verify plist profile alignment
 grep OPENCLAW_STATE_DIR ~/Library/LaunchAgents/ai.openclaw.gateway.plist
@@ -261,6 +275,144 @@ grep OPENCLAW_PROFILE ~/Library/LaunchAgents/ai.openclaw.gateway.plist
 Then restart: `launchctl bootout gui/501/ai.openclaw.gateway && launchctl bootstrap gui/501 ~/Library/LaunchAgents/ai.openclaw.gateway.plist`
 **Prevention:** After running `openclaw --profile <name> gateway install`, verify BOTH plists still point to the correct profiles. The install command may overwrite the default profile's plist.
 
+### 15. Session Context Overflow + Compaction Timeout (Messages Swallowed)
+**Symptom:** Messages received but never responded to. Bot shows "typing" for ~2 minutes then stops (`typing TTL reached`). Same behavior across ALL providers (Anthropic, Codex, Gemini). Switching providers does not help.
+**Diagnosis:** The agent session has grown too large (>90% of context window). Compaction times out, blocking the message processing lane indefinitely.
+```bash
+# Check session token counts
+cat ~/.openclaw/agents/main/sessions/sessions.json | python3 -c "
+import sys,json
+data=json.load(sys.stdin)
+for k,v in data.items():
+    tokens=v.get('contextTokens',0)
+    pct=tokens/200000*100
+    flag=' ⚠️ BLOATED' if pct>75 else ''
+    print(f'{k}: {tokens:,} tokens ({pct:.0f}%){flag}')
+"
+# Check for compaction timeout in logs
+grep -i 'timed out during compaction\|embedded run timeout' ~/.openclaw/logs/gateway.err.log | tail -5
+# Check for typing TTL (message received but agent stuck)
+grep 'typing TTL reached' ~/.openclaw/logs/gateway.log | tail -5
+```
+Key log signatures:
+- `embedded run timeout: runId=... timeoutMs=600000` — compaction timed out at 600s
+- `using current snapshot: timed out during compaction` — session remains at bloated size
+- `typing TTL reached` — bot received message, started typing, but agent never responded
+**Fix:** Reset the bloated session:
+```bash
+# 1. Find the session transcript
+ls -la ~/.openclaw/agents/main/sessions/*.jsonl
+# 2. Rename transcript to trigger reset
+TIMESTAMP=$(date -u +%Y-%m-%dT%H-%M-%S.000Z)
+mv ~/.openclaw/agents/main/sessions/<session-id>.jsonl \
+   ~/.openclaw/agents/main/sessions/<session-id>.jsonl.reset.$TIMESTAMP
+# 3. Remove session entry from sessions.json
+python3 -c "
+import json
+path='$HOME/.openclaw/agents/main/sessions/sessions.json'
+data=json.load(open(path))
+# Delete the bloated session entry (e.g., 'agent:main:main')
+del data['agent:main:main']
+json.dump(data, open(path, 'w'), indent=2)
+"
+# 4. Restart gateway
+launchctl bootout gui/501/ai.openclaw.gateway && launchctl bootstrap gui/501 ~/Library/LaunchAgents/ai.openclaw.gateway.plist
+```
+**Prevention:**
+- Ensure `contextPruning` is configured on ALL profiles: `{ "mode": "cache-ttl", "ttl": "1h", "keepLastAssistants": 5 }`
+- Monitor session token counts — alert when any session exceeds 150K (75%)
+- Consider periodic `/reset` for long-running persistent sessions (weekly)
+- `typing TTL reached` + provider-agnostic failures = session bloat, not provider issue
+
+### 16. Agent Stuck on Hung API Call (Lane Deadlock Without Errors)
+**Symptom:** Messages received but never responded to. No errors in logs. No `lane wait exceeded`. No `typing TTL reached` for the stuck call. Gateway process healthy, event loop alive (cron timers firing). Channel status shows `in: Xm ago` but `out: Ym ago` where Y >> X.
+**Diagnosis:** The agent's API call to the LLM provider hung indefinitely — neither returned nor timed out. The lane is blocked but below the `lane wait exceeded` threshold logging interval, OR the lane wait log already fired and the call is still stuck.
+```bash
+# 1. Check channel in/out gap (indicates processing is stuck)
+openclaw --profile <profile> channels status
+
+# 2. Check last session transcript entry — look for unanswered tool results
+tail -5 ~/.openclaw-vesper/agents/main/sessions/*.jsonl | python3 -c "
+import sys, json
+for line in sys.stdin:
+    line = line.strip()
+    if not line: continue
+    try:
+        d = json.loads(line)
+        msg = d.get('message',{})
+        role = msg.get('role','?')
+        ts = d.get('timestamp','')
+        if role == 'toolResult':
+            tool = msg.get('toolName','?')
+            print(f'{ts} toolResult({tool}) — agent should respond but may be stuck')
+        elif role == 'user':
+            print(f'{ts} user message — waiting for agent response')
+    except: pass
+"
+
+# 3. Verify event loop is alive (cron still firing)
+grep 'cron: timer armed' /tmp/openclaw/openclaw-$(date +%Y-%m-%d).log | tail -1
+
+# 4. Check compaction model auth (misconfigured = compaction fails silently)
+python3 -c "
+import json
+c=json.load(open('$HOME/.openclaw-vesper/openclaw.json'))
+model=c.get('agents',{}).get('defaults',{}).get('compaction',{}).get('model','not set')
+print(f'Compaction model: {model}')
+provider=model.split('/')[0] if '/' in model else model
+# Check if provider has auth
+import os
+for d in ['.openclaw', '.openclaw-vesper']:
+    p=os.path.expanduser(f'~/{d}/agents/main/agent/auth-profiles.json')
+    if os.path.exists(p):
+        data=json.load(open(p))
+        found=[k for k in data.get('profiles',{}) if provider.replace('-cli','') in k]
+        print(f'  {d}: auth={\"yes\" if found else \"NO - MISCONFIGURED\"} ({found})')
+"
+```
+**Distinguishing from #15 (Context Overflow):**
+- #15: Session tokens >90%, `timed out during compaction`, affects ALL providers
+- #16: Session tokens normal/low, no compaction errors, single API call hangs silently
+**Fix:** Restart the gateway:
+```bash
+launchctl bootout gui/501/ai.openclaw.vesper && launchctl bootstrap gui/501 ~/Library/LaunchAgents/ai.openclaw.vesper.plist
+```
+**Prevention:**
+- Ensure compaction model provider has valid auth (common: `google-gemini-cli` set but no gemini auth profile)
+- Lower `timeoutSeconds` from 1800 (30m) to 600 (10m) to detect hung calls faster
+- Monitor channel in/out gap — if `out` lags `in` by >5 minutes, agent is stuck
+- `typing TTL reached` + no subsequent `sendMessage` within 5 minutes = stuck, not slow
+
+### 17. Compaction Model Timeout (Context Degradation Without Errors)
+**Symptom:** Messages processed but context degrades over time. Agent "forgets" recent context or gives less coherent responses. No visible errors to the user — gateway keeps running.
+**Diagnosis:**
+```bash
+grep -i "timed out during compaction" ~/.openclaw/logs/gateway.err.log | tail -10
+grep "compaction-safeguard" ~/.openclaw/logs/gateway.err.log | tail -10
+```
+Log signatures:
+- `[agent/embedded] using current snapshot: timed out during compaction runId=... sessionId=...`
+- `[compaction-safeguard] Compaction safeguard: new content uses X% of context; dropped N older chunk(s) (M messages) to fit history budget.`
+**Root cause:** The compaction model (configured in `agents.defaults.compaction.model`) is timing out. For example, `google-gemini-cli/gemini-2.5-flash` has OAuth latency + API rate limits that cause frequent timeouts. The gateway falls back to "safeguard" mode: dropping old message chunks without generating a proper summary. This preserves recent context but loses historical continuity — the agent gradually loses older conversation history.
+**Distinguishing from #15 (Context Overflow):**
+- #15: Session tokens >90%, compaction times out because of sheer size, messages swallowed entirely
+- #17: Session tokens normal, compaction model itself is slow/unreliable, messages processed but context quality degrades silently
+**Fix:** Switch compaction model to a faster/more reliable provider:
+```bash
+# Check current compaction model
+cat ~/.openclaw/openclaw.json | python3 -c "import sys,json; c=json.load(sys.stdin); print(c.get('agents',{}).get('defaults',{}).get('compaction',{}).get('model','not set (using primary model)'))"
+
+# Switch to Sonnet (proven reliable for compaction)
+# Use gateway config.patch or edit openclaw.json directly:
+# agents.defaults.compaction.model = "anthropic/claude-sonnet-4-6"
+```
+**Good compaction model choices:**
+- `anthropic/claude-sonnet-4-6` — reliable, fast, good summarization
+- `anthropic/claude-sonnet-4-20250514` — same tier
+- `google-gemini-cli/gemini-2.5-flash` — cheapest but prone to timeout (OAuth + rate limits)
+- Local models via LM Studio — $0 but needs testing for summary quality
+**Prevention:** Avoid cross-provider compaction models that add auth overhead. Same-provider as primary model reduces failure modes. Monitor for `timed out during compaction` in err.log periodically.
+
 ## Memory Thresholds
 
 | RSS | Status | Action |
@@ -350,6 +502,35 @@ openclaw --profile vesper memory status
 Key config: `agents.defaults.memorySearch.enabled` in `openclaw.json` — if `false`, the `memory_search`/`memory_get` tools won't register even if listed in `tools.alsoAllow`.
 
 Enabling requires a gateway restart (hot-reload picks up the config but tool registration needs restart).
+
+## QMD / Memory Search Debugging
+
+`qmd` runs on **Node.js** (`#!/usr/bin/env node`), NOT Bun. The sqlite-vec extension loads fine under Node's `better-sqlite3`. Previous reports of "sqlite-vec/Bun" issues are a **red herring** for OpenClaw users.
+
+If `qmd embed` hangs or fails:
+```bash
+# 1. Check Homebrew SQLite is installed
+brew list sqlite
+
+# 2. Rebuild better-sqlite3 if needed
+npm rebuild better-sqlite3 --build-from-source
+# Note: npm v11 warns about --build-from-source but the flag still works (cosmetic warning)
+
+# 3. Check embedding status
+qmd status  # Shows pending embedding count
+
+# 4. Force re-embedding of all content
+qmd embed -f
+
+# 5. Update collections that may have new files
+qmd update <collection>  # e.g., tool-heuristics collections after adding files
+```
+
+Key commands for memory search triage:
+- `qmd status` — shows collections, document counts, pending embeds
+- `qmd embed` — process pending embeddings (runs incrementally)
+- `qmd embed -f` — force re-embed everything (nuclear option)
+- `qmd update <collection>` — re-scan collection source for new/changed files
 
 ## Gateway Restart (by profile)
 

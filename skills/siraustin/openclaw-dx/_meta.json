@@ -3,11 +3,16 @@
   "slug": "openclaw-dx",
   "displayName": "Openclaw Dx",
   "latest": {
-    "version": "1.5.1",
-    "publishedAt": 1773061174964,
-    "commit": "https://github.com/openclaw/skills/commit/fe32dda8f0763445208f91186c8d533dc68863ba"
+    "version": "1.7.0",
+    "publishedAt": 1773174566100,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.5.1",
+      "publishedAt": 1773061174964,
+      "commit": "https://github.com/openclaw/skills/commit/fe32dda8f0763445208f91186c8d533dc68863ba"
+    },
     {
       "version": "1.5.0",
       "publishedAt": 1772980909316,
