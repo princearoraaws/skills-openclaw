@@ -7,14 +7,12 @@ description: "Use when asked to make a portal, create a portal, demo a website, 
 
 Turn any URL into a shareable live browser session. Viewers get a real browser running in a cloud VM — 10 minutes per session.
 
-## Install (OpenClaw Plugin)
+## Install
 
 ```
-openclaw plugins install https://github.com/makeportals/mcp/releases/download/v1.2.0/makeportals-openclaw-portal-1.2.0.tgz
+openclaw plugins install openclaw-portal
 openclaw gateway restart
 ```
-
-This installs the plugin with all 27 portal tools. Works on WhatsApp, Telegram, and all messaging channels.
 
 **Watch** — AI clicks, scrolls, and narrates a guided demo.
 **Play** — Viewer explores freely with AI guardrails blocking unwanted areas.
