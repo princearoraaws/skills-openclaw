@@ -1,7 +1,6 @@
 ---
 name: License Picker
 description: >-
-runtime: python3
   开源协议选择器。协议对比、生成LICENSE文件、解释条款、商用指南、FAQ。License picker with comparison, generation, explanation, commercial guide. 开源、协议。
 ---
 # License Picker
