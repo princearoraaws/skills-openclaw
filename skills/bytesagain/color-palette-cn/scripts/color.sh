@@ -30,12 +30,20 @@ EOF
   echo "  Powered by BytesAgain | bytesagain.com | hello@bytesagain.com"
 }
 
-# Python helper for color operations
+# Pass command and args to Python via environment variables
 run_color_py() {
+  local py_cmd="${1:-help}"
+  shift 2>/dev/null || true
+  local py_arg1="${1:-}"
+  local py_arg2="${2:-}"
+
+  export PY_CMD="$py_cmd"
+  export PY_ARG1="$py_arg1"
+  export PY_ARG2="$py_arg2"
+
   python3 << 'PYEOF'
-import sys
+import os
 import math
-import json
 
 def hex_to_rgb(h):
     h = h.lstrip('#')
@@ -120,11 +128,13 @@ def contrast_ratio(hex1, hex2):
     darker = min(l1, l2)
     return (lighter + 0.05) / (darker + 0.05)
 
-args = sys.argv[1:]
-cmd = args[0] if args else "help"
+# Read command and args from environment
+cmd = os.environ.get("PY_CMD", "help")
+arg1 = os.environ.get("PY_ARG1", "")
+arg2 = os.environ.get("PY_ARG2", "")
 
 if cmd == "generate":
-    theme = args[1] if len(args) > 1 else "tech"
+    theme = arg1 if arg1 else "tech"
     palettes = {
         "tech": [
             ("#0a192f", "Deep Navy"),
@@ -188,8 +198,8 @@ if cmd == "generate":
     print("  背景: {}".format(p[4][0]))
 
 elif cmd == "harmony":
-    base = args[1] if len(args) > 1 else "#3498db"
-    htype = args[2] if len(args) > 2 else "complementary"
+    base = arg1 if arg1 else "#3498db"
+    htype = arg2 if arg2 else "complementary"
     print("\n=== Color Harmony: {} ===".format(htype.upper()))
     print("\nBase Color:")
     print(color_block(base, "Base"))
@@ -233,7 +243,7 @@ elif cmd == "harmony":
         print("Unknown type: {}. Options: complementary/analogous/triadic/split/tetradic".format(htype))
 
 elif cmd == "brand":
-    industry = args[1] if len(args) > 1 else "tech"
+    industry = arg1 if arg1 else "tech"
     brands = {
         "tech": {
             "primary": ("#0066ff", "Trust Blue"),
@@ -295,8 +305,8 @@ elif cmd == "brand":
     print("  {}".format(b["tips"]))
 
 elif cmd == "contrast":
-    fg = args[0] if args else "#333333"
-    bg = args[1] if len(args) > 1 else "#ffffff"
+    fg = arg1 if arg1 else "#333333"
+    bg = arg2 if arg2 else "#ffffff"
     ratio = contrast_ratio(fg, bg)
     print("\n=== WCAG Contrast Check ===\n")
     print("Foreground: {}".format(fg))
@@ -327,7 +337,7 @@ elif cmd == "contrast":
         print("  Minimum recommended: 4.5:1 for normal text")
 
 elif cmd == "convert":
-    color_input = args[0] if args else "#ff6600"
+    color_input = arg1 if arg1 else "#ff6600"
     if color_input.startswith("#"):
         r, g, b = hex_to_rgb(color_input)
         h, s, l = rgb_to_hsl(r, g, b)
@@ -357,7 +367,7 @@ elif cmd == "convert":
     print("  CSS RGBA: color: rgba({}, {}, {}, 1.0);".format(r, g, b))
 
 elif cmd == "trending":
-    year = args[0] if args else "2025"
+    year = arg1 if arg1 else "2025"
     print("\n=== {} Trending Colors ===\n".format(year))
     trends = [
         ("#5b5ea6", "Future Dusk", "数字紫，代表科技与未来"),
@@ -378,6 +388,7 @@ elif cmd == "trending":
     print("  可持续、平静、乐观是关键色彩情绪")
 
 else:
+    import sys
     print("Unknown command: {}".format(cmd))
     sys.exit(1)
 PYEOF
