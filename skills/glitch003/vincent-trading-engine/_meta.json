@@ -3,11 +3,16 @@
   "slug": "vincent-trading-engine",
   "displayName": "Vincent - Trading Engine",
   "latest": {
-    "version": "1.0.66",
-    "publishedAt": 1772948806299,
-    "commit": "https://github.com/openclaw/skills/commit/3c95b9c2614b95dfde234a4f9c40141065872a43"
+    "version": "1.0.69",
+    "publishedAt": 1773088495623,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.66",
+      "publishedAt": 1772948806299,
+      "commit": "https://github.com/openclaw/skills/commit/3c95b9c2614b95dfde234a4f9c40141065872a43"
+    },
     {
       "version": "1.0.65",
       "publishedAt": 1772491616312,
