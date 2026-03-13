@@ -1,39 +1,35 @@
-# Windows Screenshot Skill for OpenClaw
+# Windows Screenshot - OpenClaw Skill
 
-PowerShell 实现的 Windows 屏幕截图工具，专为 OpenClaw 无头节点设计。
+A pure PowerShell screenshot tool using GDI+ for Windows systems.
 
-## 快速开始
-
-**获取脚本：** 从 [GitHub 仓库](https://github.com/vvxer/windows-screenshot) 下载 `screenshot.ps1`
+## Quick Start
 
 ```powershell
-# 直接执行
+# Run directly
 powershell -File screenshot.ps1
 
-# 输出：MEDIA:C:\Users\YourUsername\.openclaw\media\screenshot_YYYYMMDD_HHMMSS.png
-```
-
-## 集成到 OpenClaw
-
-### 1. 通过 exec 执行截图
-
-```bash
+# Or via OpenClaw
 openclaw exec powershell -File screenshot.ps1
 ```
 
-### 2. 发送到 Telegram
+## Environment Variables
 
-```bash
-openclaw message send --channel telegram --target YOUR_USER_ID --media /path/to/screenshot.png
-```
+- `OPENCLAW_MEDIA_DIR` - Custom output directory (optional)
+  - Default: `$USERPROFILE\.openclaw\media`
+  - Script creates directory automatically if needed
 
-## 特点
+## Files
 
-✅ 无依赖 - 仅使用系统 .NET Framework  
-✅ 快速 - GDI+ 硬件加速  
-✅ 可靠 - 自动处理分辨率缩放  
-✅ 集成 - 输出 MEDIA 前缀便于 OpenClaw 处理  
+- **screenshot.txt** - PowerShell script (rename to .ps1 if needed)
+- **SKILL.md** - Skill documentation and metadata
+- **README.md** - This file
 
-## 许可
+## Source Code
 
-MIT-0 (Open Source)
+All code is open source and available on GitHub for review:
+https://github.com/vvxer/windows-screenshot
+
+## License
+
+MIT-0 (Free to use, modify, and redistribute without attribution)
+
