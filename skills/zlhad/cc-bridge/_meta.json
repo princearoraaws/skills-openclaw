@@ -1,11 +1,17 @@
 {
   "owner": "zlhad",
   "slug": "cc-bridge",
-  "displayName": "CC Bridge",
+  "displayName": "Claude Code Bridge",
   "latest": {
-    "version": "0.2.0",
-    "publishedAt": 1773087688387,
-    "commit": "https://github.com/openclaw/skills/commit/79926e879e02b372344a94693f5a6c63eedcd07d"
+    "version": "0.2.1",
+    "publishedAt": 1773087922455,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.2.0",
+      "publishedAt": 1773087688387,
+      "commit": "https://github.com/openclaw/skills/commit/79926e879e02b372344a94693f5a6c63eedcd07d"
+    }
+  ]
 }
