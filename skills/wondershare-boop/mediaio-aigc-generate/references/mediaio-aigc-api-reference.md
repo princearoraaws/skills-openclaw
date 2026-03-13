@@ -9,11 +9,11 @@
 
 ### 1.1 Unified Entry Point
 ```python
-from skill_router import Skill
+from scripts.skill_router import Skill
 import os
 
-skill = Skill('c_api_doc_detail.json')
-api_key = os.getenv('MEDIAIO_API_KEY', '')
+skill = Skill('scripts/c_api_doc_detail.json')
+api_key = os.getenv('API_KEY', '')
 
 result = skill.invoke(api_name, params, api_key=api_key)
 print(result)
@@ -2165,10 +2165,10 @@ print(result)
 ```python
 import os
 import time
-from skill_router import Skill
+from scripts.skill_router import Skill
 
-skill = Skill('c_api_doc_detail.json')
-api_key = os.getenv('MEDIAIO_API_KEY', '')
+skill = Skill('scripts/c_api_doc_detail.json')
+api_key = os.getenv('API_KEY', '')
 
 create = skill.invoke('Imagen 4', {
     'prompt': 'A cute kitten, photorealistic, soft natural light, highly detailed',
@@ -2238,10 +2238,10 @@ for _ in range(24):
 ```python
 import os
 import time
-from skill_router import Skill
+from scripts.skill_router import Skill
 
-skill = Skill('c_api_doc_detail.json')
-api_key = os.getenv('MEDIAIO_API_KEY', '')
+skill = Skill('scripts/c_api_doc_detail.json')
+api_key = os.getenv('API_KEY', '')
 
 def submit_and_wait(api_name, params, retries=36, interval_sec=5):
     create = skill.invoke(api_name, params, api_key=api_key)
@@ -2282,7 +2282,7 @@ print(r)
 
 ## 7. Troubleshooting Checklist
 
-1. `code=374004`: verify that `MEDIAIO_API_KEY` is configured and valid.
+1. `code=374004`: verify that `API_KEY` is configured and valid.
 2. `code=490505`: your account is out of credits; recharge before retrying.
 3. `API not found`: ensure `api_name` exactly matches the `name` field in API definitions.
 4. Task remains `processing`: increase polling retries or reduce duration/resolution.

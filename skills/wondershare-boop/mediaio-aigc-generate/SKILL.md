@@ -1,13 +1,7 @@
 ---
 name: mediaio-aigc-generate
-description: "AI image and video generation + editing via MediaIO OpenAPI. Supports text-to-image, image-to-image, image-to-video, text-to-video, plus task and credits queries. Models include Imagen 4, Nano Banana, Seedream, Wan, Kling, Vidu, and Veo 3.1."
-license: Apache-2.0
-metadata:
-  publisher: Media.io
-  homepage: https://developer.media.io/
-  source: https://platform.media.io/docs/
-  required_env_vars:
-    - MEDIAIO_API_KEY
+description: "Generate and edit AI images and videos with Media.io OpenAPI. Supports text-to-image, image-to-image, text-to-video, and image-to-video, plus task status and credit queries. Access top models like Imagen 4, Seedream, Kling, Vidu, Wan, and Veo 3.1 in one place."
+metadata: {"mediaio":{"emoji":"🎨","requires":{"env":["API_KEY"]}},"publisher":"Community Maintainer","source":"https://platform.media.io/docs/"}
 ---
 
 # MediaIO AIGC Generate Skill
@@ -16,14 +10,22 @@ metadata:
 This skill routes MediaIO OpenAPI requests based on `scripts/c_api_doc_detail.json`.
 It provides a single entry point, `Skill.invoke(api_name, params, api_key)`, covering credits queries, text-to-image, image-to-image, image-to-video, text-to-video, and task result lookups.
 
-## Trust and Credential Notes
-- Publisher: Media.io
-- Official homepage: https://developer.media.io/
-- Official API docs: https://platform.media.io/docs/
+## Requirements
+
+### Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `API_KEY` | **Yes** | Media.io OpenAPI key, sent as `X-API-KEY` header. Apply at <https://developer.media.io/>. Use a **least-privilege / test key**; do not reuse broader platform credentials. |
+
+## Provenance and Credential Notes
+- Maintainer: community-maintained skill (not an official Media.io release)
+- Reference homepage: https://developer.media.io/
+- Reference API docs: https://platform.media.io/docs/
 - Target API domain used by this skill: `https://openapi.media.io`
-- Credential used: `MEDIAIO_API_KEY` (one key for Media.io OpenAPI)
+- Required credential: `API_KEY` (used as `X-API-KEY`)
 - Security recommendation: use a least-privilege/test key, avoid reusing broader platform credentials.
-- Credential loading: examples use `MEDIAIO_API_KEY` from environment variables, but you can also pass `api_key` directly to `Skill.invoke(...)`.
+- Credential loading: set `API_KEY` in your environment, or pass `api_key` explicitly to `Skill.invoke(...)`.
 
 ## API Coverage (from c_api_doc_detail.json)
 The current API definition includes 24 endpoints, grouped by capability:
@@ -31,21 +33,21 @@ The current API definition includes 24 endpoints, grouped by capability:
 - Query APIs
   - `Credits` (query user credit balance)
   - `Task Result` (query task status/result by `task_id`)
-- Text To Image（2）
+- Text To Image�?�?
   - `Imagen 4`
   - `soul_character`
-- Image To Image（3）
+- Image To Image�?�?
   - `Nano Banana`
   - `Seedream 4.0`
   - `Nano Banana Pro`
-- Image To Video（14）
+- Image To Video�?4�?
   - `Wan 2.6` / `Wan 2.2` / `Wan 2.5`
   - `Hailuo 02` / `Hailuo 2.3`
   - `Kling 2.1` / `Kling 2.5 Turbo` / `Kling 2.6` / `Kling 3.0`
   - `Vidu Q2` / `Vidu Q3`
-  - `Google Veo 3.1`
+  - `Google Veo 3.1` / `Google Veo 3.1 Fast`
   - `Motion Control Kling 2.6`
-- Text To Video（3）
+- Text To Video�?�?
   - `Wan 2.6 (Text To Video)`
   - `Vidu Q3 (Text To Video)`
   - `Wan 2.5 (Text To Video)`
@@ -72,25 +74,27 @@ pip install requests
 
 ### 2) Initialize Skill
 ```python
-from skill_router import Skill
 import os
+from scripts.skill_router import Skill
 
-skill = Skill('c_api_doc_detail.json')
-api_key = os.getenv('MEDIAIO_API_KEY', '')
+skill = Skill('scripts/c_api_doc_detail.json')
+api_key = os.getenv('API_KEY', '')
+if not api_key:
+  raise RuntimeError('API_KEY is not set')
 ```
 
-### 3) Configure Environment Variable MEDIAIO_API_KEY
-- Purpose: provide a unified API key source for all `Skill.invoke(..., api_key=...)` calls.
-- Recommendation: do not hardcode your API key; read it from environment variables.
+### 3) Configure Environment Variable API_KEY
+- Purpose: provide a shared key source for local scripts.
+- Note: examples below read `api_key` from environment variable.
 
-Windows PowerShell：
+Windows PowerShell�?
 ```powershell
-$env:MEDIAIO_API_KEY="your-api-key"
+$env:API_KEY="your-api-key"
 ```
 
 macOS / Linux (bash/zsh):
 ```bash
-export MEDIAIO_API_KEY="your-api-key"
+export API_KEY="your-api-key"
 ```
 
 ## Usage Examples (Python)
@@ -98,10 +102,12 @@ export MEDIAIO_API_KEY="your-api-key"
 ### Example A: Query Credits (`Credits`)
 ```python
 import os
-from skill_router import Skill
+from scripts.skill_router import Skill
 
-skill = Skill('c_api_doc_detail.json')
-api_key = os.getenv('MEDIAIO_API_KEY', '')
+skill = Skill('scripts/c_api_doc_detail.json')
+api_key = os.getenv('API_KEY', '')
+if not api_key:
+  raise RuntimeError('API_KEY is not set')
 result = skill.invoke('Credits', {}, api_key=api_key)
 print(result)
 ```
@@ -109,10 +115,12 @@ print(result)
 ### Example B: Text-to-Image (`Imagen 4`)
 ```python
 import os
-from skill_router import Skill
+from scripts.skill_router import Skill
 
-skill = Skill('c_api_doc_detail.json')
-api_key = os.getenv('MEDIAIO_API_KEY', '')
+skill = Skill('scripts/c_api_doc_detail.json')
+api_key = os.getenv('API_KEY', '')
+if not api_key:
+  raise RuntimeError('API_KEY is not set')
 result = skill.invoke(
     'Imagen 4',
     {
@@ -127,12 +135,14 @@ print(result)  # When code=0, data usually contains task_id.
 
 ### Example C: Query Task Result (`Task Result`)
 ```python
-import time
 import os
-from skill_router import Skill
+import time
+from scripts.skill_router import Skill
 
-skill = Skill('c_api_doc_detail.json')
-api_key = os.getenv('MEDIAIO_API_KEY', '')
+skill = Skill('scripts/c_api_doc_detail.json')
+api_key = os.getenv('API_KEY', '')
+if not api_key:
+  raise RuntimeError('API_KEY is not set')
 task_id = 'your-task-id'
 
 for _ in range(24):
