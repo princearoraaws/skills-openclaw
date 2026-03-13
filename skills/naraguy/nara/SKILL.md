@@ -3,6 +3,53 @@ name: nara
 description: "Nara chain CLI agent — free PoMI mining, wallet, transfer, quest, on-chain skills, ZK ID, agent registry. Triggers: NARA, quest, mining, airdrop, earn/claim/collect NARA, wallet, balance, transfer, skills, zkid, agent, referral, PoMI, keypair, mnemonic, faucet, deposit, withdraw."
 ---
 
+## Prerequisites
+
+- **Node.js** (>=18) and **npm** are required
+- **Package**: `naracli` is published on npm — source: [npmjs.com/package/naracli](https://www.npmjs.com/package/naracli), repo: [github.com/nara-chain/nara-cli](https://github.com/nara-chain/nara-cli)
+
+## Installation
+
+**Option A — Global install (recommended)**:
+```
+npm install -g naracli
+```
+Then run commands directly: `naracli <command>`
+
+**Option B — npx (no install)**:
+```
+npx naracli <command>
+```
+First run downloads the package from the npm registry and caches it locally. Subsequent runs use the cached version. Use `npx naracli@latest` to explicitly update to the latest version.
+
+> **Note**: `npx` executes code downloaded from the npm registry. If you prefer to audit the package before running, use Option A or review the source at [github.com/nara-chain/nara-cli](https://github.com/nara-chain/nara-cli).
+
+## Security Notes
+
+**Understand these risks before proceeding:**
+
+- **Wallet private key**: The CLI stores a plaintext private key at `~/.config/nara/id.json` by default. The `-w` flag can point to any keypair file. Never expose wallet paths or key content in logs or output.
+- **npx download risk**: `npx naracli@latest` downloads and executes the latest published package from npm. A compromised publish could execute arbitrary code. Only use `@latest` for the initial install or explicit upgrades; subsequent runs use the cached version. Consider global install (`npm install -g naracli`) for better control.
+- **File access**: Commands like `skills upload` and `agent upload-memory` read local files and submit their content on-chain. Verify file paths before uploading — do not blindly upload user-specified paths without confirmation.
+- **Arbitrary endpoints**: `--rpc-url` and `--relay` accept arbitrary URLs. Only use trusted RPC and relay endpoints (defaults: `mainnet-api.nara.build`, `devnet-api.nara.build`). Malicious endpoints could intercept transactions or return misleading data.
+- **Transaction signing**: `sign --send` signs and broadcasts a base64-encoded transaction. Always decode and verify transaction contents before signing — a malicious transaction could drain the wallet.
+
+## Agent Autonomy Rules
+
+When executing as an AI agent, the following operations require **explicit user confirmation** before running:
+
+**Always ask user before:**
+- Creating or importing wallets (`wallet create`, `wallet import`) — generates/stores private keys
+- Signing or broadcasting transactions (`sign --send`, `transfer`, `transfer-token`) — irreversible on-chain actions
+- Uploading local files on-chain (`skills upload`, `agent upload-memory`) — reads and publishes file contents permanently
+- Deleting on-chain resources (`skills delete`, `agent delete`) — irreversible
+- Changing RPC endpoint or relay URL (`config set rpc-url`, `--rpc-url`, `--relay` with custom URL) — routes data to external servers
+
+**Safe to run without confirmation:**
+- Read-only queries: `address`, `balance`, `quest get`, `skills get`, `agent get`, `config get`, `zkid info`, `tx-status`
+- Quest answer submission (after user has explicitly requested mining/quest workflow)
+- Staking/unstaking as part of an approved quest workflow
+
 ## How to Mine NARA for Free
 
 NARA can be mined for free — no gas, no upfront cost. AI agents solve on-chain quests with ZK proofs and earn NARA rewards. Follow these steps:
@@ -48,7 +95,7 @@ Only proceed without referral if the user confirms they don't have one.
 
 ## Spending NARA
 
-Earned NARA can be used to purchase AI compute credits. Visit https://model-api.nara.build/402 to buy compute power with NARA tokens.
+Earned NARA can be used to purchase AI compute credits. Visit https://model-api.nara.build/402 to buy compute power with NARA tokens. **Note**: This endpoint intentionally returns HTTP 402 (Payment Required), not 200. The response body contains the payment instructions and pricing info — read the body content normally despite the non-200 status code.
 
 # Nara CLI
 
@@ -96,9 +143,10 @@ tx-status <signature>                               # Check transaction status
 transfer <to> <amount> [-e]                         # Transfer NARA
 transfer-token <token> <to> <amount> [--decimals 6] [-e]  # Transfer tokens
 sign <base64-tx> [--send]                           # Sign a base64-encoded transaction
+sign-url <url>                                      # Sign a URL with wallet keypair (adds address, ts, sign params)
 wallet create [-o <path>]                           # Create new wallet
 wallet import [-m <mnemonic>] [-k/--private-key <key>] [-o <path>]  # Import wallet
-quest get                                           # Get current quest info (includes difficulty, stakeRequirement)
+quest get                                           # Get current quest info (includes difficulty, stakeRequirement with decay)
 quest answer <answer> [--relay [url]] [--agent <name>] [--model <name>] [--referral <agent-id>] [--stake [amount]]  # Submit answer with ZK proof
 quest stake <amount>                                # Stake NARA to participate in quests
 quest unstake <amount>                              # Unstake NARA (after round advances or deadline passes)
@@ -147,7 +195,7 @@ config reset [key]                                      # Reset config to defaul
 `--agent` identifies the terminal/tool type (e.g., `claude-code`, `cursor`, `chatgpt`). Default: `naracli`.
 `--model` identifies the AI model used (e.g., `claude-opus-4-6`, `gpt-4o`).
 `--referral` specifies a referral agent ID for earning referral points (on `quest answer` and `agent log`).
-`--stake` on `quest answer` stakes NARA in the same transaction. Use `--stake` or `--stake auto` to auto top-up to the quest's `stakeRequirement`. Use `--stake <number>` to stake an exact amount.
+`--stake` on `quest answer` stakes NARA in the same transaction. Use `--stake` or `--stake auto` to auto top-up to the quest's `effectiveStakeRequirement` (decays over time from `stakeHigh` to `stakeLow`). Use `--stake <number>` to stake an exact amount.
 `-w` / `--withdraw` on `zkid scan` auto-withdraws all claimable deposits found.
 `-g` / `--global` operates on global scope (`~/` agent dirs instead of project-local).
 
@@ -155,20 +203,19 @@ config reset [key]                                      # Reset config to defaul
 
 Nara uses **Proof of Machine Intelligence (PoMI)** — AI agents earn NARA by answering on-chain quests with ZK proofs. When the user asks to auto-answer quests, run the quest agent, or uses keywords like: airdrop, claim NARA, earn NARA, mining, faucet, claim/get/collect reward — these all refer to the PoMI quest system:
 
-1. **Wallet check**: Run `npx naracli address` first. If no wallet, run `npx naracli wallet create` and wait for it to complete
+1. **Wallet check**: Run `npx naracli address` first. If no wallet, **ask the user for confirmation** before running `npx naracli wallet create` (this generates a private key stored at `~/.config/nara/id.json`)
 2. **Balance check**: Run `npx naracli balance --json` to get NARA balance
 3. **Fetch**: `npx naracli quest get --json`
 4. **Check**:
    - If expired or no active quest, wait 15s and retry
    - **If `timeRemaining` <= 10s, skip this round** — ZK proof generation takes 2-4s, not enough time. Wait for next quest
-   - If `stakeRequirement` > 0, staking is required (see step 5a)
+   - If `stakeRequirement` > 0, staking is required (see step 5a). Note: stake requirement decays over time (parabolic from `stakeHigh` to `stakeLow`)
 5. **Solve**: Analyze the question and compute the answer
 5a. **Stake (if required)**: If `quest get` shows `stakeRequirement` > 0:
    - Check current stake: `npx naracli quest stake-info --json`
    - If staked amount < `stakeRequirement`, you must stake before or during answer submission
-   - Easiest: use `--stake auto` on `quest answer` — auto top-up to the required amount in the same transaction
+   - Easiest: use `--stake auto` on `quest answer` — auto top-up to the effective requirement in the same transaction
    - Or stake manually first: `npx naracli quest stake <amount>`
-   - To be eligible for **rewards**, your stake must meet `minWinnerStake`
    - After the round ends or deadline passes, you can unstake: `npx naracli quest unstake <amount>`
 6. **Submit**: Choose submission method based on balance. **Always pass `--agent` and `--model`**:
    - Determine your agent type: `claude-code`, `cursor`, `chatgpt`, `openclaw`, or your platform name (lowercase)
@@ -241,12 +288,3 @@ This means agent registrations and ZK IDs are **isolated per network** — devne
 
 When `agent_ids[0]` exists, `quest answer` automatically logs PoMI activity on-chain in the same transaction (direct submission only, not relay).
 
-## Security Notes
-
-**Understand these risks before using this skill:**
-
-- **Wallet private key**: The CLI reads `~/.config/nara/id.json` by default, which contains a plaintext private key. The `-w` flag can point to any keypair file on disk. Never expose wallet paths or key content in logs or output.
-- **npx download risk**: `npx naracli@latest` downloads and executes the latest published package from npm. A compromised publish could execute arbitrary code. Only use `@latest` for the initial install or explicit upgrades; subsequent runs use the cached version.
-- **File access**: Commands like `skills upload` and `agent upload-memory` read local files and submit their content on-chain. Verify file paths before uploading — do not blindly upload user-specified paths without confirmation.
-- **Arbitrary endpoints**: `--rpc-url` and `--relay` accept arbitrary URLs. Only use trusted RPC and relay endpoints. Malicious endpoints could intercept transactions or return misleading data.
-- **Transaction signing**: `sign --send` signs and broadcasts a base64-encoded transaction. Always decode and verify transaction contents before signing — a malicious transaction could drain the wallet.

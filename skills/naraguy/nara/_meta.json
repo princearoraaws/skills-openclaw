@@ -3,9 +3,15 @@
   "slug": "nara",
   "displayName": "Nara",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1773222169974,
-    "commit": "https://github.com/openclaw/skills/commit/96734d7e21c46d266949d5d8bc83508b0dd70581"
+    "version": "1.0.5",
+    "publishedAt": 1773325301914,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1773222169974,
+      "commit": "https://github.com/openclaw/skills/commit/96734d7e21c46d266949d5d8bc83508b0dd70581"
+    }
+  ]
 }
