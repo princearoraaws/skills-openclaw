@@ -1,0 +1,11 @@
+{
+  "owner": "crazyozzy",
+  "slug": "crazyozzy-auto-updater",
+  "displayName": "CrazyOzzy Auto Updater",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1773502183065,
+    "commit": null
+  },
+  "history": []
+}
