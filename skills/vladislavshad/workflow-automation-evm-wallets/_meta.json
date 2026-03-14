@@ -1,0 +1,11 @@
+{
+  "owner": "vladislavshad",
+  "slug": "workflow-automation-evm-wallets",
+  "displayName": "Trustless Workflow Automation on EVM networks for Agents (powered by Ditto Network)",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773476135185,
+    "commit": null
+  },
+  "history": []
+}
