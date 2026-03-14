@@ -1,0 +1,11 @@
+{
+  "owner": "agistack",
+  "slug": "scraper",
+  "displayName": "Scraper",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773301498247,
+    "commit": null
+  },
+  "history": []
+}
