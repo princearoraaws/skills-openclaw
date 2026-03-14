@@ -1,0 +1,11 @@
+{
+  "owner": "agisearch",
+  "slug": "first",
+  "displayName": "Firstprinciples thinking",
+  "latest": {
+    "version": "1.1.0",
+    "publishedAt": 1773337325151,
+    "commit": null
+  },
+  "history": []
+}
