@@ -1,0 +1,11 @@
+{
+  "owner": "membranedev",
+  "slug": "clicksend-sms",
+  "displayName": "Clicksend Sms",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773266546453,
+    "commit": null
+  },
+  "history": []
+}
