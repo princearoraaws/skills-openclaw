@@ -1,0 +1,11 @@
+{
+  "owner": "4t-shirt",
+  "slug": "create-telegram-agent",
+  "displayName": "CreateTelegramClawAgent",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773420675066,
+    "commit": null
+  },
+  "history": []
+}
