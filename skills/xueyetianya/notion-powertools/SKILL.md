@@ -1,6 +1,10 @@
+---
+name: notion-powertools
+description: "Unknown: help. Use when you need notion powertools capabilities. Triggers on: notion powertools, token, database-id, page-id, title, content."
+---
+
 # Notion Powertools
 
-> Powered by BytesAgain | bytesagain.com | hello@bytesagain.com
 
 A comprehensive Notion API toolkit for managing pages, databases, blocks, and content directly from the command line. Create and update pages, query databases with filters, manage block content, search across your workspace, and export structured data — all using the official Notion API with your own integration token.
 
@@ -16,21 +20,15 @@ Notion Powertools provides full programmatic access to your Notion workspace. Wh
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `search <query>` | Search pages and databases across your workspace |
-| `page get <page_id>` | Get page properties and metadata |
-| `page create <parent_id> <title> [properties_json]` | Create a new page |
-| `page update <page_id> <properties_json>` | Update page properties |
-| `page archive <page_id>` | Archive (soft-delete) a page |
-| `db query <database_id> [filter_json] [sort_json]` | Query a database with optional filters and sorts |
-| `db list <database_id>` | List all entries in a database |
-| `block children <block_id>` | List child blocks of a page or block |
-| `block append <block_id> <content> [type]` | Append a block to a page (paragraph, heading, todo, etc.) |
-| `block delete <block_id>` | Delete a block |
-| `user list` | List all users in the workspace |
-| `user get <user_id>` | Get user details |
-
+- `append-block` — Error: --page-id required
+- `create-page` — Error: --database-id required
+- `database-id` — -gt 0 ]; do
+- `get-page` — Error: --page-id required
+- `list-blocks` — Error: --page-id required
+- `list-databases` — Execute list-databases
+- `query-database` — Error: --database-id required
+- `stdin` — Execute stdin
+- `update-page` — Error: --page-id required
 ## Environment Variables
 
 | Variable | Required | Description |
@@ -62,3 +60,6 @@ NOTION_API_KEY=ntn_xxx notion-powertools user list
 - **table** — Human-readable formatted table (default)
 - **json** — Raw JSON response from API
 - **markdown** — Markdown-formatted output for docs/notes
+---
+💬 Feedback & Feature Requests: https://bytesagain.com/feedback
+Powered by BytesAgain | bytesagain.com

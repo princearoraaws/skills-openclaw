@@ -3,9 +3,15 @@
   "slug": "notion-powertools",
   "displayName": "Notion Powertools",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773280582997,
-    "commit": "https://github.com/openclaw/skills/commit/6cb3dc3abb927bdd47c7dd3675bb9acebbb0e662"
+    "version": "2.3.0",
+    "publishedAt": 1773448518853,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773280582997,
+      "commit": "https://github.com/openclaw/skills/commit/6cb3dc3abb927bdd47c7dd3675bb9acebbb0e662"
+    }
+  ]
 }
