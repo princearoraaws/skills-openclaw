@@ -3,9 +3,15 @@
   "slug": "edu-claw",
   "displayName": "EduClaw - 主动式英语学习家教",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1773474510339,
-    "commit": "https://github.com/openclaw/skills/commit/aee85b8b17a9b0067439f163451e0966338d13a0"
+    "version": "1.1.5",
+    "publishedAt": 1773486856844,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1773474510339,
+      "commit": "https://github.com/openclaw/skills/commit/aee85b8b17a9b0067439f163451e0966338d13a0"
+    }
+  ]
 }
