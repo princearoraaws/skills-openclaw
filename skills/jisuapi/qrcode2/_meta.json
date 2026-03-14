@@ -1,0 +1,11 @@
+{
+  "owner": "jisuapi",
+  "slug": "qrcode2",
+  "displayName": "本地二维码生成与识别 - Local QR Code Generation And Recognition  Not Require An API_KEY",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773396061769,
+    "commit": null
+  },
+  "history": []
+}
