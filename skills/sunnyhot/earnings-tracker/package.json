@@ -1,7 +1,7 @@
 {
   "name": "earnings-tracker",
-  "version": "1.0.0",
-  "description": "AI 驱动的财报追踪器，自动扫描 A 股/美股财报日历",
+  "version": "1.1.0",
+  "description": "AI 驱动的财报追踪器（中国版），自动扫描 A 股财报日历",
   "main": "scripts/earnings_scanner.py",
   "scripts": {
     "scan": "python3 scripts/earnings_scanner.py"
@@ -9,7 +9,9 @@
   "keywords": [
     "earnings",
     "financial-reports",
-    "stock-tracker"
+    "stock-tracker",
+    "akshare",
+    "china-stocks"
   ],
   "author": "sunnyhot",
   "license": "MIT"
