@@ -1,0 +1,11 @@
+{
+  "owner": "openwaygate",
+  "slug": "youtube-watermark",
+  "displayName": "YouTube Watermark",
+  "latest": {
+    "version": "0.10.6-3",
+    "publishedAt": 1773414209232,
+    "commit": null
+  },
+  "history": []
+}
