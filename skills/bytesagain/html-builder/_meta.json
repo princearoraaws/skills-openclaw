@@ -1,11 +1,17 @@
 {
   "owner": "bytesagain",
   "slug": "html-builder",
-  "displayName": "HTML Builder",
+  "displayName": "Html Builder",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773249431748,
-    "commit": "https://github.com/openclaw/skills/commit/c69c3508bea3a1f6f46a2cf3923d81410044b5f3"
+    "version": "2.2.0",
+    "publishedAt": 1773421401604,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773249431748,
+      "commit": "https://github.com/openclaw/skills/commit/c69c3508bea3a1f6f46a2cf3923d81410044b5f3"
+    }
+  ]
 }
