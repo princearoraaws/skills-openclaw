@@ -1,0 +1,11 @@
+{
+  "owner": "robin-ph",
+  "slug": "synai-relay",
+  "displayName": "SynAI Relay Protocol",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773320160687,
+    "commit": null
+  },
+  "history": []
+}
