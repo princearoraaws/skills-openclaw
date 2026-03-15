@@ -373,6 +373,14 @@ If your human says "defaults are fine" → great, move on. The point is to **off
 - Config: `settings.starvation_guard` in needs-config.json
 - Default: 1 forced slot per cycle, 48h threshold
 
+**Spontaneity Layer A (v1.18.0):** Surplus energy system for organic high-impact actions.
+- When all needs are above baseline (sat ≥ 2.0), surplus accumulates per-need
+- Global gate requires ALL needs ≥ 1.5 and no starvation guard active
+- When surplus exceeds threshold (~12.5 effective), impact matrix shifts toward bigger actions
+- Full spend on HIGH hit, 30% partial on miss — creates natural ~28-35hr pulsing rhythm
+- Disabled for safety needs (security, integrity, coherence)
+- Config: `settings.spontaneity` + per-need `spontaneous` block in needs-config.json
+
 **Day/Night Mode (v1.11.0):** Decay slows at night to reduce pressure during rest hours.
 - Configure in `assets/decay-config.json`
 - Default: 06:01-22:00 = day (×1.0), 22:01-06:00 = night (×0.5)
@@ -634,4 +642,4 @@ WORKSPACE=/path/to/workspace ./tests/run-tests.sh
 
 ## Version
 
-**v1.15.2** — Starvation guard, action staleness, needs customization onboarding, ClawHub review fixes. Full changelog: `CHANGELOG.md`
+**v1.18.0** — Spontaneity Layer A (surplus energy system), 25 new tests. Full changelog: `CHANGELOG.md`

@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.18.0 (2026-03-16)
+- **Spontaneity Layer A** — surplus energy system for organic high-impact actions
+  - Global gate: all needs must be ≥ 1.5 AND no starvation guard active
+  - Per-need surplus pools: accumulate when satisfaction > baseline (2.0), drain when below
+  - Matrix shift: interpolates impact probabilities toward spontaneous target when surplus is eligible
+  - Spend mechanics: full spend on HIGH hit, 30% partial spend on miss
+  - Hysteresis: effective activation ≈ threshold × 1.25 (natural buffer, not a bug)
+  - Configurable per-need: target_matrix, cap, threshold; disabled for security/integrity/coherence
+  - New file: `scripts/spontaneity.sh` (sourced by run-cycle.sh)
+  - Status display: surplus pool bars with gate status and eligibility indicators
+  - 25 unit tests covering gate, accumulation, clamping, matrix shift, spend, edge cases
+
 ## v1.17.1 (2026-03-08)
 - **Research thread integration**: 3 new actions in `understanding` need — continue/start/synthesize research threads (migrated from weighted-daemon)
 - **Understanding need tuned**: importance 3→4, decay 12h→8h — fires more often to support research work

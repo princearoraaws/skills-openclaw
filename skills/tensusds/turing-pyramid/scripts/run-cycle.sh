@@ -18,6 +18,7 @@ MAX_IMPORTANCE=$(jq '[.needs[].importance] | max' "$CONFIG_FILE")
 MAX_TENSION=$((MAX_IMPORTANCE * 3))
 STATE_FILE="$SKILL_DIR/assets/needs-state.json"
 SCRIPTS_DIR="$SKILL_DIR/scripts"
+source "$SCRIPTS_DIR/spontaneity.sh"
 WORKSPACE="$WORKSPACE"
 MEMORY_DIR="$WORKSPACE/memory"
 LOGS_DIR="$WORKSPACE/memory/logs"
@@ -179,24 +180,22 @@ roll_action() {
 }
 
 # Roll for impact range based on satisfaction
-# Returns: low, mid, high, or skip (for sat=3.0)
+# Returns: "low|mid|high|skip [rolled_spend]"
+# If spontaneity shifted the matrix, appends rolled_spend for later deduction
 roll_impact_range() {
     local need=$1
     local sat=$2
     local roll=$((RANDOM % 100))
     
     # Round float satisfaction to nearest 0.5 for matrix lookup
-    # Formula: round(sat * 2) / 2 → e.g., 1.3→1.5, 1.7→1.5, 2.1→2.0, 2.8→3.0
     local doubled=$(echo "$sat * 2" | bc -l)
     local rounded_int=$(printf "%.0f" "$doubled")
     local sat_rounded=$(echo "scale=1; $rounded_int / 2" | bc -l)
-    # Normalize format (.5 → 0.5)
     [[ "$sat_rounded" == .* ]] && sat_rounded="0$sat_rounded"
-    # Clamp to valid range [0.5, 3.0]
     if (( $(echo "$sat_rounded < 0.5" | bc -l) )); then sat_rounded="0.5"; fi
     if (( $(echo "$sat_rounded > 3.0" | bc -l) )); then sat_rounded="3.0"; fi
     
-    # Get impact matrix probabilities
+    # Get normal impact matrix probabilities
     local matrix_key="sat_$sat_rounded"
     local p_low p_mid p_high
     
@@ -206,18 +205,41 @@ roll_impact_range() {
     
     # If all zeros (sat=3.0), skip action
     if [[ $p_low -eq 0 && $p_mid -eq 0 && $p_high -eq 0 ]]; then
-        echo "skip"
+        echo "skip 0"
         return
     fi
     
-    # Roll: 0-p_low = low, p_low-(p_low+p_mid) = mid, rest = high
-    if [[ $roll -lt $p_low ]]; then
-        echo "low"
-    elif [[ $roll -lt $((p_low + p_mid)) ]]; then
-        echo "mid"
-    else
-        echo "high"
+    # --- Spontaneity: try to shift matrix ---
+    local shift_result
+    shift_result=$(get_shifted_matrix "$need" "$p_low" "$p_mid" "$p_high" "$STATE_FILE" "$CONFIG_FILE")
+    
+    local rolled_spend=0
+    if [[ "$shift_result" != "none" ]]; then
+        # Parse: "shifted_low shifted_mid shifted_high rolled_spend t"
+        p_low=$(echo "$shift_result" | awk '{print $1}')
+        p_mid=$(echo "$shift_result" | awk '{print $2}')
+        p_high=$(echo "$shift_result" | awk '{print $3}')
+        rolled_spend=$(echo "$shift_result" | awk '{print $4}')
+        local t_val=$(echo "$shift_result" | awk '{print $5}')
+        echo "  [SURPLUS] $need: surplus=$(jq -r --arg n "$need" '.[$n].surplus // 0' "$STATE_FILE"), rolled_spend=$rolled_spend, t=$t_val, matrix={low:$p_low, mid:$p_mid, high:$p_high}" >&2
     fi
+    
+    # Roll: 0-p_low = low, p_low-(p_low+p_mid) = mid, rest = high
+    local impact_range
+    if [[ $roll -lt $p_low ]]; then
+        impact_range="low"
+    elif [[ $roll -lt $((p_low + p_mid)) ]]; then
+        impact_range="mid"
+    else
+        impact_range="high"
+    fi
+    
+    # Spend surplus if spontaneity was active
+    if [[ "$shift_result" != "none" ]]; then
+        spend_surplus "$need" "$impact_range" "$rolled_spend" "$STATE_FILE" "$CONFIG_FILE"
+    fi
+    
+    echo "$impact_range"
 }
 
 # Get actions filtered by impact range (low/mid/high)
@@ -607,6 +629,10 @@ fi
 
 calculate_tensions
 
+# Spontaneity: accumulate surplus (after tensions, before action selection)
+starvation_active=false
+accumulate_surplus "$STATE_FILE" "$CONFIG_FILE" "$starvation_active"
+
 # Check if all satisfied
 all_satisfied=true
 for need in "${!TENSIONS[@]}"; do
@@ -701,8 +727,20 @@ for need in "${top_needs_array[@]}"; do
         done
         
         if $is_forced_need || roll_action $sat $tension; then
-            # Roll for impact range first
-            impact_range=$(roll_impact_range "$need" "$sat")
+            # Roll for impact range (with spontaneity shift if eligible)
+            # Surplus logs go to /tmp/tp_spont_log for capture
+            roll_impact_range "$need" "$sat" > /tmp/tp_roll_result.$$ 2>/tmp/tp_spont_log.$$
+            impact_range=$(cat /tmp/tp_roll_result.$$)
+            
+            # Print surplus logs and detect [SPONTANEOUS]
+            local_spont_label=""
+            if [[ -s /tmp/tp_spont_log.$$ ]]; then
+                cat /tmp/tp_spont_log.$$
+                if grep -q "\[SPONTANEOUS\]" /tmp/tp_spont_log.$$; then
+                    local_spont_label=" [SPONTANEOUS]"
+                fi
+            fi
+            rm -f /tmp/tp_roll_result.$$ /tmp/tp_spont_log.$$
             
             # If sat=3.0, skip action (fully satisfied)
             if [[ "$impact_range" == "skip" ]]; then
@@ -731,7 +769,7 @@ for need in "${top_needs_array[@]}"; do
             fi
             
             echo ""
-            echo "▶ ACTION: $need (tension=$tension, sat=$sat)$local_forced_label"
+            echo "▶ ACTION: $need (tension=$tension, sat=$sat)$local_forced_label$local_spont_label"
             echo "  Range $impact_range rolled → selected:"
             
             if [[ -n "$selected_action" ]]; then
