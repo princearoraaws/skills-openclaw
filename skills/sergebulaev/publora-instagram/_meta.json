@@ -1,13 +1,18 @@
 {
   "owner": "sergebulaev",
   "slug": "publora-instagram",
-  "displayName": "Publora — Instagram",
+  "displayName": "Publora Instagram",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1772064566874,
-    "commit": "https://github.com/openclaw/skills/commit/a5ced75ac1e739a120737b8424ca5a1617759947"
+    "version": "2.0.0",
+    "publishedAt": 1773488651107,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1772064566874,
+      "commit": "https://github.com/openclaw/skills/commit/a5ced75ac1e739a120737b8424ca5a1617759947"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1771618268373,
