@@ -1,0 +1,11 @@
+{
+  "owner": "solmas",
+  "slug": "pre-publish-security",
+  "displayName": "Pre Publish Security",
+  "latest": {
+    "version": "2.0.0",
+    "publishedAt": 1773608214464,
+    "commit": null
+  },
+  "history": []
+}
