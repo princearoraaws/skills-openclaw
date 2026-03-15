@@ -7,141 +7,108 @@ description: >
 
 # Publora — Threads
 
-Post and schedule Threads content via the Publora API.
+Threads platform skill for the Publora API. For auth, core scheduling, media upload, and workspace/webhook docs, see the `publora` core skill.
 
-> **Prerequisite:** Install the `publora` core skill for auth setup and getting platform IDs.
+**Base URL:** `https://api.publora.com/api/v1`  
+**Header:** `x-publora-key: sk_YOUR_KEY`  
+**Platform ID format:** `threads-{accountId}`
 
-## Get Your Threads Platform ID
+## ⚠️ Temporary Restriction — Thread Nesting Unavailable
 
-```bash
-GET https://api.publora.com/api/v1/platform-connections
-# Look for entries like "threads-55667788"
-```
+**Multi-threaded nested posts are temporarily unavailable** on Threads due to Threads app reconnection status.
 
-## Post to Threads Immediately
+This means: content over 500 characters that would normally auto-split into connected reply chains does **not** work right now.
+
+**What still works normally:**
+- Single posts (text, images, videos, carousels)
+- Standalone posts under 500 characters
+
+Contact support@publora.com for updates on when thread nesting will be restored.
+
+## Platform Limits (API)
+
+| Property | API Limit | Notes |
+|----------|-----------|-------|
+| Text | **500 characters** | 10,000 via text attachment |
+| Images | Up to 20 × 8 MB | JPEG, PNG |
+| Video | **5 min** / 500 MB | MP4, MOV |
+| Max links | 5 per post | — |
+| Text only | ✅ Yes | — |
+| Threading | ⚠️ Temporarily unavailable | See above |
+| Rate limit | 250 posts/24hr | 1,000 replies/24hr |
+
+## Post a Single Thread
 
 ```javascript
 await fetch('https://api.publora.com/api/v1/create-post', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-publora-key': 'sk_YOUR_KEY' },
   body: JSON.stringify({
-    content: 'Good morning Threads 👋 What are you building today?',
-    platforms: ['threads-55667788']
+    content: 'Building in public is the best marketing strategy. Here\'s why 👇',
+    platforms: ['threads-17841412345678']
   })
 });
 ```
 
-## Schedule a Threads Post
+## Schedule a Post
 
 ```javascript
-await fetch('https://api.publora.com/api/v1/create-post', {
+body: JSON.stringify({
+  content: 'Your Threads post here',
+  platforms: ['threads-17841412345678'],
+  scheduledTime: '2026-03-20T10:00:00.000Z'
+})
+```
+
+## Post with Image
+
+```javascript
+// Step 1: Create post
+const post = await fetch('https://api.publora.com/api/v1/create-post', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json', 'x-publora-key': 'sk_YOUR_KEY' },
   body: JSON.stringify({
-    content: 'Reminder: ship it, then make it perfect. Done beats perfect.',
-    platforms: ['threads-55667788'],
-    scheduledTime: '2026-03-16T11:00:00.000Z'
+    content: 'Caption for your image post',
+    platforms: ['threads-17841412345678']
   })
+}).then(r => r.json());
+
+// Step 2: Get upload URL
+const upload = await fetch('https://api.publora.com/api/v1/get-upload-url', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json', 'x-publora-key': 'sk_YOUR_KEY' },
+  body: JSON.stringify({
+    postGroupId: post.postGroupId,
+    fileName: 'photo.jpg',
+    contentType: 'image/jpeg',
+    type: 'image'
+  })
+}).then(r => r.json());
+
+// Step 3: Upload to S3
+await fetch(upload.uploadUrl, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'image/jpeg' },
+  body: imageBytes
 });
 ```
 
-## Posting a Thread
+## Thread Nesting (when available)
 
-Publora supports two ways to create a Threads thread:
+When thread nesting is restored, you can split long content using `---` on its own line:
 
-### 1. Auto-split (long content)
-
-Send content longer than 500 characters — Publora automatically splits it into a thread at sentence boundaries. Unlike X/Twitter, **no `[1/N]` markers are added** by default.
-
-```python
-import requests
-
-content = """Stoicism isn't about suppressing emotion. That's a common misconception.
-
-Marcus Aurelius, who ran the most powerful empire on earth, wrote journals full of fear, frustration, and self-doubt. He felt everything.
-
-What Stoicism actually teaches is this: you don't control what happens. You only control how you respond. The discipline is in the gap between stimulus and reaction.
-
-Most people collapse that gap entirely. Something happens → they react immediately, automatically, emotionally.
-
-The Stoic practice is widening that gap. Creating space. Then choosing deliberately.
-
-That's it. That's the whole philosophy."""
-
-response = requests.post(
-    'https://api.publora.com/api/v1/create-post',
-    headers={'Content-Type': 'application/json', 'x-publora-key': 'sk_YOUR_KEY'},
-    json={'content': content, 'platforms': ['threads-55667788']}
-)
-# Publora splits this into multiple Threads posts at sentence boundaries
+```javascript
+body: JSON.stringify({
+  content: 'First post in thread.\n\n---\n\nSecond post continues the thought.\n\n---\n\nFinal post wraps up.',
+  platforms: ['threads-17841412345678']
+})
 ```
 
-### 2. Manual split with `---`
+> ⚠️ Currently disabled. Single posts and carousels work normally.
 
-Use `---` on its own line to explicitly define where each post ends. This gives you full control over the thread structure regardless of character count.
+## Platform Quirks
 
-```python
-content = """Most people wait for motivation to start.
-
-That's backwards.
-
----
-
-Action creates motivation. Not the other way around.
-
-You don't feel like running. You run. Then you feel like running.
-
----
-
-The Stoics called this "acting in accordance with nature."
-
-Do the thing. The feeling follows.
-
-Don't wait. Start."""
-
-response = requests.post(
-    'https://api.publora.com/api/v1/create-post',
-    headers={'Content-Type': 'application/json', 'x-publora-key': 'sk_YOUR_KEY'},
-    json={
-        'content': content,
-        'platforms': ['threads-55667788'],
-        'scheduledTime': '2026-03-16T11:00:00.000Z'
-    }
-)
-# Posts as 3 separate Threads posts in a thread, each exactly as written
-```
-
-> **Tip:** Manual `---` split is the recommended approach when each post is a standalone thought — gives you full control over pacing and phrasing.
-
-## Threads + Image
-
-```python
-import requests
-
-HEADERS = { 'Content-Type': 'application/json', 'x-publora-key': 'sk_YOUR_KEY' }
-
-post = requests.post('https://api.publora.com/api/v1/create-post', headers=HEADERS, json={
-    'content': 'Behind the scenes 👇',
-    'platforms': ['threads-55667788'],
-    'scheduledTime': '2026-03-16T11:00:00.000Z'
-}).json()
-
-upload = requests.post('https://api.publora.com/api/v1/get-upload-url', headers=HEADERS, json={
-    'fileName': 'behind-scenes.jpg', 'contentType': 'image/jpeg',
-    'type': 'image', 'postGroupId': post['postGroupId']
-}).json()
-
-with open('behind-scenes.jpg', 'rb') as f:
-    requests.put(upload['uploadUrl'], headers={'Content-Type': 'image/jpeg'}, data=f)
-```
-
-## Tips for Threads
-
-- **500 character limit** per post
-- **Threading:** Use `---` for explicit post boundaries; Publora auto-splits at sentence boundaries for content >500 chars
-- **No `[1/N]` markers** — unlike X, Threads doesn't add numbering automatically (add manually if you want it)
-- **Hashtags:** Maximum **1 hashtag per post** — using more gets the post categorized and reduces organic reach
-- **Images:** Carousel supported; WebP is auto-converted
-- **Conversational tone** works best — Threads rewards authenticity over polish
-- **Best times:** Morning (7–9 AM) and evening (7–9 PM)
-- **Cross-post with Instagram** for wider reach on Meta platforms
+- **Connected via Meta OAuth** — same account as Instagram
+- **5 links per post max** — Threads enforces this at the API level
+- **PNG supported** — unlike Instagram, Threads accepts PNG images
+- **Threading restriction** — see the notice at the top of this skill
