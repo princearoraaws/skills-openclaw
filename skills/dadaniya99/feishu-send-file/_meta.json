@@ -1,13 +1,18 @@
 {
   "owner": "dadaniya99",
   "slug": "feishu-send-file",
-  "displayName": "Feishu Send File",
+  "displayName": "feishu-send-file",
   "latest": {
-    "version": "1.2.0",
-    "publishedAt": 1773301262694,
-    "commit": "https://github.com/openclaw/skills/commit/6b49d9200fda03f30191295c24c74759265501bf"
+    "version": "1.2.1",
+    "publishedAt": 1773558978040,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.2.0",
+      "publishedAt": 1773301262694,
+      "commit": "https://github.com/openclaw/skills/commit/6b49d9200fda03f30191295c24c74759265501bf"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1772151675513,
