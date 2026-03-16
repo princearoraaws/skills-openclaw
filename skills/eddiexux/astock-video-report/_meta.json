@@ -1,0 +1,11 @@
+{
+  "owner": "eddiexux",
+  "slug": "astock-video-report",
+  "displayName": "A股每日复盘视频生成",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1773680202805,
+    "commit": null
+  },
+  "history": []
+}
