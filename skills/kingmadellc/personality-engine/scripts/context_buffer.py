@@ -7,11 +7,80 @@ JSON persistence, auto-reset at midnight.
 
 import json
 import logging
+import shutil
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger(__name__)
+
+
+# ──────────────────────────────────────────────────────────────────────────────
+# State File Recovery Helpers
+# ──────────────────────────────────────────────────────────────────────────────
+
+def _safe_load_state(filepath: Path, default: Any = None) -> Any:
+    """Load JSON state file with corruption recovery.
+
+    Tries to load primary file first, falls back to .bak if primary is corrupted.
+
+    Args:
+        filepath: Path to JSON state file
+        default: Default value if both files fail or don't exist
+
+    Returns:
+        Loaded data, or default if unable to load
+    """
+    bak = filepath.with_suffix('.json.bak')
+
+    # Try primary file first
+    if filepath.exists():
+        try:
+            with open(filepath) as f:
+                data = json.load(f)
+            return data
+        except (json.JSONDecodeError, IOError) as e:
+            logger.warning(f"Primary state file corrupted ({filepath}): {e}")
+
+    # Try backup file
+    if bak.exists():
+        try:
+            with open(bak) as f:
+                data = json.load(f)
+            logger.info(f"Recovered from backup: {bak}")
+            return data
+        except (json.JSONDecodeError, IOError) as e:
+            logger.warning(f"Backup state file also corrupted ({bak}): {e}")
+
+    # Return default
+    return default if default is not None else {}
+
+
+def _safe_save_state(filepath: Path, data: Any) -> None:
+    """Save JSON state with backup rotation.
+
+    Before writing new state, copies current file to .bak for recovery.
+
+    Args:
+        filepath: Path to JSON state file
+        data: Data to save
+    """
+    filepath.parent.mkdir(parents=True, exist_ok=True)
+    bak = filepath.with_suffix('.json.bak')
+
+    # Rotate backup: current → backup
+    if filepath.exists():
+        try:
+            shutil.copy2(filepath, bak)
+        except IOError as e:
+            logger.warning(f"Failed to create backup {bak}: {e}")
+
+    # Write new primary file
+    try:
+        with open(filepath, 'w') as f:
+            json.dump(data, f, indent=2, default=str)
+    except IOError as e:
+        logger.error(f"Failed to save state to {filepath}: {e}")
 
 
 class ContextBuffer:
@@ -272,15 +341,11 @@ class ContextBuffer:
         return len(self.context.get("messages", []))
 
     def _load_context(self) -> None:
-        """Load context from disk."""
-        if self.context_file.exists():
-            try:
-                with open(self.context_file) as f:
-                    self.context = json.load(f)
-                logger.debug("Loaded daily context")
-            except Exception as e:
-                logger.warning(f"Failed to load context: {e}")
-                self.context = self._fresh_context()
+        """Load context from disk with corruption recovery."""
+        data = _safe_load_state(self.context_file, default=None)
+        if data is not None:
+            self.context = data
+            logger.debug("Loaded daily context")
         else:
             self.context = self._fresh_context()
 
@@ -296,12 +361,8 @@ class ContextBuffer:
         }
 
     def _save_context(self) -> None:
-        """Save context to disk."""
-        try:
-            with open(self.context_file, "w") as f:
-                json.dump(self.context, f, indent=2, default=str)
-        except Exception as e:
-            logger.error(f"Failed to save context: {e}")
+        """Save context to disk with backup rotation."""
+        _safe_save_state(self.context_file, self.context)
 
     def get_all_messages(self) -> List[Dict[str, Any]]:
         """Get all messages logged today."""

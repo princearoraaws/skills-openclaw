@@ -1,7 +1,7 @@
 """Personality Engine — 6-system behavior framework for OpenClaw agents."""
 
 __version__ = "1.0.0"
-__author__ = "clawdkesselring"
+__author__ = "KingMadeLLC"
 
 from .engine import PersonalityEngine
 from .editorial_voice import EditorialVoice

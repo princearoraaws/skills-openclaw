@@ -52,4 +52,4 @@ See [SKILL.md](SKILL.md) for complete documentation including per-system archite
 clawhub install kalshalyst kalshi-command-center polymarket-command-center prediction-market-arbiter xpulse portfolio-drift-monitor market-morning-brief personality-engine
 ```
 
-**Author**: clawdkesselring
+**Author**: KingMadeLLC
