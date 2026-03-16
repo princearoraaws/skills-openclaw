@@ -3,11 +3,16 @@
   "slug": "fund-advisor-cn",
   "displayName": "Fund Advisor Cn",
   "latest": {
-    "version": "2.2.0",
-    "publishedAt": 1773421327339,
-    "commit": "https://github.com/openclaw/skills/commit/e337a9fed31cda6c390677528957703ba9d3272a"
+    "version": "2.3.4",
+    "publishedAt": 1773666060172,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.2.0",
+      "publishedAt": 1773421327339,
+      "commit": "https://github.com/openclaw/skills/commit/e337a9fed31cda6c390677528957703ba9d3272a"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1773213440864,
