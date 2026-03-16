@@ -1,11 +1,17 @@
 {
   "owner": "bytesagain",
   "slug": "crypto-market-cli",
-  "displayName": "Crypto Market CLI",
+  "displayName": "Crypto Market Cli",
   "latest": {
-    "version": "1.4.1",
-    "publishedAt": 1773140841855,
-    "commit": "https://github.com/openclaw/skills/commit/ab24354e148f1cd59153e82c21e128e73a957f62"
+    "version": "2.4.6",
+    "publishedAt": 1773673686516,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.4.1",
+      "publishedAt": 1773140841855,
+      "commit": "https://github.com/openclaw/skills/commit/ab24354e148f1cd59153e82c21e128e73a957f62"
+    }
+  ]
 }
