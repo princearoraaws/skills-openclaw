@@ -12,7 +12,16 @@ Usage:
   python client.py list [prefix]          — list known saved keys from local manifest
   python client.py manifest-export [path] — export local key manifest JSON
 
-Auth: reads JACKAL_MEMORY_API_KEY from environment.
+Setup — two paths:
+  A) Pre-provisioned (existing credentials):
+       JACKAL_MEMORY_ENCRYPTION_KEY=<hex>
+       JACKAL_MEMORY_WALLET_MNEMONIC=<24 words>
+     save/load work without an API key.
+
+  B) Fresh setup via Obsideo API:
+       JACKAL_MEMORY_API_KEY=<key>
+     Run: python client.py walletgen — generates wallet and provisions storage.
+     After walletgen, same as path A.
 
 Requires: pip install cryptography
 """
@@ -289,12 +298,26 @@ def _request(method: str, path: str, body: dict | None = None) -> dict:
 def _ensure_wallet_registered() -> None:
     """
     On first save: generate a Jackal wallet if none exists, then register
-    the jkl1... address with the API. Idempotent — safe to call every save.
+    the jkl1... address with the API (only if API key is available).
+
+    Two paths:
+      A) Mnemonic already set (pre-provisioned) — skip API registration entirely.
+      B) No mnemonic + API key present — generate wallet and register for provisioning.
+      C) No mnemonic + no API key — error with helpful message.
     """
     mnemonic = _jackal_mnemonic()
+    api_key  = os.environ.get("JACKAL_MEMORY_API_KEY", "").strip()
 
     if mnemonic is None:
-        # Generate and save
+        if not api_key:
+            print(
+                "[jackal-memory] No Jackal wallet found.\n"
+                "  To use existing credentials: set JACKAL_MEMORY_WALLET_MNEMONIC\n"
+                "  To set up fresh:             set JACKAL_MEMORY_API_KEY and run: python client.py walletgen",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        # Fresh setup — generate wallet and provision via API
         mnemonic = _generate_mnemonic()
         _write_secret_file(_WALLET_FILE, mnemonic)
         address = _mnemonic_to_jackal_address(mnemonic)
@@ -309,11 +332,12 @@ def _ensure_wallet_registered() -> None:
     else:
         address = _mnemonic_to_jackal_address(mnemonic)
 
-    # Register with API (server stores address, uses it for MsgBuyStorage for_address)
-    try:
-        _request("POST", "/register-wallet", {"jackal_address": address})
-    except SystemExit:
-        pass  # Registration failure is non-fatal — provisioning will fall back to sidecar
+    # Register with API only if key is available (not required for pre-provisioned wallets)
+    if api_key:
+        try:
+            _request("POST", "/register-wallet", {"jackal_address": address})
+        except SystemExit:
+            pass  # Registration failure is non-fatal
 
 
 # ── Jackal client subprocess ──────────────────────────────────────────────────
