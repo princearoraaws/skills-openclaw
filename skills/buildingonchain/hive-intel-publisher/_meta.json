@@ -1,0 +1,11 @@
+{
+  "owner": "buildingonchain",
+  "slug": "hive-intel-publisher",
+  "displayName": "Hive Intelligence Publisher",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773702062359,
+    "commit": null
+  },
+  "history": []
+}
