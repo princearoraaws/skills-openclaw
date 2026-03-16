@@ -3,11 +3,16 @@
   "slug": "codex-hook",
   "displayName": "Codex Hook",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1773063840219,
-    "commit": "https://github.com/openclaw/skills/commit/dcd796405c6db45d37a9695414d113f9682b6db6"
+    "version": "1.0.2",
+    "publishedAt": 1773489667103,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1773063840219,
+      "commit": "https://github.com/openclaw/skills/commit/dcd796405c6db45d37a9695414d113f9682b6db6"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1772667599554,

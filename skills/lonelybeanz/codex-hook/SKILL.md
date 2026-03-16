@@ -1,13 +1,39 @@
 ---
 name: Codex Hook
-description: OpenClaw 智能任务执行系统 - 支持任务拆解、执行、监控、干预、自动 PR 合并、git worktree 隔离
+description: OpenClaw 智能任务执行系统 - 支持任务派发、执行、监控（精简版）
 license: MIT-0
-version: 1.0.1
+version: 1.1.1
 ---
 
-# Skill: codex-hook v1.0.1
 
-OpenClaw 智能任务执行系统。支持任务拆解、执行、监控、干预、自动 PR 合并。
+### 核心脚本
+| 脚本 | 功能 | 状态 |
+|------|------|------|
+| task-execute.sh | 单任务派发（推荐） | ✅ |
+| codex-tasks.sh | 任务管理入口 | ✅ |
+| task-registry.sh | 任务注册表 | ✅ |
+| task-monitor.sh | 任务监控 | ✅ |
+| notify.sh | 通知系统 | ✅ |
+| auto-merge.sh | 自动合并 | ✅ |
+| codex-progress-reporter.sh | 进度汇报 | ✅ |
+| task-dispatcher.sh | 任务调度器（高级） | ⚠️ 可选 |
+
+### Worktree 管理策略
+
+**复用逻辑**：
+- 关联任务（同一项目）→ 复用现有 worktree
+- 独立任务 → 新建 worktree
+
+**合并命令**：
+```bash
+# 1. 在 worktree 中提交
+git add .
+git commit -m "feat: 描述"
+
+# 2. 推送分支
+git push -u origin <branch>
+
+# 3. 创建 PR（需要手动或用 gh）
 
 ## 架构
 
@@ -274,12 +300,3 @@ export TELEGRAM_BOT_TOKEN="your-bot-token"
 export TELEGRAM_CHAT_ID="your-chat-id"
 ```
 
-## 版本历史
-
-- **1.0.1** - MIT-0 开源，修复 tmux/worktree 集成，改进状态监控
-- **1.0.0** - 初始版本
-- **0.1.0** - 基础任务调度
-
-## 许可证
-
-MIT-0 (No Attribution) - 见 LICENSE 文件

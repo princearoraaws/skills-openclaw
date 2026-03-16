@@ -125,8 +125,8 @@ EOF
 # ========== 统一发送接口 ==========
 
 send() {
-    local channel="$1"
-    local message="$2"
+    local channel="${1:-telegram}"
+    local message="${2:-}"
     shift 2
     
     case "$channel" in
@@ -228,7 +228,7 @@ report_error() {
 
 report_intervene() {
     local task_id="$1"
-    local message="$2"
+    local message="${2:-}"
     local channel="${3:-$DEFAULT_CHANNEL}"
     
     local msg="✏️ 人工干预
@@ -245,7 +245,7 @@ report_intervene() {
 # 用于在终端显示实时进度（不发送通知）
 show_progress_bar() {
     local progress="$1"
-    local message="$2"
+    local message="${2:-}"
     
     local bar_length=30
     local filled=$((progress * bar_length / 100))

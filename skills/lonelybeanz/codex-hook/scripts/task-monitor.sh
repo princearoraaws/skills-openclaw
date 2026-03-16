@@ -15,6 +15,7 @@ LOG_FILE="/tmp/codex-tasks/monitor.log"
 # 配置
 TASK_TIMEOUT="${TASK_TIMEOUT:-3600}"  # 默认超时 1 小时
 CHECK_INTERVAL="${CHECK_INTERVAL:-60}"  # 默认检查间隔 60 秒
+MAX_RETRIES="${MAX_RETRIES:-3}"  # 最大重试次数
 
 # 颜色
 RED='\033[0;31m'
@@ -126,15 +127,20 @@ check_single_task() {
     
     # 1. 检查超时
     if [[ $elapsed -gt $TASK_TIMEOUT ]]; then
-        log "⚠️ 任务 $task_id 超时 (${elapsed_min}分钟)，标记为失败"
+        log "⚠️ 任务 $task_id 超时 (${elapsed_min}分钟)"
         
-        $REGISTRY update "$task_id" "status" "timeout"
-        $REGISTRY log "$task_id" "任务超时 (${elapsed_min}分钟)" "error"
-        
-        # 发送超时通知
-        local task_name
-        task_name=$(echo "$task_info" | jq -r '.name')
-        $NOTIFY error "$task_id" "$task_name" "任务超时 (${elapsed_min}分钟)"
+        # 尝试重试
+        if retry_failed_task "$task_id" "$task_info"; then
+            log "🔄 任务超时，已触发重试"
+        else
+            $REGISTRY update "$task_id" "status" "timeout"
+            $REGISTRY log "$task_id" "任务超时 (${elapsed_min}分钟)，已达最大重试次数" "error"
+            
+            # 发送超时通知
+            local task_name
+            task_name=$(echo "$task_info" | jq -r '.name')
+            $NOTIFY error "$task_id" "$task_name" "任务超时 (${elapsed_min}分钟)，重试次数已用尽"
+        fi
         return
     fi
     
@@ -164,12 +170,17 @@ check_single_task() {
             # 检查输出文件判断是否成功
             local output_file="/tmp/codex-results/tasks/$task_id/output.log"
             if [[ -f "$output_file" ]] && grep -q "error\|failed\|Error\|Failed" "$output_file" 2>/dev/null; then
-                $REGISTRY update "$task_id" "status" "failed"
-                $REGISTRY log "$task_id" "任务执行失败" "error"
-                
-                local task_name
-                task_name=$(echo "$task_info" | jq -r '.name')
-                $NOTIFY error "$task_id" "$task_name" "执行失败"
+                # 尝试重试
+                if retry_failed_task "$task_id" "$task_info"; then
+                    log "🔄 任务 $task_id 失败，已触发重试"
+                else
+                    $REGISTRY update "$task_id" "status" "failed"
+                    $REGISTRY log "$task_id" "任务执行失败，已达最大重试次数" "error"
+                    
+                    local task_name
+                    task_name=$(echo "$task_info" | jq -r '.name')
+                    $NOTIFY error "$task_id" "$task_name" "执行失败"
+                fi
             else
                 # 没有错误，标记完成
                 $REGISTRY complete "$task_id"
@@ -222,6 +233,104 @@ check_completed_tasks() {
         log "发现已完成但未合并的任务: $done_tasks"
         # 这里可以触发自动合并流程
     fi
+}
+
+# 检查 CI 状态
+check_ci_status() {
+    local task_id="$1"
+    local task_info="$2"
+    
+    local branch repo
+    branch=$(echo "$task_info" | jq -r '.branch // ""')
+    repo=$(echo "$task_info" | jq -r '.repo // ""')
+    
+    if [[ -z "$branch" || -z "$repo" || "$branch" == "null" || "$branch" == "" ]]; then
+        return 0  # 没有分支信息，跳过
+    fi
+    
+    log "检查 CI 状态 for $task_id (branch: $branch)"
+    
+    # 尝试通过 gh CLI 获取 CI 状态
+    if command -v gh &>/dev/null; then
+        local pr_info
+        pr_info=$(gh pr view "$branch" --repo "$repo" --json statusCheckRollup 2>/dev/null || echo "")
+        
+        if [[ -n "$pr_info" ]]; then
+            local ci_status
+            ci_status=$(echo "$pr_info" | jq -r '.[0].conclusion // .[0].status // "unknown"' 2>/dev/null || echo "unknown")
+            
+            log "CI 状态: $ci_status"
+            
+            case "$ci_status" in
+                "SUCCESS"|"COMPLETED")
+                    log "✅ CI 通过"
+                    return 0
+                    ;;
+                "FAILURE"|"FAILED")
+                    log "❌ CI 失败"
+                    return 1
+                    ;;
+                "PENDING"|"IN_PROGRESS")
+                    log "⏳ CI 运行中..."
+                    return 2
+                    ;;
+                *)
+                    log "⚠️ CI 状态未知: $ci_status"
+                    return 3
+                    ;;
+            esac
+        fi
+    fi
+    
+    # 如果没有 gh 或获取失败，返回未知状态
+    return 3
+}
+
+# 重试失败任务
+retry_failed_task() {
+    local task_id="$1"
+    local task_info="$2"
+    
+    local retry_count
+    retry_count=$(echo "$task_info" | jq -r '.retry_count // 0')
+    
+    if [[ $retry_count -ge $MAX_RETRIES ]]; then
+        log "❌ 任务 $task_id 已达到最大重试次数 ($MAX_RETRIES)，不再重试"
+        return 1
+    fi
+    
+    local task_name
+    task_name=$(echo "$task_info" | jq -r '.name')
+    
+    log "🔄 重试任务 $task_id (第 $((retry_count + 1))/$MAX_RETRIES 次)"
+    
+    # 增加重试计数
+    local new_retry=$((retry_count + 1))
+    jq ".tasks[] |= if .id == \"$task_id\" then .retry_count = $new_retry else . end" "$REGISTRY_FILE" > /tmp/registry_tmp.json && mv /tmp/registry_tmp.json "$REGISTRY_FILE"
+    
+    # 调用重新执行
+    local workspace
+    workspace=$(echo "$task_info" | jq -r '.workspace // ""')
+    local prompt_file="/tmp/codex-results/tasks/$task_id/prompt.txt"
+    
+    if [[ -f "$prompt_file" ]]; then
+        local prompt
+        prompt=$(cat "$prompt_file")
+        
+        # 重新执行任务
+        "$SCRIPT_DIR/task-dispatcher.sh" execute "$task_id" "$prompt" "$workspace" 2>&1 | tee -a "/tmp/codex-results/tasks/$task_id/output.log" &
+        
+        # 更新任务状态
+        $REGISTRY update "$task_id" "status" "running"
+        
+        log "✅ 任务 $task_id 已重新启动"
+        $NOTIFY progress "$task_id" "$task_name" "任务重试中 (第 $new_retry/$MAX_RETRIES 次)"
+    else
+        log "⚠️ 找不到任务提示文件，无法重试"
+        return 1
+    fi
+    
+    return 0
 }
 
 # 清理孤立 worktree

@@ -139,7 +139,7 @@ dispatch_task() {
     # 发送执行命令
     local prompt_text
     prompt_text=$(cat "$task_dir/prompt.txt")
-    local cmd="cd '$worktree_path' && codex --full-auto exec \"$prompt_text\""
+    local cmd="cd '$worktree_path' && codex --sandbox workspace-write --full-auto exec \"$prompt_text\""
     
     tmux send-keys -t "$tmux_session" "$cmd" Enter
     
@@ -164,7 +164,7 @@ execute_task() {
     
     # 执行 codex
     if command -v codex &>/dev/null; then
-        codex --full-auto exec "$prompt"
+        codex --sandbox workspace-write --full-auto exec "$prompt"
     elif [[ -x "$CODEX_DIR/run-agent.sh" ]]; then
         "$CODEX_DIR/run-agent.sh" "$agent" "$prompt"
     else
