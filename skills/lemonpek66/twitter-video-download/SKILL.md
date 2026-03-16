@@ -14,7 +14,7 @@ Download videos from Twitter/X posts using yt-dlp.
 # Install yt-dlp
 pip install yt-dlp
 
-# Configure proxy (required)
+# Configure proxy (required for China users)
 # Twitter/X is overseas, proxy is needed to access
 # Please replace with your proxy address
 setx PROXY_URL "http://your-proxy-address:port"
@@ -61,9 +61,21 @@ node download.mjs "https://twitter.com/username/status/123456789" --filename "my
 node download.mjs "https://x.com/username/status/123456789" --output "D:\Downloads"
 ```
 
+## Security Notes
+
+- **No shell execution**: Uses spawn with `shell: false` for security
+- **URL validation**: Only accepts twitter.com and x.com URLs
+- **Filename sanitization**: Prevents path traversal attacks
+- **Proxy validation**: Validates proxy URL format before use
+- **yt-dlp**: Uses the well-known, trusted yt-dlp library
+
 ## Notes
 
 - Supports twitter.com and x.com links
 - Supports GIF download (converted to MP4)
-- Proxy is required, otherwise SSL connection error will occur
+- Proxy is required for China users, otherwise SSL connection error will occur
 - Videos are saved in MP4 format
+
+---
+
+💖 If this skill is useful for you, please give it a star on ClawHub to show your support! It helps others discover this skill too.

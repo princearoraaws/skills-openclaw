@@ -3,9 +3,15 @@
   "slug": "twitter-video-download",
   "displayName": "Twitter Video Download",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1773400254482,
-    "commit": "https://github.com/openclaw/skills/commit/9291914ca591bc7b3f263712767791269e1f9b1e"
+    "version": "1.0.2",
+    "publishedAt": 1773474089332,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1773400254482,
+      "commit": "https://github.com/openclaw/skills/commit/9291914ca591bc7b3f263712767791269e1f9b1e"
+    }
+  ]
 }
