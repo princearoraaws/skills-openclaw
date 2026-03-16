@@ -1,13 +1,31 @@
 #!/usr/bin/env python3
-import argparse, base64, json, mimetypes, os
-import requests
+import argparse
+import base64
+import json
+import mimetypes
+import os
+import sys
 from collections import defaultdict
+from pathlib import Path
+
+import requests
+
+
+def fail(msg: str, code: int = 1):
+    print(f"Error: {msg}", file=sys.stderr)
+    raise SystemExit(code)
 
 
 def file_to_data_url(path: str) -> str:
+    p = Path(path)
+    if not p.exists() or not p.is_file():
+        fail(f"file not found: {path}")
     mime = mimetypes.guess_type(path)[0] or "application/octet-stream"
-    with open(path, "rb") as f:
-        b64 = base64.b64encode(f.read()).decode("utf-8")
+    try:
+        raw = p.read_bytes()
+    except OSError as e:
+        fail(f"failed reading file: {e}")
+    b64 = base64.b64encode(raw).decode("utf-8")
     return f"data:{mime};base64,{b64}"
 
 
@@ -36,11 +54,12 @@ def main():
     ap.add_argument("--max-new-tokens", type=int, default=2048)
     ap.add_argument("--temperature", type=float, default=0)
     ap.add_argument("--meta-info", action="store_true")
+    ap.add_argument("--timeout", type=int, default=300)
     ap.add_argument("--out", default="transcribe_result.json")
     args = ap.parse_args()
 
     if not args.api_key:
-        raise SystemExit("Missing API key. Set --api-key or MOSS_API_KEY")
+        fail("Missing API key. Set --api-key or MOSS_API_KEY")
 
     if args.audio_url:
         audio_data = args.audio_url
@@ -48,6 +67,9 @@ def main():
         audio_data = file_to_data_url(args.file)
     else:
         audio_data = args.audio_data
+
+    if not audio_data:
+        fail("audio source resolved to empty value")
 
     payload = {
         "model": args.model,
@@ -64,18 +86,27 @@ def main():
         "Content-Type": "application/json",
     }
 
-    r = requests.post(args.endpoint, headers=headers, json=payload, timeout=300)
+    try:
+        r = requests.post(args.endpoint, headers=headers, json=payload, timeout=args.timeout)
+    except requests.RequestException as e:
+        fail(f"request failed: {e}")
+
     try:
         data = r.json()
     except Exception:
-        raise SystemExit(f"Non-JSON response ({r.status_code}): {r.text[:300]}")
+        fail(f"Non-JSON response ({r.status_code}): {r.text[:300]}")
 
-    with open(args.out, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
+    if r.status_code >= 400:
+        fail(f"HTTP {r.status_code}: {json.dumps(data, ensure_ascii=False)[:500]}")
+
+    out_path = Path(args.out)
+    if out_path.parent and not out_path.parent.exists():
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
 
     segs = normalize_segments(data)
 
-    seg_path = args.out.replace('.json', '.segments.txt')
+    seg_path = str(out_path).replace('.json', '.segments.txt')
     with open(seg_path, "w", encoding="utf-8") as f:
         for s in segs:
             f.write(f"[{s['start']} - {s['end']}] {s['speaker']}: {s['content']}\n")
@@ -83,7 +114,7 @@ def main():
     by = defaultdict(list)
     for s in segs:
         by[s["speaker"]].append(s["content"])
-    by_path = args.out.replace('.json', '.by_speaker.txt')
+    by_path = str(out_path).replace('.json', '.by_speaker.txt')
     with open(by_path, "w", encoding="utf-8") as f:
         for spk, parts in by.items():
             f.write(f"## {spk}\n")
@@ -91,7 +122,7 @@ def main():
 
     print(json.dumps({
         "status": r.status_code,
-        "result": args.out,
+        "result": str(out_path),
         "segments": seg_path,
         "by_speaker": by_path,
         "segment_count": len(segs),
