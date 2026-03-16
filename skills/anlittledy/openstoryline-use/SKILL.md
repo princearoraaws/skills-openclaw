@@ -29,9 +29,7 @@ OpenStoryline 是一个剪辑 Agent，用户可使用自己的素材，通过自
 1. 默认只监听 `127.0.0.1`，不要主动暴露到局域网。
 2. 优先复用现有脚本，不要重复造轮子：
    - 修改配置脚本：位于代码仓库`scripts/update_config.py`
-   - Web 服务桥接脚本：位于SKILL文件夹内部`scripts/bridge_openstoryline.py`
-   - 一般来说，桥接脚本位于：
-     `~/.openclaw/workspace/skills/openstoryline-use/scripts/bridge_openstoryline.py`
+   - Web 服务桥接脚本位于当前 skill 目录下的 `scripts/bridge_openstoryline.py`。请先定位当前 skill 目录，再拼接`scripts/bridge_openstoryline.py`  
 3. 长驻服务（MCP / Web）必须按“长驻进程”方式启动，并持续观察日志；不要把启动命令当成一次性探测命令。
 4. **不要**在启动命令后面追加这些包装：
    - `| head`
@@ -224,13 +222,14 @@ cp path/to/source.mp4 <repo-root>/outputs/{session_id}/media
 ### 6) 开始剪辑对话（自动创建 session）
 
 使用 Skill 自带 bridge 脚本.
+  - skill-baseDir: 当前 skill 所在目录。
   - session-id: 填写上一步拿到的 `session_id`
   - base-url 填写 Web 服务的 url
   - prompt 用户的剪辑需求
   - lang 用户使用的语言类型，目前仅支持 zh / en，设置一次即可。
 
 ```bash
-cd <repo-root> && source .venv/bin/activate && python ~/.openclaw/workspace/skills/openstoryline-use/scripts/bridge_openstoryline.py \
+cd <repo-root> && source .venv/bin/activate && python {skill-baseDir}/scripts/bridge_openstoryline.py \
   --session-id <session_id> \
   --base-url http://127.0.0.1:8005 \
   --prompt "剪一个小红书风格视频" \
@@ -296,23 +295,30 @@ cd <repo-root> && find .storyline/.server_cache/<session_id> -name "output_*.mp4
 
 #### 方案 1（最推荐，预览体验最好）
 
-该命令的有效期可调 1h / 12h / 24h / 72h，上传限制 1GB
+该命令的有效期可调 1h / 12h / 24h / 72h，上传限制 1GB。注意去掉返回的链接末尾多余的百分号。
 ```bash
 curl -fsS \
   -F 'reqtype=fileupload' \
-  -F 'time=72h' \
+  -F 'time=12h' \
   -F 'fileToUpload=@"path/to/output_video.mp4"' \
   https://litterbox.catbox.moe/resources/internals/api.php
 ```
 
-#### 方案 2 
+#### 方案 2（推荐）
+
+命令会返回一个3小时后过期的视频url，上传限制 16MB。
+```bash
+curl -i -F 'files[]=@path/to/output_video.mp4' https://uguu.se/upload
+```
+
+#### 方案 3
 
 命令会返回一个3天后过期的视频url，上传限制 4GB。
 ```bash
 curl -fsS -F 'file=@"path/to/output_video.mp4"' https://temp.sh/upload
 ```
 
-#### 方案 3
+#### 方案 4
 
 该命令会返回一个**永久有效**的视频url，上传限制 200 MB。
 ```bash
@@ -326,7 +332,7 @@ curl -fsS -F 'reqtype=fileupload' -F 'fileToUpload=@"path/to/output_video.mp4"' 
 #### 示例：修改文案风格
 
 ```bash
-cd <repo-root> && source .venv/bin/activate && python ~/.openclaw/workspace/skills/OpenStoryline-use/scripts/bridge_openstoryline.py \
+cd <repo-root> && source .venv/bin/activate && python ~/.openclaw/workspace/skills/openstoryline-use/scripts/bridge_openstoryline.py \
   --base-url http://127.0.0.1:8005 \
   --session-id <session_id> \
   --prompt "帮我把文案换成更欢乐、更有活力的风格"
