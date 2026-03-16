@@ -3,11 +3,16 @@
   "slug": "aeo",
   "displayName": "Aeo",
   "latest": {
-    "version": "1.2.2",
-    "publishedAt": 1773087792722,
-    "commit": "https://github.com/openclaw/skills/commit/be7cc5852c9dbae3365a6260030e6bfd2d3e7205"
+    "version": "1.3.2",
+    "publishedAt": 1773512327528,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.2.2",
+      "publishedAt": 1773087792722,
+      "commit": "https://github.com/openclaw/skills/commit/be7cc5852c9dbae3365a6260030e6bfd2d3e7205"
+    },
     {
       "version": "1.1.1",
       "publishedAt": 1772764439072,
