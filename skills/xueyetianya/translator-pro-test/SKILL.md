@@ -1,15 +1,16 @@
 ---
+version: "2.0.0"
 name: translator-pro
-version: 1.0.0
-description: 专业翻译(中英日韩)、多译本对比、术语表、本地化、校对、批量翻译。Professional translation (CN/EN/JP/KR), multi-version comparison, glossary, localization, proofreading, batch translation.
+description: "专业翻译(中英日韩)、多译本对比、术语表、本地化、校对、批量翻译。Professional translation (CN/EN/JP/KR), multi-version comparison, glossary, localization, proofreading, batch translation. Use when you need translator pro capabilities. Triggers on: translator pro."
 author: BytesAgain
-tags: [translate, translation, 翻译, 中英翻译, 日语, 韩语, localization, glossary, proofread, 本地化]
 ---
 # translator-pro
 
 专业翻译(中英日韩)、多译本对比、术语表、本地化、校对、批量翻译。Professional translation (CN/EN/JP/KR), multi-version comparison, glossary, localization, proofreading, batch translation.
 
 ## 速查表
+
+See commands above.
 
 ## 可用命令
 
@@ -20,9 +21,7 @@ tags: [translate, translation, 翻译, 中英翻译, 日语, 韩语, localizatio
 - **proofread** — proofread
 - **batch** — batch
 
-
 > 💡 小技巧：先用 `help` 查看所有命令，再选择最适合的
-
 
 ## 专业建议
 
@@ -34,3 +33,20 @@ tags: [translate, translation, 翻译, 中英翻译, 日语, 韩语, localizatio
 
 ---
 *translator-pro by BytesAgain*
+---
+💬 Feedback & Feature Requests: https://bytesagain.com/feedback
+Powered by BytesAgain | bytesagain.com
+
+## Examples
+
+```bash
+# Show help
+translator-pro help
+
+# Run
+translator-pro run
+```
+
+## Commands
+
+Run `translator-pro help` to see all available commands.
