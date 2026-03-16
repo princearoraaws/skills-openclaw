@@ -1,301 +1,154 @@
 ---
-name: scalekit-auth
-description: Secure OAuth token management via Scalekit. Handles token storage, refresh, and retrieval for third-party services (Gmail, Slack, GitHub, etc.). Never stores tokens locally - always fetches fresh tokens from Scalekit.
-homepage: https://scalekit.com
+name: openclaw-tool-executor
+description: |
+  Use this skill whenever the user asks for information from, or wants to take an action in, a third-party tool or service. This includes — but is not limited to — searching the web, reading or writing documents, sending messages, querying databases, managing tasks, fetching data from APIs, or interacting with any connected SaaS product (e.g. "search Exa for...", "read my Notion page", "send a Slack message", "get my Google Sheet", "create a GitHub issue", "query Snowflake", "look up a HubSpot contact"). Trigger this skill any time the user's request involves an external service, integration, or data source — even if the provider is not explicitly named. Handles OAuth and non-OAuth (API Key, Bearer, Basic) connections, tool discovery, execution, and proxy fallback via Scalekit Connect.
+homepage: https://github.com/scalekit-inc/openclaw-skill
 metadata:
   openclaw:
     requires:
-      bins: ["python3"]
+      bins: ["python3", "uv"]
     install:
       - id: python-deps
         kind: exec
-        command: "pip3 install scalekit-sdk-python python-dotenv requests"
+        command: "uv sync"
         label: "Install Python dependencies"
 ---
 
-# Scalekit Auth - Secure Token Management
+# OpenClaw Tool Executor
 
-Centralized OAuth token management for AI agents. No local token storage, automatic refresh, multi-service support.
+General-purpose tool executor for OpenClaw agents. Uses Scalekit Connect to discover and run tools for any connected service — OAuth (Notion, Slack, Gmail, GitHub, etc.) or non-OAuth (API Key, Bearer, Basic auth).
 
-## Why Use This?
+## Environment Variables
 
-**Problem:** OAuth tokens scattered across config files, no refresh logic, security risks.
+Required in `.env`:
 
-**Solution:** Scalekit handles all token lifecycle:
-- ✅ Secure cloud storage (never stored locally)
-- ✅ Automatic token refresh
-- ✅ Multi-service support (Gmail, Slack, Notion, GitHub, etc.)
-- ✅ Always returns fresh, valid tokens
+```
+TOOL_CLIENT_ID=<scalekit_client_id>
+TOOL_CLIENT_SECRET=<scalekit_client_secret>
+TOOL_ENV_URL=<scalekit_environment_url>
+TOOL_IDENTIFIER=<default_identifier>   # optional but recommended
+```
 
-## Installation
+`TOOL_IDENTIFIER` is used as the default `--identifier` for all operations. If not set, the script will prompt the user at runtime and display a warning advising them to set it in `.env`.
 
-### 1. Install Skill
+## Execution Flow
+
+When the user asks to perform an action on a connected service, follow these steps **in order**:
+
+### Step 1 — Discover the Connection
+
+Dynamically resolve the `connection_name` by listing all configured connections for the provider. The API paginates automatically through all pages:
 
 ```bash
-clawhub install scalekit-auth
-cd skills/scalekit-auth
-pip3 install -r requirements.txt
+uv run tool_exec.py --list-connections --provider <PROVIDER>
 ```
 
-### 2. Get Scalekit Credentials
+- Use the `key_id` from the first result as `<CONNECTION_NAME>` for all subsequent steps.
+- If **no connection found** → inform the user that no `<PROVIDER>` connection is configured in Scalekit and stop.
+- If **multiple connections found** → the first one is selected automatically (a warning is shown).
 
-1. Sign up at [scalekit.com](https://scalekit.com)
-2. Go to Dashboard → Developers → Settings → API Credentials
-3. Copy:
-   - Client ID
-   - Client Secret
-   - Environment URL
+### Step 2 — Check & Authorize
 
-### 3. Configure Credentials
-
-Create `skills/scalekit-auth/.env`:
+Run `--generate-link` for the connection. The tool automatically detects the connection type (OAuth vs non-OAuth) and applies the correct auth flow:
 
 ```bash
-SCALEKIT_CLIENT_ID=your_client_id_here
-SCALEKIT_CLIENT_SECRET=your_client_secret_here
-SCALEKIT_ENV_URL=https://your-env.scalekit.com
+uv run tool_exec.py --generate-link \
+  --connection-name <CONNECTION_NAME>
 ```
 
-**Or** let the agent ask you on first use.
+**OAuth connections:**
+- If already **ACTIVE** → proceed to Step 3.
+- If **not active** → a magic link is generated. Present it to the user, wait for them to complete the flow, then proceed to Step 3.
 
-## Setting Up a Service (e.g., Gmail)
+**Non-OAuth connections (BEARER, BASIC, API Key, etc.):**
+- If account **not found** → stop. Tell the user: *"Please create and configure the `<CONNECTION_NAME>` connection in the Scalekit Dashboard."*
+- If account exists but **not active** → stop. Tell the user: *"Please activate the `<CONNECTION_NAME>` connection in the Scalekit Dashboard."*
+- If **ACTIVE** → proceed to Step 3.
 
-### Step 1: Create Connection in Scalekit Dashboard
+> Never use `--get-authorization` in the execution flow — that is only for inspecting raw OAuth tokens and does not work for non-OAuth connections.
 
-1. Go to Scalekit Dashboard → Connections → Add Connection
-2. Select provider (e.g., Gmail/Google)
-3. Configure OAuth:
-   - Get Client ID/Secret from Google Cloud Console
-   - Set Redirect URI (provided by Scalekit)
-4. **Copy the `connection_name`** (e.g., `gmail_u3134a`)
+### Step 3 — Discover Available Tools
 
-### Step 2: Register with Agent
-
-Tell the agent:
-```
-"Configure Gmail for Scalekit. Connection name is gmail_u3134a"
-```
-
-Agent stores it in `connections.json`:
-```json
-{
-  "gmail": {
-    "connection_name": "gmail_u3134a",
-    "identifier": "mess"
-  }
-}
-```
-
-### Step 3: Authorize
-
-First API call will prompt:
-```
-Authorization needed for Gmail.
-Link: https://scalekit.com/auth/... (expires in 1 minute!)
-```
-
-Click link → authorize → done!
-
-## Usage
-
-### From Agent Skills
-
-```python
-#!/usr/bin/env python3
-import sys
-sys.path.append('./skills/scalekit-auth')
-from scalekit_helper import get_token
-
-# Get fresh token for any service
-access_token = get_token("gmail")
-
-# Use it immediately
-headers = {"Authorization": f"Bearer {access_token}"}
-response = requests.get("https://gmail.googleapis.com/gmail/v1/users/me/messages", headers=headers)
-```
-
-### From Shell Scripts
+Fetch the list of tools available for the provider:
 
 ```bash
-# Get token via CLI wrapper
-TOKEN=$(python3 skills/scalekit-auth/get_token.py gmail)
-
-# Use in API call
-curl -H "Authorization: Bearer $TOKEN" \
-  https://gmail.googleapis.com/gmail/v1/users/me/messages
+uv run tool_exec.py --get-tool --provider <PROVIDER>
 ```
 
-## Configuration Files
+- Look for a tool that matches the user's intent (e.g. `notion_page_get` for reading a page).
+- If a matching tool **exists** → go to Step 4.
+- If **no matching tool exists** → go to Step 5 (proxy fallback).
 
-### connections.json
-Maps service names to Scalekit connection names:
-
-```json
-{
-  "gmail": {
-    "connection_name": "gmail_u3134a",
-    "identifier": "mess"
-  },
-  "slack": {
-    "connection_name": "slack_x7y9z",
-    "identifier": "mess"
-  }
-}
-```
-
-**Note:** `identifier` is auto-set to agent's name (from IDENTITY.md).
-
-### .env
-Scalekit API credentials (never commit to git!):
+You can also inspect a specific tool's schema:
 
 ```bash
-SCALEKIT_CLIENT_ID=sk_live_...
-SCALEKIT_CLIENT_SECRET=...
-SCALEKIT_ENV_URL=https://...
+uv run tool_exec.py --get-tool --tool-name <TOOL_NAME>
 ```
 
-## Supported Services
+### Step 4 — Execute the Tool
 
-Any OAuth provider Scalekit supports:
-- Gmail, Google Calendar, Google Drive
-- Slack, Notion, Linear, GitHub
-- Salesforce, HubSpot, Zendesk
-- 50+ more
+Run the matched tool with the appropriate input:
 
-Check [Scalekit Connectors](https://docs.scalekit.com/connectors) for full list.
-
-## Authorization Flow
-
-```
-1. Agent calls get_token("gmail")
-2. Check if connection configured → if NO, ask user
-3. Check if authorized (status == ACTIVE)
-4. If NOT authorized:
-   - Generate auth link (expires 1 min)
-   - Send to user via Telegram/chat
-   - Wait for authorization
-5. Return fresh access_token
-6. Scalekit auto-refreshes in background
-```
-
-## Error Handling
-
-**Connection not configured:**
-```
-Error: gmail not configured. Please:
-1. Create connection in Scalekit dashboard
-2. Provide connection_name
-```
-
-**Authorization expired:**
-```
-Authorization needed: [link]
-(Link expires in 1 minute - click now!)
-```
-
-**Scalekit credentials missing:**
-```
-Scalekit not configured. Please provide:
-- SCALEKIT_CLIENT_ID
-- SCALEKIT_CLIENT_SECRET
-- SCALEKIT_ENV_URL
-```
-
-## Security Best Practices
-
-1. **Never log tokens** - use `[REDACTED]` in logs
-2. **Add .env to .gitignore** - never commit credentials
-3. **Rotate credentials** if exposed
-4. **Use separate Scalekit accounts** for dev/prod
-5. **Auth links expire in 1 min** - act fast!
-
-## Troubleshooting
-
-**"Module not found" error:**
 ```bash
-cd skills/scalekit-auth
-pip3 install -r requirements.txt
+uv run tool_exec.py --execute-tool \
+  --tool-name <TOOL_NAME> \
+  --connection-name <CONNECTION_NAME> \
+  --tool-input '<JSON_INPUT>'
 ```
 
-**Token returns 401:**
-- Authorization may have expired
-- Agent will prompt for re-authorization
+Return the result to the user.
 
-**Connection not found:**
-- Check `connections.json` exists
-- Verify connection_name from Scalekit dashboard
+### Step 5 — Proxy Fallback (only if no tool exists)
 
-## Example: Gmail Integration
+If no Scalekit tool covers the required action, attempt a proxied HTTP request directly to the provider's API:
 
-```python
-# In your skill's script
-from scalekit_helper import get_token
-import requests
-
-def fetch_unread_emails():
-    token = get_token("gmail")
-    
-    headers = {"Authorization": f"Bearer {token}"}
-    url = "https://gmail.googleapis.com/gmail/v1/users/me/messages"
-    params = {"q": "is:unread", "maxResults": 5}
-    
-    response = requests.get(url, headers=headers, params=params)
-    return response.json()
+```bash
+uv run tool_exec.py --proxy-request \
+  --connection-name <CONNECTION_NAME> \
+  --path <API_PATH> \
+  --method <GET|POST|PUT|DELETE> \
+  --query-params '<JSON>' \   # optional
+  --body '<JSON>'             # optional
 ```
 
-## Publishing Skills with Scalekit Auth
+> Note: Proxy may be disabled on some environments. If it returns `TOOL_PROXY_DISABLED`, inform the user that this action isn't supported by the current Scalekit tool catalog and suggest they request a new tool from Scalekit.
 
-If your skill uses scalekit-auth:
+## Example: Search the web with Exa (API Key connection)
 
-1. **Document in SKILL.md:**
-   ```markdown
-   ## Prerequisites
-   - Install scalekit-auth skill
-   - Configure [SERVICE] connection in Scalekit
-   ```
-
-2. **Import in scripts:**
-   ```python
-   sys.path.append('./skills/scalekit-auth')
-   from scalekit_helper import get_token
-   ```
-
-3. **Handle errors gracefully** - guide users to configure connections
-
-## API Reference
-
-### get_token(service_name: str) → str
-
-Returns fresh OAuth access token for the service.
-
-**Parameters:**
-- `service_name`: Service identifier (e.g., "gmail", "slack")
-
-**Returns:**
-- `access_token`: Fresh OAuth bearer token
-
-**Raises:**
-- `ConfigurationError`: Service not configured or Scalekit creds missing
-- `AuthorizationError`: User needs to authorize (sends link to user)
-
-**Example:**
-```python
-token = get_token("gmail")
-print(f"Token: {token[:10]}...")  # Never log full token!
+```
+User: "Search for latest AI news using Exa"
 ```
 
-## Roadmap
+1. `--list-connections --provider EXA` → `key_id: exa`, `type: API_KEY`
+2. `--generate-link --connection-name exa` → detects API_KEY, checks account → ACTIVE
+3. `--get-tool --provider EXA` → finds `exa_search`
+4. `--execute-tool --tool-name exa_search --connection-name exa --tool-input '{"query": "latest AI news"}'`
+   → returns search results
 
-- [ ] Multi-user support (multiple identifiers per service)
-- [ ] Token caching (reduce API calls)
-- [ ] CLI tool (`scalekit-auth config gmail gmail_u3134a`)
-- [ ] Auto-detect service from API URL
-- [ ] Batch token retrieval
+## Example: Read a Notion Page (OAuth connection)
 
-## Contributing
+```
+User: "Read my Notion page https://notion.so/..."
+```
 
-Found a bug? Have a feature request? Open an issue on ClawHub!
+1. `--list-connections --provider NOTION` → `key_id: notion-ijIQedmJ`, `type: OAUTH`
+2. `--generate-link --connection-name notion-ijIQedmJ` → detects OAuth, already ACTIVE
+3. `--get-tool --provider NOTION` → finds `notion_page_get`
+4. `--execute-tool --tool-name notion_page_get --connection-name notion-ijIQedmJ --tool-input '{"page_id": "..."}'`
+   → returns page metadata
 
----
+## Example: Action Not Yet in Scalekit
 
-**Remember:** Tokens are secrets. Handle with care. 🔐
+```
+User: "Fetch the blocks of a Notion page"
+```
+
+1. `--list-connections --provider NOTION` → `key_id: notion-ijIQedmJ`
+2. `--generate-link --connection-name notion-ijIQedmJ` → ACTIVE
+3. `--get-tool --provider NOTION` → no `notion_blocks_fetch` tool found
+4. `--proxy-request --path "/blocks/<page_id>/children"` → fallback attempt
+5. If proxy disabled → inform user the action isn't available yet
+
+## Supported Providers
+
+Any provider configured in Scalekit (Notion, Slack, Gmail, Google Sheets, GitHub, Salesforce, HubSpot, Linear, and 50+ more). Use the provider name in uppercase for `--provider` (e.g. `NOTION`, `SLACK`, `GOOGLE`).

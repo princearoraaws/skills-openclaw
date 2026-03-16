@@ -1,74 +1,80 @@
-# Scalekit Auth - Secure OAuth Token Management
+# OpenClaw Tool Executor
 
-[![ClawHub](https://img.shields.io/badge/ClawHub-scalekit--auth-blue)](https://clawhub.com)
-[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+A general-purpose skill for [OpenClaw](https://openclaw.ai) agents that executes tools on any connected third-party service via [Scalekit Connect](https://scalekit.com).
 
-Centralized OAuth token management for AI agents via [Scalekit](https://scalekit.com). Never store tokens locally again.
+Tell your agent to do something — "get my Notion page", "list HubSpot contacts", "fetch Gmail emails" — and the skill handles the rest: finding the right connection, authorizing if needed, discovering available tools, and executing them.
 
-## Features
+## How It Works
 
-- ✅ **Secure token storage** - No local token files
-- ✅ **Automatic refresh** - Always get fresh, valid tokens
-- ✅ **Multi-service support** - Gmail, Slack, GitHub, 50+ more
-- ✅ **Simple API** - One function call: `get_token(service)`
-- ✅ **Public skill** - Easy to share and reuse
+1. **Discover** — Finds the configured connection for the requested service
+2. **Authorize** — Checks if the user is connected; generates a magic link if not
+3. **Execute** — Finds the right tool and runs it
+4. **Fallback** — If no tool exists, attempts a direct proxied API request
 
-## Quick Start
+## Setup
+
+### 1. Install dependencies
 
 ```bash
-# Install
-clawhub install scalekit-auth
-cd skills/scalekit-auth
-pip3 install -r requirements.txt
-
-# Configure credentials in .env
-echo "SCALEKIT_CLIENT_ID=your_id" > .env
-echo "SCALEKIT_CLIENT_SECRET=your_secret" >> .env
-echo "SCALEKIT_ENV_URL=https://your-env.scalekit.com" >> .env
-
-# Set up a service (e.g., Gmail)
-python3 -c "from scalekit_helper import configure_connection; configure_connection('gmail', 'gmail_u3134a')"
-
-# Get token
-python3 get_token.py gmail
+uv sync
 ```
 
-## Usage in Your Skill
+### 2. Configure credentials
 
-```python
-#!/usr/bin/env python3
-import sys
-sys.path.append('./skills/scalekit-auth')
-from scalekit_helper import get_token
+Copy `.env.example` to `.env` and fill in your Scalekit credentials:
 
-# Get fresh token
-token = get_token("gmail")
-
-# Use immediately
-import requests
-headers = {"Authorization": f"Bearer {token}"}
-response = requests.get("https://gmail.googleapis.com/gmail/v1/users/me/messages", headers=headers)
+```bash
+cp .env.example .env
 ```
 
-## Documentation
+```env
+TOOL_ENV_URL=https://your-env.scalekit.cloud
+TOOL_CLIENT_ID=your_client_id
+TOOL_CLIENT_SECRET=your_client_secret
+TOOL_IDENTIFIER=your_agent_name
+```
 
-See [SKILL.md](SKILL.md) for complete documentation.
+Get your credentials from the [Scalekit dashboard](https://app.scalekit.com) under **Developers → API Credentials**.
 
-## Setup Workflow
+### 3. Create a connection in Scalekit
 
-1. **Install skill** via ClawHub
-2. **Get Scalekit credentials** from [app.scalekit.com](https://app.scalekit.com)
-3. **Create connections** in Scalekit dashboard for each service
-4. **Configure** via agent or CLI
-5. **Authorize** when prompted (1-min expiry!)
-6. **Use tokens** seamlessly
+You need a connection configured in Scalekit for each service your agent will use.
+
+**Example: Notion**
+
+Follow the [Notion connector setup guide](https://docs.scalekit.com/reference/agent-connectors/notion/) to:
+1. Create a Notion OAuth integration
+2. Register the redirect URI in Scalekit
+3. Add your Notion client ID and secret to the Scalekit dashboard
+
+Once configured, the skill auto-discovers the connection — no hardcoded connection names needed.
+
+## Usage
+
+```bash
+# List all connections
+uv run tool_exec.py --list-connections
+
+# Filter by provider
+uv run tool_exec.py --list-connections --provider NOTION
+
+# Generate auth link (or confirm already connected)
+uv run tool_exec.py --generate-link --connection-name notion-xxxx
+
+# List available tools for a provider
+uv run tool_exec.py --get-tool --provider NOTION
+
+# Execute a tool
+uv run tool_exec.py --execute-tool \
+  --tool-name notion_page_get \
+  --connection-name notion-xxxx \
+  --tool-input '{"page_id": "your-page-id"}'
+```
+
+## Supported Providers
+
+Any provider available in Scalekit Connect — Notion, Gmail, Slack, HubSpot, Google Drive, Todoist, and more.
 
 ## License
 
 MIT
-
-## Links
-
-- [Scalekit Docs](https://docs.scalekit.com/agent-auth/quickstart/)
-- [ClawHub](https://clawhub.com)
-- [OpenClaw](https://openclaw.ai)
