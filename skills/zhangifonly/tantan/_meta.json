@@ -3,9 +3,15 @@
   "slug": "tantan",
   "displayName": "Tantan",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1772988962996,
-    "commit": "https://github.com/openclaw/skills/commit/8cbc082b6e040c704806e218395cd3c7479646f7"
+    "version": "1.0.0",
+    "publishedAt": 1773652840935,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1772988962996,
+      "commit": "https://github.com/openclaw/skills/commit/8cbc082b6e040c704806e218395cd3c7479646f7"
+    }
+  ]
 }
