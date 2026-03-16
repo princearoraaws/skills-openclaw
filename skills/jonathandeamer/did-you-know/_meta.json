@@ -3,11 +3,16 @@
   "slug": "did-you-know",
   "displayName": "Did You Know",
   "latest": {
-    "version": "0.2.1",
-    "publishedAt": 1773394556162,
-    "commit": "https://github.com/openclaw/skills/commit/698ecae8dd38659e9e2bf46651b68409167a6bea"
+    "version": "0.2.2",
+    "publishedAt": 1773395264535,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.2.1",
+      "publishedAt": 1773394556162,
+      "commit": "https://github.com/openclaw/skills/commit/698ecae8dd38659e9e2bf46651b68409167a6bea"
+    },
     {
       "version": "0.2.0",
       "publishedAt": 1773220886642,
