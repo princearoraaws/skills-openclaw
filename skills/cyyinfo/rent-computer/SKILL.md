@@ -80,3 +80,5 @@ https://zhiweisoft.com/api/openclaw/link
     "message": "用户需求"
 }
 ```
+-请求头增加： Content-Type: application/json;charset=UTF-8
+
