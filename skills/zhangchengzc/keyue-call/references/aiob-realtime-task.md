@@ -15,8 +15,7 @@
 ## 常用可选字段
 - `callerNum` (string[]) 主叫号码池
 - `stopDate` (string) 截止时间，格式 `yyyy-MM-dd HH:mm:ss`
-- `dialogVar` (object) 对话变量
-- `promptVar` (object) Prompt 变量
+- `dialogVar` (object) 对话变量；本 skill 约定优先传 `name`、`owner_name` 与 `user_intent`
 - `callBackUrl` (string) 任务级回调地址
 - `extJson` (string) 业务透传字段
 

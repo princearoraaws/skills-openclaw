@@ -5,6 +5,7 @@ Create an AIOB realtime outbound call task.
 Default behavior:
 - Load AK/SK/robotId/mobile/callerNum and other defaults from config.json
 - Allow CLI args to override config values (especially mobile)
+- Support convenient dialogVar overrides via --name, --owner-name and --user-intent
 
 Typical usage:
 1) Call default configured phone
@@ -13,7 +14,10 @@ Typical usage:
 2) Override phone only ("打电话给 1333333")
    python3 create_realtime_call.py --mobile "13333333333"
 
-3) Use custom config path
+3) Pass common dialog variables
+   python3 create_realtime_call.py --mobile "13333333333" --name "张三" --owner-name "王五" --user-intent "下午三点开会"
+
+4) Use custom config path
    python3 create_realtime_call.py --config ./my-config.json --mobile "13333333333"
 """
 
@@ -88,6 +92,28 @@ def get_value(config: Dict[str, Any], cli_value: Any, key: str, required: bool =
     return value
 
 
+def merge_dialog_var(config: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any] | None:
+    dialog_var = parse_json_arg(args.dialog_var, "dialogVar") if args.dialog_var is not None else config.get("dialogVar")
+    if dialog_var is not None and not isinstance(dialog_var, dict):
+        raise ValueError("dialogVar must be a JSON object")
+
+    merged = dict(dialog_var or {})
+    if args.name is not None:
+        merged["name"] = args.name
+    if args.owner_name is not None:
+        merged["owner_name"] = args.owner_name
+    if args.user_intent is not None:
+        merged["user_intent"] = args.user_intent
+
+    cleaned = {
+        key: value
+        for key, value in merged.items()
+        if value is not None and (not isinstance(value, str) or value.strip() != "")
+    }
+
+    return cleaned or None
+
+
 def build_call_body(config: Dict[str, Any], args: argparse.Namespace) -> Dict[str, Any]:
     robot_id = get_value(config, args.robot_id, "robotId", required=True)
     mobile = get_value(config, args.mobile, "mobile", required=True)
@@ -109,13 +135,9 @@ def build_call_body(config: Dict[str, Any], args: argparse.Namespace) -> Dict[st
     if stop_date:
         body["stopDate"] = stop_date
 
-    dialog_var = parse_json_arg(args.dialog_var, "dialogVar") if args.dialog_var is not None else config.get("dialogVar")
+    dialog_var = merge_dialog_var(config, args)
     if dialog_var is not None:
         body["dialogVar"] = dialog_var
-
-    prompt_var = parse_json_arg(args.prompt_var, "promptVar") if args.prompt_var is not None else config.get("promptVar")
-    if prompt_var is not None:
-        body["promptVar"] = prompt_var
 
     secret_id = get_value(config, args.secret_id, "secretId")
     if secret_id is not None:
@@ -151,7 +173,9 @@ def make_parser() -> argparse.ArgumentParser:
     p.add_argument("--caller-num", nargs="*", help="Override callerNum list")
     p.add_argument("--stop-date", help="Override stopDate, format yyyy-MM-dd HH:mm:ss")
     p.add_argument("--dialog-var", help="Override dialogVar JSON object string")
-    p.add_argument("--prompt-var", help="Override promptVar JSON object string")
+    p.add_argument("--name", help="Set dialogVar.name, e.g. 张三")
+    p.add_argument("--owner-name", help="Set dialogVar.owner_name, e.g. 王五")
+    p.add_argument("--user-intent", help="Set dialogVar.user_intent, e.g. 下午三点开会")
     p.add_argument("--secret-id", help="Override secretId")
     p.add_argument("--plain-text", help="Override plainText")
     p.add_argument("--cipher-text", help="Override cipherText")
