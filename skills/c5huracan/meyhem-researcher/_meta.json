@@ -3,11 +3,16 @@
   "slug": "meyhem-researcher",
   "displayName": "Meyhem Researcher",
   "latest": {
-    "version": "0.2.4",
-    "publishedAt": 1773184676955,
-    "commit": "https://github.com/openclaw/skills/commit/cc3e37fc053001fe2f8831b070d8a196ccf56af6"
+    "version": "0.2.5",
+    "publishedAt": 1773509740032,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.2.4",
+      "publishedAt": 1773184676955,
+      "commit": "https://github.com/openclaw/skills/commit/cc3e37fc053001fe2f8831b070d8a196ccf56af6"
+    },
     {
       "version": "0.2.1",
       "publishedAt": 1773182562849,

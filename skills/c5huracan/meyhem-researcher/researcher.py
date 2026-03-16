@@ -10,7 +10,7 @@ def post(path, data):
 def main():
     args = sys.argv[1:]
     if not args or args[0] in ('-h', '--help'):
-        print("Usage: researcher.py <topic> [-n <num>] [-q <num_queries>] [--agent <id>]")
+        print("Usage: researcher.py <topic> [-n <num>] [-q <num_queries>] [--agent <id>] [--freshness realtime|hour|day|week]")
         sys.exit(0)
 
     n, nq, agent = 5, 3, 'my-agent'
@@ -20,6 +20,9 @@ def main():
         i = args.index('-q'); nq = int(args[i+1]); args = args[:i] + args[i+2:]
     if '--agent' in args:
         i = args.index('--agent'); agent = args[i+1]; args = args[:i] + args[i+2:]
+    freshness = None
+    if '--freshness' in args:
+        i = args.index('--freshness'); freshness = args[i+1]; args = args[:i] + args[i+2:]
 
     topic = ' '.join(args)
     queries = [f"{topic} part {i+1}" for i in range(nq)]
@@ -28,7 +31,9 @@ def main():
 
     for qi, query in enumerate(queries):
         print(f"=== Query {qi+1}/{nq}: {query} ===")
-        resp = post('/search', dict(query=query, agent_id=agent, max_results=n))
+        body = dict(query=query, agent_id=agent, max_results=n)
+        if freshness: body['freshness'] = freshness
+        resp = post('/search', body)
         search_id = resp['search_id']
 
         for i, r in enumerate(resp['results']):
