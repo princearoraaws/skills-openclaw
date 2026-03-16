@@ -3,11 +3,16 @@
   "slug": "sop-writer",
   "displayName": "Sop Writer",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1773579103840,
-    "commit": "https://github.com/openclaw/skills/commit/ade31cc83b49e2a15cb9cbdbcb22d0c2673f40c9"
+    "version": "1.0.6",
+    "publishedAt": 1773667045742,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1773579103840,
+      "commit": "https://github.com/openclaw/skills/commit/ade31cc83b49e2a15cb9cbdbcb22d0c2673f40c9"
+    },
     {
       "version": "2.2.0",
       "publishedAt": 1773444890470,
