@@ -24,7 +24,7 @@ $env:JISU_API_KEY="your_appkey_here"
 
 ## 脚本路径
 
-脚本文件：`skill/stockindex/stockindex.py`
+脚本文件：`skills/stockindex/stockindex.py`
 
 ## 使用方式
 
@@ -33,7 +33,7 @@ $env:JISU_API_KEY="your_appkey_here"
 无需请求参数，直接调用即可获取各指数品种的实时行情及分钟趋势。
 
 ```bash
-python3 skill/stockindex/stockindex.py sh
+python3 skills/stockindex/stockindex.py sh
 ```
 
 ## 返回结果示例（节选）
@@ -92,5 +92,5 @@ python3 skill/stockindex/stockindex.py sh
 ## 在 OpenClaw 中的推荐用法
 
 1. 用户提问：「今天大盘指数怎么样？上证、深证、创业板都多少？」  
-2. 代理调用：`python3 skill/stockindex/stockindex.py sh`  
+2. 代理调用：`python3 skills/stockindex/stockindex.py sh`  
 3. 从返回数组中按 `name` 筛选「上证指数」「深证成指」「创业板指」等，提取 `price`、`lastclosingprice`、`openningprice`，用自然语言汇总涨跌与点位；若用户需要分钟走势，可说明 `trend` / `trend_standard` 可用于绘图。
