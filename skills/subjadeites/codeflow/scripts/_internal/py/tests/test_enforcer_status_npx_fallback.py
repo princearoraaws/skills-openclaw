@@ -77,7 +77,9 @@ exit 0
             )
 
             env = dict(os.environ)
-            env["PATH"] = fake_bin + os.pathsep + env.get("PATH", "")
+            env["HOME"] = os.path.join(td, "home")
+            os.makedirs(env["HOME"], exist_ok=True)
+            env["PATH"] = fake_bin + os.pathsep + "/usr/bin:/bin"
 
             proc = subprocess.run(
                 ["/bin/bash", ENFORCER, "status", "--json"],
@@ -94,6 +96,81 @@ exit 0
             self.assertEqual(payload["recommendation"]["action"], "install")
             self.assertTrue(payload["recommendation"]["buttons"])
             self.assertEqual(payload["recommendation"]["callbackData"], "cfe:install")
+
+    def test_status_does_not_offer_install_when_npx_reports_plugin_loaded(self):
+        with tempfile.TemporaryDirectory() as td:
+            fake_bin = os.path.join(td, "bin")
+            os.makedirs(fake_bin, exist_ok=True)
+
+            _write_executable(
+                os.path.join(fake_bin, "npx"),
+                """#!/bin/sh
+set -eu
+if [ "${1:-}" = "-y" ] && [ "${2:-}" = "openclaw" ] && [ "${3:-}" = "plugins" ] && [ "${4:-}" = "list" ] && [ "${5:-}" = "--json" ]; then
+  printf '%s\n' '[{"id":"codeflow-enforcer","enabled":true,"status":"loaded","hookCount":2}]'
+  exit 0
+fi
+exit 0
+""",
+            )
+
+            env = dict(os.environ)
+            env["HOME"] = os.path.join(td, "home")
+            os.makedirs(env["HOME"], exist_ok=True)
+            env["PATH"] = fake_bin + os.pathsep + "/usr/bin:/bin"
+
+            proc = subprocess.run(
+                ["/bin/bash", ENFORCER, "status", "--json"],
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+
+            self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+            payload = json.loads(proc.stdout)
+            self.assertEqual(payload["openclawLauncherKind"], "npx")
+            self.assertEqual(payload["plugin"]["state"], "loaded")
+            self.assertTrue(payload["pluginDetected"])
+            self.assertEqual(payload["recommendation"]["action"], "none")
+
+    def test_status_reports_restart_when_plugin_is_installed_but_not_loaded(self):
+        with tempfile.TemporaryDirectory() as td:
+            fake_bin = os.path.join(td, "bin")
+            os.makedirs(fake_bin, exist_ok=True)
+
+            _write_executable(
+                os.path.join(fake_bin, "openclaw"),
+                """#!/bin/sh
+set -eu
+case "${1:-}" in
+  plugins)
+    if [ "${2:-}" = "list" ] && [ "${3:-}" = "--json" ]; then
+      printf '%s\n' '[{"id":"codeflow-enforcer","enabled":true,"status":"installed","hookCount":0}]'
+      exit 0
+    fi
+    ;;
+esac
+exit 0
+""",
+            )
+
+            env = dict(os.environ)
+            env["HOME"] = os.path.join(td, "home")
+            os.makedirs(env["HOME"], exist_ok=True)
+            env["PATH"] = fake_bin + os.pathsep + "/usr/bin:/bin"
+
+            proc = subprocess.run(
+                ["/bin/bash", ENFORCER, "status", "--json"],
+                capture_output=True,
+                text=True,
+                env=env,
+            )
+
+            self.assertEqual(proc.returncode, 0, proc.stderr + proc.stdout)
+            payload = json.loads(proc.stdout)
+            self.assertEqual(payload["plugin"]["state"], "restart-pending")
+            self.assertEqual(payload["plugin"]["status"], "installed")
+            self.assertEqual(payload["recommendation"]["action"], "restart")
 
 
 if __name__ == "__main__":

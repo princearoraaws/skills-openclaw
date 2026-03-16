@@ -92,6 +92,41 @@ class CodeflowSkillFlowTests(unittest.TestCase):
         self.assertIn("Codeflow guard is not active", reply["message"])
         self.assertIn("Install: bash /tmp/codeflow enforcer install --restart", reply["message"])
 
+    def test_build_control_reply_reports_restart_pending_enforcer(self):
+        status = {
+            "guard": {"active": False, "state": "inactive"},
+            "plugin": {"state": "restart-pending", "status": "installed"},
+            "recommendation": {
+                "action": "restart",
+                "message": "Soft mode is active.",
+                "buttons": [],
+            },
+            "restartCommand": "openclaw gateway restart",
+        }
+
+        reply = codeflow_skill_flow.build_control_reply("status", status, buttons_supported=False)
+
+        self.assertIn("Codeflow guard is configured but inactive", reply["message"])
+        self.assertIn("Enforcer: installed, but restart is still pending.", reply["message"])
+        self.assertIn("Restart: openclaw gateway restart", reply["message"])
+
+    def test_build_control_reply_for_install_uses_refreshed_status(self):
+        status = {
+            "guard": {"active": False, "state": "unbound"},
+            "plugin": {"state": "loaded", "status": "loaded"},
+            "recommendation": {
+                "action": "none",
+                "message": "Hard blocking is now available.",
+                "buttons": [],
+            },
+        }
+
+        reply = codeflow_skill_flow.build_control_reply("install", status, buttons_supported=True)
+
+        self.assertIn("Codeflow enforcer installed and loaded", reply["message"])
+        self.assertIn("Hard blocking is now available.", reply["message"])
+        self.assertNotIn("Installing the bundled Codeflow enforcer", reply["message"])
+
 
 if __name__ == "__main__":
     unittest.main()

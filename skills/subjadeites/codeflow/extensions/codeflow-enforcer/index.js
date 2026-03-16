@@ -69,6 +69,68 @@ function extractExecCommand(params) {
   return norm(params.command);
 }
 
+function createRuntimeCommandRunner(api, commandTimeoutMs) {
+  const systemRuntime = api.runtime?.system;
+  const legacyRuntime = api.runtime;
+  const systemRunner =
+    typeof systemRuntime?.runCommandWithTimeout === "function"
+      ? systemRuntime.runCommandWithTimeout.bind(systemRuntime)
+      : null;
+  const legacyRunner =
+    typeof legacyRuntime?.runCommandWithTimeout === "function"
+      ? legacyRuntime.runCommandWithTimeout.bind(legacyRuntime)
+      : null;
+
+  let degraded = false;
+  let warnedMissing = false;
+  let warnedError = false;
+
+  function warnOnce(kind, message) {
+    if (kind === "missing") {
+      if (warnedMissing) {
+        return;
+      }
+      warnedMissing = true;
+    } else if (kind === "error") {
+      if (warnedError) {
+        return;
+      }
+      warnedError = true;
+    }
+    api.logger.warn(message);
+  }
+
+  return async function runCommand(argv, env) {
+    if (degraded) {
+      return null;
+    }
+
+    const runner = systemRunner || legacyRunner;
+    if (!runner) {
+      degraded = true;
+      warnOnce(
+        "missing",
+        `[${PLUGIN_ID}] runtime command execution is unavailable; Codeflow enforcement will fail open.`,
+      );
+      return null;
+    }
+
+    try {
+      return await runner(argv, {
+        timeoutMs: commandTimeoutMs,
+        env: env ? { ...process.env, ...env } : process.env,
+      });
+    } catch (error) {
+      degraded = true;
+      warnOnce(
+        "error",
+        `[${PLUGIN_ID}] runtime command execution failed; Codeflow enforcement will fail open: ${String(error)}`,
+      );
+      return null;
+    }
+  };
+}
+
 function isAllowedCodeflowExec(command, codeflowScript) {
   const normalized = normalizeCommandForMatch(command);
   if (!normalized) {
@@ -96,7 +158,7 @@ const plugin = {
   id: PLUGIN_ID,
   name: "Codeflow Enforcer",
   description: "Thread-scoped hard enforcement for Codeflow skill workflows.",
-  async register(api) {
+  register(api) {
     const commandTimeoutMs =
       typeof api.pluginConfig?.commandTimeoutMs === "number" &&
       Number.isFinite(api.pluginConfig.commandTimeoutMs) &&
@@ -112,12 +174,10 @@ const plugin = {
     const blockSubagents = api.pluginConfig?.blockSubagents !== false;
     const codeflowScript = api.resolvePath("../../scripts/codeflow");
     const stateCache = new Map();
+    const runRuntimeCommand = createRuntimeCommandRunner(api, commandTimeoutMs);
 
     async function runCodeflow(argv, env) {
-      return api.runtime.runCommandWithTimeout(["bash", codeflowScript, ...argv], {
-        timeoutMs: commandTimeoutMs,
-        env: env ? { ...process.env, ...env } : process.env,
-      });
+      return runRuntimeCommand(["bash", codeflowScript, ...argv], env);
     }
 
     function invalidateState(sessionKey) {
@@ -144,7 +204,12 @@ const plugin = {
         OPENCLAW_SESSION_KEY: key,
         OPENCLAW_SESSION: key,
       });
+      if (!result) {
+        stateCache.set(key, { state: null, ts: nowMs() });
+        return null;
+      }
       if (result.code !== 0) {
+        stateCache.set(key, { state: null, ts: nowMs() });
         api.logger.warn(
           `[${PLUGIN_ID}] guard current failed for ${key}: ${tailText(result.stderr || result.stdout)}`,
         );
@@ -156,6 +221,7 @@ const plugin = {
         stateCache.set(key, { state, ts: nowMs() });
         return state;
       } catch (error) {
+        stateCache.set(key, { state: null, ts: nowMs() });
         api.logger.warn(`[${PLUGIN_ID}] guard current JSON parse failed: ${String(error)}`);
         return null;
       }
@@ -172,21 +238,31 @@ const plugin = {
         OPENCLAW_SESSION_KEY: key,
         OPENCLAW_SESSION: key,
       });
+      if (!result) {
+        return "Codeflow enforcement reset skipped because runtime command execution is unavailable.";
+      }
       if (result.code !== 0) {
         return formatFailure("Codeflow enforcement disable failed.", result);
       }
       return "Codeflow enforcement disabled for this thread.";
     }
 
-    api.registerHook(["command:new", "command:reset"], async (event) => {
-      const key = norm(event.sessionKey);
-      if (!key) {
-        return;
-      }
-      const reply = await deactivate(key);
-      invalidateState(key);
-      api.logger.info?.(`[${PLUGIN_ID}] ${event.action}: ${reply}`);
-    });
+    api.registerHook(
+      ["command:new", "command:reset"],
+      async (event) => {
+        const key = norm(event.sessionKey);
+        if (!key) {
+          return;
+        }
+        const reply = await deactivate(key);
+        invalidateState(key);
+        api.logger.info?.(`[${PLUGIN_ID}] ${event.action}: ${reply}`);
+      },
+      {
+        name: `${PLUGIN_ID}.session-reset`,
+        description: "Deactivate Codeflow enforcement when the session is reset.",
+      },
+    );
 
     api.on(
       "before_prompt_build",

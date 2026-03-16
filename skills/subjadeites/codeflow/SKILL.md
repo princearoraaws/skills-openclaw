@@ -1,5 +1,5 @@
 ---
-version: 2.0.1
+version: 2.0.2
 name: codeflow
 description: Codeflow streams coding agent sessions (Claude Code, Codex, Gemini CLI, etc.) to Discord or Telegram in real-time. Use when invoking coding agents and wanting transparent, observable dev sessions — no black box. Parses Claude Code's stream-json output into clean formatted messages showing tool calls, file writes, bash commands, and results with zero AI token burn. Use when asked to "stream to Discord", "stream to Telegram", "relay agent output", or "make dev sessions visible".
 user-invocable: true

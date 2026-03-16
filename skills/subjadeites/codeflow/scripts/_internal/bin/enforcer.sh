@@ -142,11 +142,170 @@ current_session_key() {
   printf '%s\n' "${OPENCLAW_SESSION_KEY:-${OPENCLAW_SESSION:-}}"
 }
 
+parse_plugin_list_status() {
+  local raw="${1:-}"
+  local parsed rest
+
+  PLUGIN_INSTALLED=false
+  PLUGIN_ENABLED=false
+  PLUGIN_LOADED=false
+  PLUGIN_HEALTHY=false
+  PLUGIN_STATUS=""
+  PLUGIN_HOOK_COUNT=""
+
+  if [ -z "$raw" ]; then
+    return 0
+  fi
+
+  parsed="$(PLUGIN_LIST_INPUT="$raw" python3 - "$PLUGIN_ID" <<'PY'
+import json
+import os
+import re
+import sys
+
+plugin_id = sys.argv[1]
+raw = os.environ.get("PLUGIN_LIST_INPUT", "")
+result = {
+    "installed": False,
+    "enabled": False,
+    "loaded": False,
+    "healthy": False,
+    "status": "",
+    "hook_count": "",
+}
+text = raw.strip()
+
+def emit() -> None:
+    print(
+        "\t".join(
+            [
+                "true" if result["installed"] else "false",
+                "true" if result["enabled"] else "false",
+                "true" if result["loaded"] else "false",
+                "true" if result["healthy"] else "false",
+                str(result["status"] or ""),
+                "" if result["hook_count"] == "" else str(result["hook_count"]),
+            ]
+        )
+    )
+
+if not text:
+    emit()
+    raise SystemExit(0)
+
+items = None
+try:
+    parsed = json.loads(text)
+except Exception:
+    parsed = None
+
+if isinstance(parsed, dict):
+    if isinstance(parsed.get("plugins"), list):
+        items = parsed["plugins"]
+    else:
+        items = [parsed]
+elif isinstance(parsed, list):
+    items = parsed
+
+if items is not None:
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        candidate = str(item.get("id") or item.get("pluginId") or item.get("name") or "").strip()
+        if candidate != plugin_id:
+            continue
+        result["installed"] = True
+        enabled = item.get("enabled")
+        result["enabled"] = True if enabled is None else bool(enabled)
+        status = str(item.get("status") or "").strip().lower()
+        if status:
+            result["status"] = status
+        hook_count = item.get("hookCount")
+        if isinstance(hook_count, int) and not isinstance(hook_count, bool):
+            result["hook_count"] = hook_count
+        if status in {"loaded", "ready", "active"}:
+            result["loaded"] = True
+        if result["loaded"] and result["enabled"]:
+            result["healthy"] = True
+        elif status in {"degraded", "error", "failed", "disabled"} or enabled is False:
+            result["healthy"] = False
+        else:
+            result["healthy"] = result["loaded"] and result["enabled"]
+        break
+
+    if result["installed"] and not result["status"]:
+        result["status"] = "loaded" if result["loaded"] else "installed"
+
+    emit()
+    raise SystemExit(0)
+
+if re.search(rf"\b{re.escape(plugin_id)}\b", text, re.IGNORECASE):
+    result["installed"] = True
+    status_match = re.search(
+        r"\b(loaded|ready|active|degraded|error|failed|disabled|installed)\b",
+        text,
+        re.IGNORECASE,
+    )
+    if status_match:
+        result["status"] = status_match.group(1).lower()
+    if result["status"] in {"loaded", "ready", "active"}:
+        result["enabled"] = True
+        result["loaded"] = True
+        result["healthy"] = True
+    elif result["status"] in {"degraded", "error", "failed", "disabled"}:
+        result["enabled"] = result["status"] != "disabled"
+        result["healthy"] = False
+    else:
+        result["status"] = result["status"] or "installed"
+
+emit()
+PY
+)"
+
+  if [ -z "$parsed" ]; then
+    return 0
+  fi
+
+  PLUGIN_INSTALLED_RAW="${parsed%%	*}"
+  rest="${parsed#*	}"
+  PLUGIN_ENABLED_RAW="${rest%%	*}"
+  rest="${rest#*	}"
+  PLUGIN_LOADED_RAW="${rest%%	*}"
+  rest="${rest#*	}"
+  PLUGIN_HEALTHY_RAW="${rest%%	*}"
+  rest="${rest#*	}"
+  PLUGIN_STATUS="${rest%%	*}"
+  if [ "$PLUGIN_STATUS" != "$rest" ]; then
+    PLUGIN_HOOK_COUNT="${rest#*	}"
+  fi
+
+  if [ "$PLUGIN_INSTALLED_RAW" = "true" ]; then
+    PLUGIN_INSTALLED=true
+  fi
+  if [ "$PLUGIN_ENABLED_RAW" = "true" ]; then
+    PLUGIN_ENABLED=true
+  fi
+  if [ "$PLUGIN_LOADED_RAW" = "true" ]; then
+    PLUGIN_LOADED=true
+  fi
+  if [ "$PLUGIN_HEALTHY_RAW" = "true" ]; then
+    PLUGIN_HEALTHY=true
+  fi
+}
+
 collect_status() {
   PLUGIN_BUNDLED=false
   OPENCLAW_CLI=false
   PLUGIN_DETECTED=false
+  PLUGIN_INSTALLED=false
+  PLUGIN_ENABLED=false
+  PLUGIN_LOADED=false
+  PLUGIN_HEALTHY=false
+  PLUGIN_STATUS=""
+  PLUGIN_HOOK_COUNT=""
+  PLUGIN_STATE="unknown"
   CAN_INSTALL=false
+  PLUGIN_LIST_RAW=""
   SESSION_KEY_RESOLVED="$(current_session_key)"
   GUARD_ACTIVE=false
   GUARD_MATCHED=false
@@ -166,13 +325,12 @@ collect_status() {
     OPENCLAW_CLI=true
   fi
 
-  if [ "$OPENCLAW_CLI" = true ] && [ "$OPENCLAW_LAUNCHER_KIND" = "native" ]; then
+  if [ "$OPENCLAW_CLI" = true ]; then
     PLUGIN_LIST_RAW="$(plugin_list_json 2>/dev/null || true)"
-    if printf '%s\n' "$PLUGIN_LIST_RAW" | grep -Fqi "$PLUGIN_ID"; then
+    parse_plugin_list_status "$PLUGIN_LIST_RAW"
+    if [ "$PLUGIN_INSTALLED" = true ]; then
       PLUGIN_DETECTED=true
     fi
-  else
-    PLUGIN_LIST_RAW=""
   fi
 
   if [ "$PLUGIN_BUNDLED" = true ] && [ "$OPENCLAW_CLI" = true ]; then
@@ -206,24 +364,51 @@ print(("true" if active else "false") + "\t" + ("true" if matched else "false") 
         if [ "$GUARD_STATE" != "$REST_GUARD" ]; then
           GUARD_BINDING="${REST_GUARD#*	}"
         fi
-        [ "$GUARD_ACTIVE_RAW" = "true" ] && GUARD_ACTIVE=true
-        [ "$GUARD_MATCHED_RAW" = "true" ] && GUARD_MATCHED=true
+        if [ "$GUARD_ACTIVE_RAW" = "true" ]; then
+          GUARD_ACTIVE=true
+        fi
+        if [ "$GUARD_MATCHED_RAW" = "true" ]; then
+          GUARD_MATCHED=true
+        fi
       fi
     fi
   fi
 
-  if [ "$PLUGIN_DETECTED" = true ]; then
+  if [ "$PLUGIN_BUNDLED" != true ]; then
+    PLUGIN_STATE="missing-bundle"
+  elif [ "$OPENCLAW_CLI" != true ]; then
+    PLUGIN_STATE="cli-unavailable"
+  elif [ "$PLUGIN_INSTALLED" != true ]; then
+    PLUGIN_STATE="not-installed"
+  elif [ "$PLUGIN_HEALTHY" = true ]; then
+    PLUGIN_STATE="loaded"
+  elif [ -n "$PLUGIN_STATUS" ] && [ "$PLUGIN_STATUS" != "installed" ]; then
+    PLUGIN_STATE="degraded"
+  else
+    PLUGIN_STATE="restart-pending"
+  fi
+
+  if [ "$PLUGIN_STATE" = "loaded" ]; then
     RECOMMEND_ACTION="none"
-    RECOMMEND_MESSAGE="Codeflow soft mode remains active because /codeflow is owned by the skill. The bundled enforcer plugin is installed on this host. If you just installed or updated it, run 'openclaw gateway restart' before relying on hard tool blocking."
+    RECOMMEND_MESSAGE="Codeflow soft mode remains active because /codeflow is owned by the skill. The bundled enforcer plugin is installed and loaded on this host, so hard tool blocking is available when the guard is active."
+  elif [ "$PLUGIN_STATE" = "restart-pending" ]; then
+    RECOMMEND_ACTION="restart"
+    RECOMMEND_MESSAGE="Codeflow soft mode remains active. The bundled enforcer plugin is installed on this host, but OpenClaw has not loaded it yet. Restart the gateway to make hard tool blocking effective."
+  elif [ "$PLUGIN_STATE" = "degraded" ]; then
+    RECOMMEND_ACTION="restart"
+    RECOMMEND_MESSAGE="Codeflow soft mode remains active. The bundled enforcer plugin is installed, but OpenClaw is not reporting it as healthy yet."
+    if [ -n "$PLUGIN_STATUS" ]; then
+      RECOMMEND_MESSAGE="$RECOMMEND_MESSAGE Current plugin status: $PLUGIN_STATUS."
+    fi
   elif [ "$OPENCLAW_CLI" = true ] && [ "$OPENCLAW_LAUNCHER_KIND" = "npx" ]; then
     RECOMMEND_ACTION="install"
     RECOMMEND_MESSAGE="Codeflow soft mode remains active. A global openclaw binary is not on PATH, but npx can run the bundled installer, so hard enforcement can still be installed from chat."
     RECOMMEND_BUTTON_TEXT="Install Enforcer"
     RECOMMEND_CALLBACK_DATA="$INSTALL_CALLBACK_DATA"
-  elif [ "$PLUGIN_BUNDLED" != true ]; then
+  elif [ "$PLUGIN_STATE" = "missing-bundle" ]; then
     RECOMMEND_ACTION="manual"
     RECOMMEND_MESSAGE="Codeflow soft mode remains active. This skill install is incomplete because the bundled enforcer plugin directory is missing."
-  elif [ "$OPENCLAW_CLI" != true ]; then
+  elif [ "$PLUGIN_STATE" = "cli-unavailable" ]; then
     RECOMMEND_ACTION="manual"
     RECOMMEND_MESSAGE="Codeflow soft mode remains active. openclaw CLI is not available on this host, so the bundled enforcer plugin cannot be installed from chat."
   else
@@ -244,6 +429,13 @@ emit_status_json() {
   export CODEFLOW_ENFORCER_OPENCLAW_LAUNCHER="$OPENCLAW_LAUNCHER_LABEL"
   export CODEFLOW_ENFORCER_OPENCLAW_LAUNCHER_KIND="$OPENCLAW_LAUNCHER_KIND"
   export CODEFLOW_ENFORCER_PLUGIN_DETECTED="$PLUGIN_DETECTED"
+  export CODEFLOW_ENFORCER_PLUGIN_INSTALLED="$PLUGIN_INSTALLED"
+  export CODEFLOW_ENFORCER_PLUGIN_ENABLED="$PLUGIN_ENABLED"
+  export CODEFLOW_ENFORCER_PLUGIN_LOADED="$PLUGIN_LOADED"
+  export CODEFLOW_ENFORCER_PLUGIN_HEALTHY="$PLUGIN_HEALTHY"
+  export CODEFLOW_ENFORCER_PLUGIN_STATUS="$PLUGIN_STATUS"
+  export CODEFLOW_ENFORCER_PLUGIN_HOOK_COUNT="$PLUGIN_HOOK_COUNT"
+  export CODEFLOW_ENFORCER_PLUGIN_STATE="$PLUGIN_STATE"
   export CODEFLOW_ENFORCER_CAN_INSTALL="$CAN_INSTALL"
   export CODEFLOW_ENFORCER_SESSION_KEY="$SESSION_KEY_RESOLVED"
   export CODEFLOW_ENFORCER_GUARD_ACTIVE="$GUARD_ACTIVE"
@@ -263,6 +455,14 @@ import os
 def b(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() == "true"
 
+hook_count_raw = os.environ.get("CODEFLOW_ENFORCER_PLUGIN_HOOK_COUNT", "").strip()
+hook_count = None
+if hook_count_raw:
+    try:
+        hook_count = int(hook_count_raw)
+    except Exception:
+        hook_count = hook_count_raw
+
 button_text = os.environ.get("CODEFLOW_ENFORCER_RECOMMEND_BUTTON_TEXT", "").strip()
 callback_data = os.environ.get("CODEFLOW_ENFORCER_RECOMMEND_CALLBACK_DATA", "").strip()
 buttons = [[{"text": button_text, "callback_data": callback_data}]] if button_text and callback_data else []
@@ -277,6 +477,15 @@ payload = {
     "openclawLauncher": os.environ.get("CODEFLOW_ENFORCER_OPENCLAW_LAUNCHER", ""),
     "openclawLauncherKind": os.environ.get("CODEFLOW_ENFORCER_OPENCLAW_LAUNCHER_KIND", ""),
     "pluginDetected": b("CODEFLOW_ENFORCER_PLUGIN_DETECTED"),
+    "plugin": {
+        "state": os.environ.get("CODEFLOW_ENFORCER_PLUGIN_STATE", ""),
+        "installed": b("CODEFLOW_ENFORCER_PLUGIN_INSTALLED"),
+        "enabled": b("CODEFLOW_ENFORCER_PLUGIN_ENABLED"),
+        "loaded": b("CODEFLOW_ENFORCER_PLUGIN_LOADED"),
+        "healthy": b("CODEFLOW_ENFORCER_PLUGIN_HEALTHY"),
+        "status": os.environ.get("CODEFLOW_ENFORCER_PLUGIN_STATUS", ""),
+        "hookCount": hook_count,
+    },
     "canInstall": b("CODEFLOW_ENFORCER_CAN_INSTALL"),
     "sessionKey": os.environ.get("CODEFLOW_ENFORCER_SESSION_KEY", ""),
     "installCommand": os.environ.get("CODEFLOW_ENFORCER_INSTALL_COMMAND", ""),
@@ -319,10 +528,12 @@ show_status() {
   else
     echo "openclaw_cli: missing"
   fi
-  if [ "$PLUGIN_DETECTED" = true ]; then
-    echo "host_plugin: installed"
-  else
-    echo "host_plugin: missing"
+  echo "host_plugin: $PLUGIN_STATE"
+  if [ -n "$PLUGIN_STATUS" ]; then
+    echo "plugin_status: $PLUGIN_STATUS"
+  fi
+  if [ -n "$PLUGIN_HOOK_COUNT" ]; then
+    echo "plugin_hook_count: $PLUGIN_HOOK_COUNT"
   fi
   echo
   echo "== guard =="
@@ -341,7 +552,7 @@ show_status() {
   if [ "$RECOMMEND_ACTION" = "install" ]; then
     echo "Install: bash $ROOT_DIR/codeflow enforcer install --restart"
   elif [ "$RECOMMEND_ACTION" = "restart" ]; then
-    echo "Restart: openclaw gateway restart"
+    echo "Restart: ${OPENCLAW_LAUNCHER_LABEL:-openclaw} gateway restart"
   fi
 }
 

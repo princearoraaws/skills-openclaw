@@ -151,7 +151,43 @@ def run_guard_action(action: str, session_key: str) -> None:
     require_ok(proc, f"guard {action}")
 
 
-def headline_for(action: str, guard: Dict[str, Any]) -> str:
+def plugin_state(status: Dict[str, Any]) -> str:
+    plugin = status.get("plugin") or {}
+    value = str(plugin.get("state") or "").strip().lower()
+    if value:
+        return value
+
+    recommendation = status.get("recommendation") or {}
+    action = str(recommendation.get("action") or "").strip().lower()
+    if action == "install":
+        return "not-installed"
+    if action == "restart":
+        return "restart-pending"
+    return ""
+
+
+def plugin_summary_line(status: Dict[str, Any]) -> str:
+    plugin = status.get("plugin") or {}
+    state = plugin_state(status)
+    detail = str(plugin.get("status") or "").strip().lower()
+
+    if state == "loaded":
+        return "Enforcer: installed and loaded."
+    if state == "restart-pending":
+        return "Enforcer: installed, but restart is still pending."
+    if state == "degraded":
+        return f"Enforcer: installed, but degraded ({detail})." if detail else "Enforcer: installed, but degraded."
+    if state == "not-installed":
+        return "Enforcer: not installed on this host."
+    if state == "cli-unavailable":
+        return "Enforcer: openclaw CLI unavailable on this host."
+    if state == "missing-bundle":
+        return "Enforcer: bundled plugin files are missing from this skill install."
+    return ""
+
+
+def headline_for(action: str, status: Dict[str, Any]) -> str:
+    guard = status.get("guard") or {}
     active = bool(guard.get("active"))
     state = str(guard.get("state") or "").strip().lower()
 
@@ -179,7 +215,16 @@ def headline_for(action: str, guard: Dict[str, Any]) -> str:
         return "Codeflow guard status is unavailable for this chat/topic."
 
     if action == "install":
-        return "Installing the bundled Codeflow enforcer and restarting the OpenClaw gateway."
+        enforcer_state = plugin_state(status)
+        if enforcer_state == "loaded":
+            return "Codeflow enforcer installed and loaded on this host."
+        if enforcer_state == "restart-pending":
+            return "Codeflow enforcer installed. Gateway restart is still pending."
+        if enforcer_state == "degraded":
+            return "Codeflow enforcer is installed, but the host is still reporting a degraded state."
+        if enforcer_state == "not-installed":
+            return "Codeflow enforcer install was requested, but the plugin is still not installed."
+        return "Codeflow enforcer install completed, but refreshed status is unavailable."
 
     return "Codeflow control request processed."
 
@@ -205,11 +250,15 @@ def build_control_reply(action: str, status: Dict[str, Any], buttons_supported: 
     buttons = normalize_buttons(recommendation.get("buttons")) if buttons_supported else []
     buttons_sent = len(buttons) > 0
 
-    parts: List[str] = [headline_for(action, guard)]
+    parts: List[str] = [headline_for(action, status)]
 
     binding = str(guard.get("bindingKey") or "").strip()
     if binding and action in {"activate", "status"}:
         parts.append(f"Binding: {binding}")
+
+    summary = plugin_summary_line(status)
+    if summary and action != "install":
+        parts.append(summary)
 
     rec_message = str(recommendation.get("message") or "").strip()
     if rec_message:
@@ -236,6 +285,16 @@ def build_install_notice() -> Dict[str, Any]:
     }
 
 
+def build_post_install_pending_notice() -> Dict[str, Any]:
+    return {
+        "message": (
+            "Codeflow enforcer install finished, but refreshed status is temporarily unavailable.\n\n"
+            "The OpenClaw gateway may still be restarting."
+        ),
+        "buttons": [],
+    }
+
+
 def attach_install_message_id(buttons: List[List[Dict[str, str]]], message_id: str) -> List[List[Dict[str, str]]]:
     if not message_id:
         return buttons
@@ -257,6 +316,25 @@ def emit_need_llm_route(payload: Dict[str, Any]) -> int:
     print("NEED_LLM_ROUTE", file=sys.stdout)
     print(json.dumps(payload, ensure_ascii=False), file=sys.stdout)
     return 3
+
+
+def dispatch_control_reply(session_key: str, reply: Dict[str, Any], callback_message_id: str = "") -> int:
+    if callback_message_id:
+        buttons = attach_install_message_id(reply["buttons"], callback_message_id)
+        require_edit_message(session_key, callback_message_id, reply["message"], buttons=buttons or [])
+        return 0
+
+    if reply["buttons"]:
+        resp = require_send_message(session_key, reply["message"], buttons=None)
+        mid = extract_message_id(resp) or ""
+        buttons = attach_install_message_id(reply["buttons"], mid)
+        if mid and buttons:
+            require_edit_message(session_key, mid, reply["message"], buttons=buttons)
+        elif buttons:
+            require_send_message(session_key, reply["message"], buttons=buttons)
+    else:
+        require_send_message(session_key, reply["message"], buttons=None)
+    return 0
 
 
 def main() -> int:
@@ -289,10 +367,17 @@ def main() -> int:
             proc = run_codeflow(["enforcer", "install", "--restart"], session_key=session_key)
             require_ok(proc, "enforcer install")
 
-            if buttons_supported:
-                return 0
+            try:
+                status = load_enforcer_status(session_key)
+                reply = build_control_reply("install", status, buttons_supported=buttons_supported)
+            except Exception:
+                reply = build_post_install_pending_notice()
+            fallback_payload = reply
 
-            return emit_need_llm_route(notice)
+            if buttons_supported:
+                return dispatch_control_reply(session_key, reply, callback_message_id=callback_message_id)
+
+            return emit_need_llm_route(reply)
 
         if action in {"activate", "deactivate"}:
             run_guard_action(action, session_key=session_key)
@@ -302,17 +387,7 @@ def main() -> int:
         fallback_payload = reply
 
         if buttons_supported:
-            if reply["buttons"]:
-                resp = require_send_message(session_key, reply["message"], buttons=None)
-                mid = extract_message_id(resp) or ""
-                buttons = attach_install_message_id(reply["buttons"], mid)
-                if mid and buttons:
-                    require_edit_message(session_key, mid, reply["message"], buttons=buttons)
-                elif buttons:
-                    require_send_message(session_key, reply["message"], buttons=buttons)
-            else:
-                require_send_message(session_key, reply["message"], buttons=None)
-            return 0
+            return dispatch_control_reply(session_key, reply)
 
         return emit_need_llm_route(reply)
 

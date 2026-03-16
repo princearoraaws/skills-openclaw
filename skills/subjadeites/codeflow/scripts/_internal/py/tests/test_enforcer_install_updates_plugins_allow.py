@@ -68,7 +68,9 @@ exit 0
             )
 
             env = dict(os.environ)
-            env["PATH"] = fake_bin + os.pathsep + env.get("PATH", "")
+            env["HOME"] = os.path.join(td, "home")
+            os.makedirs(env["HOME"], exist_ok=True)
+            env["PATH"] = fake_bin + os.pathsep + "/usr/bin:/bin"
 
             proc = subprocess.run(
                 ["/bin/bash", ENFORCER, "install", "--restart"],
