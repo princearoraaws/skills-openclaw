@@ -1,11 +1,11 @@
 ---
 name: agentwalletapi
-description: OpenclawCash crypto wallet API for AI agents. Use when an agent needs to send native or token transfers, check balances, list wallets, or interact with EVM and Solana wallets programmatically via OpenclawCash.
+description: OpenclawCash crypto wallet API for AI agents (also called openclawcash). Use when an agent needs to send native or token transfers, check balances, list wallets, or interact with EVM and Solana wallets programmatically via OpenclawCash.
 license: Proprietary
 compatibility: Requires network access to https://openclawcash.com
 metadata:
   author: agentwalletapi
-  version: "1.12.0"
+  version: "1.18.0"
   required_env_vars:
     - AGENTWALLETAPI_KEY
   optional_env_vars:
@@ -19,6 +19,7 @@ metadata:
 # OpenclawCash Agent API
 
 Interact with OpenclawCash-managed wallets to send native assets and tokens, check balances, execute DEX swaps, and manage Polymarket account + orders via Polygon wallets.
+This skill may also be referred to as `openclawcash`.
 
 ## Requirements
 
@@ -108,6 +109,7 @@ bash scripts/agentwalletapi.sh checkout-webhooks-list
 # Polymarket setup is user-managed in dashboard Venues settings
 # Direct setup page: https://openclawcash.com/venues/polymarket
 bash scripts/agentwalletapi.sh polymarket-market Q7X2K9P 123456 BUY 25 FAK 0.65 --yes
+bash scripts/agentwalletapi.sh polymarket-resolve https://polymarket.com/market/market-slug No
 bash scripts/agentwalletapi.sh polymarket-account Q7X2K9P
 bash scripts/agentwalletapi.sh polymarket-orders Q7X2K9P OPEN 50
 bash scripts/agentwalletapi.sh polymarket-activity Q7X2K9P 50
@@ -117,12 +119,13 @@ bash scripts/agentwalletapi.sh polymarket-cancel Q7X2K9P order_id_here --yes
 
 ### Base-Units Rule (Important)
 
-- `quote.amountIn`, `swap.amountIn`, `approve.amount`, and transfer `value` must be **base-units integer strings** (digits only).
+- `quote.amountIn`, `swap.amountIn`, `approve.amount`, and transfer `valueBaseUnits` must be **base-units integer strings** (digits only).
 - Do **not** send decimal strings in these fields (for example, `0.001`), or validation will fail immediately.
 - Examples:
   - `0.001 ETH` -> `1000000000000000` wei
   - `1 USDC` (6 decimals) -> `1000000`
-- For transfer, use `amount` when you want human-readable units and let the API convert.
+- For transfer, use `amountDisplay` when you want human-readable units and let the API convert.
+- Legacy transfer aliases `amount` and `value` are still accepted for compatibility.
 
 ### Import Input Safety
 
@@ -183,9 +186,10 @@ Content-Type: application/json
 6. `POST /api/agent/token-balance` - Check wallet balances (native + token balances; specific token by symbol/address supported)
 7. `POST /api/agent/quote` - Get a swap quote before execution on Uniswap (EVM) or Jupiter (Solana mainnet). `amountIn` is base-units integer string.
 8. `POST /api/agent/swap` - Execute token swap on Uniswap (EVM) or Jupiter (Solana mainnet). `amountIn` is base-units integer string.
-9. `POST /api/agent/transfer` - Send native coin or token on the wallet's chain (optional `chain` guard)
+9. `POST /api/agent/transfer` - Send native coin or token on the wallet's chain (optional `chain` guard). Do not use this for checkout escrow funding.
 10. `GET /api/agent/user-tag` and `PUT /api/agent/user-tag` - Read/set the global checkout user tag (set is one-time / immutable once configured)
 11. Optional checkout flow (escrow by global user tag):
+   - MCP default: `checkout_fund` (tries `quick-pay`, falls back to `swap-and-pay` when needed)
    - `POST /api/agent/checkout/payreq` - Create pay request + escrow
    - `GET /api/agent/checkout/payreq/:id` - Read pay request
    - `POST /api/agent/checkout/escrows/:id/funding-confirm` - Confirm funding by tx hash
@@ -199,13 +203,22 @@ Content-Type: application/json
    - `POST /api/agent/checkout/escrows/:id/refund` - Refund funds
    - `POST /api/agent/checkout/escrows/:id/cancel` - Cancel escrow
    - `GET|POST /api/agent/checkout/webhooks` and `PATCH|DELETE /api/agent/checkout/webhooks/:id` - Manage webhooks
+
+Checkout timing fields for `POST /api/agent/checkout/payreq`:
+- `expiresInSeconds`: funding deadline before request expires.
+- `autoReleaseSeconds`: when funded escrow can auto-release if no dispute exists.
+- `disputeWindowSeconds`: how long dispute can be opened after auto-release point.
+- Constraints: all three must be at least `3600` seconds, and `disputeWindowSeconds <= autoReleaseSeconds`.
 12. Optional Polymarket venue flow (polygon-mainnet wallets only):
    - Prerequisite: user configures Polymarket in dashboard Venues settings for that wallet
+   - `GET /api/agent/venues/polymarket/market/resolve` resolves `marketUrl`/`slug` + human-readable `outcome` to the exact `tokenId` needed for order tools
+   - MCP helper: `polymarket_market_resolve` calls the same agent endpoint
    - `POST /api/agent/venues/polymarket/orders/limit` - Place BUY/SELL limit orders
    - `POST /api/agent/venues/polymarket/orders/market` - Place BUY/SELL market orders
    - `GET /api/agent/venues/polymarket/account` - Read account summary
    - `GET /api/agent/venues/polymarket/orders` - List open orders
    - `POST /api/agent/venues/polymarket/orders/cancel` - Cancel an order
+   - `POST /api/agent/venues/polymarket/unlink` - Clear stored Polymarket integration config for a wallet
    - `GET /api/agent/venues/polymarket/activity` - List trade activity
    - `GET /api/agent/venues/polymarket/positions` - List open positions (open-market filtered, includes PnL fields)
 13. Use returned `txHash` / `orderId` values to confirm execution and lifecycle status
@@ -251,7 +264,7 @@ Example:
 | `/api/agent/wallets/create` | POST | Yes | Create a new API-key-managed wallet |
 | `/api/agent/wallets/import` | POST | Yes | Import a mainnet/polygon-mainnet/solana-mainnet wallet via API key |
 | `/api/agent/transactions` | GET | Yes | List per-wallet transaction history |
-| `/api/agent/transfer` | POST | Yes | Send native/token transfers (EVM + Solana) |
+| `/api/agent/transfer` | POST | Yes | Send native/token transfers (EVM + Solana). Not the checkout escrow funding path. |
 | `/api/agent/swap` | POST | Yes | Execute DEX swap (Uniswap on EVM, Jupiter on Solana mainnet) |
 | `/api/agent/quote` | POST | Yes | Get swap quotes (Uniswap on EVM, Jupiter on Solana mainnet) |
 | `/api/agent/token-balance` | POST | Yes | Check balances |
@@ -275,11 +288,13 @@ Example:
 | `/api/agent/checkout/webhooks` | POST | Yes | Create checkout webhook |
 | `/api/agent/checkout/webhooks/:id` | PATCH | Yes | Update checkout webhook |
 | `/api/agent/checkout/webhooks/:id` | DELETE | Yes | Delete checkout webhook |
+| `/api/agent/venues/polymarket/market/resolve` | GET | Yes | Resolve market URL/slug + outcome to Polymarket tokenId |
 | `/api/agent/venues/polymarket/orders/limit` | POST | Yes | Place Polymarket limit order |
 | `/api/agent/venues/polymarket/orders/market` | POST | Yes | Place Polymarket market order |
 | `/api/agent/venues/polymarket/account` | GET | Yes | Read Polymarket account summary |
 | `/api/agent/venues/polymarket/orders` | GET | Yes | List Polymarket open orders |
 | `/api/agent/venues/polymarket/orders/cancel` | POST | Yes | Cancel Polymarket order |
+| `/api/agent/venues/polymarket/unlink` | POST | Yes | Clear Polymarket integration for wallet |
 | `/api/agent/venues/polymarket/activity` | GET | Yes | List Polymarket trade activity |
 | `/api/agent/venues/polymarket/positions` | GET | Yes | List Polymarket open positions (open-market filtered with PnL fields) |
 
@@ -317,13 +332,22 @@ Behavior notes:
 
 - Polymarket execution is available only for EVM wallets on `polygon-mainnet`.
 - Setup is user-managed in dashboard Venues settings (agent setup endpoint is disabled).
+- Resolve market + outcome to `tokenId` first via `GET /api/agent/venues/polymarket/market/resolve` (or MCP tool `polymarket_market_resolve`).
 - Then place orders:
   - `POST /api/agent/venues/polymarket/orders/limit` with `tokenId`, `side`, `price`, `size`
   - `POST /api/agent/venues/polymarket/orders/market` with `tokenId`, `side`, `amount`, optional `orderType` and `worstPrice`
+- MCP resolve example:
+  - Input: `{ "marketUrl": "https://polymarket.com/market/<slug>", "outcome": "No" }`
+  - Output includes: `outcome.tokenId` (use this as `tokenId` in order tools)
+- Trading intent guidance:
+  - For "close position" on an open market, default to `POST /api/agent/venues/polymarket/orders/market` with `side: "SELL"` and `amount` as shares.
+  - Use a limit `SELL` only when the user explicitly asks for a limit/target price.
+  - `amount` semantics follow Polymarket CLOB behavior: `BUY` uses notional/collateral amount; `SELL` uses share amount.
 - Read and lifecycle endpoints:
   - `GET /api/agent/venues/polymarket/account`
   - `GET /api/agent/venues/polymarket/orders`
   - `POST /api/agent/venues/polymarket/orders/cancel` with `orderId`
+  - `POST /api/agent/venues/polymarket/unlink` to clear stored venue config for a wallet
   - `GET /api/agent/venues/polymarket/activity`
   - `GET /api/agent/venues/polymarket/positions`
 - Positions are sourced from Polymarket open positions and filtered to open markets only.
@@ -334,35 +358,36 @@ Behavior notes:
 
 Send native coin (default when no token specified):
 ```json
-{ "walletId": "Q7X2K9P", "to": "0xRecipient...", "amount": "0.01" }
+{ "walletId": "Q7X2K9P", "to": "0xRecipient...", "amountDisplay": "0.01" }
 ```
 
 Send 100 USDC by symbol:
 ```json
-{ "walletLabel": "Trading Bot", "to": "0xRecipient...", "token": "USDC", "amount": "100" }
+{ "walletLabel": "Trading Bot", "to": "0xRecipient...", "token": "USDC", "amountDisplay": "100" }
 ```
 
 Send arbitrary ERC-20 by contract address:
 ```json
-{ "walletId": "Q7X2K9P", "to": "0xRecipient...", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "amount": "100" }
+{ "walletId": "Q7X2K9P", "to": "0xRecipient...", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "amountDisplay": "100" }
 ```
 
 Send SOL by symbol:
 ```json
-{ "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "token": "SOL", "amount": "0.01" }
+{ "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "token": "SOL", "amountDisplay": "0.01" }
 ```
 
 Send SOL with memo (Solana only):
 ```json
-{ "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "token": "SOL", "amount": "0.01", "memo": "payment verification note" }
+{ "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "token": "SOL", "amountDisplay": "0.01", "memo": "payment verification note" }
 ```
 
-Use `amount` for human-readable values (e.g., "100" = 100 USDC). Use `value` for base units (smallest denomination on each chain).
+Use `amountDisplay` for human-readable values (e.g., "100" = 100 USDC). Use `valueBaseUnits` for base units (smallest denomination on each chain).
+Legacy transfer aliases `amount` and `value` remain available for compatibility.
 Use optional `chain: "evm" | "solana"` in agent payloads for explicit chain routing and validation.
 `memo` is supported only for Solana transfers and must pass safety validation (max 5 words, max 256 UTF-8 bytes, no control/invisible characters).
 Native transfers (EVM + Solana) enforce a minimum transferable amount preflight that accounts for platform fee and network fee; Solana may also require a larger first funding transfer for a brand-new recipient address.
 For native SOL transfers, the API may auto-adjust requested value to fit platform fee + network fee.
-Transfer responses include `requestedValue`, `adjustedValue`, `requestedAmount`, and `adjustedAmount`.
+Transfer responses include `requestedValueBaseUnits`, `adjustedValueBaseUnits`, `requestedAmountDisplay`, and `adjustedAmountDisplay` (legacy aliases also included).
 
 ## Token Support Model
 
@@ -401,7 +426,7 @@ Violations return HTTP 401 with an explanation message.
 - If requested native SOL + platform fee + network fee cannot fit wallet balance, API returns `400 insufficient_balance`
 - Swap supports EVM (Uniswap) and Solana mainnet (Jupiter); Quote supports EVM and Solana mainnet; Approve is EVM-only
 - A platform fee (default 1%) is deducted from the token amount
-- Use `amount` for simplicity, use `value` for precise base-unit control
+- Use `amountDisplay` for simplicity, use `valueBaseUnits` for precise base-unit control
 - For robust agent behavior:
   - First call `wallets`, then `wallet` (or `token-balance`), then `quote`, then `swap`.
   - On 400 with `insufficient_token_balance`, reduce amount or change token.

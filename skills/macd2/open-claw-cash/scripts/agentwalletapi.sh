@@ -39,6 +39,7 @@
 #   polymarket-limit <walletSelector> <tokenId> <BUY|SELL> <price> <size> [--yes]
 #   polymarket-market <walletSelector> <tokenId> <BUY|SELL> <amount> [orderType] [worstPrice] [--yes]
 #   polymarket-account <walletSelector>
+#   polymarket-resolve <marketUrl|slug> <outcome>
 #   polymarket-orders <walletSelector> [status] [limit] [cursor]
 #   polymarket-activity <walletSelector> [limit] [cursor]
 #   polymarket-positions <walletSelector> [limit]
@@ -182,6 +183,16 @@ require_decimal() {
     VALUE="$2"
     if ! [[ "$VALUE" =~ ^[0-9]+([.][0-9]+)?$ ]]; then
         echo "Error: $NAME must be a number."
+        exit 1
+    fi
+}
+
+require_polymarket_token_id() {
+    VALUE="$1"
+    if ! [[ "$VALUE" =~ ^[0-9]+$ ]]; then
+        echo "Error: tokenId must be a numeric Polymarket outcome token ID."
+        echo "Hint: resolve market + outcome first:"
+        echo "  agentwalletapi.sh polymarket-resolve <marketUrl|slug> <outcome>"
         exit 1
     fi
 }
@@ -400,7 +411,7 @@ case "$COMMAND" in
         json_escape_var AMOUNT_ESC "$AMOUNT"
         BODY="{"
         append_wallet_id_json_field BODY "$WALLET_ID"
-        BODY="$BODY, \"to\": \"$TO_ESC\", \"amount\": \"$AMOUNT_ESC\""
+        BODY="$BODY, \"to\": \"$TO_ESC\", \"amountDisplay\": \"$AMOUNT_ESC\""
         if [ "$TOKEN" != "ETH" ]; then
             json_escape_var TOKEN_ESC "$TOKEN"
             BODY="$BODY, \"token\": \"$TOKEN_ESC\""
@@ -530,6 +541,14 @@ case "$COMMAND" in
         require_uint "expiresSec" "$EXPIRES"
         require_uint "autoReleaseSec" "$AUTO_RELEASE"
         require_uint "disputeWindowSec" "$DISPUTE_WINDOW"
+        if [ "$EXPIRES" -lt 3600 ] || [ "$AUTO_RELEASE" -lt 3600 ] || [ "$DISPUTE_WINDOW" -lt 3600 ]; then
+            echo "expiresSec, autoReleaseSec, and disputeWindowSec must each be at least 3600 (1 hour)." >&2
+            exit 1
+        fi
+        if [ "$DISPUTE_WINDOW" -gt "$AUTO_RELEASE" ]; then
+            echo "disputeWindowSec must be less than or equal to autoReleaseSec." >&2
+            exit 1
+        fi
         json_escape_var AMOUNT_ESC "$AMOUNT"
         BODY="{"
         append_wallet_or_address_json_field BODY "$WALLET_SELECTOR"
@@ -834,7 +853,7 @@ case "$COMMAND" in
     polymarket-config)
         echo "Polymarket setup via agent API is disabled."
         echo "Ask your human to complete setup at https://openclawcash.com/venues/polymarket."
-        echo "Then use polymarket-limit|polymarket-market and polymarket-account|polymarket-orders|polymarket-activity|polymarket-positions."
+        echo "Then use polymarket-resolve, polymarket-limit|polymarket-market and polymarket-account|polymarket-orders|polymarket-activity|polymarket-positions."
         exit 1
         ;;
 
@@ -849,6 +868,7 @@ case "$COMMAND" in
             echo "Usage: agentwalletapi.sh polymarket-limit <walletSelector> <tokenId> <BUY|SELL> <price> <size> [--yes]"
             exit 1
         fi
+        require_polymarket_token_id "$TOKEN_ID"
         require_decimal "price" "$PRICE"
         require_decimal "size" "$SIZE"
         json_escape_var TOKEN_ID_ESC "$TOKEN_ID"
@@ -875,6 +895,7 @@ case "$COMMAND" in
             echo "Usage: agentwalletapi.sh polymarket-market <walletSelector> <tokenId> <BUY|SELL> <amount> [orderType] [worstPrice] [--yes]"
             exit 1
         fi
+        require_polymarket_token_id "$TOKEN_ID"
         require_decimal "amount" "$AMOUNT"
         require_decimal "worstPrice" "$WORST_PRICE"
         json_escape_var TOKEN_ID_ESC "$TOKEN_ID"
@@ -902,6 +923,24 @@ case "$COMMAND" in
         else
             append_query_param URL "walletId" "$WALLET_SELECTOR"
         fi
+        curl -s -H "X-Agent-Key: $AGENTWALLETAPI_KEY" \
+            "$URL" | pretty_print_json
+        ;;
+
+    polymarket-resolve)
+        MARKET_OR_SLUG="$2"
+        OUTCOME="$3"
+        if [ -z "$MARKET_OR_SLUG" ] || [ -z "$OUTCOME" ]; then
+            echo "Usage: agentwalletapi.sh polymarket-resolve <marketUrl|slug> <outcome>"
+            exit 1
+        fi
+        URL="$BASE_URL/api/agent/venues/polymarket/market/resolve"
+        if [[ "$MARKET_OR_SLUG" =~ ^https?:// ]]; then
+            append_query_param URL "marketUrl" "$MARKET_OR_SLUG"
+        else
+            append_query_param URL "slug" "$MARKET_OR_SLUG"
+        fi
+        append_query_param URL "outcome" "$OUTCOME"
         curl -s -H "X-Agent-Key: $AGENTWALLETAPI_KEY" \
             "$URL" | pretty_print_json
         ;;
@@ -1039,6 +1078,7 @@ case "$COMMAND" in
         echo "  polymarket-limit <walletSelector> <tokenId> <BUY|SELL> <price> <size> [--yes]"
         echo "  polymarket-market <walletSelector> <tokenId> <BUY|SELL> <amount> [orderType] [worstPrice] [--yes]"
         echo "  polymarket-account <walletSelector>"
+        echo "  polymarket-resolve <marketUrl|slug> <outcome>"
         echo "  polymarket-orders <walletSelector> [status] [limit] [cursor]"
         echo "  polymarket-activity <walletSelector> [limit] [cursor]"
         echo "  polymarket-positions <walletSelector> [limit]"
@@ -1065,6 +1105,7 @@ case "$COMMAND" in
         echo "  agentwalletapi.sh checkout-swap-and-pay-quote es_d4e5f6 2"
         echo "  agentwalletapi.sh checkout-release es_d4e5f6 --yes"
         echo "  agentwalletapi.sh polymarket-market 2 123456 BUY 25 FAK 0.65 --yes"
+        echo "  agentwalletapi.sh polymarket-resolve https://polymarket.com/market/market-slug No"
         echo "  agentwalletapi.sh polymarket-account 2"
         echo "  agentwalletapi.sh polymarket-orders 2 OPEN 50"
         echo "  agentwalletapi.sh polymarket-cancel 2 0xorderid --yes"

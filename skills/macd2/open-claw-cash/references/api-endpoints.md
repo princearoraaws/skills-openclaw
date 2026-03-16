@@ -265,43 +265,45 @@ X-Agent-Key: occ_your_api_key
 | chain | string | No | Optional guard: `"evm"` or `"solana"` |
 | to | string | Yes | Recipient address (0x... for EVM, base58 for Solana) |
 | token | string | No | Token symbol or token address/mint. Defaults to chain native token (ETH/SOL) |
-| amount | string | One of amount/value | Human-readable amount (e.g., "100" for 100 USDC) |
-| value | string | One of amount/value | Amount in base units (e.g., "100000000" for 100 USDC with 6 decimals) |
+| amountDisplay | string | One of amountDisplay/valueBaseUnits | Human-readable amount (e.g., "100" for 100 USDC) |
+| valueBaseUnits | string | One of amountDisplay/valueBaseUnits | Amount in base units (e.g., "100000000" for 100 USDC with 6 decimals) |
+| amount | string | Deprecated | Legacy alias for amountDisplay |
+| value | string | Deprecated | Legacy alias for valueBaseUnits |
 | memo | string | No | Solana-only transfer memo. Max 5 words, max 256 UTF-8 bytes, no control/invisible characters |
 
 ### Examples
 
 Send 0.01 ETH:
 ```json
-{ "walletId": 2, "to": "0xRecipient...", "amount": "0.01" }
+{ "walletId": 2, "to": "0xRecipient...", "amountDisplay": "0.01" }
 ```
 
 Send 100 USDC by symbol:
 ```json
-{ "walletLabel": "Trading Bot", "to": "0xRecipient...", "token": "USDC", "amount": "100" }
+{ "walletLabel": "Trading Bot", "to": "0xRecipient...", "token": "USDC", "amountDisplay": "100" }
 ```
 
 Send USDC by contract address + base units:
 ```json
-{ "walletId": 2, "to": "0xRecipient...", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "value": "100000000" }
+{ "walletId": 2, "to": "0xRecipient...", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "valueBaseUnits": "100000000" }
 ```
 
 Send arbitrary ERC-20 by address + human amount:
 ```json
-{ "walletId": 2, "to": "0xRecipient...", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "amount": "100" }
+{ "walletId": 2, "to": "0xRecipient...", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "amountDisplay": "100" }
 ```
 
 Send 0.01 SOL:
 ```json
-{ "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "token": "SOL", "amount": "0.01" }
+{ "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "token": "SOL", "amountDisplay": "0.01" }
 ```
 Send 0.01 SOL with memo:
 ```json
-{ "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "token": "SOL", "amount": "0.01", "memo": "payment verification note" }
+{ "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "token": "SOL", "amountDisplay": "0.01", "memo": "payment verification note" }
 ```
 Optional chain guard example:
 ```json
-{ "chain": "solana", "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "amount": "0.01" }
+{ "chain": "solana", "walletId": "Q7X2K9P", "to": "SolanaRecipientWalletAddress...", "amountDisplay": "0.01" }
 ```
 
 ### Response
@@ -312,10 +314,12 @@ Optional chain guard example:
   "status": "confirmed",
   "token": "USDC",
   "tokenAddress": "0xA0b86991...",
-  "requestedValue": "100000000",
-  "adjustedValue": "100000000",
-  "requestedAmount": "100",
-  "adjustedAmount": "100",
+  "requestedValueBaseUnits": "100000000",
+  "adjustedValueBaseUnits": "100000000",
+  "requestedAmountDisplay": "100",
+  "adjustedAmountDisplay": "100",
+  "valueBaseUnits": "100000000",
+  "amountDisplay": "100",
   "fee": "1000000",
   "feePercent": "1%",
   "feeAmount": "1.0",
@@ -328,6 +332,13 @@ Optional chain guard example:
 ```
 
 Behavior notes:
+- Checkout escrow destinations are enforced separately from generic transfer:
+  - If `to` is an open escrow address and the transfer network or asset does not match checkout settlement rules, API returns `409` with code `unsupported_funding_network` or `unsupported_funding_asset`.
+  - Error `details.acceptedFundingAssets` provides the allowed funding asset for that escrow.
+  - For escrow funding, use checkout endpoints instead of generic transfer:
+    - `POST /api/agent/checkout/escrows/:id/quick-pay`
+    - `POST /api/agent/checkout/escrows/:id/swap-and-pay`
+    - `POST /api/agent/checkout/escrows/:id/funding-confirm` (external/manual tx confirm)
 - Native transfers (EVM + Solana) enforce a minimum transferable amount preflight that considers platform fee and network fee.
 - For native SOL transfers, server estimates network fee and may reduce requested gross amount so transfer + platform fee + network fee fits wallet balance.
 - For first-time funding of a brand-new Solana address, a larger minimum transfer may be required; too-small requests return `400` with code `amount_below_min_transfer`.
@@ -521,6 +532,15 @@ POST /api/agent/checkout/payreq
 
 Creates a signed pay request and escrow wallet.
 
+Timing fields (plain meaning):
+- `expiresInSeconds`: deadline for buyer funding before request expires.
+- `autoReleaseSeconds`: point when funded escrow can auto-release if no dispute is opened.
+- `disputeWindowSeconds`: dispute window length after the auto-release point.
+
+Validation rules:
+- Minimum `3600` (1 hour) for all three fields.
+- `disputeWindowSeconds` must be less than or equal to `autoReleaseSeconds`.
+
 ### Get Pay Request
 
 ```
@@ -599,6 +619,50 @@ Subscribe and manage escrow event deliveries (`escrow.funded`, `escrow.released`
 - Agent endpoint setup is disabled.
 - Ask your human to complete setup at: https://openclawcash.com/venues/polymarket
 - After user setup is complete, use the agent venue order/read endpoints below.
+- MCP convenience tool: `polymarket_market_resolve`
+  - Purpose: resolve `marketUrl` or `slug` plus human-readable `outcome` to the exact `tokenId` required by order endpoints.
+  - Typical MCP flow:
+    1. Call `polymarket_market_resolve` with `{ marketUrl|slug, outcome }`
+    2. Use returned `outcome.tokenId` in `POST /api/agent/venues/polymarket/orders/market` or `/limit`
+
+## Polymarket Market Resolver (Agent API)
+
+```
+GET /api/agent/venues/polymarket/market/resolve?marketUrl=https://polymarket.com/market/<slug>&outcome=No
+X-Agent-Key: occ_your_api_key
+```
+
+Alternative query form:
+
+```
+GET /api/agent/venues/polymarket/market/resolve?slug=<slug>&outcome=No
+X-Agent-Key: occ_your_api_key
+```
+
+Response:
+```json
+{
+  "venue": "polymarket",
+  "market": {
+    "slug": "market-slug",
+    "question": "Will X happen?",
+    "conditionId": "0x...",
+    "url": "https://polymarket.com/market/market-slug",
+    "active": true,
+    "closed": false
+  },
+  "outcome": {
+    "requested": "No",
+    "normalized": "No",
+    "index": 1,
+    "tokenId": "123456789..."
+  },
+  "outcomes": [
+    { "label": "Yes", "tokenId": "111...", "selected": false },
+    { "label": "No", "tokenId": "123456789...", "selected": true }
+  ]
+}
+```
 
 ## Polymarket Limit Order (Agent API)
 
@@ -658,6 +722,11 @@ Response:
   "txHash": "optional-tx-hash"
 }
 ```
+
+Notes:
+- For close-position intent on open markets, prefer market `SELL` (`side: "SELL"`).
+- Use limit `SELL` only when a specific target price is requested.
+- `amount` semantics: `BUY` means notional/collateral amount; `SELL` means share amount.
 
 ## Polymarket Account Summary (Agent API)
 
@@ -721,6 +790,32 @@ Response:
   "network": "polygon-mainnet",
   "status": "cancel_requested",
   "orderId": "your-order-id"
+}
+```
+
+## Polymarket Clear Integration (Agent API)
+
+```
+POST /api/agent/venues/polymarket/unlink
+Content-Type: application/json
+X-Agent-Key: occ_your_api_key
+```
+
+Request:
+```json
+{
+  "walletId": "Q7X2K9P"
+}
+```
+
+Response:
+```json
+{
+  "venue": "polymarket",
+  "walletId": "Q7X2K9P",
+  "walletAddress": "0x...",
+  "network": "polygon-mainnet",
+  "status": "cleared"
 }
 ```
 
@@ -828,5 +923,5 @@ Network is fixed at wallet creation and cannot be changed.
 - Polymarket endpoints require a configured `polygon-mainnet` EVM wallet
 - All Polymarket order/read endpoints require exactly one wallet selector (`walletId` or `walletAddress`)
 - Platform fee is deducted from the token amount (not ETH), consistent with ETH transfers
-- Use `amount` for simplicity (human-readable), use `value` when you need precise base-unit control
+- For transfer, use `amountDisplay` for simplicity (human-readable), use `valueBaseUnits` when you need precise base-unit control (legacy `amount`/`value` aliases are still accepted)
 - Optional `chain` guard is supported on agent endpoints; mismatches return `400` with `code: "chain_mismatch"`.
