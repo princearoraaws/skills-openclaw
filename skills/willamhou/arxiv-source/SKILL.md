@@ -8,20 +8,25 @@ metadata:
     requires:
       bins: []
       os: [darwin, linux, win32]
+      runtime: node
+    network:
+      - host: arxiv.org
+        purpose: Fetch paper LaTeX source tarballs and Atom API metadata
+      - host: export.arxiv.org
+        purpose: Alternate arXiv download endpoint
 ---
 
 # arxiv-reader
 
-Read and analyze arXiv papers directly from the workspace. Converts LaTeX source into clean text suitable for LLM analysis.
+Read and analyze arXiv papers by fetching their public LaTeX source. Converts LaTeX into clean text suitable for LLM analysis.
 
 ## Description
 
-This skill fetches arXiv papers, flattens LaTeX includes, and returns clean text. It works in two modes:
+This skill fetches arXiv papers from the **public arXiv API** (arxiv.org), flattens LaTeX includes, and returns clean text. No local file access is required — all content is fetched over HTTPS from arXiv's public endpoints and cached in memory for the session.
 
-- **Standalone mode** (default): Downloads directly from arXiv using Node.js built-ins. No Docker or Python required.
-- **Container mode**: Delegates to the arXiv server (port 8082) if available, for faster processing.
+**Network access:** Only connects to `arxiv.org` and `export.arxiv.org` to download publicly available paper source tarballs and metadata. No other network connections are made. No data is sent to external services — this is read-only.
 
-Results are cached locally (`~/.cache/arxiv-reader/` in standalone, `/workspace/.cache/arxiv/` in container) for fast repeat access.
+**Caching:** Results are cached in memory (process-scoped) for fast repeat access within the same session. No files are written to disk.
 
 ## Usage Examples
 
@@ -85,8 +90,9 @@ Extract just the abstract from an arXiv paper.
 
 ## Notes
 
-- All results are cached locally — repeat requests are instant
-- Works standalone (no Docker required) or with the container arXiv server
+- Results are cached in memory — repeat requests within the same session are instant
 - Paper IDs support version suffixes (e.g. `2301.00001v2`)
 - Very large papers may take 10-30 seconds on first fetch
-- `arxiv_abstract` uses the arXiv Atom API for fast metadata retrieval in standalone mode
+- `arxiv_abstract` uses the public arXiv Atom API for fast metadata retrieval
+- No filesystem writes — all caching is in-memory only
+- Only connects to arxiv.org (read-only, public data)

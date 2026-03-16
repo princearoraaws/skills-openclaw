@@ -1,13 +1,18 @@
 {
   "owner": "willamhou",
   "slug": "arxiv-source",
-  "displayName": "Arxiv Reader",
+  "displayName": "arXiv Source Reader",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1773646453494,
-    "commit": "https://github.com/openclaw/skills/commit/5aa1c31aaf576974b7c533a9632192dca44e5f18"
+    "version": "1.0.5",
+    "publishedAt": 1773655324967,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1773646453494,
+      "commit": "https://github.com/openclaw/skills/commit/5aa1c31aaf576974b7c533a9632192dca44e5f18"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1773194908543,
