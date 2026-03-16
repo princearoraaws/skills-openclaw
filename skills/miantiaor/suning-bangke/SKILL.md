@@ -1,3 +1,8 @@
+---
+name: suning-bangke
+description: 苏宁帮客预约服务
+---
+
 # 苏宁帮客预约服务 Skill
 
 ## Description

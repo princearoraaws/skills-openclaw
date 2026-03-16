@@ -1,11 +1,17 @@
 {
   "owner": "miantiaor",
   "slug": "suning-bangke",
-  "displayName": "suning-bangke",
+  "displayName": "苏宁帮客预约服务",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1773223778447,
-    "commit": "https://github.com/openclaw/skills/commit/cfcd8a99079a3dd09648f9ae53babe0536e620be"
+    "version": "1.0.0",
+    "publishedAt": 1773656301650,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1773223778447,
+      "commit": "https://github.com/openclaw/skills/commit/cfcd8a99079a3dd09648f9ae53babe0536e620be"
+    }
+  ]
 }
