@@ -1,165 +1,63 @@
 ---
-name: VIP Shopping
-slug: vip
-version: 1.1.0
-homepage: https://clawic.com/skills/vip
-description: Shop VIP.com with smart deal finding, flash sale timing, brand navigation, and price comparison guidance.
-metadata:
-  clawdbot:
-    emoji: "🛍️"
-    requires:
-      bins: []
-    os: ["linux", "darwin", "win32"]
+name: vip
+description: Help users decide when VIP.com (Vipshop) is a good shopping choice for branded discount retail. Use when the user asks where to buy branded fashion, beauty, or discount retail items, whether Vipshop is a good fit, or how to think about off-season and branded discount buying.
 ---
 
-## When to Use
+# VIP
 
-User wants to shop on VIP.com (唯品会). Agent helps with flash sale timing, brand discovery, price comparison, and finding the best deals on China's leading flash sale platform.
+Help users judge when Vipshop is the right platform for branded discount buying.
 
-## Quick Reference
+This is a low-sensitivity public skill. It focuses on public decision support and does not perform login, account access, cookie handling, order retrieval, coupon claiming, local database persistence, or browser automation runtime actions.
 
-| Topic | File |
-|-------|------|
-| Flash sale timing | `timing.md` |
-| Brand directory | `brands.md` |
-| Price comparison | `pricing.md` |
+Use this skill when the user wants public buying, ordering, sourcing, or booking guidance rather than account-state operations.
 
-## Core Rules
+For live page inspection, account pages, checkout-state actions, or real-time retrieval that depends on login, switch to browser-based workflows instead of pretending this skill performs those actions directly.
 
-### 1. Flash Sale Timing is Everything
+Read these references as needed:
+- `references/discount-guide.md` for supporting guidance
+- `references/output-patterns.md` for supporting guidance
 
-VIP.com operates on **timed flash sales** (限时特卖):
+## Workflow
 
-| Sale Type | Timing | Best For |
-|-----------|--------|----------|
-| Morning Flash | 10:00 AM | Fresh arrivals, full sizes |
-| Afternoon Drop | 2:00 PM | Mid-day restocks |
-| Evening Rush | 8:00 PM | Clearance deals, last sizes |
-| Midnight Clearance | 12:00 AM | Deep discounts, limited stock |
+1. Identify the user's shopping, ordering, or booking need.
+   - Accept a product, merchant, ride, store, or booking scenario.
+   - If the request is too broad, ask one short clarifying question.
 
-**Strategy:**
-- Check upcoming sales 24h in advance
-- Set reminders for high-priority brands
-- Popular items sell out within 15-30 minutes
+2. Focus on public decision-relevant factors.
+   - Prefer category fit, trust, timing, fees, conditions, and scenario fit over superficial labels.
 
-### 2. Brand Navigation Priority
+3. Explain trade-offs.
+   - Say why the strongest option fits.
+   - Mention meaningful risks or caveats.
 
-VIP features **brand-specific sale events**:
+4. Give practical next-step advice.
+   - Tell the user what to verify before paying or placing an order.
 
-| Category | Top Brands to Watch |
-|----------|---------------------|
-| Women's Fashion | 欧时力(Ochirly),  Five Plus, 太平鸟 |
-| Men's Fashion | 海澜之家, 七匹狼, 杰克琼斯 |
-| Sportswear | 耐克, 阿迪达斯, 安踏, 李宁 |
-| Beauty | 欧莱雅, 美宝莲, 完美日记 |
-| Home & Kids | 全棉时代, 好孩子, 巴拉巴拉 |
+## Output
 
-**Pro Tip:** Each brand sale lasts 24-72 hours. Mark your calendar for favorite brands.
+Use this structure unless the user asks for something shorter:
 
-### 3. Price Intelligence
+### Best Option
+State the strongest current choice.
 
-**Original Price Verification:**
-- VIP shows "market price" vs "VIP price"
-- Cross-check with Tmall/JD for true market value
-- True discounts: 30-70% off are common
-- Suspicious: "90% off" claims (verify carefully)
+### Why
+List the main reasons.
 
-**Price Tracking Strategy:**
-- Same items often return in 2-4 week cycles
-- Track desired items across multiple sales
-- End-of-season sales (Jan/Feb, Jul/Aug) = deepest discounts
+### Caveats
+List meaningful concerns or trade-offs.
 
-### 4. Size & Fit Guidance
+### Final Advice
+Give a direct practical suggestion.
 
-| Region | VIP Sizing |
-|--------|------------|
-| Domestic Brands | True to Chinese sizing (usually smaller than US) |
-| International Brands | Check size chart carefully |
-| Shoes | European sizing standard |
+## Quality bar
 
-**Sizing Tips:**
-- Always check size chart measurements (cm/inches)
-- Read review comments for "偏大/偏小" (runs large/small)
-- When in doubt, size up for comfort
+Do:
+- focus on public decision support
+- explain trade-offs clearly
+- stay honest about not doing account-state operations
 
-### 5. Quality Assessment Protocol
-
-**Red Flags to Avoid:**
-- No product photos (only stock images)
-- Less than 50 reviews
-- Return rate >15% mentioned in reviews
-- Vague material descriptions
-
-**Green Signals:**
-- Detailed product photos (5+ angles)
-- Video reviews from buyers
-- Specific fabric composition listed
-- High repeat purchase rate
-
-### 6. Shipping & Returns
-
-| Aspect | Details |
-|--------|---------|
-| Standard Shipping | 3-7 days (major cities) |
-| Free Shipping Threshold | Usually ¥88-288 depending on promotion |
-| Return Window | 7 days from receipt |
-| Return Cost | Free for quality issues; buyer pays for size/color changes |
-| Non-returnable | Swimwear, underwear, cosmetics, personalized items |
-
-**Return Strategy:**
-- Document item condition on arrival (photos)
-- Keep original packaging
-- Initiate return within 24h if issues found
-
-### 7. Smart Cart Building
-
-**Timing Strategies:**
-1. **Early Access:** VIP Plus members get 30-min early access
-2. **Cart Hold:** Add items immediately, checkout within 20 minutes
-3. **Flash Sale Stacking:** Combine multiple concurrent sales
-4. **Coupon Hunting:** Check homepage banners for stackable coupons
-
-**Payment Optimization:**
-- VIP Wallet: occasional extra discounts
-- Bank partnerships: check for card-specific deals
-- First-time user: usually has welcome coupons
-
-## Common Traps
-
-- **FOMO purchasing** → Flash sales create urgency; sleep on carts over ¥500
-- **Ignoring size charts** → Chinese sizing runs smaller than Western
-- **Trusting stock photos** → Always check buyer photos in reviews
-- **Missing return deadline** → 7-day window is strict
-- **Not comparing prices** → "Original price" may be inflated
-- **Ignoring shipping costs** → Factor into total price if under free threshold
-
-## VIP-Specific Features to Leverage
-
-### 1. 唯品会超级VIP (VIP Plus)
-- Early access to sales
-- Free shipping on all orders
-- Exclusive member prices
-- Worth it if you shop monthly
-
-### 2. 品牌特卖日历
-- Check weekly sale calendar
-- Plan purchases around favorite brands
-- Major sales: 3.8, 6.18, 11.11, 12.12
-
-### 3. 今日特卖 vs 明日预告
-- 今日特卖: Active sales (act fast)
-- 明日预告: Upcoming sales (plan ahead)
-
-## Related Skills
-
-Install with `clawhub install <slug>` if user confirms:
-- `shopping` — general shopping assistance
-- `fashion` — style and outfit guidance
-- `ecommerce` — broader ecommerce patterns
-- `taobao` — Taobao marketplace guidance
-- `jd` — JD.com shopping guidance
-
-## Feedback
-
-- If useful: `clawhub star vip`
-- Stay updated: `clawhub sync`
+Do not:
+- pretend to log in
+- claim to retrieve orders, coupons, or account data
+- store cookies or user data
+- present heuristics as guaranteed outcomes
