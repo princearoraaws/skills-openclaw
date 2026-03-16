@@ -1,13 +1,18 @@
 {
   "owner": "kelcey2023",
   "slug": "zeelin-twitter-x-autopost",
-  "displayName": "ZeeLin Twitter/X AutoPost",
+  "displayName": "ZeeLin Twitter/X 运营",
   "latest": {
-    "version": "1.3.0",
-    "publishedAt": 1772757099546,
-    "commit": "https://github.com/openclaw/skills/commit/aeb654688a7dd427ff3080df23d3178ff3a063f9"
+    "version": "1.1.1",
+    "publishedAt": 1773454339147,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.3.0",
+      "publishedAt": 1772757099546,
+      "commit": "https://github.com/openclaw/skills/commit/aeb654688a7dd427ff3080df23d3178ff3a063f9"
+    },
     {
       "version": "1.2.0",
       "publishedAt": 1772615367004,
