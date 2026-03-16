@@ -1,7 +1,8 @@
 ---
+version: "2.0.0"
 name: roomba-control
-version: 1.0.0
-description: Manage iRobot Roomba vacuums via the cloud API. Start/stop/schedule cleaning jobs, monitor consumable status, and view cleaning maps and history.
+description: "Manage iRobot Roomba vacuums via the cloud API. Start/stop/schedule cleaning jobs, monitor consumable status, and view cleaning maps and history. Use when you need roomba control capabilities. Triggers on: roomba control."
+author: BytesAgain
 ---
 
 # Roomba Control
@@ -241,9 +242,21 @@ fi
 ## Troubleshooting
 
 | Issue | Solution |
-|-------|----------|
-| "Robot offline" | Check Wi-Fi. Reboot robot (hold CLEAN 10s). Verify iRobot app works. |
-| "Authentication failed" | Re-run `setup`. Check credentials. Verify 2FA if enabled. |
-| "Room not found" | Room names must match exactly. Use `bash scripts/roomba-ctl.sh rooms` to list. |
-| "Cannot clean — bin full" | Empty the dustbin or dust bag, then retry. |
-| Slow response | iRobot cloud can be slow. Script retries 3x with backoff. |
+| Command | Description |
+|---------|-------------|
+| `setup` | Configuration instructions |
+| `status` | Full robot status + consumables |
+| `clean` | Clean |
+| `dock` | Send to charging dock |
+| `pause` | Pause |
+| `resume` | Resume |
+| `schedule` | Schedule |
+| `history` | View cleaning history |
+
+---
+💬 Feedback & Feature Requests: https://bytesagain.com/feedback
+Powered by BytesAgain | bytesagain.com
+
+## Commands
+
+Run `roomba-control help` to see all available commands.
