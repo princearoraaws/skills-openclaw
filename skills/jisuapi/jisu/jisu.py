@@ -59,6 +59,7 @@ API_LIST = [
     {"api": "vehiclelimit/city", "desc": "限行城市列表"},
     {"api": "vehiclelimit/query", "desc": "限行查询，params: city, date 等"},
     {"api": "vin/query", "desc": "VIN 车辆信息，params: vin"},
+    {"api": "vinrecognition/recognize", "desc": "VIN 车架号图像识别，params: pic(base64)"},
     {"api": "oil/query", "desc": "省市油价查询，params 可选 province"},
     {"api": "oil/province", "desc": "油价支持省市列表"},
     {"api": "silver/shgold", "desc": "上海黄金交易所白银价格"},
@@ -90,6 +91,10 @@ API_LIST = [
     {"api": "barcode/generate", "desc": "条码生成，params: type, barcode, fontsize, dpi, scale, height"},
     {"api": "barcode/read", "desc": "条码识别，params: barcode(URL 或 base64)"},
     {"api": "barcode2/query", "desc": "商品条码查询，params: barcode"},
+    {"api": "generalrecognition/recognize", "desc": "通用文字识别 OCR，params: pic(base64)、type(cnen/en/fr/pt/de/it/es/ru/jp)"},
+    {"api": "idcardrecognition/type", "desc": "身份证识别支持的证件类型列表"},
+    {"api": "idcardrecognition/recognize", "desc": "身份证等证件 OCR 识别，params: typeid, pic(base64)"},
+    {"api": "bankcardcognition/recognize", "desc": "银行卡 OCR 识别，params: pic(base64)"},
 ]
 
 

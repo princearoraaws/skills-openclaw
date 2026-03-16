@@ -24,14 +24,14 @@ $env:JISU_API_KEY="your_appkey_here"
 
 ## 脚本路径
 
-脚本文件：`skill/jisu/jisu.py`
+脚本文件：`skills/jisu/jisu.py`
 
 ## 使用方式
 
 ### 1. 列出支持的接口（list）
 
 ```bash
-python3 skill/jisu/jisu.py list
+python3 skills/jisu/jisu.py list
 ```
 
 返回当前支持的 `api` 列表及简短说明，便于按需选择接口。
@@ -43,17 +43,17 @@ python3 skill/jisu/jisu.py list
 **无参示例：**
 
 ```bash
-python3 skill/jisu/jisu.py call '{"api":"gold/shgold"}'
-python3 skill/jisu/jisu.py call '{"api":"stockindex/sh"}'
+python3 skills/jisu/jisu.py call '{"api":"gold/shgold"}'
+python3 skills/jisu/jisu.py call '{"api":"stockindex/sh"}'
 ```
 
 **带参示例：**
 
 ```bash
-python3 skill/jisu/jisu.py call '{"api":"stock/query","params":{"code":"300917"}}'
-python3 skill/jisu/jisu.py call '{"api":"weather/query","params":{"city":"北京"}}'
-python3 skill/jisu/jisu.py call '{"api":"recipe/search","params":{"keyword":"白菜","num":10,"start":0}}'
-python3 skill/jisu/jisu.py call '{"api":"exchange/convert","params":{"from":"CNY","to":"USD","amount":100}}'
+python3 skills/jisu/jisu.py call '{"api":"stock/query","params":{"code":"300917"}}'
+python3 skills/jisu/jisu.py call '{"api":"weather/query","params":{"city":"北京"}}'
+python3 skills/jisu/jisu.py call '{"api":"recipe/search","params":{"keyword":"白菜","num":10,"start":0}}'
+python3 skills/jisu/jisu.py call '{"api":"exchange/convert","params":{"from":"CNY","to":"USD","amount":100}}'
 ```
 
 返回格式与极速数据官网一致：成功时为 `result` 内容；失败时脚本返回 `error`、`code`、`message` 等。
@@ -89,6 +89,10 @@ python3 skill/jisu/jisu.py call '{"api":"exchange/convert","params":{"from":"CNY
 | 车型大全     | car/brand, car/type, car/car, car/detail, car/search, car/hot, car/rank | 品牌/车型/车款/详情/搜索/热门/销量排行 |
 | 限行     | vehiclelimit/city, vehiclelimit/query | 限行城市、限行查询 |
 | 车辆     | vin/query                | VIN 车辆信息，params: vin |
+| VIN识别 OCR | vinrecognition/recognize | VIN 车架号图像识别，params: pic(base64 或本地读后编码) |
+| 通用文字识别 OCR | generalrecognition/recognize | 通用文字识别，将图片中的文字识别为文本，params: pic(base64)、type(cnen/en/fr/pt/de/it/es/ru/jp) |
+| 身份证等证件 OCR | idcardrecognition/type, idcardrecognition/recognize | 证件类型列表，以及身份证/驾照/护照等证件 OCR 识别，params: typeid, pic(base64) |
+| 银行卡 OCR | bankcardcognition/recognize | 银行卡号、卡类型、银行名称识别，params: pic(base64) |
 | 油价     | oil/query, oil/province  | 省市油价、支持省市列表 |
 | 白银     | silver/shgold, silver/shfutures, silver/london | 上海黄金/上海期货/伦敦银价 |
 | 万年历     | calendar/query, calendar/holiday, huangli/date | 万年历、节假日、黄历 |
@@ -110,8 +114,8 @@ python3 skill/jisu/jisu.py call '{"api":"exchange/convert","params":{"from":"CNY
 ## 在 OpenClaw 中的推荐用法
 
 1. 用户提问：「北京天气怎么样」「300917 股票今天多少钱」「人民币兑美元汇率」等。
-2. 代理先调用 `python3 skill/jisu/jisu.py list` 确认接口名，再按需调用 `call`，例如：  
-   `python3 skill/jisu/jisu.py call '{"api":"weather/query","params":{"city":"北京"}}'`  
-   `python3 skill/jisu/jisu.py call '{"api":"stock/detail","params":{"code":"300917"}}'`  
-   `python3 skill/jisu/jisu.py call '{"api":"exchange/convert","params":{"from":"CNY","to":"USD","amount":1}}'`  
+2. 代理先调用 `python3 skills/jisu/jisu.py list` 确认接口名，再按需调用 `call`，例如：  
+   `python3 skills/jisu/jisu.py call '{"api":"weather/query","params":{"city":"北京"}}'`  
+   `python3 skills/jisu/jisu.py call '{"api":"stock/detail","params":{"code":"300917"}}'`  
+   `python3 skills/jisu/jisu.py call '{"api":"exchange/convert","params":{"from":"CNY","to":"USD","amount":1}}'`  
 3. 从返回的 `result` 中抽取关键字段，用自然语言回复用户；若需更多接口参数说明，可引导用户查看极速数据官网文档。
