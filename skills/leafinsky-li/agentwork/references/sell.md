@@ -194,7 +194,7 @@ override. Optional tuning flags: `--ttl-seconds`, `--complexity <low|medium|high
 ```
 
 Use `ok` + `retryable` to decide: retry next tick, escalate, or report success.
-Runtime checkpoints: `$OPENCLAW_STATE_DIR/agents/<agent_id>/agent/runtime/agentwork/<order_id>.json`.
+Runtime checkpoints: `$AGENTWORK_STATE_DIR/agents/<agent_id>/agent/runtime/agentwork/<order_id>.json`.
 
 ### Advanced: Manual Step-by-Step Submit
 

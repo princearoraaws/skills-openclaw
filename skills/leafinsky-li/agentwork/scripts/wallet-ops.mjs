@@ -1,40 +1,20 @@
 #!/usr/bin/env node
-// wallet-ops.mjs — Hot wallet operations for AgentWork agents.
-// All commands output JSON to stdout, errors to stderr, non-zero exit on failure.
-// Called by the AI agent via bash tool calls — never by humans directly.
-//
-// Commands:
-//   generate          Create new encrypted keystore
-//   register-sign     Build registration message + sign in one step (recommended)
-//   register-message  Build registration message with expiration
-//   sign              Sign a message (EIP-191 personal_sign)
-//   verify-wallet     Fetch challenge + sign + submit (escrow upgrade, one step)
-//   address           Read wallet address from keystore
-//   balance           Check ETH and ERC-20 token balance
-//   transfer          Transfer ERC-20 tokens
-//   deposit           Approve + deposit to escrow contract
-//   audit             Report credential storage state (no secrets exposed)
-//
-// Security guarantees:
-// - No key-export, key-dump, or private-key-display command exists
-// - Private keys are decrypted only during signing, then GC'd
-// - All network calls are explicit (user-specified --rpc, --escrow, and --base-url only)
-// - No telemetry, no remote reporting, no opaque fetches
+// wallet-ops.mjs — signer/executor dispatcher for AgentWork wallet operations.
 
-import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync, statSync } from 'node:fs';
-import { dirname } from 'node:path';
-import { execSync } from 'node:child_process';
-import { randomBytes } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
+import { randomUUID } from 'node:crypto';
 
-// Dynamic import of ethers (installed as skill dependency)
-let ethers;
-try {
-  ethers = await import('ethers');
-} catch {
-  error('MISSING_DEPENDENCY', 'ethers is not installed. Run: npm install ethers');
-}
+const SIGNER_MODULES = {
+  'ethers-keystore': './signers/ethers-keystore.mjs',
+  agentkit: './signers/agentkit.mjs',
+};
 
-// ─── Helpers ───
+const EXECUTOR_MODULES = {
+  'local-rpc': './executors/local-rpc.mjs',
+  'onchainos-gateway': './executors/onchainos-gateway.mjs',
+  'x402-cdp': './executors/x402.mjs',
+  'x402-okx': './executors/x402.mjs',
+};
 
 function error(code, message, details = {}) {
   process.stderr.write(JSON.stringify({ error: code, message, details }) + '\n');
@@ -47,16 +27,15 @@ function output(data) {
 
 function parseArgs(argv) {
   const args = {};
-  for (let i = 0; i < argv.length; i++) {
-    if (argv[i].startsWith('--')) {
-      const key = argv[i].slice(2);
-      const next = argv[i + 1];
-      if (next && !next.startsWith('--')) {
-        args[key] = next;
-        i++;
-      } else {
-        args[key] = true;
-      }
+  for (let i = 0; i < argv.length; i += 1) {
+    if (!argv[i].startsWith('--')) continue;
+    const key = argv[i].slice(2);
+    const next = argv[i + 1];
+    if (next && !next.startsWith('--')) {
+      args[key] = next;
+      i += 1;
+    } else {
+      args[key] = true;
     }
   }
   return args;
@@ -69,396 +48,92 @@ function requireArg(args, name) {
   return args[name];
 }
 
-// ─── Passphrase Management ───
-
-function resolvePassphraseDir(keystorePath) {
-  return dirname(keystorePath);
+function resolveSignerName(args) {
+  return args.signer ?? process.env.AGENTWORK_SIGNER ?? 'ethers-keystore';
 }
 
-function storePassphrase(passphrase, credDir) {
-  // Try macOS Keychain first
-  if (process.platform === 'darwin') {
+function resolveExecutorName(args) {
+  return args.executor ?? process.env.AGENTWORK_EXECUTOR ?? 'local-rpc';
+}
+
+async function loadSignerModule(args) {
+  const signerName = resolveSignerName(args);
+  const modulePath = SIGNER_MODULES[signerName];
+  if (!modulePath) {
+    error('UNKNOWN_SIGNER', `Unknown signer: ${signerName}`, { valid: Object.keys(SIGNER_MODULES) });
+  }
+  return await import(modulePath);
+}
+
+async function loadExecutorModule(args) {
+  const executorName = resolveExecutorName(args);
+  const modulePath = EXECUTOR_MODULES[executorName];
+  if (!modulePath) {
+    error('UNKNOWN_EXECUTOR', `Unknown executor: ${executorName}`, { valid: Object.keys(EXECUTOR_MODULES) });
+  }
+  return await import(modulePath);
+}
+
+function readSignerMeta(args) {
+  if (args['wallet-meta']) {
     try {
-      execSync(
-        `security add-generic-password -a agentwork-hot-wallet -s agentwork-hot-wallet -w "${passphrase}" -U`,
-        { stdio: 'pipe' }
-      );
-      return 'keychain';
-    } catch {
-      // Fall through to file
+      return JSON.parse(args['wallet-meta']);
+    } catch (e) {
+      error('INVALID_WALLET_META', `Cannot parse --wallet-meta JSON: ${e.message}`);
+    }
+  }
+  if (process.env.AGENTWORK_WALLET_META) {
+    try {
+      return JSON.parse(process.env.AGENTWORK_WALLET_META);
+    } catch (e) {
+      error('INVALID_WALLET_META', `Cannot parse AGENTWORK_WALLET_META JSON: ${e.message}`);
+    }
+  }
+  return null;
+}
+
+function signerNeedsKeystore(signer) {
+  return signer.requiresKeystore !== false;
+}
+
+function resolveSignerInputs(args, signer, options = {}) {
+  const requireKeystore = options.requireKeystore ?? signerNeedsKeystore(signer);
+  const requireExisting = options.requireExisting ?? false;
+  const meta = options.meta ?? readSignerMeta(args);
+
+  let keystore = args.keystore;
+  if (requireKeystore) {
+    keystore = requireArg(args, 'keystore');
+    if (requireExisting && !existsSync(keystore)) {
+      error('KEYSTORE_NOT_FOUND', `No keystore at ${keystore}`);
     }
   }
 
-  // Try Linux secret-tool
-  if (process.platform === 'linux') {
-    try {
-      execSync(
-        `echo -n "${passphrase}" | secret-tool store --label "agentwork-hot-wallet" service agentwork-hot-wallet account hot-wallet`,
-        { stdio: 'pipe' }
-      );
-      return 'secret-tool';
-    } catch {
-      // Fall through to file
-    }
-  }
-
-  // Fallback: file
-  const passFile = `${credDir}/.passphrase`;
-  writeFileSync(passFile, passphrase, { mode: 0o600 });
-  return 'file';
+  return {
+    ...(keystore ? { keystore } : {}),
+    meta,
+  };
 }
 
-function readPassphrase(credDir) {
-  // Try macOS Keychain first
-  if (process.platform === 'darwin') {
-    try {
-      const result = execSync(
-        'security find-generic-password -a agentwork-hot-wallet -s agentwork-hot-wallet -w',
-        { stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8' }
-      );
-      return result.trim();
-    } catch {
-      // Fall through to file
-    }
-  }
-
-  // Try Linux secret-tool
-  if (process.platform === 'linux') {
-    try {
-      const result = execSync(
-        'secret-tool lookup service agentwork-hot-wallet account hot-wallet',
-        { stdio: ['pipe', 'pipe', 'pipe'], encoding: 'utf8' }
-      );
-      return result.trim();
-    } catch {
-      // Fall through to file
-    }
-  }
-
-  // Fallback: file
-  const passFile = `${credDir}/.passphrase`;
-  if (!existsSync(passFile)) {
-    error('PASSPHRASE_NOT_FOUND', 'No passphrase in keychain or file');
-  }
-  return readFileSync(passFile, 'utf8').trim();
+function buildWalletBindingFields(args, signer, meta) {
+  return {
+    wallet_provider: signer.provider ?? resolveSignerName(args),
+    wallet_signer_type: signer.signerType ?? (signerNeedsKeystore(signer) ? 'local-keystore' : 'agentkit-managed'),
+    ...(meta ? { wallet_meta: meta } : {}),
+  };
 }
 
-// ─── Wallet Loading ───
-
-function loadWallet(keystorePath, credDir) {
-  if (!existsSync(keystorePath)) {
-    error('KEYSTORE_NOT_FOUND', `No keystore at ${keystorePath}`);
-  }
-  const keystore = readFileSync(keystorePath, 'utf8');
-  const passphrase = readPassphrase(credDir);
-  try {
-    return ethers.Wallet.fromEncryptedJsonSync(keystore, passphrase);
-  } catch (e) {
-    error('KEYSTORE_DECRYPT_FAILED', `Failed to decrypt keystore: ${e.message}`);
-  }
-}
-
-// ─── Commands ───
-
-async function cmdGenerate(args) {
-  const keystorePath = requireArg(args, 'keystore');
-  const credDir = dirname(keystorePath);
-
-  if (existsSync(keystorePath)) {
-    error('KEYSTORE_EXISTS', `Keystore already exists at ${keystorePath}`);
-  }
-
-  // Create directory
-  mkdirSync(credDir, { recursive: true });
-  try { chmodSync(credDir, 0o700); } catch { /* best effort */ }
-
-  // Generate wallet
-  const wallet = ethers.Wallet.createRandom();
-  const passphrase = randomBytes(32).toString('hex');
-
-  // Encrypt to keystore v3
-  const keystore = await wallet.encrypt(passphrase);
-
-  // Write keystore file
-  writeFileSync(keystorePath, keystore, { mode: 0o600 });
-
-  // Store passphrase
-  const storage = storePassphrase(passphrase, credDir);
-
-  output({
-    address: wallet.address,
-    keystore_path: keystorePath,
-    passphrase_storage: storage,
-  });
-}
-
-function cmdRegisterMessage(args) {
-  const name = requireArg(args, 'name');
-  const address = requireArg(args, 'address');
-  const ttlMinutes = parseInt(args['ttl-minutes'] ?? '5', 10);
-
+function buildRegistrationMessage(name, address, ttlMinutes) {
   const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
-  const message = [
+  return [
     'agentwork:register',
     `name:${name}`,
     `address:${address}`,
     `Expiration Time:${expiresAt.toISOString()}`,
   ].join('\n');
-
-  output({ message });
 }
 
-async function cmdSign(args) {
-  const keystorePath = requireArg(args, 'keystore');
-  const message = requireArg(args, 'message');
-  const credDir = dirname(keystorePath);
-
-  const wallet = loadWallet(keystorePath, credDir);
-  const signature = await wallet.signMessage(message);
-
-  output({ signature });
-}
-
-async function cmdRegisterSign(args) {
-  const keystorePath = requireArg(args, 'keystore');
-  const name = requireArg(args, 'name');
-  const ttlMinutes = parseInt(args['ttl-minutes'] ?? '5', 10);
-  const credDir = dirname(keystorePath);
-
-  // Idempotent: generate wallet if missing, read if exists
-  let address;
-  if (!existsSync(keystorePath)) {
-    mkdirSync(credDir, { recursive: true });
-    try { chmodSync(credDir, 0o700); } catch { /* best effort */ }
-    const wallet = ethers.Wallet.createRandom();
-    const passphrase = randomBytes(32).toString('hex');
-    const keystore = await wallet.encrypt(passphrase);
-    writeFileSync(keystorePath, keystore, { mode: 0o600 });
-    storePassphrase(passphrase, credDir);
-    address = wallet.address;
-  } else {
-    const ks = JSON.parse(readFileSync(keystorePath, 'utf8'));
-    address = ethers.getAddress(`0x${ks.address}`);
-  }
-
-  // Build registration message
-  const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000);
-  const message = [
-    'agentwork:register',
-    `name:${name}`,
-    `address:${address}`,
-    `Expiration Time:${expiresAt.toISOString()}`,
-  ].join('\n');
-
-  // Sign
-  const wallet = loadWallet(keystorePath, credDir);
-  const signature = await wallet.signMessage(message);
-
-  output({ address, message, signature });
-}
-
-function cmdAddress(args) {
-  const keystorePath = requireArg(args, 'keystore');
-
-  if (!existsSync(keystorePath)) {
-    error('KEYSTORE_NOT_FOUND', `No keystore at ${keystorePath}`);
-  }
-  const keystore = JSON.parse(readFileSync(keystorePath, 'utf8'));
-  // ethers v3 keystore stores address in the 'address' field (without 0x prefix)
-  const address = keystore.address
-    ? ethers.getAddress(`0x${keystore.address}`)
-    : error('KEYSTORE_INVALID', 'No address field in keystore');
-
-  output({ address });
-}
-
-async function cmdBalance(args) {
-  const keystorePath = requireArg(args, 'keystore');
-  const rpcUrl = requireArg(args, 'rpc');
-  const tokenAddress = requireArg(args, 'token');
-
-  if (!existsSync(keystorePath)) {
-    error('KEYSTORE_NOT_FOUND', `No keystore at ${keystorePath}`);
-  }
-  const keystore = JSON.parse(readFileSync(keystorePath, 'utf8'));
-  const address = ethers.getAddress(`0x${keystore.address}`);
-
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-
-  try {
-    // ETH balance
-    const ethBalance = await provider.getBalance(address);
-
-    // ERC-20 balance
-    const erc20 = new ethers.Contract(
-      tokenAddress,
-      [
-        'function balanceOf(address) view returns (uint256)',
-        'function symbol() view returns (string)',
-        'function decimals() view returns (uint8)',
-      ],
-      provider
-    );
-
-    const [tokenBalance, symbol, decimals] = await Promise.all([
-      erc20.balanceOf(address),
-      erc20.symbol().catch(() => 'UNKNOWN'),
-      erc20.decimals().catch(() => 6),
-    ]);
-
-    output({
-      token_balance: tokenBalance.toString(),
-      eth_balance: ethBalance.toString(),
-      token_symbol: symbol,
-      token_decimals: Number(decimals),
-    });
-  } catch (e) {
-    error('RPC_FAILURE', `RPC call failed: ${e.message}`, { rpc_url: rpcUrl });
-  }
-}
-
-async function cmdTransfer(args) {
-  const keystorePath = requireArg(args, 'keystore');
-  const rpcUrl = requireArg(args, 'rpc');
-  const tokenAddress = requireArg(args, 'token');
-  const to = requireArg(args, 'to');
-  const amount = requireArg(args, 'amount');
-  const credDir = dirname(keystorePath);
-
-  const wallet = loadWallet(keystorePath, credDir);
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const signer = wallet.connect(provider);
-
-  const erc20 = new ethers.Contract(
-    tokenAddress,
-    ['function transfer(address to, uint256 amount) returns (bool)'],
-    signer
-  );
-
-  try {
-    const tx = await erc20.transfer(to, amount);
-    const receipt = await tx.wait();
-    output({ tx_hash: receipt.hash, amount });
-  } catch (e) {
-    if (e.message?.includes('insufficient')) {
-      error('INSUFFICIENT_BALANCE', e.message);
-    }
-    error('TX_FAILED', `Transfer failed: ${e.message}`);
-  }
-}
-
-async function cmdDeposit(args) {
-  const keystorePath = requireArg(args, 'keystore');
-  const rpcUrl = requireArg(args, 'rpc');
-  const escrowAddress = requireArg(args, 'escrow');
-  const tokenAddress = requireArg(args, 'token');
-  const orderId = requireArg(args, 'order-id');
-  const termsHash = requireArg(args, 'terms-hash');
-  const amount = requireArg(args, 'amount');
-  const seller = requireArg(args, 'seller');
-  const jurors = JSON.parse(requireArg(args, 'jurors'));
-  const threshold = parseInt(requireArg(args, 'threshold'), 10);
-  const credDir = dirname(keystorePath);
-
-  const wallet = loadWallet(keystorePath, credDir);
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
-  const signer = wallet.connect(provider);
-
-  // Step 1: Approve ERC-20 spend
-  const erc20 = new ethers.Contract(
-    tokenAddress,
-    ['function approve(address spender, uint256 amount) returns (bool)'],
-    signer
-  );
-
-  try {
-    const approveTx = await erc20.approve(escrowAddress, amount);
-    await approveTx.wait();
-  } catch (e) {
-    error('APPROVE_FAILED', `Token approval failed: ${e.message}`);
-  }
-
-  // Step 2: Call deposit on escrow contract
-  const escrow = new ethers.Contract(
-    escrowAddress,
-    ['function deposit(bytes32 orderId, address token, uint256 amount, bytes32 termsHash, address seller, address[] jurors, uint8 threshold) external'],
-    signer
-  );
-
-  try {
-    const tx = await escrow.deposit(orderId, tokenAddress, amount, termsHash, seller, jurors, threshold);
-    const receipt = await tx.wait();
-    output({ tx_hash: receipt.hash });
-  } catch (e) {
-    if (e.receipt?.hash) {
-      error('TX_REVERTED', `Transaction reverted: ${e.message}`, { tx_hash: e.receipt.hash });
-    }
-    error('DEPOSIT_FAILED', `Deposit failed: ${e.message}`);
-  }
-}
-
-async function cmdAudit(args) {
-  const keystorePath = requireArg(args, 'keystore');
-  const credDir = dirname(keystorePath);
-
-  if (!existsSync(keystorePath)) {
-    error('KEYSTORE_NOT_FOUND', `No keystore at ${keystorePath}`);
-  }
-
-  const keystore = JSON.parse(readFileSync(keystorePath, 'utf8'));
-  const address = keystore.address
-    ? ethers.getAddress(`0x${keystore.address}`)
-    : 'unknown';
-
-  // Check passphrase storage method
-  let passphraseStorage = 'unknown';
-  if (process.platform === 'darwin') {
-    try {
-      execSync('security find-generic-password -a agentwork-hot-wallet -s agentwork-hot-wallet', { stdio: 'pipe' });
-      passphraseStorage = 'keychain';
-    } catch {
-      passphraseStorage = existsSync(`${credDir}/.passphrase`) ? 'file' : 'none';
-    }
-  } else if (process.platform === 'linux') {
-    try {
-      execSync('secret-tool lookup service agentwork-hot-wallet account hot-wallet', { stdio: ['pipe', 'pipe', 'pipe'] });
-      passphraseStorage = 'secret-tool';
-    } catch {
-      passphraseStorage = existsSync(`${credDir}/.passphrase`) ? 'file' : 'none';
-    }
-  } else {
-    passphraseStorage = existsSync(`${credDir}/.passphrase`) ? 'file' : 'none';
-  }
-
-  // Check file permissions
-  let keystorePermissions = 'unknown';
-  let dirPermissions = 'unknown';
-  try {
-    keystorePermissions = '0' + (statSync(keystorePath).mode & 0o777).toString(8);
-  } catch { /* best effort */ }
-  try {
-    dirPermissions = '0' + (statSync(credDir).mode & 0o777).toString(8);
-  } catch { /* best effort */ }
-
-  output({
-    address,
-    passphrase_storage: passphraseStorage,
-    keystore_permissions: keystorePermissions,
-    dir_permissions: dirPermissions,
-  });
-}
-
-async function cmdVerifyWallet(args) {
-  if (typeof globalThis.fetch !== 'function') {
-    error('MISSING_RUNTIME', 'Node 18+ is required for verify-wallet (built-in fetch)');
-  }
-
-  const keystorePath = requireArg(args, 'keystore');
-  const baseUrl = requireArg(args, 'base-url');
-  const chain = args.chain ?? 'base';
-  const credDir = dirname(keystorePath);
-
-  // Resolve API key: --api-key-file > env AGENTWORK_API_KEY > --api-key (legacy)
+function readApiKey(args) {
   let apiKey = args['api-key'];
   if (args['api-key-file']) {
     try {
@@ -472,8 +147,10 @@ async function cmdVerifyWallet(args) {
   if (!apiKey) {
     error('MISSING_ARG', '--api-key-file, AGENTWORK_API_KEY env, or --api-key is required');
   }
+  return apiKey;
+}
 
-  // Resolve recovery code: --recovery-code-file > env AGENTWORK_RECOVERY_CODE > --recovery-code (legacy)
+function readRecoveryCode(args) {
   let recoveryCode = args['recovery-code'];
   if (args['recovery-code-file']) {
     try {
@@ -484,27 +161,291 @@ async function cmdVerifyWallet(args) {
   } else if (!recoveryCode && process.env.AGENTWORK_RECOVERY_CODE) {
     recoveryCode = process.env.AGENTWORK_RECOVERY_CODE;
   }
+  return recoveryCode;
+}
 
-  // Read address from keystore without decrypting
-  if (!existsSync(keystorePath)) {
-    error('KEYSTORE_NOT_FOUND', `No keystore at ${keystorePath}`);
-  }
-  let ks;
-  try {
-    ks = JSON.parse(readFileSync(keystorePath, 'utf8'));
-  } catch (e) {
-    error('KEYSTORE_INVALID', `Cannot parse keystore JSON: ${e.message}`);
-  }
-  const address = ks.address
-    ? ethers.getAddress(`0x${ks.address}`)
-    : error('KEYSTORE_INVALID', 'No address field in keystore');
+async function cmdGenerate(args) {
+  const signer = await loadSignerModule(args);
+  const signerInputs = resolveSignerInputs(args, signer, { requireKeystore: signerNeedsKeystore(signer) });
+  const created = await signer.createWallet(signerInputs).catch((e) => {
+    error('GENERATE_FAILED', e.message);
+  });
+  const walletFields = buildWalletBindingFields(args, signer, created.meta ?? signerInputs.meta);
+  output({
+    address: created.address,
+    ...(signerInputs.keystore ? { keystore_path: signerInputs.keystore } : {}),
+    passphrase_storage: created.passphraseStorage ?? 'managed',
+    ...walletFields,
+    ...(created.meta ? { meta: created.meta } : {}),
+  });
+}
 
-  // Step 1: Fetch challenge
+function cmdRegisterMessage(args) {
+  const name = requireArg(args, 'name');
+  const address = requireArg(args, 'address');
+  const ttlMinutes = Number.parseInt(args['ttl-minutes'] ?? '5', 10);
+  output({ message: buildRegistrationMessage(name, address, ttlMinutes) });
+}
+
+async function cmdRegisterSign(args) {
+  const signer = await loadSignerModule(args);
+  const name = requireArg(args, 'name');
+  const ttlMinutes = Number.parseInt(args['ttl-minutes'] ?? '5', 10);
+  const signerInputs = resolveSignerInputs(args, signer, { requireKeystore: signerNeedsKeystore(signer) });
+  const created = await signer.createWallet(signerInputs).catch((e) => {
+    error('GENERATE_FAILED', e.message);
+  });
+  const runtimeMeta = created.meta ?? signerInputs.meta;
+  const address = created.address ?? (await signer.getAddress({
+    ...signerInputs,
+    meta: runtimeMeta,
+  })).address;
+  const message = buildRegistrationMessage(name, address, ttlMinutes);
+  const signed = await signer.signMessage({
+    ...signerInputs,
+    meta: runtimeMeta,
+    message,
+  }).catch((e) => {
+    error('SIGN_FAILED', e.message);
+  });
+  output({
+    address,
+    message,
+    signature: signed.signature,
+    ...buildWalletBindingFields(args, signer, runtimeMeta),
+    ...(runtimeMeta ? { meta: runtimeMeta } : {}),
+  });
+}
+
+async function cmdSign(args) {
+  const signer = await loadSignerModule(args);
+  const signed = await signer.signMessage({
+    ...resolveSignerInputs(args, signer, {
+      requireKeystore: signerNeedsKeystore(signer),
+      requireExisting: signerNeedsKeystore(signer),
+    }),
+    message: requireArg(args, 'message'),
+  }).catch((e) => {
+    error('SIGN_FAILED', e.message);
+  });
+  output(signed);
+}
+
+async function cmdAddress(args) {
+  const signer = await loadSignerModule(args);
+  const result = await signer.getAddress(resolveSignerInputs(args, signer, {
+    requireKeystore: signerNeedsKeystore(signer),
+    requireExisting: signerNeedsKeystore(signer),
+  })).catch((e) => {
+    error('KEYSTORE_INVALID', e.message);
+  });
+  output(result);
+}
+
+async function cmdBalance(args) {
+  const signer = await loadSignerModule(args);
+  const executor = await loadExecutorModule(args);
+  const balanceExecutor = typeof executor.getBalances === 'function'
+    ? executor
+    : await import('./executors/local-rpc.mjs');
+  const { address } = await signer.getAddress(resolveSignerInputs(args, signer, {
+    requireKeystore: signerNeedsKeystore(signer),
+    requireExisting: signerNeedsKeystore(signer),
+  })).catch((e) => {
+    error('KEYSTORE_INVALID', e.message);
+  });
+
+  const balances = await balanceExecutor.getBalances({
+    rpc: requireArg(args, 'rpc'),
+    token: requireArg(args, 'token'),
+    address,
+  }).catch((e) => {
+    error('RPC_FAILURE', `RPC call failed: ${e.message}`);
+  });
+  output(balances);
+}
+
+async function cmdTransfer(args) {
+  const signer = await loadSignerModule(args);
+  const executor = await loadExecutorModule(args);
+  const { wallet } = await signer.loadWallet(resolveSignerInputs(args, signer, {
+    requireKeystore: signerNeedsKeystore(signer),
+    requireExisting: signerNeedsKeystore(signer),
+  })).catch((e) => {
+    error('KEYSTORE_DECRYPT_FAILED', e.message);
+  });
+
+  const transferred = await executor.transferToken({
+    wallet,
+    rpc: requireArg(args, 'rpc'),
+    token: requireArg(args, 'token'),
+    to: requireArg(args, 'to'),
+    amount: requireArg(args, 'amount'),
+  }).catch((e) => {
+    error('TX_FAILED', e.message);
+  });
+  output(transferred);
+}
+
+async function buildAuthorization(args, signerModule) {
+  if ((args['deposit-mode'] ?? 'approve_deposit') !== 'transfer_with_authorization') return null;
+
+  const from = (await signerModule.getAddress({
+    ...resolveSignerInputs(args, signerModule, {
+      requireKeystore: signerNeedsKeystore(signerModule),
+      requireExisting: signerNeedsKeystore(signerModule),
+    }),
+  })).address;
+  const validAfter = BigInt(args['valid-after'] ?? '0');
+  const validBefore = BigInt(args['valid-before'] ?? Math.floor(Date.now() / 1000 + 300).toString());
+  const authNonce = args['auth-nonce'] ?? `0x${randomUUID().replace(/-/g, '').padEnd(64, '0').slice(0, 64)}`;
+  const chainId = Number.parseInt(args['chain-id'] ?? process.env.CHAIN_ID ?? '196', 10);
+  const tokenName = args['token-name'] ?? process.env.CHAIN_TOKEN_EIP3009_NAME ?? 'Tether USD';
+  const tokenVersion = args['token-version'] ?? process.env.CHAIN_TOKEN_EIP3009_VERSION ?? '1';
+  const domain = {
+    name: tokenName,
+    version: tokenVersion,
+    chainId,
+    verifyingContract: requireArg(args, 'token'),
+  };
+  const types = {
+    TransferWithAuthorization: [
+      { name: 'from', type: 'address' },
+      { name: 'to', type: 'address' },
+      { name: 'value', type: 'uint256' },
+      { name: 'validAfter', type: 'uint256' },
+      { name: 'validBefore', type: 'uint256' },
+      { name: 'nonce', type: 'bytes32' },
+    ],
+  };
+  const message = {
+    from,
+    to: requireArg(args, 'escrow'),
+    value: requireArg(args, 'amount'),
+    validAfter,
+    validBefore,
+    nonce: authNonce,
+  };
+  const signature = await signerModule.signTypedData({
+    ...resolveSignerInputs(args, signerModule, {
+      requireKeystore: signerNeedsKeystore(signerModule),
+      requireExisting: signerNeedsKeystore(signerModule),
+    }),
+    domain,
+    types,
+    message,
+  }).catch((e) => {
+    error('SIGN_FAILED', e.message);
+  });
+
+  return {
+    from,
+    validAfter,
+    validBefore,
+    authNonce,
+    signature: signature.signature,
+  };
+}
+
+async function cmdDeposit(args) {
+  const signer = await loadSignerModule(args);
+  const executor = await loadExecutorModule(args);
+  const depositMode = args['deposit-mode'] ?? 'approve_deposit';
+  const signerInputs = resolveSignerInputs(args, signer, {
+    requireKeystore: signerNeedsKeystore(signer),
+    requireExisting: signerNeedsKeystore(signer),
+  });
+  const { address: walletAddress, wallet } = await signer.loadWallet(signerInputs).catch((e) => {
+    error('KEYSTORE_DECRYPT_FAILED', e.message);
+  });
+
+  let deposited;
+  if (depositMode === 'x402') {
+    deposited = await executor.depositToEscrow({
+      wallet,
+      walletAddress,
+      depositMode,
+      orderRef: requireArg(args, 'order-ref'),
+      baseUrl: requireArg(args, 'base-url'),
+      apiKey: args['api-key'] ?? process.env.AGENTWORK_API_KEY,
+      facilitatorId: args['facilitator-id'],
+      executorType: resolveExecutorName(args),
+      paymentSignature: args['payment-signature'],
+    }).catch((e) => {
+      error('DEPOSIT_FAILED', e.message);
+    });
+  } else {
+    const jurors = JSON.parse(requireArg(args, 'jurors'));
+    const authorization = await buildAuthorization(args, signer);
+    deposited = await executor.depositToEscrow({
+      wallet,
+      walletAddress,
+      rpc: requireArg(args, 'rpc'),
+      escrow: requireArg(args, 'escrow'),
+      token: requireArg(args, 'token'),
+      orderId: requireArg(args, 'order-id'),
+      termsHash: requireArg(args, 'terms-hash'),
+      amount: requireArg(args, 'amount'),
+      seller: requireArg(args, 'seller'),
+      jurors,
+      threshold: Number.parseInt(requireArg(args, 'threshold'), 10),
+      depositMode,
+      authorization,
+      orderRef: args['order-ref'],
+      baseUrl: args['base-url'],
+      apiKey: args['api-key'] ?? process.env.AGENTWORK_API_KEY,
+      facilitatorId: args['facilitator-id'],
+      executorType: resolveExecutorName(args),
+      paymentSignature: args['payment-signature'],
+    }).catch((e) => {
+      error(
+        depositMode === 'transfer_with_authorization' ? 'DEPOSIT_WITH_AUTHORIZATION_FAILED' : 'DEPOSIT_FAILED',
+        e.message,
+      );
+    });
+  }
+  output(deposited);
+}
+
+async function cmdAudit(args) {
+  const signer = await loadSignerModule(args);
+  if (typeof signer.auditKeystore === 'function') {
+    output(await signer.auditKeystore({ keystore: requireArg(args, 'keystore') }).catch((e) => {
+      error('AUDIT_FAILED', e.message);
+    }));
+    return;
+  }
+
+  output({
+    signer: resolveSignerName(args),
+    executor: resolveExecutorName(args),
+  });
+}
+
+async function cmdVerifyWallet(args) {
+  if (typeof globalThis.fetch !== 'function') {
+    error('MISSING_RUNTIME', 'Node 18+ is required for verify-wallet (built-in fetch)');
+  }
+
+  const signer = await loadSignerModule(args);
+  const signerInputs = resolveSignerInputs(args, signer, {
+    requireKeystore: signerNeedsKeystore(signer),
+    requireExisting: signerNeedsKeystore(signer),
+  });
+  const baseUrl = requireArg(args, 'base-url');
+  const chain = args.chain ?? 'base';
+  const apiKey = readApiKey(args);
+  const recoveryCode = readRecoveryCode(args);
+
+  const { address } = await signer.getAddress(signerInputs).catch((e) => {
+    error('KEYSTORE_INVALID', e.message);
+  });
+
   const challengeUrl = `${baseUrl}/agent/v1/profile/wallet-challenge?address=${encodeURIComponent(address)}&chain=${encodeURIComponent(chain)}`;
   let challengeRes;
   try {
     challengeRes = await fetch(challengeUrl, {
-      headers: { 'Authorization': `Bearer ${apiKey}` },
+      headers: { Authorization: `Bearer ${apiKey}` },
     });
   } catch (e) {
     error('CHALLENGE_FETCH_FAILED', `GET wallet-challenge network error: ${e.message}`);
@@ -513,99 +454,83 @@ async function cmdVerifyWallet(args) {
     const body = await challengeRes.text().catch(() => '');
     error('CHALLENGE_FETCH_FAILED', `GET wallet-challenge returned ${challengeRes.status}`, { body });
   }
+
   let challengeData;
   try {
     challengeData = await challengeRes.json();
   } catch (e) {
     error('CHALLENGE_PARSE_FAILED', `Failed to parse challenge response JSON: ${e.message}`);
   }
-  const challenge = challengeData.data?.challenge;
-  if (!challenge) {
-    error('CHALLENGE_PARSE_FAILED', 'Response missing data.challenge', { body: challengeData });
+  const challenge = challengeData?.data?.challenge;
+  if (!challenge || typeof challenge !== 'string') {
+    error('CHALLENGE_INVALID', 'wallet-challenge response missing data.challenge');
   }
 
-  // Extract nonce from challenge for idempotency key
-  const nonceMatch = challenge.match(/\nnonce:([a-fA-F0-9]+)/);
-  const nonce = nonceMatch ? nonceMatch[1] : '';
+  const signed = await signer.signMessage({
+    ...signerInputs,
+    message: challenge,
+  }).catch((e) => {
+    error('SIGN_FAILED', e.message);
+  });
 
-  // Step 2: Sign the exact challenge string
-  const wallet = loadWallet(keystorePath, credDir);
-  const signature = await wallet.signMessage(challenge);
-
-  // Step 3: Submit verification
-  const verifyBody = {
+  const nonceLine = challenge.split(/\r?\n/).find((line) => line.startsWith('nonce:'));
+  const nonce = nonceLine?.slice('nonce:'.length).trim() ?? 'unknown';
+  const body = {
     address,
     chain,
     challenge,
-    signature,
+    signature: signed.signature,
+    ...buildWalletBindingFields(args, signer, signerInputs.meta),
+    ...(recoveryCode ? { recovery_code: recoveryCode } : {}),
     idempotency_key: `verify-wallet:${address.toLowerCase()}:${chain}:${nonce}`,
   };
-  if (recoveryCode) {
-    verifyBody.recovery_code = recoveryCode;
-  }
 
   let verifyRes;
   try {
     verifyRes = await fetch(`${baseUrl}/agent/v1/profile/verify-wallet`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        'content-type': 'application/json',
+        Authorization: `Bearer ${apiKey}`,
       },
-      body: JSON.stringify(verifyBody),
+      body: JSON.stringify(body),
     });
   } catch (e) {
     error('VERIFY_FAILED', `POST verify-wallet network error: ${e.message}`);
   }
-  if (!verifyRes.ok) {
-    const body = await verifyRes.text().catch(() => '');
-    error('VERIFY_FAILED', `POST verify-wallet returned ${verifyRes.status}`, { body });
-  }
-  let verifyData;
-  try {
-    verifyData = await verifyRes.json();
-  } catch (e) {
-    error('VERIFY_FAILED', `Failed to parse verify response JSON: ${e.message}`);
-  }
-  output(verifyData.data);
-}
 
-// ─── Main ───
+  if (!verifyRes.ok) {
+    const failed = await verifyRes.text().catch(() => '');
+    error('VERIFY_FAILED', `POST verify-wallet returned ${verifyRes.status}`, { body: failed });
+  }
+
+  const verified = await verifyRes.json().catch((e) => {
+    error('VERIFY_PARSE_FAILED', `Failed to parse verify-wallet response JSON: ${e.message}`);
+  });
+  output(verified.data);
+}
 
 const command = process.argv[2];
 const args = parseArgs(process.argv.slice(3));
 
-switch (command) {
-  case 'generate':
-    await cmdGenerate(args);
-    break;
-  case 'register-message':
-    cmdRegisterMessage(args);
-    break;
-  case 'sign':
-    await cmdSign(args);
-    break;
-  case 'register-sign':
-    await cmdRegisterSign(args);
-    break;
-  case 'address':
-    cmdAddress(args);
-    break;
-  case 'balance':
-    await cmdBalance(args);
-    break;
-  case 'transfer':
-    await cmdTransfer(args);
-    break;
-  case 'deposit':
-    await cmdDeposit(args);
-    break;
-  case 'verify-wallet':
-    await cmdVerifyWallet(args);
-    break;
-  case 'audit':
-    await cmdAudit(args);
-    break;
-  default:
-    error('UNKNOWN_COMMAND', `Unknown command: ${command}. Valid: generate, register-sign, register-message, sign, verify-wallet, address, balance, transfer, deposit, audit`);
+const COMMANDS = {
+  generate: cmdGenerate,
+  'register-sign': cmdRegisterSign,
+  'register-message': cmdRegisterMessage,
+  sign: cmdSign,
+  'verify-wallet': cmdVerifyWallet,
+  address: cmdAddress,
+  balance: cmdBalance,
+  transfer: cmdTransfer,
+  deposit: cmdDeposit,
+  audit: cmdAudit,
+};
+
+if (!command || !COMMANDS[command]) {
+  error(
+    'UNKNOWN_COMMAND',
+    `Unknown command "${command}". Valid commands: ${Object.keys(COMMANDS).join(', ')}`,
+  );
 }
+
+await COMMANDS[command](args);

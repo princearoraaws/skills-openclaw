@@ -10,7 +10,7 @@ import { spawn, execSync } from "node:child_process";
 import { randomUUID, createHash } from "node:crypto";
 
 const DEFAULT_BASE_URL = process.env.AGENTWORK_BASE_URL?.trim() || "https://agentwork.one";
-const DEFAULT_AGENT_ID = process.env.OPENCLAW_AGENT_ID?.trim() || "main";
+const DEFAULT_AGENT_ID = process.env.AGENTWORK_AGENT_ID?.trim() || process.env.OPENCLAW_AGENT_ID?.trim() || "main";
 const DEFAULT_HEARTBEAT_INTERVAL_SEC = 60;
 const DEFAULT_MAX_EXECUTION_ATTEMPTS = 2;
 const TOKEN_SUBMIT_BUFFER_SEC = 120;
@@ -57,8 +57,8 @@ function usage() {
       "Environment:",
       "  AGENTWORK_API_KEY (required unless --api-key is provided)",
       "  AGENTWORK_BASE_URL (optional, default: https://agentwork.one)",
-      "  OPENCLAW_STATE_DIR (optional, default: ~/.openclaw)",
-      "  OPENCLAW_AGENT_ID (optional, default: main)",
+      "  AGENTWORK_STATE_DIR (optional, default: ~/.agentwork; legacy OPENCLAW_STATE_DIR also supported)",
+      "  AGENTWORK_AGENT_ID (optional, default: main; legacy OPENCLAW_AGENT_ID also supported)",
     ].join("\n"),
   );
 }
@@ -122,9 +122,9 @@ function resolveStateRoot(args) {
   if (typeof args["state-dir"] === "string" && args["state-dir"].trim()) {
     return path.resolve(args["state-dir"].trim());
   }
-  const envDir = process.env.OPENCLAW_STATE_DIR?.trim();
+  const envDir = process.env.AGENTWORK_STATE_DIR?.trim() || process.env.OPENCLAW_STATE_DIR?.trim();
   if (envDir) return path.resolve(envDir);
-  return path.join(resolveHomeDir(), ".openclaw");
+  return path.join(resolveHomeDir(), ".agentwork");
 }
 
 function resolveRuntimeDir(args) {
@@ -1124,7 +1124,7 @@ async function main() {
   if (requiredEnvKey && !process.env[requiredEnvKey]) {
     fatal({
       error_code: "MISSING_PROVIDER_CREDENTIAL",
-      message: `Missing ${requiredEnvKey}. Persist it with: openclaw config set env.vars.${requiredEnvKey} "<your-key>"`,
+      message: `Missing ${requiredEnvKey}. Persist it in your environment or secret store (OpenClaw: openclaw config set env.vars.${requiredEnvKey} "<your-key>")`,
       retryable: false,
       order_id: orderId,
     });

@@ -2,8 +2,9 @@
 
 ## API Key Storage
 
-Your API key must be persisted via `openclaw config set skills.entries.agentwork.apiKey`.
-The `primaryEnv` mapping automatically injects it as `AGENTWORK_API_KEY` at runtime.
+Persist your API key in the runtime secret store that backs your agent session.
+On OpenClaw, the standard path is `openclaw config set skills.entries.agentwork.apiKey`,
+which then injects `AGENTWORK_API_KEY` at runtime via `primaryEnv`.
 Never write the key into conversations or log output.
 Use `browse`-scoped keys for read-only operations to limit blast radius if compromised.
 
@@ -235,8 +236,8 @@ The hot wallet stores a private key locally using ethers.js keystore v3 encrypti
 (AES-128-CTR + scrypt). The passphrase is stored in the OS keychain (macOS Keychain
 or Linux `secret-tool`) with a fallback to a file with `0600` permissions.
 
-All credential files are under `$OPENCLAW_STATE_DIR/credentials/agentwork/` (default
-`~/.openclaw/credentials/agentwork/`) with `0700` directory and `0600` file permissions.
+All credential files are under `$AGENTWORK_STATE_DIR/credentials/agentwork/` (default
+`~/.agentwork/credentials/agentwork/`) with `0700` directory and `0600` file permissions.
 
 ### Balance Limits
 
@@ -244,7 +245,8 @@ All credential files are under `$OPENCLAW_STATE_DIR/credentials/agentwork/` (def
 - Auto-sweep: When balance exceeds the limit and `owner_transfer_address` is set,
   excess funds are transferred automatically
 - When `owner_transfer_address` is not set, the agent alerts the owner (24h de-dupe)
-- Low gas warning: ETH balance < 0.0005 ETH triggers an owner notification
+- Low gas warning: native gas token balance below threshold triggers an owner notification
+  (use `chain_config.gas_token.symbol` in the message)
 
 ### Manual Transfer Safety
 
