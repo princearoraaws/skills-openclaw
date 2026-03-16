@@ -31,13 +31,53 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 # 外国媒体RSS源
 FOREIGN_RSS_SOURCES = [
     {
+        "name": "Investing.com",
+        "url": "https://www.investing.com/rss/news.rss",
+        "language": "en"
+    },
+    {
+        "name": "WSJ Markets",
+        "url": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+        "language": "en"
+    },
+    {
+        "name": "Yahoo Finance",
+        "url": "https://finance.yahoo.com/news/rssindex",
+        "language": "en"
+    },
+    {
         "name": "BBC Business",
         "url": "https://feeds.bbci.co.uk/news/business/rss.xml",
         "language": "en"
     },
     {
-        "name": "Yahoo Finance",
-        "url": "https://finance.yahoo.com/rss/",
+        "name": "TechCrunch",
+        "url": "https://techcrunch.com/feed/",
+        "language": "en"
+    },
+    {
+        "name": "The Verge",
+        "url": "https://www.theverge.com/rss/index.xml",
+        "language": "en"
+    },
+    {
+        "name": "Wired",
+        "url": "https://www.wired.com/feed/rss",
+        "language": "en"
+    },
+    {
+        "name": "Ars Technica",
+        "url": "https://arstechnica.com/feed/",
+        "language": "en"
+    },
+    {
+        "name": "MIT Tech Review",
+        "url": "https://www.technologyreview.com/feed/",
+        "language": "en"
+    },
+    {
+        "name": "The Information",
+        "url": "https://www.theinformation.com/feed",
         "language": "en"
     }
 ]
@@ -130,20 +170,61 @@ def fetch_rss_news(source: Dict) -> List[Dict]:
     """抓取RSS源的新闻"""
     news_list = []
     
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+    }
+    
     try:
-        response = requests.get(source['url'], timeout=15)
+        response = requests.get(source['url'], headers=headers, timeout=15)
         response.raise_for_status()
         
         # 解析XML
         root = ET.fromstring(response.content)
         
-        # RSS 2.0格式
+        # RSS 2.0格式 or Atom 格式
         channel = root.find('.//channel')
-        if channel is None:
-            return news_list
+        items = channel.findall('.//item')[:20] if channel is not None else []
         
-        for item in channel.findall('.//item')[:20]:  # 取前20条
+        # Atom 兼容
+        if not items:
+            # 尝试查找 Atom entry
+            ns = {'atom': 'http://www.w3.org/2005/Atom'}
+            entries = root.findall('.//atom:entry', ns)
+            if not entries:
+                entries = root.findall('.//{http://www.w3.org/2005/Atom}entry')
+            if not entries:
+                entries = root.findall('.//entry') # 默认无命名空间
+            
+            for entry in entries[:20]:
+                title_elem = entry.find('atom:title', ns) or entry.find('{http://www.w3.org/2005/Atom}title') or entry.find('title')
+                link_elem = entry.find('atom:link', ns) or entry.find('{http://www.w3.org/2005/Atom}link') or entry.find('link')
+                pub_date_elem = entry.find('atom:published', ns) or entry.find('{http://www.w3.org/2005/Atom}published') or entry.find('published') or entry.find('atom:updated', ns) or entry.find('{http://www.w3.org/2005/Atom}updated') or entry.find('updated')
+                
+                if title_elem is not None and title_elem.text:
+                    title = title_elem.text
+                    link = link_elem.attrib.get('href', '') if link_elem is not None else ''
+                    pub_date = pub_date_elem.text if pub_date_elem is not None else ''
+                    
+                    title_cn = simple_translate(title)
+                    news_list.append({
+                        'title': f"[EN] {title_cn}",
+                        'title_original': title,
+                        'source': source['name'],
+                        'source_type': 'foreign',
+                        'language': source['language'],
+                        'url': link,
+                        'pub_date': pub_date,
+                        'timestamp': int(datetime.now().timestamp()),
+                        'fetched_at': datetime.now().isoformat()
+                    })
+            if news_list:
+                return news_list
+        
+        for item in items:
             title_elem = item.find('title')
+            link_elem = item.find('link')
             pub_date_elem = item.find('pubDate')
             
             if title_elem is not None and title_elem.text:
@@ -152,6 +233,7 @@ def fetch_rss_news(source: Dict) -> List[Dict]:
                 if title.startswith('<![CDATA['):
                     title = title[9:-3]
                 
+                link = link_elem.text if link_elem is not None else ''
                 pub_date = pub_date_elem.text if pub_date_elem is not None else ''
                 
                 # 翻译标题
@@ -163,6 +245,7 @@ def fetch_rss_news(source: Dict) -> List[Dict]:
                     'source': source['name'],
                     'source_type': 'foreign',
                     'language': source['language'],
+                    'url': link,
                     'pub_date': pub_date,
                     'timestamp': int(datetime.now().timestamp()),
                     'fetched_at': datetime.now().isoformat()
@@ -300,7 +383,7 @@ def fetch_chinese_news() -> List[Dict]:
     
     try:
         result = subprocess.run(
-            ['bash', os.path.expanduser('~/.openclaw/workspace-group/tools/news-fetcher.sh')],
+            ['bash', os.path.dirname(__file__) + '/news-fetcher.sh'],
             capture_output=True,
             text=True,
             timeout=30
@@ -308,6 +391,7 @@ def fetch_chinese_news() -> List[Dict]:
         
         output = result.stdout
         current_source = ''
+        current_news = {}
         
         for line in output.split('\n'):
             line = line.strip()
@@ -321,18 +405,27 @@ def fetch_chinese_news() -> List[Dict]:
                     current_source = '华尔街见闻'
                 continue
             
-            if line.startswith('• ') and '时间:' not in line:
+            if line.startswith('• '):
                 title = line[2:].strip()
                 if title:
-                    news_list.append({
+                    current_news = {
                         'title': title,
                         'source': current_source,
                         'source_type': 'chinese',
                         'language': 'zh',
-                        'url': '暂无链接',
+                        'url': '',
                         'timestamp': int(datetime.now().timestamp()),
                         'fetched_at': datetime.now().isoformat()
-                    })
+                    }
+            elif line.startswith('时间:'):
+                pass
+            elif line.startswith('链接:'):
+                url = line[3:].strip()
+                if current_news:
+                    current_news['url'] = url
+            elif line == '' and current_news:
+                news_list.append(current_news)
+                current_news = {}
     
     except Exception as e:
         print(f"抓取中文新闻失败: {e}")
@@ -356,8 +449,9 @@ def generate_report(all_news: List[Dict]) -> str:
     
     for i, news in enumerate(bullish_news[:15], 1):
         source_tag = "🇨🇳" if news.get('source_type') == 'chinese' else "🇬🇧"
+        url = news.get('url', '无链接')
         report += f"{i}. {news['title']}\n"
-        report += f"   来源: {source_tag} {news['source']}\n\n"
+        report += f"   来源: {source_tag} {news['source']} ([阅读原文]({url}))\n\n"
     
     if len(bullish_news) > 15:
         report += f"... 还有 {len(bullish_news) - 15} 条利好新闻\n\n"
@@ -369,8 +463,9 @@ def generate_report(all_news: List[Dict]) -> str:
     
     for i, news in enumerate(bearish_news[:15], 1):
         source_tag = "🇨🇳" if news.get('source_type') == 'chinese' else "🇬🇧"
+        url = news.get('url', '无链接')
         report += f"{i}. {news['title']}\n"
-        report += f"   来源: {source_tag} {news['source']}\n\n"
+        report += f"   来源: {source_tag} {news['source']} ([阅读原文]({url}))\n\n"
     
     if len(bearish_news) > 15:
         report += f"... 还有 {len(bearish_news) - 15} 条利空新闻\n\n"
@@ -382,8 +477,9 @@ def generate_report(all_news: List[Dict]) -> str:
     
     for i, news in enumerate(neutral_news[:15], 1):
         source_tag = "🇨🇳" if news.get('source_type') == 'chinese' else "🇬🇧"
+        url = news.get('url', '无链接')
         report += f"{i}. {news['title']}\n"
-        report += f"   来源: {source_tag} {news['source']}\n\n"
+        report += f"   来源: {source_tag} {news['source']} ([阅读原文]({url}))\n\n"
     
     if len(neutral_news) > 15:
         report += f"... 还有 {len(neutral_news) - 15} 条中性新闻\n\n"
