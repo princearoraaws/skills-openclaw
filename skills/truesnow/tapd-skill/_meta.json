@@ -1,0 +1,11 @@
+{
+  "owner": "truesnow",
+  "slug": "tapd-skill",
+  "displayName": "TAPD",
+  "latest": {
+    "version": "0.0.2",
+    "publishedAt": 1773753745549,
+    "commit": null
+  },
+  "history": []
+}
