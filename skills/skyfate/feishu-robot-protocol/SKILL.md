@@ -1,306 +1,216 @@
-# Skill: 飞书机器人身份消息协议
+# Skill: 飞书机器人身份消息协议 v2
 
 ## 概述
 
-本技能定义了一个消息协议，让多个 OpenClaw 机器人之间可以通过统一的标准识别发送者身份，并在回复时使用 `feishu_im_user_message` 以用户身份发送消息。
+本技能定义了飞书机器人之间的双层消息通信协议，解决机器人之间无法相互@触发 mention 事件的问题。
 
 ## 核心概念
 
-### 1. 用户名-ID 映射表
+### 1. 双层消息机制
 
-维护一个独立的映射文件，按群分组记录用户名和用户 ID 的对应关系。
+机器人主动 @另一个机器人（或多人）时，需要发送两条消息：
+
+**格式说明【发送者->接收者1,接收者2...】**：
+- -> 前面是发信人
+- -> 后面是收信人，多个用逗号分隔
+
+**多人场景**：
+- 第一条：【发送者->接收者1,接收者2...】
+- 第二条：@所有接收者
+
+**示例（@两个人）**：
+- 第一条：<at user_id="ou_A">A</at><at user_id="ou_B">B</at> 【发送者->A,B】
+- 第二条：<at user_id="ou_A">A</at><at user_id="ou_B">B</at> [图钉]【发送者->A,B】[图钉]
+
+**第1步：用机器人身份发送（message 工具）**
+```
+<at user_id="接收者ID">接收者</at> 📌【发送者->接收者】📌
+消息正文
+```
+- message 工具只支持 emoji 📌，不支持 [图钉] 占位符
+- 群里所有人都能看到是机器人发的
+- 有【】格式标识发送者和接收者
+
+**第2步：用用户身份发送（feishu_im_user_message send）**
+两种格式可选：
+
+**格式1：富文本 post**
+```
+内容：{"zh_cn":{"content":[[{"tag":"at","user_id":"ou_接收者ID","name":"接收者"},{"tag":"text","text":" 📌【发送者->接收者】或【发送者->接收者1,接收者2...】📌"}]]}}
+格式：post（必须使用 emoji 📌，[图钉] 不会显示）
+```
+
+**格式2：纯文本 text（推荐）**
+```
+内容：<at user_id="ou_接收者ID">接收者</at> [图钉]【发送者->接收者】或【发送者->接收者1,接收者2...】[图钉]
+格式：text（使用飞书占位表情 [图钉] 或 emoji 📌 都可以）
+```
+- 优先使用此格式（第二条消息）
+- 如果发送失败，再使用富文本 post 格式
+- 第一条消息根据情况自行决定（可text可post）
+- 触发 mention 事件
+- 被 @的机器人收到通知
+
+### 2. 用户名-ID 映射表
+
+维护映射文件，按群分组记录用户名和用户 ID 的对应关系。
 
 **文件位置：** `~/.openclaw/workspace/feishu-user-map.md`
 
 **格式：**
 ```markdown
-# 飞书用户映射表
+## 群组：龙虾池塘 (chat_id)
 
-## 群组：群名A (chat_id_A)
+| 用户名 | 用户ID (open_id) | 类型 | 更新时间 |
+|--------|------------------|------|----------|
+| saber | ou_xxx | bot | 2026-03-14T09:00:00+08:00 |
+| Excalibur | ou_xxx | bot | 2026-03-14T09:00:00+08:00 |
+| Qilin | ou_xxx | bot | 2026-03-14T09:00:00+08:00 |
 
-| 用户名 | 用户ID (open_id) | 类型 |
-|--------|------------------|------|
-| Saber | ou_test_saber_001 | user |
-| Lancer | ou_test_lancer_001 | bot |
+## 全局配置
 
-## 群组：群名B (chat_id_B)
-
-| 用户名 | 用户ID (open_id) | 类型 |
-|--------|------------------|------|
-| 用户A | ou_test_user_a | user |
+- **ID过期时间**：21600 秒（6小时）
 ```
 
-**类型说明：**
-- `user` - 人类用户
-- `bot` - 机器人
+### 3. 消息格式
 
-机器人需要根据当前群组查找映射表中的用户名对应的 ID。
-
-### 2. 消息格式
-
-每条消息使用以下格式：
-
+**第1条（机器人身份）：**
 ```
-<at user_id="接收者ID">接收者</at> 【发送者->接收者】
-消息正文内容
+<at user_id="接收者ID">接收者</at> 📌【发送者->接收者】📌
+消息正文
 ```
+- message 工具只支持 emoji 📌，不支持 [图钉] 占位符
 
-例如：
-- `<at id="ou_test_lancer_001">Lancer</at> 【Saber->Lancer】
-你好`
-
-简化为：
+**第2条（用户身份）：**
 ```
-@Lancer 【Saber->Lancer】
-你好
+{"zh_cn":{"content":[[{"tag":"at","user_id":"ou_qilin","name":"Qilin"},{"tag":"text","text":" 📌【发送者->Qilin】📌"}]]}}
 ```
 
-**注意：如果使用 【发送者->xxx】格式，消息正文必须从下一行开始！**
+## 发送消息流程
 
-### 3. 解析规则
+### 主动 @另一个机器人
 
-从消息中提取发送者：
-
-1. 查找 `【` 和 `->` 之间的内容 = **发送者用户名**
-2. 查找 `->` 和 `】` 之间的内容 = **接收者用户名**（可忽略）
-3. 在当前群组的映射表中查找发送者用户名对应的 ID
-
-### 4. 回复规则
-
-收到消息后，回复时：
-
-1. 解析消息中的发送者
-2. 优先使用 `【发送者->xxx】` 中 `->` 前面的发送者
-3. 如果解析不到，使用消息原始发送者
-4. 在回复中包含自己的身份标识
-
-## 使用方法
-
-### 发送消息
-
-根据接收者类型选择不同的发送方式：
-
-**1. 如果接收者是机器人：**
-- 使用 `feishu_im_user_message` 工具发送（以用户身份）
-- 这样可以触发 mention 事件，让被 @ 的机器人收到通知
-
-**2. 如果接收者是用户：**
-- 使用 `message` 工具正常发送
-
-**判断逻辑：**
+1. **第1步（机器人身份）：**
 ```javascript
-// 根据群组和接收者名称判断类型
-const receiverInfo = getUserInfoByGroup(chatId, receiverName);
-
-if (receiverInfo && receiverInfo.type === 'bot') {
-    // 接收者是机器人，使用 feishu_im_user_message
-    await feishu_im_user_message({
-        action: 'send',
-        receive_id_type: 'chat_id',
-        receive_id: chatId,
-        msg_type: 'text',
-        content: JSON.stringify({ text: messageContent })
-    });
-} else {
-    // 接收者是用户，使用正常方式
-    await message({
-        action: 'send',
-        channel: 'feishu',
-        message: messageContent,
-        target: `chat:${chatId}`
-    });
-}
+// 使用 message 工具发送
+await message({
+    action: 'send',
+    channel: 'feishu',
+    message: '<at user_id="接收者ID">接收者</at> 【发送者->接收者】或【发送者->接收者1,接收者2...】\n消息正文',
+    target: 'chat:群ID'
+});
 ```
 
-**判断后发送：**
-
-```json
-// 如果接收者是机器人（使用 feishu_im_user_message）
-{
-  "action": "send",
-  "receive_id_type": "chat_id",
-  "receive_id": "群聊ID",
-  "msg_type": "text",
-  "content": "{\"text\": \"<at user_id=\\\"接收者ID\\\">接收者</at> 【发送者->接收者】消息内容\"}"
-}
-
-// 如果接收者是用户（使用 message）
-{
-  "action": "send",
-  "channel": "feishu",
-  "message": "消息内容",
-  "target": "chat:群聊ID"
-}
+2. **第2步（用户身份，用 feishu_im_user_message 发送富文本）：**
+```javascript
+// 使用 feishu_im_user_message 发送富文本
+// 注意：[📌] 用 emoji 字符 📌 代替
+await feishu_im_user_message({
+    action: 'send',
+    msg_type: 'post',
+    content: '{"zh_cn":{"content":[[{"tag":"at","user_id":"ou_接收者ID","name":"接收者"},{"tag":"text","text":" 📌【发送者->接收者】或【发送者->接收者1,接收者2...】📌"}]]}}',
+    receive_id: '群ID',
+    receive_id_type: 'chat_id'
+});
 ```
 
-### 映射表查询
+## 接收者处理流程
 
-当需要发送消息或解析消息时：
+当收到 mention 事件时：
 
-1. 根据当前群组查找对应的映射表
-2. 从映射表文件读取该群组的用户名-ID-类型 对应关系
-3. 根据用户名查找对应的 open_id
+### 1. 解析发送者
+
+**优先检查：** 是否有符合以下条件的消息？
+- 内容包含 `@接收者` 和 `📌【发送者->接收者】或【发送者->接收者1,接收者2...】📌`
+- 是用户发送的（sender_type = user）
+- msg_type 是 post
+- 有引用（reply_to 字段）
+
+**如果有：** 解析引用指向的第一条消息，获取【】里的发送者
+
+**如果没有：** 往上回溯，找到最近一条满足：
+- 【发送者->接收者】或【发送者->接收者1,接收者2...】格式匹配
+- 发送者是当前消息的发送者
+
+### 2. 回复（也是两步）
+
+**第1步（机器人身份）：**
+```
+<at user_id="原发送者ID">原发送者</at> 【接收者->原发送者】
+回复内容
+```
+
+**第2步（用户身份）：**
+```
+{"zh_cn":{"content":[[{"tag":"at","user_id":"ou_原发送者ID","name":"原发送者"},{"tag":"text","text":" 📌【接收者->原发送者】📌"}]]}}
+（引用第1条消息）
+```
 
 ## 示例
 
-### 场景：Saber发送消息给Lancer
+### 场景：saber让 Excalibur 找 Qilin 讨论
 
-1. Saber发送：
+**发送方（saber）：**
+
+1. 第1条（Excalibur 机器人）：
    ```
-   <at id="ou_test_lancer_001">Lancer</at> 【Saber->Lancer】
-   你好
-   ```
-
-2. 映射表查询（群组：龙虾池塘）：Saber = `ou_test_saber_001`
-
-3. 机器人识别到发送者是"Saber"
-
-### 场景：Excalibur 回复 Qilin
-
-1. Qilin 发送：
-   ```
-   <at id="ou_test_excalibur_001">Excalibur</at> 【Qilin->Excalibur】
-   我们来讨论一下吧
+   <at user_id="ou_qilin">Qilin</at> 【Excalibur->Qilin】
+   saber有事找你
    ```
 
-2. Excalibur 解析：发送者是"Qilin"
-
-3. Excalibur 回复：
+2. 第2条（saber用户）：
    ```
-   <at id="ou_test_qilin_001">Qilin</at> 【Excalibur->Qilin】
-   好的，开始讨论
+   {"zh_cn":{"content":[[{"tag":"at","user_id":"ou_qilin","name":"Qilin"},{"tag":"text","text":" 📌【Excalibur->Qilin】📌"}]]}}
+   （引用第1条）
    ```
 
-### 场景：多个机器人讨论
+**接收方（Qilin）：**
 
-1. Excalibur 发送：
-   ```
-   <at id="ou_test_qilin_001">Qilin</at> 【Excalibur->Qilin】
-   你觉得今天天气怎么样？
-   ```
+1. 收到 mention 事件
+2. 找到第2条消息（post格式），包含 `@Qilin` 和 `📌【Excalibur->Qilin】📌`
+3. 解析引用，找到第1条，获取发送者是 Excalibur
+4. 回复：
 
-2. Qilin 回复：
-   ```
-   <at id="ou_test_excalibur_001">Excalibur</at> 【Qilin->Excalibur】
-   我觉得还不错！
-   ```
+   - 第1条（Qilin 机器人）：
+     ```
+     <at user_id="ou_excalibur">Excalibur</at> 【Qilin->Excalibur】
+     好的，什么事？
+     ```
 
-3. Excalibur 继续：
-   ```
-   <at id="ou_test_qilin_001">Qilin</at> 【Excalibur->Qilin】
-   是啊，适合出去走走
-   ```
+   - 第2条（Qilin 用户）：
+     ```
+     {"zh_cn":{"content":[[{"tag":"at","user_id":"ou_excalibur","name":"Excalibur"},{"tag":"text","text":" 📌【Qilin->Excalibur】📌"}]]}}
+     （引用第1条）
+     ```
 
 ## 映射表管理
 
-### 映射表位置
+### ID过期刷新机制
 
-映射表存储在：`~/.openclaw/workspace/feishu-user-map.md`
+**配置参数：**
+- **ID过期时间**（秒）：默认 21600 秒（6小时）
+- 可在 feishu-user-map.md 中修改
 
-### 按群分组
+**刷新逻辑：**
+1. 每次使用映射表时，检查每条记录的"更新时间"
+2. 如果当前时间与更新时间之差 > 过期时间，则重新获取该用户ID
+3. 重新获取方式：从最近的消息历史中查找该用户发送的消息，从 mentions 字段获取最新ID
 
-映射表按群组划分，每个群组有独立的用户列表：
+**刷新时机：**
+- 发送消息前检查接收者ID是否过期
+- 收到消息时检查发送者ID是否过期
 
-```markdown
-# 飞书用户映射表
+### 手动触发
 
-## 群组：群名A (chat_id_A)
-
-| 用户名 | 用户ID (open_id) | 类型 |
-|--------|------------------|------|
-| 用户1 | ou_xxx | user |
-| 机器人1 | ou_xxx | bot |
-
-## 群组：群名B (chat_id_B)
-
-| 用户名 | 用户ID (open_id) | 类型 |
-|--------|------------------|------|
-```
-
-### 初始化加载
-
-机器人启动时自动读取 feishu-user-map.md，加载当前群组的用户名-ID-类型 对应关系到内存中。
-
-### 定时批量查看并记录群的成员名称列表
-
-机器人每天定时批量学习群聊消息，更新映射表，而不是实时更新。
-
-**定时时间：**
-- 默认每天 9:00
-- 可在 feishu-user-map.md 中配置
-
-**配置格式：**
-```markdown
-## 定时学习配置
-
-- **学习时间**：每天 9:00（可自定义，如 10:00）
-- **每次最大处理消息数**：500 条
-```
-
-**定时任务：**
-- 每天指定时间执行
-- 每次最多处理 500 条消息
-
-**更新逻辑：**
-
-1. **获取群组消息**
-   - 使用 `feishu_im_user_get_messages` 获取最近 500 条消息
-   - 按群组（chat_id）分组处理
-
-2. **提取发送者信息**
-   - 从每条消息的 sender 信息中获取发送者名称
-   - 从 sender id 中获取发送者 open_id
-
-3. **确定用户类型**
-   - 如果发送者 ID 已在当前群映射表中且类型为 bot → 类型为 `bot`
-   - 如果发送者在其他群映射表中且类型为 bot → 类型为 `bot`
-   - 否则 → 类型为 `user`
-
-4. **更新映射表**
-   - 如果用户在当前群不存在，添加到映射表
-   - 如果用户存在但 ID 或类型变化，更新映射表
-   - 写回 feishu-user-map.md 文件
-
-**示例命令：**
-```javascript
-// 获取最近500条消息
-const messages = await feishu_im_user_get_messages({
-    chat_id: "群ID",
-    page_size: 500
-});
-
-// 提取所有发送者
-const senders = messages.map(m => ({
-    name: m.sender.name,
-    id: m.sender.id,
-    id_type: m.sender.sender_type  // user 或 app
-}));
-
-// 按群组更新映射表
-for (const sender of senders) {
-    updateUserMap(群ID, sender.name, sender.id, sender.id_type === 'app' ? 'bot' : 'user');
-}
-```
-
-### 手动维护
-
-如果需要手动添加新用户，可以直接编辑 feishu-user-map.md 文件：
-
-```markdown
-## 群组：群名
-
-| 新用户名 | ou_test_xxx | user |
-```
+在群里发送：`查看并记录群的成员名称列表 [数量]`
 
 ### 查询函数
-
-机器人应该实现以下函数来操作映射表：
 
 ```javascript
 // 根据群组和用户名查找信息
 function getUserInfoByGroup(chatId, username) {
     const groupMap = loadUserMapByGroup(chatId);
-    return groupMap[username];  // 返回 { id: "ou_xxx", type: "user|bot" }
+    return groupMap[username];  // 返回 { id: "ou_xxx", type: "user|bot", updatedAt: "ISO时间" }
 }
 
 // 根据群组和ID查找用户名
@@ -312,59 +222,69 @@ function getUserNameByGroup(chatId, userId) {
     return null;
 }
 
-// 判断是否是机器人
-function isBotByGroup(chatId, username) {
-    const info = getUserInfoByGroup(chatId, username);
-    return info && info.type === 'bot';
+// 检查ID是否过期，过期则刷新
+async function getUserIdWithRefresh(chatId, username) {
+    const userInfo = getUserInfoByGroup(chatId, username);
+    if (!userInfo) return null;
+
+    const expireSeconds = getExpireSeconds(); // 默认21600
+    const now = new Date();
+    const updated = new Date(userInfo.updatedAt);
+    const diffSeconds = (now - updated) / 1000;
+
+    if (diffSeconds > expireSeconds) {
+        // ID过期，需要刷新
+        const newId = await refreshUserIdFromHistory(chatId, username);
+        if (newId) {
+            updateUserId(chatId, username, newId);
+            return newId;
+        }
+    }
+    return userInfo.id;
+}
+
+// 从历史消息中刷新用户ID
+async function refreshUserIdFromHistory(chatId, username) {
+    // 获取最近的消息，找到该用户发送的消息
+    const messages = await feishu_im_user_get_messages({
+        chat_id: chatId,
+        page_size: 50
+    });
+
+    for (const msg of messages) {
+        if (msg.sender.name === username && msg.mentions) {
+            for (const mention of msg.mentions) {
+                if (mention.name === username) {
+                    return mention.id;
+                }
+            }
+        }
+    }
+    return null;
 }
 ```
 
-### 注意事项
+## ⚠️ 重要前提
 
-1. 映射表文件使用 Markdown 表格格式存储，按群组划分
-2. 每次批量更新后保留原有的表格格式
-3. 机器人重启后会加载最新的映射表
-4. 定时任务每天最多处理 500 条消息，避免 API 限制
-5. 定时时间可在 feishu-user-map.md 中配置
-6. 支持在群里手动触发查看并记录群的成员名称列表
+**本 skill 中所有示例都是示例，不能直接使用！**
+- ❌ 不能直接用 `ou_接收者ID` 这个值
+- ❌ 不能直接用 `接收者` 这个名字
+- ✅ 必须替换为实际的值（从 feishu-user-map.md 或 mentions 获取）
 
-## 手动触发查看并记录群的成员名称列表
+## 注意事项
 
-除了定时任务，还可以在群里手动触发查看并记录群的成员名称列表。
-
-### 触发命令
-
-在群里发送以下格式的消息即可手动触发：
-
-```
-查看并记录群的成员名称列表 [数量]
-```
-
-例如：
-- `查看并记录群的成员名称列表 100` - 学习最近 100 条消息
-- `查看并记录群的成员名称列表` - 使用默认配置（500 条）
-
-### 处理逻辑
-
-1. 解析命令中的数量参数（最大 500）
-2. 获取最近 N 条消息
-3. 提取所有发送者信息
-4. 更新当前群组的映射表
-5. 在群里回复学习结果
-
-### 示例
-
-用户发送：`查看并记录群的成员名称列表 200`
-
-机器人回复：
-```
-✅ 已查看并记录群的成员名称列表！
-- 处理消息数：200
-- 新增用户：3
-- 更新用户：1
-
-当前群组映射表：
-| 用户名 | 用户ID | 类型 |
-|--------|--------|------|
-| Saber | ou_xxx | user |
-```
+1. 必须使用 `user_id`（不是 `id`）在 @标签中
+2. @标签中必须用 ou_xxx，不能用名字（机器人身份无法解析名字）
+3. @标签中 ou_xxx 不能为空，必须按以下优先级获取：
+   - 优先从 feishu-user-map.md 查找
+   - 如果找不到，回溯群里历史消息获取真实 ID
+   - 绝对不能留空！
+   - 绝对不能直接用 skill 样例中的值！
+4. 回复规则：
+   - 如果消息中有 [图钉]【发送者->接收者】[图钉] 或 📌【发送者->接收者】📌 标记，解析【】并回复给【】中的发送者
+   - 如果没有标记，按正常逻辑回复@你的人
+5. 第二条消息必须有占位符：[图钉] 或 📌（判断时需同时兼容占位符和 emoji 📌）
+3. 回复时也是两步：机器人身份 + 用户身份 reply
+4. 解析发送者时优先找有引用的用户消息
+5. 如果找不到匹配的引用消息，再回溯查找
+6. 定期刷新ID，防止ID过期导致@失败
