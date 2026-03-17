@@ -1,0 +1,11 @@
+{
+  "owner": "tooled-app",
+  "slug": "low-token",
+  "displayName": "Low Token Usage",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773336310266,
+    "commit": null
+  },
+  "history": []
+}
