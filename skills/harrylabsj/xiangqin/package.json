@@ -1,0 +1,28 @@
+{
+  "name": "xiangqin",
+  "version": "1.0.0",
+  "description": "相亲辅助 skill：用于资料管理、基础匹配、沟通建议与安全提醒",
+  "main": "scripts/index.js",
+  "scripts": {
+    "test": "node test.js",
+    "start": "node scripts/cli.js"
+  },
+  "keywords": ["相亲", "dating", "匹配", "婚恋", "交友"],
+  "author": "Harry",
+  "license": "MIT",
+  "openclaw": {
+    "skill": {
+      "name": "xiangqin",
+      "displayName": "相亲助手",
+      "description": "用于相亲资料管理、基础匹配推荐、开场白与聊天建议、约会建议、接触记录和安全提醒的本地辅助 skill",
+      "version": "1.0.0",
+      "triggers": [
+        "相亲",
+        "找对象",
+        "匹配",
+        "约会",
+        "脱单"
+      ]
+    }
+  }
+}
