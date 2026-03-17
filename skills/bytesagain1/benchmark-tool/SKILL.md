@@ -1,6 +1,8 @@
 ---
+version: "2.0.0"
 name: Benchmark Tool
 description: "A command-line benchmarking tool benchmark tool, rust, benchmark, cli, command-line, rust, terminal. Use when you need benchmark tool capabilities. Triggers on: benchmark tool."
+author: BytesAgain
 ---
 
 # Benchmark Tool
@@ -25,3 +27,23 @@ Run any command: `benchmark-tool <command> [args]`
 ---
 💬 Feedback & Feature Requests: https://bytesagain.com/feedback
 Powered by BytesAgain | bytesagain.com
+
+## Examples
+
+```bash
+# Show help
+benchmark-tool help
+
+# Run
+benchmark-tool run
+```
+
+- Run `benchmark-tool help` for commands
+- No API keys needed
+
+- Run `benchmark-tool help` for all commands
+
+## When to Use
+
+- Quick benchmark tasks from terminal
+- Automation pipelines
