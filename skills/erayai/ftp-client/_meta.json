@@ -1,0 +1,11 @@
+{
+  "owner": "erayai",
+  "slug": "ftp-client",
+  "displayName": "Ftp Client",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1773655044565,
+    "commit": null
+  },
+  "history": []
+}
