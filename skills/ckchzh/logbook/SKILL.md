@@ -1,10 +1,10 @@
 ---
 name: LogBook
-description: "Personal digital logbook for daily journaling and knowledge capture. Write timestamped entries, search across all past logs by keyword, view today's entries or weekly summaries, track your journaling consistency with stats, and export everything to markdown. All data stored locally — your thoughts stay private."
-version: "1.0.0"
+version: "2.0.0"
 author: "BytesAgain"
 tags: ["journal","diary","log","daily","writing","personal","productivity","notes"]
 categories: ["Personal Management", "Productivity", "Writing"]
+description: "Logbook - command-line tool for everyday use"
 ---
 
 # LogBook
