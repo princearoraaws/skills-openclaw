@@ -1,6 +1,6 @@
 ---
 name: cashbook
-description: 个人记账 Skill，数据本地优先（SQLite），支持自然语言、截图录入，提供账户管理、预算追踪、周/月报告和 CSV 导入。触发场景：用户说"记一笔"、"花了多少钱"、"今天买了xx花了xx"、上传账单/小票截图、"设置预算"、"本月还剩多少"、"出月报"、"导出流水"、"删除这笔"、"导入账单" 等任何记账或个人财务相关请求。Use for all personal bookkeeping and expense tracking tasks.
+description: Local-first personal bookkeeping Skill (SQLite). Supports natural language and screenshot-based expense recording, account management, budget tracking, weekly/monthly reports, and CSV import (Alipay/WeChat). Trigger phrases include "record expense", "spent $X on Y", "set budget", "monthly report", "export transactions", "delete last entry", "import CSV", or upload a receipt/payment screenshot. Also responds to Chinese triggers like "记一笔", "花了多少", "出月报", "设置预算". Use for all personal bookkeeping and expense tracking tasks.
 ---
 
 # cashbook

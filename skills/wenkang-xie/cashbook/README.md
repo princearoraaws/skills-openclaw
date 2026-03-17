@@ -1,138 +1,113 @@
 # cashbook
 
-> 个人记账 OpenClaw Skill，数据本地优先，支持自然语言、截图录入，提供预算追踪和周/月报告。
+> Local-first personal bookkeeping Skill for OpenClaw. Supports natural language & screenshot-based expense recording, budget tracking, and financial reports. All data stored locally in SQLite — zero cloud dependency.
 
-## 核心特性
+## Features
 
-✅ **自然语言记账** — "今天咖啡花了 38" → 自动解析金额/分类/账户  
-✅ **截图记账** — 上传支付宝/微信/小票截图，自动提取字段  
-✅ **账户管理** — 支持借记卡、信用卡、电子钱包，自动余额计算  
-✅ **预算追踪** — 按分类或总预算设置月度限额，超支提示  
-✅ **周月报告** — ASCII 进度条，分类分布 + 预算执行情况  
-✅ **CSV 导入** — 支付宝/微信账单批量导入，自动分类和重复检测  
-✅ **数据本地** — SQLite 单文件，完全数据主权，随时导出  
+✅ **Natural Language Recording** — "Spent $38 on coffee today" → auto-parse amount, category, account  
+✅ **Screenshot Recording** — Upload Alipay/WeChat/POS receipt screenshots, auto-extract fields  
+✅ **Account Management** — Debit cards, credit cards, e-wallets with automatic balance tracking  
+✅ **Budget Tracking** — Set monthly limits per category or total, with overspend alerts  
+✅ **Weekly & Monthly Reports** — Spending breakdown, category distribution, budget progress  
+✅ **CSV Import** — Batch import Alipay/WeChat transaction history with auto-categorization  
+✅ **Multi-language** — Chinese, English, and Japanese category aliases supported  
+✅ **Local-first** — SQLite single-file storage, full data ownership, export anytime  
 
-## 安装
+## Install
 
 ```bash
 clawhub install cashbook
 ```
 
-首次使用初始化数据库：
-```bash
-python3 scripts/init.py
+No manual setup needed — the database initializes automatically on first use.
+
+## Quick Start
+
+### Record an expense
+```
+You: Spent 68 on groceries at Walmart
+Bot: ✅ Recorded: Expense ¥68.00 / Shopping / Default Wallet / 2026-03-16
 ```
 
-## 快速开始
-
-### 1. 记一笔
+### Set a budget
 ```
-你：今天买菜花了 68，用微信钱包
-我：✅ 已记录：支出 ¥68.00 / 购物 / 微信钱包 / 今天
-```
+You: Set monthly food budget to 2000
+Bot: ✅ Set 餐饮 monthly budget ¥2,000.00
 
-### 2. 预算
-```
-你：设置餐饮月预算 2000 块
-我：✅ 已设置 餐饮 月度预算 ¥2,000.00
-
-你：本月餐饮还剩多少
-我：本月餐饮预算：¥2,000.00
-   已支出：¥1,234.00（61.7%）
-   剩余：¥766.00
-   状态：正常 ✅
+You: How much food budget left this month?
+Bot: Monthly food budget: ¥2,000.00
+    Spent: ¥1,234.00 (61.7%)
+    Remaining: ¥766.00
+    Status: On track ✅
 ```
 
-### 3. 截图记账
-上传支付宝/微信账单截图 → 自动识别金额/商户/时间 → 确认入账
+### Screenshot recording
+Upload a payment screenshot → auto-extract amount/merchant/date → confirm → recorded
 
-### 4. 月报
+### Monthly report
 ```
-你：出一份本月月报
-我：📊 2026年3月账单
-   总支出：¥4,567.00    总收入：¥15,000.00    净额：+¥10,433.00
-   
-   支出分类排行：
-     1. 餐饮      ¥1,234.00  27.0%  █████░░░░
-     2. 交通      ¥890.00    19.5%  ████░░░░░
-     ...
+You: Generate monthly report
+Bot: 📊 March 2026 Report
+    Total Expenses: ¥4,567.00    Total Income: ¥15,000.00
+    
+    Expense Breakdown:
+      1. Food       ¥1,234.00  27.0%  █████░░░░
+      2. Transport   ¥890.00   19.5%  ████░░░░░
+      ...
 ```
 
-## 文件结构
+## Supported Languages
+
+| Language | Example | Category Mapping |
+|----------|---------|-----------------|
+| Chinese | "今天咖啡花了38" | 餐饮 (native) |
+| English | "Spent 38 on coffee" | food → 餐饮 |
+| Japanese | "食費 38円" | 食費 → 餐饮 |
+
+## File Structure
 
 ```
 cashbook/
-├── SKILL.md                 # Skill 指令说明
-├── references/              # 参考文档
-│   ├── schema.md           # 数据模型
-│   ├── account.md          # 账户管理说明
-│   └── budget.md           # 预算管理说明
-└── scripts/                # Python 脚本
-    ├── db.py               # 数据库公共模块
-    ├── init.py             # 初始化
-    ├── add_tx.py           # 添加交易
-    ├── delete_tx.py        # 删除交易
-    ├── account.py          # 账户管理
-    ├── category.py         # 分类管理
-    ├── budget.py           # 预算管理
-    ├── query.py            # 查询流水
-    ├── report.py           # 周月报
-    ├── import_csv.py       # CSV 导入
-    └── export.py           # 数据导出
+├── SKILL.md                 # Skill instructions
+├── references/              # Reference docs
+│   ├── schema.md           # Data model
+│   ├── account.md          # Account management guide
+│   └── budget.md           # Budget management guide
+└── scripts/                # Python scripts
+    ├── db.py               # Database module (auto-init)
+    ├── init.py             # Manual initialization
+    ├── add_tx.py           # Record transaction
+    ├── delete_tx.py        # Delete transaction
+    ├── account.py          # Account CRUD
+    ├── category.py         # Category management
+    ├── budget.py           # Budget management
+    ├── query.py            # Query transactions
+    ├── report.py           # Weekly/monthly reports
+    ├── import_csv.py       # CSV import (Alipay/WeChat)
+    └── export.py           # Data export
 ```
 
-## 技术栈
+## Tech Stack
 
-- **语言**: Python 3
-- **存储**: SQLite（本地单文件）
-- **依赖**: 零第三方包（仅用标准库）
-- **数据路径**: `~/.local/share/cashbook/cashbook.db`
+- **Language**: Python 3 (standard library only, zero dependencies)
+- **Storage**: SQLite (local single-file)
+- **Data Path**: `~/.local/share/cashbook/cashbook.db`
+- **Override**: Set `CASHBOOK_DB` environment variable
 
-## 数据安全
+## Data Security
 
-- ✅ 100% 本地存储，无云同步
-- ✅ 只存卡号尾号，不存完整卡号/密码
-- ✅ 用户随时可导出为 CSV/JSON
-- ✅ 支持自定义数据库路径（`CASHBOOK_DB` 环境变量）
+- ✅ 100% local storage, no cloud sync
+- ✅ Only stores card nicknames and last 4 digits (no full card numbers or passwords)
+- ✅ Export to CSV/JSON anytime
+- ✅ Custom database path supported
 
-## 常见命令
+## Preset Categories
 
-### 对话触发（自然语言）
-- "记一笔" → 自动识别金额/分类
-- "今天花了多少" → 查询日期汇总
-- "设置预算" → 设置月度限额
-- "本月月报" → 生成报告
-- "删除最后一笔" → 撤销记录
+**Expenses**: Food, Transport, Shopping, Entertainment, Medical, Housing, Education, Travel, Other  
+**Income**: Salary, Bonus, Freelance, Other
 
-### 手动脚本（需要指定参数）
-```bash
-# 账户
-python3 scripts/account.py add --nickname "招行卡" --type debit
-python3 scripts/account.py list
-python3 scripts/account.py default --id 1
+Custom categories supported via `scripts/category.py add`.
 
-# 预算
-python3 scripts/budget.py set --category 餐饮 --amount 2000
-python3 scripts/budget.py query --all
-
-# 查询
-python3 scripts/query.py --last 10
-python3 scripts/query.py --period month
-
-# 报告
-python3 scripts/report.py --period month
-
-# 导入
-python3 scripts/import_csv.py --file ~/Downloads/alipay.csv --account "支付宝"
-
-# 导出
-python3 scripts/export.py --format csv
-```
-
-## 许可证
+## License
 
 MIT
-
----
-
-**Made with ❤️ for cashbook lovers**
