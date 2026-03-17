@@ -51,25 +51,15 @@ class ConsistencyReport:
 
 
 class ConsistencyChecker:
-    TEXT_WEIGHT = 0.4
-    STRUCT_WEIGHT = 0.3
-    ENTROPY_WEIGHT = 0.3
+    CHAR_WEIGHT = 0.4
+    SEMANTIC_WEIGHT = 0.6
     DEFAULT_SAMPLES = 5
 
     def __init__(self, config=None):
         self.config = config or DeterministicConfig()
-        self._entropy_history: list = []
 
-    def check(self, prompt, sampler_fn=None, n_samples=None,
-              logprobs_list=None):
-        """一致性检查主流程（v1.1: 支持熵一致性维度）
-
-        Args:
-            prompt: 测试 prompt
-            sampler_fn: 采样函数
-            n_samples: 采样次数
-            logprobs_list: 可选，每次采样的 logprobs 列表
-        """
+    def check(self, prompt, sampler_fn=None, n_samples=None):
+        """一致性检查主流程"""
         if n_samples is None:
             n_samples = self.DEFAULT_SAMPLES
         if sampler_fn is None:
@@ -83,23 +73,6 @@ class ConsistencyChecker:
                 samples.append(str(s))
             except Exception:
                 samples.append("[error]")
-
-        # 熵一致性计算
-        entropy_score = 0.0
-        if logprobs_list:
-            from logprob_analyzer import entropy_from_logprobs
-            entropies = []
-            for lp in logprobs_list:
-                if lp:
-                    entropies.append(entropy_from_logprobs(lp))
-            if entropies:
-                # 熵一致性 = 1 - 归一化标准差（越一致分越高）
-                import math
-                mean_e = sum(entropies) / len(entropies)
-                std_e = math.sqrt(sum((e - mean_e) ** 2 for e in entropies) / len(entropies))
-                max_e = max(entropies) if max(entropies) > 0 else 1.0
-                entropy_score = max(0.0, 1.0 - std_e / max_e)
-                self._entropy_history.extend(entropies)
 
         if len(samples) < 2:
             return ConsistencyReport(
@@ -118,10 +91,7 @@ class ConsistencyChecker:
 
         avg_char = sum(char_scores) / len(char_scores)
         avg_sem = sum(sem_scores) / len(sem_scores)
-        # v1.1 评分公式: 0.4×文本 + 0.3×结构 + 0.3×熵一致性
-        comp = (self.TEXT_WEIGHT * avg_char +
-                self.STRUCT_WEIGHT * avg_sem +
-                self.ENTROPY_WEIGHT * entropy_score)
+        comp = composite_score(avg_char, avg_sem, self.CHAR_WEIGHT, self.SEMANTIC_WEIGHT)
         alert = self._check_threshold(comp)
         return ConsistencyReport(
             samples=samples, char_similarity=avg_char,

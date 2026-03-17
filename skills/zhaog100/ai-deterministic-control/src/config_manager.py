@@ -111,40 +111,14 @@ class ConfigManager:
         except (FileNotFoundError, json.JSONDecodeError):
             return {}
 
-    def set_level(self, level: str):
-        """设置确定性等级，自动应用对应参数
-
-        Args:
-            level: 等级标识 (L0-L4)
-        """
-        from level_manager import get_level_config
-        try:
-            cfg = get_level_config(level)
-        except ValueError as e:
-            return {"status": "error", "message": str(e)}
-
-        self.config["temperature"] = cfg["temperature"]
-        self.config["top_p"] = cfg["top_p"]
-        self.config["active_level"] = level
-        if not cfg["use_seed"]:
-            self.config["seed"] = None
-        self._save_config()
-        return {"status": "ok", "level": level, "config": self.config.copy()}
-
-    def get_level(self):
-        """获取当前确定性等级"""
-        return self.config.get("active_level")
-
     def _load_config(self):
         try:
             with open(self.config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
         except FileNotFoundError:
-            return {"temperature": 0.3, "top_p": 0.9, "seed": None,
-                    "active_preset": None, "active_level": None}
+            return {"temperature": 0.3, "top_p": 0.9, "seed": None, "active_preset": None}
         except json.JSONDecodeError:
-            return {"temperature": 0.3, "top_p": 0.9, "seed": None,
-                    "active_preset": None, "active_level": None}
+            return {"temperature": 0.3, "top_p": 0.9, "seed": None, "active_preset": None}
 
     def _save_config(self):
         os.makedirs(os.path.dirname(self.config_path), exist_ok=True)
