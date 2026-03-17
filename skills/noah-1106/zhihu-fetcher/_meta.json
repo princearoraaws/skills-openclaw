@@ -1,0 +1,11 @@
+{
+  "owner": "noah-1106",
+  "slug": "zhihu-fetcher",
+  "displayName": "知乎数据获取 | Zhihu Data Fetcher",
+  "latest": {
+    "version": "1.1.0",
+    "publishedAt": 1773613073276,
+    "commit": null
+  },
+  "history": []
+}
