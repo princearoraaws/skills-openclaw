@@ -1,0 +1,11 @@
+{
+  "owner": "meowlegemy-sudo",
+  "slug": "chrome-attach",
+  "displayName": "Chrome Session Attach",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773571416626,
+    "commit": null
+  },
+  "history": []
+}
