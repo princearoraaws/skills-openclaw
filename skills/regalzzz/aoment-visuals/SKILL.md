@@ -1,6 +1,6 @@
 ---
 name: aoment-visuals
-description: AI image and video generation service - supports text-to-image, image-to-image, and video generation
+description: AI image and video generation service - supports text-to-image, image-to-image, and video generation. Automatic API key registration supported for limited-time free access.
 metadata: {"openclaw": {"emoji": "🎨"}}
 user-invocable: true
 ---

@@ -20,6 +20,8 @@ AI图像与视频生成服务 - 由 Aoment AI 提供支持
 import argparse
 import base64
 import json
+import os
+import re
 import sys
 
 import requests
@@ -166,6 +168,60 @@ def generate_video(api_base: str, args: argparse.Namespace) -> dict:
     }
 
 
+def _read_local_version() -> str | None:
+    """从 SKILL.md 中读取 version 字段（匹配第一个 'version: x.y.z' 行）"""
+    try:
+        skill_md = os.path.join(os.path.dirname(__file__), '..', 'SKILL.md')
+        with open(skill_md, 'r', encoding='utf-8') as f:
+            content = f.read()
+        match = re.search(r'^version:\s*(.+)$', content, re.MULTILINE)
+        return match.group(1).strip() if match else None
+    except Exception:
+        return None
+
+
+def _compare_versions(local: str, remote: str) -> int:
+    """比较 semver 版本号，返回 -1(落后), 0(相同), 1(超前)"""
+    def parse(v: str) -> tuple:
+        parts = v.split('.')
+        return tuple(int(p) for p in parts)
+    try:
+        l, r = parse(local), parse(remote)
+        return (l > r) - (l < r)
+    except Exception:
+        return 0
+
+
+def _check_version(api_base: str) -> None:
+    """检查本地版本是否落后于远程最新版本，落后则中断"""
+    local_version = _read_local_version()
+    if not local_version:
+        return  # 无法读取本地版本，跳过检查
+
+    try:
+        url = f"{api_base}/api/skills/aoment-visuals/version"
+        resp = requests.get(url, timeout=5)
+        data = resp.json()
+        if not data.get('success'):
+            return
+        remote_version = data.get('data', {}).get('version')
+        if not remote_version:
+            return
+        if _compare_versions(local_version, remote_version) < 0:
+            result = {
+                "success": False,
+                "error": "update_required",
+                "current_version": local_version,
+                "latest_version": remote_version,
+                "message": f"Skill 版本过旧（当前 {local_version}，最新 {remote_version}），请下载最新版本后重试。",
+            }
+            json.dump(result, sys.stdout, ensure_ascii=False, indent=2)
+            print()
+            sys.exit(1)
+    except Exception:
+        pass  # 网络异常等情况下 fail-safe，继续执行
+
+
 def main():
     parser = argparse.ArgumentParser(
         description="aoment-visuals: AI图像与视频生成服务"
@@ -218,6 +274,9 @@ def main():
         help="视频生成模式（视频用），默认 standard",
     )
     args = parser.parse_args()
+
+    # 版本检查：落后时中断并提示更新
+    _check_version(API_BASE)
 
     try:
         if args.tool_type == "text-to-image":
