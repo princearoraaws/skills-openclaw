@@ -1,16 +1,20 @@
 ---
 name: moses-governance
 license: MIT
-description: The constitutional governance harness for OpenClaw agents. Enforces policy invariants, lineage custody, and tamper-evident audit so any execution runtime stays trustworthy. Models are commoditizing — the harness is the moat.
+description: "MO§ES™ Governance Harness — constitutional enforcement layer for AI agents. Modes, postures, roles, SHA-256 audit chain, lineage custody, signing gate, commitment verification. The harness that makes any execution runtime trustworthy."
 metadata:
   openclaw:
     emoji: ⚖️
     tags: [governance, harness, multi-agent, audit, constitution, safety]
-    version: 0.5.2
+    version: 0.5.3
     depends:
       - coverify
     env:
       - MOSES_OPERATOR_SECRET
+      - REFEREE_URL
+      - REFEREE_KEY
+      - REFEREE_ENABLED
+      - MOSES_WITNESS_ENABLED
     bins:
       - python3
     stateDirs:
@@ -81,6 +85,21 @@ If out-of-sequence: Block response, log violation, notify operator.
 
 ---
 
+## Network Behavior — Off By Default
+
+All network features require explicit opt-in. Nothing is transmitted without operator configuration.
+
+| Feature | Env var to enable | What gets sent | What stays local |
+|---|---|---|---|
+| External witness log | `MOSES_WITNESS_ENABLED=1` + `MOLTBOOK_API_KEY` | Event type, governance state, event hash | Raw task content, agent identity |
+| Outside referee | `REFEREE_ENABLED=1` + `REFEREE_URL` + `REFEREE_KEY` | Commitment kernels + hashes only | Raw text, agent identity, session data |
+
+Both features are **off by default**. Neither raw text nor agent identity leaves the system. The blind envelope sent to the outside referee contains commitment kernels and SHA-256 hashes only — by design.
+
+`MOSES_OPERATOR_SECRET` is used exclusively for local HMAC signing. It is never transmitted.
+
+---
+
 ## Tools You MUST Use
 
 When running under an MCP server, call these tools by name:
@@ -129,6 +148,8 @@ scripts/
   progress.py          ← Progress tracking across governed steps
   govern_loop.py       ← ReAct-style governance enforcement loop
   witness.py           ← External witness logger (Moltbook second ledger)
+  adversarial_review.py ← Blind peer review — did output keep instruction's commitments?
+                          triall.ai integration for external reviewer pool.
 references/
   modes.md             ← Full mode definitions and constraints
   postures.md          ← SCOUT/DEFENSE/OFFENSE specs

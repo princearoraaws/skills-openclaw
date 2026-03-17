@@ -21,6 +21,9 @@ Environment:
   MOLTBOOK_API_KEY       — Moltbook API key (or read from ~/.hange/moltbook_api_key)
   MOLTBOOK_SUBMOLT       — submolt to post to (default: "general")
   MOSES_WITNESS_ENABLED  — set to "1" to enable (off by default, opt-in)
+  REFEREE_ENABLED — set to "1" to forward adversarial review results to external reviewer
+  REFEREE_URL     — endpoint URL for external blind reviewer (any provider)
+  REFEREE_KEY     — API key for external blind reviewer
 """
 
 import hashlib

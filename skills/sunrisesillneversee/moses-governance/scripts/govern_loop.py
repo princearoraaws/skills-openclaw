@@ -92,6 +92,36 @@ def governed_step(task: str, action: str, step_num: int, total: int,
     role = state.get("role", "unknown")
     print(f"[HARNESS] State: mode={mode} posture={posture} role={role}")
 
+    # 2b. Ghost token gate — check commitment conservation between task and action
+    ghost_code, ghost_out = run_script(
+        "commitment_verify.py", "ghost", task, action
+    )
+    try:
+        ghost_report = json.loads(ghost_out.split("\n")[0]) if ghost_out else {}
+    except (json.JSONDecodeError, IndexError):
+        ghost_report = {}
+
+    cascade_risk = ghost_report.get("cascade_risk", "NONE")
+    if cascade_risk == "HIGH":
+        leaked = ghost_report.get("leaked_cascade_tokens", [])
+        print(f"[HARNESS] GHOST TOKEN ALERT — cascade_risk: HIGH")
+        print(f"          Leaked: {leaked}")
+        print(f"          {ghost_report.get('cascade_note', '')}")
+        audit_log(
+            "harness", action,
+            f"step {step_num}/{total} — ghost token HIGH: leaked={leaked}",
+            "GHOST-FLAG", ihash, source,
+        )
+        # Block in DEFENSE or HIGH_INTEGRITY mode; warn only otherwise
+        if posture == "defense" or mode in ("High Integrity", "Defense"):
+            print(f"[HARNESS] BLOCKED — modal anchor loss under {posture}/{mode}.")
+            run_script("progress.py", "flag-recovery")
+            return False
+    elif cascade_risk == "MEDIUM":
+        print(f"[HARNESS] Ghost token warning — cascade_risk: MEDIUM (non-anchor leakage)")
+    else:
+        print(f"[HARNESS] Ghost token check: NONE")
+
     # 3. Governance gate — SCOUT posture blocks all writes
     if posture == "scout":
         print(f"[HARNESS] BLOCKED — SCOUT posture prohibits action: {action}")
