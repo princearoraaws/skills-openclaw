@@ -1,8 +1,10 @@
 ---
 version: "2.0.0"
 name: tesla-commander
-description: "Command and monitor Tesla vehicles via the Fleet API. Check status, control climate/charging/locks, track location, and analyze trip history. Use when you need tesla commander capabilities. Triggers on: tesla commander."
+description: "Command and monitor Tesla vehicles via the Fleet API. Check status, control climate/charging/locks, track location."
 author: BytesAgain
+homepage: https://bytesagain.com
+source: https://github.com/bytesagain/ai-skills
 ---
 
 # Tesla Commander

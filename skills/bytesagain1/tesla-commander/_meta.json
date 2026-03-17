@@ -3,11 +3,16 @@
   "slug": "tesla-commander",
   "displayName": "Tesla Commander",
   "latest": {
-    "version": "2.3.6",
-    "publishedAt": 1773674022835,
-    "commit": "https://github.com/openclaw/skills/commit/9966bb6257c78eda2debb231211a0128e01de81b"
+    "version": "2.0.0",
+    "publishedAt": 1773773454197,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.3.6",
+      "publishedAt": 1773674022835,
+      "commit": "https://github.com/openclaw/skills/commit/9966bb6257c78eda2debb231211a0128e01de81b"
+    },
     {
       "version": "2.2.0",
       "publishedAt": 1773421917096,
