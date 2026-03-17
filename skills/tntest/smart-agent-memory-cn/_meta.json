@@ -1,0 +1,11 @@
+{
+  "owner": "tntest",
+  "slug": "smart-agent-memory-cn",
+  "displayName": "Openclaw Skills Smart Agent Memory",
+  "latest": {
+    "version": "2.1.1",
+    "publishedAt": 1773670587908,
+    "commit": null
+  },
+  "history": []
+}
