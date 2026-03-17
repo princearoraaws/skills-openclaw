@@ -1,6 +1,8 @@
 {
   "chain": "mainnet",
+  "contractMode": "",
   "collectionContract": "0x0000000000000000000000000000000000000000",
+  "deployReceiptFile": "",
   "receiver": "",
   "royaltyReceiver": "",
   "rpcUrl": "https://ethereum-rpc.publicnode.com",

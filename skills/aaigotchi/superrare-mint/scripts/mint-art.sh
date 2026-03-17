@@ -14,7 +14,9 @@ DESCRIPTION=""
 IMAGE=""
 VIDEO=""
 CHAIN_OVERRIDE=""
+CONTRACT_MODE_OVERRIDE=""
 COLLECTION_OVERRIDE=""
+DEPLOY_RECEIPT_OVERRIDE=""
 RECEIVER_OVERRIDE=""
 ROYALTY_RECEIVER_OVERRIDE=""
 NOTE_OVERRIDE=""
@@ -27,7 +29,7 @@ declare -a MINT_ARGS=()
 usage() {
   cat <<USAGE
 Usage:
-  ./scripts/mint-art.sh --name <name> --description <text> --image <path> [--video <path>] [--tag <tag>] [--attribute trait=value] [--metadata-only] [--broadcast]
+  ./scripts/mint-art.sh --name <name> --description <text> --image <path> --contract-mode ownership-given|own-deployed [--video <path>] [--tag <tag>] [--attribute trait=value] [--contract <address>] [--deploy-receipt <path>] [--metadata-only] [--broadcast]
 USAGE
 }
 
@@ -62,8 +64,10 @@ while [ "$#" -gt 0 ]; do
       MINT_ARGS+=("$1" "$2")
       shift 2
       ;;
-    --contract|--receiver|--royalty-receiver|--note)
+    --contract-mode|--contract|--deploy-receipt|--receiver|--royalty-receiver|--note)
+      if [ "$1" = "--contract-mode" ]; then CONTRACT_MODE_OVERRIDE="${2:-}"; fi
       if [ "$1" = "--contract" ]; then COLLECTION_OVERRIDE="${2:-}"; fi
+      if [ "$1" = "--deploy-receipt" ]; then DEPLOY_RECEIPT_OVERRIDE="${2:-}"; fi
       if [ "$1" = "--receiver" ]; then RECEIVER_OVERRIDE="${2:-}"; fi
       if [ "$1" = "--royalty-receiver" ]; then ROYALTY_RECEIVER_OVERRIDE="${2:-}"; fi
       if [ "$1" = "--note" ]; then NOTE_OVERRIDE="${2:-}"; fi

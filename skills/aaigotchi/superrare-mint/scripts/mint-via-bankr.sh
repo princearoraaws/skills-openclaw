@@ -12,7 +12,9 @@ require_bin curl
 
 TOKEN_URI=""
 CHAIN_OVERRIDE=""
+CONTRACT_MODE_OVERRIDE=""
 COLLECTION_OVERRIDE=""
+DEPLOY_RECEIPT_OVERRIDE=""
 RECEIVER_OVERRIDE=""
 ROYALTY_RECEIVER_OVERRIDE=""
 NOTE_OVERRIDE=""
@@ -24,7 +26,7 @@ RECEIPT_POLL_INTERVAL_SECONDS="${RECEIPT_POLL_INTERVAL_SECONDS:-5}"
 usage() {
   cat <<USAGE
 Usage:
-  ./scripts/mint-via-bankr.sh --token-uri <uri> [--contract <address>] [--receiver <address>] [--royalty-receiver <address>] [--chain mainnet|sepolia] [--broadcast] [--note <text>]
+  ./scripts/mint-via-bankr.sh --token-uri <uri> --contract-mode ownership-given|own-deployed [--contract <address>] [--deploy-receipt <path>] [--receiver <address>] [--royalty-receiver <address>] [--chain mainnet|sepolia] [--broadcast] [--note <text>]
 USAGE
 }
 
@@ -34,8 +36,16 @@ while [ "$#" -gt 0 ]; do
       TOKEN_URI="${2:-}"
       shift 2
       ;;
+    --contract-mode)
+      CONTRACT_MODE_OVERRIDE="${2:-}"
+      shift 2
+      ;;
     --contract)
       COLLECTION_OVERRIDE="${2:-}"
+      shift 2
+      ;;
+    --deploy-receipt)
+      DEPLOY_RECEIPT_OVERRIDE="${2:-}"
       shift 2
       ;;
     --receiver)
@@ -76,13 +86,11 @@ done
 
 load_config
 apply_chain_defaults "$CHAIN_OVERRIDE"
+resolve_collection_contract "$CONTRACT_MODE_OVERRIDE" "$COLLECTION_OVERRIDE" "$DEPLOY_RECEIPT_OVERRIDE"
 
-COLLECTION_CONTRACT="${COLLECTION_OVERRIDE:-$CONFIG_COLLECTION}"
+COLLECTION_CONTRACT="$RESOLVED_COLLECTION_CONTRACT"
 RECEIVER="${RECEIVER_OVERRIDE:-$CONFIG_RECEIVER}"
 ROYALTY_RECEIVER="${ROYALTY_RECEIVER_OVERRIDE:-$CONFIG_ROYALTY_RECEIVER}"
-
-[ -n "$COLLECTION_CONTRACT" ] || err "collectionContract missing in config or --contract"
-[ "$COLLECTION_CONTRACT" != "0x0000000000000000000000000000000000000000" ] || err "collectionContract is placeholder zero address"
 
 if [ -n "$RECEIVER" ] && [ -z "$ROYALTY_RECEIVER" ]; then
   ROYALTY_RECEIVER="$RECEIVER"
@@ -104,7 +112,12 @@ DESCRIPTION="$DESCRIPTION ($FUNCTION_NAME on $CHAIN)"
 
 echo "SuperRare mint preview"
 echo "  Chain: $CHAIN ($CHAIN_ID)"
+echo "  Contract mode: $RESOLVED_CONTRACT_MODE"
 echo "  Contract: $COLLECTION_CONTRACT"
+echo "  Contract source: $RESOLVED_COLLECTION_SOURCE"
+if [ -n "$RESOLVED_DEPLOY_RECEIPT_FILE" ]; then
+  echo "  Deploy receipt: $RESOLVED_DEPLOY_RECEIPT_FILE"
+fi
 echo "  Function: $FUNCTION_NAME"
 echo "  Token URI: $TOKEN_URI"
 if [ -n "$RECEIVER" ]; then
@@ -168,7 +181,10 @@ RECEIPT_PAYLOAD="$(jq -n \
   --arg timestamp "$STAMP_UTC" \
   --arg chain "$CHAIN" \
   --argjson chainId "$CHAIN_ID" \
+  --arg contractMode "$RESOLVED_CONTRACT_MODE" \
   --arg contract "$COLLECTION_CONTRACT" \
+  --arg contractSource "$RESOLVED_COLLECTION_SOURCE" \
+  --arg deployReceiptFile "$RESOLVED_DEPLOY_RECEIPT_FILE" \
   --arg functionName "$FUNCTION_NAME" \
   --arg tokenUri "$TOKEN_URI" \
   --arg receiver "$RECEIVER" \
@@ -184,7 +200,10 @@ RECEIPT_PAYLOAD="$(jq -n \
     timestamp: $timestamp,
     chain: $chain,
     chainId: $chainId,
+    contractMode: $contractMode,
     contract: $contract,
+    contractSource: $contractSource,
+    deployReceiptFile: $deployReceiptFile,
     functionName: $functionName,
     tokenUri: $tokenUri,
     receiver: $receiver,

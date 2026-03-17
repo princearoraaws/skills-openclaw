@@ -6,6 +6,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SKILL_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 CONFIG_FILE="${SUPER_RARE_CONFIG_FILE:-$SKILL_DIR/config.json}"
 TRANSFER_TOPIC="0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+ZERO_ADDRESS="0x0000000000000000000000000000000000000000"
+
+RESOLVED_COLLECTION_CONTRACT=""
+RESOLVED_COLLECTION_SOURCE=""
+RESOLVED_DEPLOY_RECEIPT_FILE=""
+RESOLVED_CONTRACT_MODE=""
 
 err() {
   echo "Error: $*" >&2
@@ -27,11 +33,26 @@ trim_hex_64_to_dec() {
   cast --to-dec "0x$clean"
 }
 
+resolve_path_from_skill_dir() {
+  local raw_path="$1"
+  if [ -z "$raw_path" ]; then
+    echo ""
+    return
+  fi
+  case "$raw_path" in
+    /*) echo "$raw_path" ;;
+    *) echo "$SKILL_DIR/$raw_path" ;;
+  esac
+}
+
 load_config() {
   [ -f "$CONFIG_FILE" ] || err "Missing config file: $CONFIG_FILE (copy config.example.json to config.json)"
 
   CONFIG_CHAIN="$(jq -r '.chain // "mainnet"' "$CONFIG_FILE")"
+  CONFIG_CONTRACT_MODE="$(jq -r '.contractMode // empty' "$CONFIG_FILE")"
   CONFIG_COLLECTION="$(jq -r '.collectionContract // empty' "$CONFIG_FILE")"
+  CONFIG_DEPLOY_RECEIPT_FILE_RAW="$(jq -r '.deployReceiptFile // empty' "$CONFIG_FILE")"
+  CONFIG_DEPLOY_RECEIPT_FILE="$(resolve_path_from_skill_dir "$CONFIG_DEPLOY_RECEIPT_FILE_RAW")"
   CONFIG_RECEIVER="$(jq -r '.receiver // empty' "$CONFIG_FILE")"
   CONFIG_ROYALTY_RECEIVER="$(jq -r '.royaltyReceiver // empty' "$CONFIG_FILE")"
   CONFIG_RPC_URL="$(jq -r '.rpcUrl // empty' "$CONFIG_FILE")"
@@ -77,7 +98,8 @@ resolve_bankr_api_key() {
   local config_path
   for config_path in \
     "$HOME/.openclaw/skills/bankr/config.json" \
-    "$HOME/.openclaw/workspace/skills/bankr/config.json"
+    "$HOME/.openclaw/workspace/skills/bankr/config.json" \
+    "$HOME/.bankr/config.json"
   do
     if [ -f "$config_path" ]; then
       local value
@@ -96,7 +118,8 @@ resolve_bankr_api_url() {
   local config_path
   for config_path in \
     "$HOME/.openclaw/skills/bankr/config.json" \
-    "$HOME/.openclaw/workspace/skills/bankr/config.json"
+    "$HOME/.openclaw/workspace/skills/bankr/config.json" \
+    "$HOME/.bankr/config.json"
   do
     if [ -f "$config_path" ]; then
       local value
@@ -131,7 +154,6 @@ write_receipt_file() {
   printf '%s\n' "$payload" > "$file_path"
 }
 
-
 wait_for_receipt_json() {
   local tx_hash="$1"
   local rpc_url="$2"
@@ -155,4 +177,113 @@ wait_for_receipt_json() {
     fi
     sleep "$poll_seconds"
   done
+}
+
+latest_receipt_in_dir() {
+  local receipt_dir="$1"
+  [ -d "$receipt_dir" ] || return 1
+
+  local latest
+  latest="$(ls -1t "$receipt_dir"/*-superrare-deploy.json 2>/dev/null | head -n1 || true)"
+  [ -n "$latest" ] || return 1
+  echo "$latest"
+}
+
+resolve_deploy_receipt_file() {
+  local override_path="${1:-}"
+  local candidate=""
+  local receipt_dir
+
+  if [ -n "$override_path" ]; then
+    candidate="$(resolve_path_from_skill_dir "$override_path")"
+    [ -f "$candidate" ] || err "Deploy receipt not found: $candidate"
+    echo "$candidate"
+    return 0
+  fi
+
+  if [ -n "${SUPER_RARE_DEPLOY_RECEIPT_FILE:-}" ]; then
+    candidate="$(resolve_path_from_skill_dir "$SUPER_RARE_DEPLOY_RECEIPT_FILE")"
+    [ -f "$candidate" ] || err "Deploy receipt not found: $candidate"
+    echo "$candidate"
+    return 0
+  fi
+
+  if [ -n "$CONFIG_DEPLOY_RECEIPT_FILE" ]; then
+    [ -f "$CONFIG_DEPLOY_RECEIPT_FILE" ] || err "Deploy receipt not found: $CONFIG_DEPLOY_RECEIPT_FILE"
+    echo "$CONFIG_DEPLOY_RECEIPT_FILE"
+    return 0
+  fi
+
+  for receipt_dir in \
+    "$SKILL_DIR/../superrare-deploy/receipts" \
+    "$HOME/.openclaw/workspace/skills/superrare-deploy/receipts" \
+    "$HOME/superrare-deploy/receipts"
+  do
+    if candidate="$(latest_receipt_in_dir "$receipt_dir" 2>/dev/null)"; then
+      echo "$candidate"
+      return 0
+    fi
+  done
+
+  return 1
+}
+
+collection_contract_from_deploy_receipt() {
+  local receipt_file="$1"
+  jq -r '.collectionAddress // empty' "$receipt_file"
+}
+
+require_contract_mode() {
+  local mode="${1:-${CONFIG_CONTRACT_MODE:-}}"
+  case "$mode" in
+    ownership-given|own-deployed)
+      RESOLVED_CONTRACT_MODE="$mode"
+      ;;
+    *)
+      err "contract mode is required. Choose one: ownership-given or own-deployed"
+      ;;
+  esac
+}
+
+resolve_collection_contract() {
+  local contract_mode="${1:-}"
+  local contract_override="${2:-}"
+  local deploy_receipt_override="${3:-}"
+  local receipt_file=""
+  local contract_value=""
+
+  RESOLVED_COLLECTION_CONTRACT=""
+  RESOLVED_COLLECTION_SOURCE=""
+  RESOLVED_DEPLOY_RECEIPT_FILE=""
+  RESOLVED_CONTRACT_MODE=""
+
+  require_contract_mode "$contract_mode"
+
+  case "$RESOLVED_CONTRACT_MODE" in
+    ownership-given)
+      if [ -n "$contract_override" ]; then
+        RESOLVED_COLLECTION_CONTRACT="$contract_override"
+        RESOLVED_COLLECTION_SOURCE="arg"
+        return 0
+      fi
+      if [ -n "$CONFIG_COLLECTION" ] && [ "$CONFIG_COLLECTION" != "$ZERO_ADDRESS" ]; then
+        RESOLVED_COLLECTION_CONTRACT="$CONFIG_COLLECTION"
+        RESOLVED_COLLECTION_SOURCE="config"
+        return 0
+      fi
+      err "ownership-given mode requires --contract or config.json collectionContract"
+      ;;
+    own-deployed)
+      if receipt_file="$(resolve_deploy_receipt_file "$deploy_receipt_override" 2>/dev/null)"; then
+        contract_value="$(collection_contract_from_deploy_receipt "$receipt_file")"
+        [ -n "$contract_value" ] || err "Deploy receipt does not contain collectionAddress: $receipt_file"
+        [ "$contract_value" != "$ZERO_ADDRESS" ] || err "Deploy receipt contains zero-address collection: $receipt_file"
+        RESOLVED_COLLECTION_CONTRACT="$contract_value"
+        RESOLVED_COLLECTION_SOURCE="deploy-receipt"
+        RESOLVED_DEPLOY_RECEIPT_FILE="$receipt_file"
+        return 0
+      fi
+      err "own-deployed mode requires a superrare-deploy receipt (via --deploy-receipt, env/config, or the latest deploy receipt)"
+      ;;
+  esac
 }
