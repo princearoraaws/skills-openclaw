@@ -22,15 +22,15 @@ $env:JISU_API_KEY="your_appkey_here"
 
 ## 脚本路径
 
-脚本文件：`skill/weather2/weather2.py`
+脚本文件：`skills/weather2/weather2.py`
 
 ## 使用方式
 
 ### 1. 历史天气查询（query）
 
 ```bash
-python3 skill/weather2/weather2.py query '{"city":"北京","date":"2018-01-01"}'
-python3 skill/weather2/weather2.py query '{"cityid":111,"date":"2018-01-01"}'
+python3 skills/weather2/weather2.py query '{"city":"北京","date":"2018-01-01"}'
+python3 skills/weather2/weather2.py query '{"cityid":111,"date":"2018-01-01"}'
 ```
 
 | 参数   | 类型   | 必填 | 说明 |
@@ -44,7 +44,7 @@ python3 skill/weather2/weather2.py query '{"cityid":111,"date":"2018-01-01"}'
 ### 2. 获取城市列表（city）
 
 ```bash
-python3 skill/weather2/weather2.py city '{}'
+python3 skills/weather2/weather2.py city '{}'
 ```
 
 无参数，返回支持历史天气查询的城市列表（cityid, parentid, citycode, city）。

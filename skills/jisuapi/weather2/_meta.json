@@ -3,9 +3,15 @@
   "slug": "weather2",
   "displayName": "历史天气 - Chinese Historical Weather",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773375450186,
-    "commit": "https://github.com/openclaw/skills/commit/f9e7d6249ba41cd360b0ccf310916739360ddf2c"
+    "version": "1.0.1",
+    "publishedAt": 1773632189895,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773375450186,
+      "commit": "https://github.com/openclaw/skills/commit/f9e7d6249ba41cd360b0ccf310916739360ddf2c"
+    }
+  ]
 }
