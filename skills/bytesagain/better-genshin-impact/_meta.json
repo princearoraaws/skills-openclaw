@@ -3,9 +3,15 @@
   "slug": "better-genshin-impact",
   "displayName": "Better Genshin Impact",
   "latest": {
-    "version": "2.3.0",
-    "publishedAt": 1773446695307,
-    "commit": "https://github.com/openclaw/skills/commit/96a062a31ae0ad1c33a8534b2ddab51deede85f3"
+    "version": "2.3.7",
+    "publishedAt": 1773664788649,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "2.3.0",
+      "publishedAt": 1773446695307,
+      "commit": "https://github.com/openclaw/skills/commit/96a062a31ae0ad1c33a8534b2ddab51deede85f3"
+    }
+  ]
 }
