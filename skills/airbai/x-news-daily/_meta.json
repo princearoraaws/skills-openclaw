@@ -1,0 +1,11 @@
+{
+  "owner": "airbai",
+  "slug": "x-news-daily",
+  "displayName": "X News Daily",
+  "latest": {
+    "version": "2.0.0",
+    "publishedAt": 1773504352299,
+    "commit": null
+  },
+  "history": []
+}
