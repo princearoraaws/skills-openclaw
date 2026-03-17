@@ -3,9 +3,15 @@
   "slug": "tar",
   "displayName": "Tar",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1773661765601,
-    "commit": "https://github.com/openclaw/skills/commit/17a6e1b7eca39c270fd237b7de3245949c5e1068"
+    "version": "1.0.2",
+    "publishedAt": 1773664208573,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1773661765601,
+      "commit": "https://github.com/openclaw/skills/commit/17a6e1b7eca39c270fd237b7de3245949c5e1068"
+    }
+  ]
 }
