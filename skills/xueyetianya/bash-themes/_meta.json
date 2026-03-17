@@ -3,11 +3,16 @@
   "slug": "bash-themes",
   "displayName": "Bash Themes",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1773661965050,
-    "commit": "https://github.com/openclaw/skills/commit/4283c1a2fb0c0f298395197be7a05825aea37234"
+    "version": "1.0.6",
+    "publishedAt": 1773664735433,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1773661965050,
+      "commit": "https://github.com/openclaw/skills/commit/4283c1a2fb0c0f298395197be7a05825aea37234"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1773572359666,
