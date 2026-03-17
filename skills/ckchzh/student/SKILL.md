@@ -1,7 +1,7 @@
 ---
 name: student
-description: "Take notes, generate summaries, format APA/MLA citations, outline essays, and calculate GPA."
-version: "3.2.0"
+description: "Help with coursework. Use when taking study notes, summarizing readings, formatting APA/MLA citations, outlining essays, running Pomodoro timers, or calculating GPA."
+version: "3.3.0"
 author: BytesAgain
 homepage: https://bytesagain.com
 source: https://github.com/bytesagain/ai-skills
