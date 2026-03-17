@@ -1,11 +1,17 @@
 {
   "owner": "ncreighton",
   "slug": "email-drip-sequence-builder",
-  "displayName": "email-drip-sequence-builder",
+  "displayName": "Email Drip Sequence Builder",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1773501789208,
-    "commit": "https://github.com/openclaw/skills/commit/8afe3f38b94ff958af262f95b748b2e372558be6"
+    "version": "1.2.0",
+    "publishedAt": 1773534984646,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1773501789208,
+      "commit": "https://github.com/openclaw/skills/commit/8afe3f38b94ff958af262f95b748b2e372558be6"
+    }
+  ]
 }
