@@ -99,6 +99,28 @@ Agent: Pushed ✅
 
 **No commands to learn. No habits to change. Just install it.**
 
+## Smart Allowlist
+
+Not everything detected needs to be fixed. Tell your Agent "ignore this" and it'll never flag it again:
+
+```
+Agent: Your files have 192.168.1.100 — want me to handle it?
+
+User: Ignore it, it's a test IP
+
+Agent: Got it, won't flag this again ✅
+```
+
+Supports wildcards — like "ignore all example.com emails":
+
+```
+User: Stop flagging example.com emails
+
+Agent: Done, added to allowlist: *@example.com ✅
+```
+
+The allowlist lives in your project directory and travels with it. No config files to edit.
+
 ## Detection Coverage
 
 **🔴 High confidence (auto-blocks):**
@@ -154,10 +176,6 @@ Based on methods validated in academic research and industry practice:
 
 Result: **high-confidence items are handled automatically without breaking anything, low-confidence items only warn without touching code.**
 
-## Acknowledgments
-
-Secret detection rules are based on [Gitleaks](https://github.com/gitleaks/gitleaks) (MIT License), maintained by 200+ community contributors. Agent Hush adds PII detection, infrastructure info detection, confidence-based layering, and Agent ecosystem integration on top.
-
 ## ⭐ Why Star?
 
 This tool protects your own privacy. We'll keep maintaining it.
@@ -169,6 +187,10 @@ This tool protects your own privacy. We'll keep maintaining it.
 Every push, every publish shouldn't be a privacy leak.
 
 Star it, and remember to use it next time you push. ⭐
+
+## Acknowledgments
+
+Secret detection rules are based on [Gitleaks](https://github.com/gitleaks/gitleaks) (MIT License), maintained by 200+ community contributors. Agent Hush adds PII detection, infrastructure info detection, confidence-based layering, and Agent ecosystem integration on top.
 
 ## License
 

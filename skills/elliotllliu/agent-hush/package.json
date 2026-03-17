@@ -1,6 +1,6 @@
 {
   "name": "agent-hush",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "🤫 Silent privacy guardian for agent workspaces. Auto-detects API keys, tokens, PII, and infrastructure info before git push or skill publish.",
   "main": "scripts/sanitize.py",
   "bin": {

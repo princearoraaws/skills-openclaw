@@ -962,6 +962,8 @@ DEFAULT_EXCLUDE_FILES = {
     '*.pdf', '*.doc', '*.docx', '*.xls', '*.xlsx',
     '*.bak', '*.sqlite', '*.db',
     'package-lock.json', 'yarn.lock', 'pnpm-lock.yaml',
+    '.env.example', '.env.sample', '.env.template', '.env.defaults',
+    '*.example', '*.sample', '*.template',
 }
 
 DEFAULT_ALLOWLIST = {
@@ -1093,10 +1095,22 @@ def _is_code_pattern(matched_text):
     if re.search(r'[\$%]\{[^}]+\}|\{\{[^}]+\}\}', val):
         return True
     # Common placeholders
-    if re.search(r'<YOUR_|CHANGE_?ME|TODO|FIXME|PLACEHOLDER|INSERT_|REPLACE_', val, re.IGNORECASE):
+    if re.search(r'<YOUR_|CHANGE_?ME|TODO|FIXME|PLACEHOLDER|INSERT_|REPLACE_|_here\b|_HERE\b', val, re.IGNORECASE):
+        return True
+    # Placeholder values: your_xxx_here, xxx_your_xxx
+    if re.search(r'(?:your_|_your_|put_|enter_|add_).{0,30}(?:here|key|token|secret|password)', val, re.IGNORECASE):
         return True
     # Language literals: None, null, undefined, nil, ''
     if val.lower() in ('none', 'null', 'undefined', 'nil', 'true', 'false', '""', "''", '``'):
+        return True
+    # Object attribute access: args.xxx, self.xxx, config.xxx, request.xxx
+    if re.search(r'(?:args|self|this|config|request|response|ctx|context|options|params|settings)\.\w+', val):
+        return True
+    # Array/dict access: xxx[0], xxx["key"], xxx['key']
+    if re.search(r'\w+\[[\'"0-9]', val):
+        return True
+    # Test data patterns: test_xxx, mock_xxx, fake_xxx, dummy_xxx
+    if re.search(r'^(?:test_|mock_|fake_|dummy_|sample_|example_|my_|temp_)', val, re.IGNORECASE):
         return True
     # Empty or very short values (after quotes stripped)
     parts = re.split(r'[=:]\s*["\']?', val)
@@ -1130,6 +1144,9 @@ def scan_file(filepath, rules, allowlist):
                     continue
                 # Heuristic: skip low-confidence generic patterns that look like code
                 if confidence == LOW_CONF and 'Generic' in rule_name and _is_code_pattern(matched_text):
+                    continue
+                # Also filter Gitleaks generic/allowlist patterns
+                if ('Generic' in rule_name or 'Allowlist' in rule_name) and _is_code_pattern(matched_text):
                     continue
                 # Mask for display
                 if len(matched_text) > 12:
