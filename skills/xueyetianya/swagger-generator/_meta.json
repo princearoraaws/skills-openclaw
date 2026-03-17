@@ -3,11 +3,16 @@
   "slug": "swagger-generator",
   "displayName": "Swagger Generator",
   "latest": {
-    "version": "2.3.4",
-    "publishedAt": 1773664193898,
-    "commit": "https://github.com/openclaw/skills/commit/f28a6bc60b02055cd5da93ef2ca9a530a43d29ef"
+    "version": "2.0.0",
+    "publishedAt": 1773774062147,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.3.4",
+      "publishedAt": 1773664193898,
+      "commit": "https://github.com/openclaw/skills/commit/f28a6bc60b02055cd5da93ef2ca9a530a43d29ef"
+    },
     {
       "version": "2.3.2",
       "publishedAt": 1773614742071,

@@ -3,6 +3,8 @@ version: "2.0.0"
 name: swagger-generator
 description: "Error: --title required. Use when you need swagger generator capabilities. Triggers on: swagger generator, title, base-url, version, desc, endpoints."
 author: BytesAgain
+homepage: https://bytesagain.com
+source: https://github.com/bytesagain/ai-skills
 ---
 
 # swagger-generator
