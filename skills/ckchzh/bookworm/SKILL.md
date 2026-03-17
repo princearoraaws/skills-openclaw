@@ -1,6 +1,8 @@
 ---
+version: "2.0.0"
 name: bookworm
 description: "Reading list and book tracker with progress, ratings, and recommendations. Use when you need to track books (reading/done/todo), update reading progress, rate finished books, get book recommendations, or export reading lists. Triggers on: book, reading, library, book list, book recommendation, reading progress."
+author: BytesAgain
 ---
 
 # Reading Log
