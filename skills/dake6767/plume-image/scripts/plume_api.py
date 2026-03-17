@@ -19,8 +19,37 @@ API_BASE = "https://design.useplume.app"
 
 
 def get_config():
-    """Read PLUME_API_KEY from environment variables"""
+    """Read PLUME_API_KEY: env var first, fallback to openclaw.json then .env"""
     api_key = os.environ.get("PLUME_API_KEY")
+
+    # fallback 1: ~/.openclaw/openclaw.json
+    if not api_key:
+        try:
+            config_path = os.path.expanduser("~/.openclaw/openclaw.json")
+            with open(config_path, encoding="utf-8") as f:
+                cfg = json.load(f)
+            api_key = (
+                cfg.get("skills", {})
+                .get("entries", {})
+                .get("plume-image", {})
+                .get("env", {})
+                .get("PLUME_API_KEY")
+            )
+        except Exception:
+            pass
+
+    # fallback 2: ~/.openclaw/.env
+    if not api_key:
+        try:
+            env_path = os.path.expanduser("~/.openclaw/.env")
+            with open(env_path, encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line.startswith("PLUME_API_KEY="):
+                        api_key = line[len("PLUME_API_KEY="):].strip()
+                        break
+        except Exception:
+            pass
 
     if not api_key:
         raise ValueError(

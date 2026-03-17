@@ -7,6 +7,7 @@ description: |
   text-to-image, image-to-image, AI art, style transfer, generate poster, photo editing, generate video, AI video,
   animate this image, make it move, image-to-video, make image into video, seedance2, seedance.
 allowed-tools: Bash(python3 ${CLAUDE_SKILL_DIR}/scripts/*), Bash(cat ~/.openclaw/media/plume/*)
+metadata: {"openclaw": {"requires": {"env": ["PLUME_API_KEY"]}, "primaryEnv": "PLUME_API_KEY"}}
 ---
 
 # Plume AI Image Service
