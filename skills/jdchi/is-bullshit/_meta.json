@@ -3,11 +3,16 @@
   "slug": "is-bullshit",
   "displayName": "is-bullshit",
   "latest": {
-    "version": "1.6.0",
-    "publishedAt": 1773567987415,
-    "commit": "https://github.com/openclaw/skills/commit/7b8fb1d51ed8f54e774fc7808195ef4939f799fe"
+    "version": "1.7.0",
+    "publishedAt": 1773568215603,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.6.0",
+      "publishedAt": 1773567987415,
+      "commit": "https://github.com/openclaw/skills/commit/7b8fb1d51ed8f54e774fc7808195ef4939f799fe"
+    },
     {
       "version": "1.0.8",
       "publishedAt": 1773395960826,
