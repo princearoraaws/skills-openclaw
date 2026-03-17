@@ -3,9 +3,15 @@
   "slug": "event-planner-pro",
   "displayName": "Event Planner Pro",
   "latest": {
-    "version": "2.3.0",
-    "publishedAt": 1773446878451,
-    "commit": "https://github.com/openclaw/skills/commit/797e687d855dfdfb3434843aa056ebbc67c112a0"
+    "version": "1.0.5",
+    "publishedAt": 1773665909693,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "2.3.0",
+      "publishedAt": 1773446878451,
+      "commit": "https://github.com/openclaw/skills/commit/797e687d855dfdfb3434843aa056ebbc67c112a0"
+    }
+  ]
 }
