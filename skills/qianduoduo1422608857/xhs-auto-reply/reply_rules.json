@@ -1,6 +1,6 @@
 {
   "ai_config": {
-    "enabled": true,
+    "enabled": false,
     "model": "glm-5",
     "temperature": 0.8,
     "max_tokens": 100,
@@ -37,6 +37,7 @@
     "特殊人物": ["不要逗我哦🐾"]
   },
   
+  "auto_reply_enabled": false,
   "reply_rules": [
     "所有回复必须以 🐾 结尾",
     "回答问题要简短，15-35字",
