@@ -1,0 +1,11 @@
+{
+  "owner": "wayne-huangyj",
+  "slug": "test-my-skill",
+  "displayName": "Test my skill",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1773744519219,
+    "commit": null
+  },
+  "history": []
+}
