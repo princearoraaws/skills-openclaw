@@ -1,0 +1,11 @@
+{
+  "owner": "chengxiansheng1",
+  "slug": "gitlab-daily-report",
+  "displayName": "GitLab 每日提交汇总",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1773838733400,
+    "commit": null
+  },
+  "history": []
+}
