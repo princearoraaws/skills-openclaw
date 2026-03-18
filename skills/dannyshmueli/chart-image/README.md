@@ -235,8 +235,10 @@ echo '[{"x":"A","y":1},{"x":"B","y":2}]' | node scripts/chart.mjs --output out.p
 | `--output` | Output file path | `chart.png` |
 | `--title` | Chart title | — |
 | `--subtitle` | Subtitle below title | — |
+| `--title-align` | Title alignment: `start`, `middle`, `end` | `start` |
 | `--width` | Width in px | `600` |
 | `--height` | Height in px | `300` |
+| `--output-size` | Platform preset: `twitter`, `discord`, `slack`, `linkedin`, `bluesky`, `youtube`, `instagram`, `portrait`, `story`, `thumbnail`, `wide`, `square` | — |
 | `--dark` | Dark theme | `false` |
 | `--svg` | Output SVG instead of PNG | `false` |
 
@@ -273,6 +275,7 @@ echo '[{"x":"A","y":1},{"x":"B","y":2}]' | node scripts/chart.mjs --output out.p
 | `--focus-change` | Zoom Y to highlight change |
 | `--focus-recent N` | Show last N points only |
 | `--show-values` | Label min/max peaks |
+| `--last-value` | Label the final data point value |
 | `--annotations` | JSON array of event markers: `[{"x":"14:00","label":"News"}]` |
 
 ---
