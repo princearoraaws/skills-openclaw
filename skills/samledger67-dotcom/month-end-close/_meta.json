@@ -1,0 +1,11 @@
+{
+  "owner": "samledger67-dotcom",
+  "slug": "month-end-close",
+  "displayName": "Month-End Close",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773800349267,
+    "commit": null
+  },
+  "history": []
+}
