@@ -13,32 +13,70 @@ import json
 import sys
 import re
 import math
+import gzip
 from collections import defaultdict
 import argparse
+from pathlib import Path
 
 class SkillAPIChatbot:
-    def __init__(self, db_path="skill_api_database.json"):
+    def __init__(self, db_path=None):
         """初始化聊天机器人，加载API数据库"""
-        self.db_path = db_path
         self.functions = []
         self.categories = {}
-        self.load_database()
+        self.load_database(db_path)
         
-    def load_database(self):
-        """加载API数据库"""
-        with open(self.db_path, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+    def load_database(self, db_path=None):
+        """加载API数据库，自动查找可能的位置"""
+        data = None
         
-        self.categories = data['categories']
-        self.functions = []
+        if db_path and Path(db_path).exists():
+            # 用户指定了数据库路径
+            with open(db_path, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+        else:
+            # 自动查找多个可能位置
+            DB_PATHS = [
+                Path(__file__).parent.parent / "references" / "skill_api_database_full.json",
+                Path(__file__).parent.parent / "references" / "skill_api_database_full.gz.json",
+                Path(__file__).parent.parent / "references" / "skill_api_database_full.json.gz",
+                Path(__file__).parent.parent / "references" / "skill_api_database.json",
+                Path(__file__).parent / "skill_api_database_full.json",
+                Path(__file__).parent / "skill_api_database.json",
+            ]
+            
+            for db_p in DB_PATHS:
+                if db_p.exists():
+                    if db_p.suffix == '.gz' or 'gz' in db_p.name:
+                        with gzip.open(db_p, 'rt', encoding='utf-8') as f:
+                            data = json.load(f)
+                    else:
+                        with open(db_p, 'r', encoding='utf-8') as f:
+                            data = json.load(f)
+                    print(f"✅ 从 {db_p} 加载API数据库")
+                    break
         
-        # 展平所有函数
-        for category_name, category_funcs in self.categories.items():
-            for func_name, func_info in category_funcs.items():
-                func_info['category'] = category_name
+        if data is None:
+            raise FileNotFoundError("找不到API数据库文件，请检查安装")
+        
+        # 处理不同数据库格式
+        if 'function_index' in data:
+            # 完整数据库格式
+            self.categories = data.get('categories', {})
+            self.functions = []
+            for func_name, func_info in data['function_index'].items():
                 self.functions.append(func_info)
+        elif 'categories' in data:
+            # 精简数据库格式
+            self.categories = data['categories']
+            self.functions = []
+            for category_name, category_funcs in self.categories.items():
+                for func_name, func_info in category_funcs.items():
+                    func_info['category'] = category_name
+                    self.functions.append(func_info)
+        else:
+            raise ValueError("未知的数据库格式")
         
-        print(f"已加载 {len(self.functions)} 个Skill API函数")
+        print(f"✅ 已加载 {len(self.functions)} 个Skill API函数")
     
     def tokenize(self, text):
         """将文本分词处理"""

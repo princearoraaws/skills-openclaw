@@ -8,13 +8,36 @@ Virtuoso Skill代码静态检查工具
 import json
 import re
 import argparse
+import gzip
 from pathlib import Path
 
-# 加载完整API数据库
-DB_PATH = Path(__file__).parent / "skill_api_database_full.json"
+# 加载完整API数据库 - 查找多个可能位置
+DB_PATHS = [
+    Path(__file__).parent.parent / "references" / "skill_api_database_full.json",
+    Path(__file__).parent.parent / "references" / "skill_api_database_full.gz.json",
+    Path(__file__).parent.parent / "references" / "skill_api_database_full.json.gz",
+    Path(__file__).parent / "skill_api_database_full.json",
+]
 
-with open(DB_PATH, "r", encoding="utf-8") as f:
-    API_DB = json.load(f)
+API_DB = None
+for db_path in DB_PATHS:
+    if db_path.exists():
+        if db_path.suffix == '.gz' or 'gz' in db_path.name:
+            with gzip.open(db_path, 'rt', encoding="utf-8") as f:
+                API_DB = json.load(f)
+        else:
+            with open(db_path, "r", encoding="utf-8") as f:
+                API_DB = json.load(f)
+        break
+
+if API_DB is None:
+    # 如果找不到完整数据库，回退到精简版
+    DB_PATH = Path(__file__).parent.parent / "references" / "skill_api_database.json"
+    with open(DB_PATH, "r", encoding="utf-8") as f:
+        API_DB = json.load(f)
+    print(f"⚠️  未找到完整API数据库，使用精简版 ({len(API_DB['function_index'])} 个函数)")
+else:
+    print(f"✅ 已加载完整API数据库 ({len(API_DB['function_index'])} 个官方Skill API)")
 
 # 提取所有合法的函数名
 VALID_FUNCTIONS = set(API_DB["function_index"].keys())
