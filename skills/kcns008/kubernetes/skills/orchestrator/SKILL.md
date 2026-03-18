@@ -279,6 +279,186 @@ Every 15 minutes:
 
 ---
 
+## 5A. CONTINUOUS LEARNING — Skill Improvement Workflow
+
+> When agents identify skill improvements during troubleshooting or cluster activities, the orchestrator MUST create PRs for human review.
+
+### Why This Matters
+
+Agents learn from every interaction. When an agent fixes a problem and notices a skill (script, documentation, workflow) could be improved, that learning should be captured and reviewed by humans.
+
+### Workflow
+
+```
+Step 1: Agent identifies improvement
+        → Logs to logs/LOGS.md with Category: SKILL_IMPROVEMENT
+        
+Step 2: Orchestrator heartbeat detects SKILL_IMPROVEMENT entries
+        → Runs skill-improvement-pr.sh script
+        
+Step 3: Script creates branch with improvement notes
+        → Adds entry to logs/SKILL_IMPROVEMENTS.md
+        
+Step 4: Script opens PR for human review
+        → Human reviews, approves, merges, or rejects
+        
+Step 5: Improvement merged → Skill updated → Future agents benefit
+```
+
+### Agent: Log SKILL_IMPROVEMENT
+
+When any agent identifies a skill needs improvement during troubleshooting:
+
+```markdown
+## [TIMESTAMP UTC]
+
+### Agent: <agent-name>
+### Action: <what was done>
+### Reason: <why>
+### Target: <file/system/resource>
+### Result: SUCCESS | FAILURE | PARTIAL | BLOCKED | PENDING_APPROVAL
+### Category: SKILL_IMPROVEMENT
+### Skill: <skill-name>/<script-or-file>
+### Improvement Type: SCRIPT_FIX | NEW_CAPABILITY | REFERENCE_DOC | WORKFLOW_CHANGE
+### Suggested Fix: <description of improvement>
+### Next Action: <orchestrator will create PR>
+```
+
+### Improvement Types
+
+| Type | Description |
+|------|-------------|
+| `SCRIPT_FIX` | Bug in existing script needs fixing |
+| `NEW_CAPABILITY` | Script needs new feature/functionality |
+| `REFERENCE_DOC` | Documentation needs updating |
+| `WORKFLOW_CHANGE` | Agent workflow needs adjustment |
+
+### Orchestrator: Run Skill Improvement Scanner
+
+Every heartbeat, run the skill improvement scanner:
+
+```bash
+# Check for new improvements (no PR creation)
+bash scripts/skill-improvement-pr.sh --check-only
+
+# Scan and create PRs
+bash scripts/skill-improvement-pr.sh
+```
+
+### Human Review Process
+
+1. **PR received** → Human reviews the improvement suggestion
+2. **Approved** → Merge PR, skill is now improved
+3. **Rejected** → Close PR with reason, note in SKILL_IMPROVEMENTS.md
+4. **Needs Work** → Comment, assign back to agent for refinement
+
+---
+
+## 5B. ENVIRONMENT AWARENESS
+
+> Every agent must know what environment they're working in and what changes are allowed.
+
+### Why Environment Awareness Matters
+
+- **prod**: NEVER make changes without explicit human approval
+- **staging/qa**: Most changes require approval  
+- **dev**: Some self-service actions allowed
+- Agents must read `working/SESSION.md` at session start
+
+### Environment Types
+
+| Environment | Code | Description |
+|-------------|------|-------------|
+| Development | `dev` | Sandbox, testing, feature development |
+| QA | `qa` | Quality assurance testing |
+| Staging | `staging` | Pre-production mirror |
+| Production | `prod` | Live customer-facing systems |
+
+### Change Permissions by Environment
+
+| Action | dev | qa | staging | prod |
+|--------|-----|-----|---------|------|
+| **Delete Resources** | Approval Required | Approval Required | Approval Required | **NEVER** |
+| **Modify Prod Workloads** | Approval Required | Approval Required | Approval Required | **NEVER** |
+| **Create/Modify RBAC** | Approval Required | Approval Required | Approval Required | **NEVER** |
+| **Scale Workloads** | Auto | Approval Required | Approval Required | **NEVER** |
+| **Modify Secrets** | Approval Required | Approval Required | Approval Required | **NEVER** |
+| **Deploy Images** | Auto | Approval Required | Approval Required | Approval Required |
+| **View/Read** | Auto | Auto | Auto | Auto |
+
+### Session Start: Must Read SESSION.md
+
+Before ANY work, agents MUST:
+
+```bash
+# 1. Read environment context
+cat working/SESSION.md
+
+# 2. Verify cluster access
+kubectl cluster-info  # or oc cluster-info
+
+# 3. Check permissions for this environment
+# See SESSION.md for your permission level
+```
+
+### Setup New Session
+
+When an agent starts a new session or changes context:
+
+```bash
+# Set up session for specific environment
+bash scripts/setup-session.sh <environment> [context-name]
+
+# Examples:
+bash scripts/setup-session.sh prod my-prod-cluster
+bash scripts/setup-session.sh dev
+bash scripts/setup-session.sh qa qa-eks-cluster
+```
+
+### Gather Cluster Information
+
+When first connecting to a cluster (or periodically):
+
+```bash
+# Gather and update cluster info
+bash scripts/gather-cluster-info.sh
+
+# Output JSON for automation
+bash scripts/gather-cluster-info.sh --json
+```
+
+This updates `working/SESSION.md` with:
+- Platform type (OpenShift, EKS, GKE, AKS, etc.)
+- Cluster version
+- Kubernetes version
+- Component versions (ArgoCD, Prometheus, etc.)
+
+### Task Routing with Environment Context
+
+When assigning tasks, include environment:
+
+```
+@{AgentName} New task: [{TaskTitle}]
+Priority: {P1-P4}
+Environment: {dev|qa|staging|prod}
+Cluster: {cluster-name}
+Description: {description}
+Please acknowledge and begin work.
+```
+
+### Log with Environment
+
+Always include environment in logs:
+
+```markdown
+### Agent: <agent-name>
+### Environment: prod
+### Action: <what was done>
+### Result: SUCCESS | FAILURE | PARTIAL | BLOCKED | PENDING_APPROVAL
+```
+
+---
+
 ## 6. CROSS-AGENT COMMUNICATION TEMPLATES
 
 ### Task Assignment
@@ -653,6 +833,9 @@ All human communication MUST include:
 | `daily-standup.sh` | Generate daily standup report |
 | `route-task.sh` | Route a task to the appropriate agent |
 | `check-sla.sh` | Check for SLA breaches |
+| `skill-improvement-pr.sh` | Scan logs for SKILL_IMPROVEMENT and create PRs |
+| `setup-session.sh` | Set up environment context (dev/qa/staging/prod) |
+| `gather-cluster-info.sh` | Gather cluster version and component info |
 
 Run any script:
 ```bash

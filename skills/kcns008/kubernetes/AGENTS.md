@@ -268,6 +268,24 @@ When requesting approval, agents MUST provide:
 ### Next Action: <planned next step>
 ```
 
+### Continuous Learning — Skill Improvements
+
+When an agent identifies a skill (script, documentation, workflow) needs improvement during troubleshooting or cluster activities:
+
+1. **Agent logs SKILL_IMPROVEMENT** in `logs/LOGS.md` with:
+   - `Category: SKILL_IMPROVEMENT`
+   - `Skill: <skill-name>/<script-or-file>`
+   - `Improvement Type: SCRIPT_FIX | NEW_CAPABILITY | REFERENCE_DOC | WORKFLOW_CHANGE`
+   - `Suggested Fix: <description>`
+
+2. **Orchestrator detects** SKILL_IMPROVEMENT entries on heartbeat
+
+3. **Orchestrator creates PR** for human review via `skill-improvement-pr.sh`
+
+4. **Human reviews** → Approve, reject, or request changes
+
+This ensures the swarm continuously learns and improves from every interaction.
+
 ---
 
 ## CONTEXT WINDOW MANAGEMENT
@@ -291,17 +309,50 @@ Every session MUST begin with:
 pwd
 ls -la
 
-# 2. Read progress file
+# 2. Read environment context (CRITICAL - know your environment)
+cat working/SESSION.md
+
+# 3. Read progress file
 cat working/WORKING.md
 
-# 3. Read recent logs
+# 4. Read recent logs
 cat logs/LOGS.md | head -100
 
-# 4. Check for incidents
+# 5. Check for incidents
 cat incidents/INCIDENTS.md | head -50
 
-# 5. Check git history
+# 6. Check git history
 git log --oneline -10
+```
+
+### Environment Context (SESSION.md)
+
+**MUST** read `working/SESSION.md` at session start to know:
+- **Environment**: dev | qa | staging | prod
+- **Cluster Type**: OpenShift, EKS, GKE, AKS, etc.
+- **Permission Level**: What changes you can make
+
+#### Change Permissions by Environment
+
+| Action | dev | qa | staging | prod |
+|--------|-----|-----|---------|------|
+| Delete Resources | Approval | Approval | Approval | **NEVER** |
+| Modify Prod | Approval | Approval | Approval | **NEVER** |
+| RBAC Changes | Approval | Approval | Approval | **NEVER** |
+| Scale Workloads | Auto | Approval | Approval | **NEVER** |
+| Modify Secrets | Approval | Approval | Approval | **NEVER** |
+| View/Read | Auto | Auto | Auto | Auto |
+
+### First Run / New Cluster
+
+If starting in a new cluster or environment:
+
+```bash
+# Set up session context
+bash skills/orchestrator/scripts/setup-session.sh <environment> [context-name]
+
+# Gather cluster information
+bash skills/orchestrator/scripts/gather-cluster-info.sh
 ```
 
 ### Session End Protocol
