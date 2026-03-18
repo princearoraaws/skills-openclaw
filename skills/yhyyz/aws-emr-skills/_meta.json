@@ -1,0 +1,11 @@
+{
+  "owner": "yhyyz",
+  "slug": "aws-emr-skills",
+  "displayName": "Aws Emr Skill",
+  "latest": {
+    "version": "2.0.0",
+    "publishedAt": 1773825197931,
+    "commit": null
+  },
+  "history": []
+}
