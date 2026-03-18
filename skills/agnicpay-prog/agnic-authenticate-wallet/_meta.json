@@ -1,0 +1,11 @@
+{
+  "owner": "agnicpay-prog",
+  "slug": "agnic-authenticate-wallet",
+  "displayName": "AgnicPay x402 wallet authentication",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773761883010,
+    "commit": null
+  },
+  "history": []
+}
