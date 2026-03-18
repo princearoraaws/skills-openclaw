@@ -1,0 +1,11 @@
+{
+  "owner": "bensk2001",
+  "slug": "per-agent-compression-universal",
+  "displayName": "Per-Agent Memory Compression (Universal)",
+  "latest": {
+    "version": "1.2.2",
+    "publishedAt": 1773825864890,
+    "commit": null
+  },
+  "history": []
+}
