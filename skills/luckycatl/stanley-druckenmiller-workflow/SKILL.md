@@ -1,6 +1,6 @@
 ---
 name: stanley-druckenmiller-workflow
-description: Thesis-driven macro-to-execution market workflow in natural Chinese or English. Generate A-share and U.S. equity Morning Briefs, Intraday Alerts, Close Reviews, Weekly Regime Resets, and pre-trade sanity checks. Use when the user asks for A股晨报、美股晨报、盘前怎么看、盘中状态变化、收盘复盘、周度框架校准、市场处于什么位置、该怎么配仓位、哪些条件会证伪当前判断、行业优先级、市场优先级，或需要把流动性、利率、信用、实体需求、价格、结构、行业表达、基本面、反身性翻译成 Regime、Best Expression、Position Bias、Kill-switch、Watchlist.
+description: Thesis-driven macro-to-execution market workflow in natural Chinese or English. Generate A-share and U.S. equity Morning Briefs, Intraday Alerts, Close Reviews, Weekly Regime Resets, and pre-trade sanity checks. Use when the user asks for an A-share morning brief, a U.S. morning brief, a pre-market view, an intraday state update, an end-of-day review, a weekly regime reset, a market-location read, portfolio-bias guidance, falsification conditions, market priority, industry priority, or a translation from liquidity, rates, credit, real-economy demand, price, structure, sector expression, fundamentals, and reflexivity into Regime, Best Expression, Position Bias, Kill-switch, and Watchlist.
 ---
 
 # Stanley Druckenmiller Workflow
@@ -39,13 +39,28 @@ When extending or maintaining the skill, read:
 
 ## 2) Output Style (Strict)
 
-- Output in the user's language.
+- Output in the resolved user language.
 - Voice should feel like a live PM memo: direct, conditional, concise, human.
 - Depth parity rule: Chinese and English outputs should have equivalent analytical depth for the same request type.
 - Do not output JSON, YAML, code blocks, key-value dumps, or tool logs unless the user explicitly asks for machine format.
 - Markdown headings and bullets are allowed.
 - On first mention, explain each ticker or series in the user's language when that helps readability.
 - Facts and interpretation must be distinguishable.
+
+### Language Policy
+Resolve output language in this order:
+1. explicit user instruction
+2. account-level preference
+3. current-session language habit
+4. platform locale / Accept-Language
+5. message-language detection
+
+Rules:
+- explicit instruction overrides everything
+- current-session language habit should not silently overwrite account-level preference unless the user explicitly confirms a long-term change
+- if account preference and session habit conflict for multiple turns, ask once and persist the answer at the appropriate layer
+- if ambiguity remains, default to the language of the latest user message
+- preserve equivalent analytical depth across languages
 
 ### Human PM texture
 Keep some human realness in the memo:
@@ -160,11 +175,11 @@ Core outputs:
 Use only when a meaningful state change happens.
 
 Format:
-- `变了什么 -> 影响哪一步 -> 是否调整仓位`
+- `what changed -> which layer it affects -> whether Position Bias should change`
 
 Examples:
-- `北向由净流入转连续流出 -> 影响A股市场流动性与内部结构 -> Position Bias: add -> reduce`
-- `HY OAS继续走阔 -> 影响信用传导 -> Position Bias: starter -> reduce`
+- `northbound conditions shifted from supportive to weak -> affects A-share market liquidity and internal structure -> Position Bias: add -> reduce`
+- `HY OAS widened further -> affects credit transmission -> Position Bias: starter -> reduce`
 
 Do not spam. No routine noise alerts.
 
@@ -218,6 +233,7 @@ Goal:
 ## 7) Required Final Translation Fields
 
 Every full Morning Brief should converge to:
+- one dominant thesis
 - Regime
 - Regime Bias
 - Best Expression
@@ -225,6 +241,11 @@ Every full Morning Brief should converge to:
 - Kill-switch
 - Why now
 - Watchlist
+
+### Dominant-thesis rule
+Each daily brief must make one main bet in one sentence.
+Secondary observations may support, nuance, or challenge that thesis, but they should not compete with it.
+If the brief sounds like several equally-important explanations at once, it is too diffuse.
 
 ### Position Bias vocabulary
 Use only:
@@ -238,41 +259,68 @@ Use only:
 
 ## 8) A-Share Transmission Framework
 
-Use this structure for A股 outputs.
+Use this structure for A-share outputs.
 
 ### 8.1 Today’s Regime
 Put this first.
 
 Include:
 - Bottom line
+- one dominant thesis in one sentence
 - Regime
 - Regime Bias
 - Confidence
 - Kill-switch
+- the asymmetry in one sentence when possible
 
-### 8.2 Core Thesis & Asymmetry
-Include:
-- today’s core macro/market hypothesis
-- why it matters
-- the asymmetry: where market pricing and underlying transmission diverge
+### 8.2 CAR Snapshot
+Place this section immediately after Today’s Regime.
 
-### 8.3 Best Expression & Position Bias
+Keep it compressed.
+Use three one-line bullets only:
+- Consensus
+- Anti-consensus
+- Second-order
+
+Purpose:
+- surface what the market thinks
+- show where the market may be wrong
+- identify the next-order consequence if the current thesis keeps transmitting
+
+### 8.3 Top Breakouts / Key Moves
+Place this section near the top.
+
+Purpose:
+- surface the 1-3 most important new changes since the prior session
+- add edge and actionability to the memo
+- prevent the brief from becoming a purely structural framework without marginal information
+
+Rules:
+- include at most 3 items
+- every item must answer:
+  1. what changed
+  2. why it matters
+  3. what to watch next
+- only include changes that validate or challenge the dominant thesis, or represent a meaningful breakout, divergence, or regime-relevant move
+- do not include generic market summaries or repeated framework points
+
+### 8.4 Best Expression & Position Bias
 Include:
 - best long
 - best short / best avoid
 - Position Bias
 - Trading Read / PM Notes
 
-### 8.4 What Would Change My Mind
+### 8.5 What Would Change My Mind
 Include:
 - IF / THEN conditions
 - turning-point requirements
 - what would move bias up or down
 
-### 8.5 Macro Transmission
+### 8.6 Macro Transmission
 Use the following substructure.
 
-#### 8.5.1 Global Liquidity & External Pricing
+#### 8.6.1 Global Liquidity & External Pricing
 Focus on:
 - dollar / external liquidity
 - global rates
@@ -282,7 +330,7 @@ Focus on:
 Output:
 - one integrated read
 
-#### 8.5.2 China Policy & Monetary Conditions
+#### 8.6.2 China Policy & Monetary Conditions
 Focus on:
 - policy tone
 - OMO / MLF
@@ -292,72 +340,51 @@ Focus on:
 Output:
 - one integrated read
 
-#### 8.5.3 Credit Transmission
+#### 8.6.3 Credit Transmission
 Focus on:
 - social financing / new credit / M2
 - property and LGFV credit stress when available
 - leverage proxies such as margin financing
+- daily credit-risk proxy when spread truth is unavailable
+
+Daily rule:
+- do not leave property/LGFV credit stress as a routine hard gap in the daily brief if a stable proxy exists
+- in daily mode, use a credit-risk proxy built from property leaders, joint-stock banks vs big banks, brokers, and other credit-sensitive baskets
+- treat true property/LGFV spread data as weekly or monthly enhancement unless a stable public daily source is available
 
 Output:
 - one integrated read
 
-#### 8.5.4 Domestic Demand / Real Economy Nowcast
+#### 8.6.4 Domestic Demand / Real Economy Nowcast
 Fetch this section automatically before each A-share morning brief when data is available.
 Do not hardcode values into the skill.
-Keep the write-up compact.
 
-Use four compact blocks:
+Daily rule:
+- keep this section compressed by default
+- do not expand every sub-block with full fields every day
+- default format should be:
+  - Housing: weak / stabilizing / improving
+  - Consumption: weak / mixed / improving
+  - Logistics / Trade: weak / mixed / improving
+  - Industrial Activity: weak / mixed / improving
+  - Composite Read: one sentence only
 
-##### Housing
-Preferred fields:
-- core-city second-hand viewings / listings
-- 30-city new home weekly sales area
-- land purchase amount / premium or construction completion proxy
+Expand the sub-blocks only if one of the following is true:
+1. the underlying data has just updated
+2. the update changes today’s thesis
+3. the market is explicitly trading this layer
 
-Output:
-- 2-3 key fields
-- one-line read
+Preferred fields behind the compressed read:
+- Housing: core-city second-hand viewings/listings, 30-city new home weekly sales area, land purchase/premium or construction proxy
+- Consumption: CPCA passenger car sales, dealer inventory or premium-consumption proxy, express delivery activity
+- Logistics / Trade: SCFI, port throughput, freight / external-demand proxy
+- Industrial Activity: Daqin railway throughput, electricity usage, excavator domestic sales, steel production / steel price when available
 
-##### Consumption
-Preferred fields:
-- CPCA passenger car sales
-- dealer inventory coefficient or premium consumption proxy
-- express delivery activity
-
-Output:
-- 2-3 key fields
-- one-line read
-
-##### Logistics / Trade
-Preferred fields:
-- SCFI
-- port throughput
-- freight / external demand proxy
-
-Output:
-- 2-3 key fields
-- one-line read
-
-##### Industrial Activity
-Preferred fields:
-- Daqin railway throughput
-- electricity usage
-- excavator domestic sales
-- steel production / steel price when available
-
-Output:
-- 2-3 key fields
-- one-line read
-
-##### Composite Read
 Always end with:
-- `Domestic Demand Status: 修复 / 分化 / 偏弱`
-- implication for A-shares:
-  - if only consumption is strong while housing and industry remain weak -> structural consumption, not broad cyclical expansion
-  - if housing + industry + logistics improve together -> broader credit/cyclical thesis can be discussed
-  - if all four stay weak -> favor defense / dividend / low-volatility style
+- `Domestic Demand Status: improving / mixed / weak`
+- one-sentence implication for A-shares
 
-#### 8.5.5 A-Share Market Liquidity
+#### 8.6.5 A-Share Market Liquidity
 Focus on:
 - northbound flow or valid proxy when northbound fails
 - turnover
@@ -365,10 +392,14 @@ Focus on:
 - leverage / margin
 - style flow
 
+Daily rule:
+- if northbound truth is unavailable or upstream values are clearly invalid, do not report it as a routine hard gap
+- use a northbound proxy built from Stock Connect breadth, core-vs-growth style relative strength, and offshore China-beta confirmation when available
+
 Output:
 - one integrated read
 
-#### 8.5.6 Price / Trend
+#### 8.6.6 Price / Trend
 Focus on:
 - broad indices
 - growth vs value
@@ -377,7 +408,7 @@ Focus on:
 Output:
 - one integrated read
 
-#### 8.5.7 Internal Structure
+#### 8.6.7 Internal Structure
 Focus on:
 - breadth
 - money-making effect
@@ -387,16 +418,21 @@ Focus on:
 Output:
 - one integrated read
 
-#### 8.5.8 Industry Expression
+#### 8.6.8 Industry Expression
 Focus on:
 - which sectors best express the current regime
 - which sectors should be avoided
 - whether leadership is defensive, cyclical, growth, or mixed
 
+Daily rule:
+- do not require a stable daily 'industry net flow' truth series to produce this section
+- use industry-expression proxy from sector relative performance, basket leadership, and participation structure when direct industry fund-flow data is unstable
+- treat exact industry fund-flow truth as enhancement, not as a daily hard dependency
+
 Output:
 - one integrated read
 
-#### 8.5.9 Fundamental Validation
+#### 8.6.9 Fundamental Validation
 Focus on:
 - whether sector leadership has earnings / valuation support
 - whether price action is backed by real fundamentals
@@ -404,7 +440,7 @@ Focus on:
 Output:
 - one integrated read
 
-#### 8.5.10 Reflexivity
+#### 8.6.10 Reflexivity
 Focus on:
 - crowding
 - positive reflexivity vs negative reflexivity
@@ -413,7 +449,7 @@ Focus on:
 Output:
 - one integrated read
 
-### 8.6 Narrative vs Tape & Transmission
+### 8.7 Narrative vs Tape & Transmission
 Include:
 - Narrative
 - Anti-consensus
@@ -426,11 +462,42 @@ This section should answer:
 - what the market is actually trading
 - whether price action confirms the dominant narrative
 
-### 8.7 Evidence Anchors
+### 8.8 News Validation
+Use News Validation as a verification layer, not as the regime engine.
+
+Rules:
+- form regime and thesis from transmission first
+- use news only to confirm, challenge, or explain the current thesis
+- include 2-4 headlines max
+- for each headline, always state:
+  - source
+  - whether it Supports / Conflicts / is just Noise
+  - one-line implication
+
+A-share source priority:
+1. Official / policy anchors
+   - State Council / China gov portal / PBOC / CSRC / NDRC / NBS / MOF / MIIT / MOFCOM / Customs / NEA / exchanges
+2. Market wires
+   - CLS / Shanghai Securities News / China Securities Journal / Securities Times / Yicai
+3. Sector verification
+   - CRIC / Cih-index / Beike Research / CPCA / Shanghai Shipping Exchange / State Post Bureau / NEA / industry associations
+
+Do not let a single headline override the transmission framework.
+
+### 8.9 Daily proxy policy (must stabilize output)
+For the A-share daily brief, the following should not remain routine hard gaps when stable proxies exist:
+- northbound net-buy truth -> use northbound proxy
+- property / LGFV spread truth -> use credit-risk proxy in daily mode and move true spread confirmation to weekly/monthly enhancement
+- direct industry net-flow truth -> use industry-expression proxy
+
+Only include an item in `Evidence Gaps` if it is a missing P0 field with no acceptable stable proxy.
+Do not list optional enhancement fields as daily gaps.
+
+### 8.10 Evidence Anchors
 Keep this after the main body.
 Use 8-12 anchors max.
 
-### 8.8 Data Panel Appendix
+### 8.11 Data Panel Appendix
 Put the compact panel after the main memo.
 Suggested panels:
 - Policy & Liquidity
@@ -444,25 +511,47 @@ Do not let the appendix dominate the memo.
 
 ## 9) U.S. Transmission Framework
 
-Use this structure for 美股 outputs.
+Use this structure for U.S. equity outputs.
 
 ### 9.1 Today’s Regime
 Put this first.
 
 Include:
 - Bottom line
+- one dominant thesis in one sentence
 - Regime
 - Regime Bias
 - Confidence
 - Kill-switch
+- the asymmetry in one sentence when possible
 
-### 9.2 Core Thesis & Asymmetry
-Include:
-- core macro thesis
-- why it matters
-- the asymmetry
+### 9.2 CAR Snapshot
+Place this section immediately after Today’s Regime.
 
-### 9.3 Best Expression & Position Bias
+Keep it compressed.
+Use three one-line bullets only:
+- Consensus
+- Anti-consensus
+- Second-order
+
+### 9.3 Top Breakouts / Key Moves
+Place this section near the top.
+
+Purpose:
+- surface the 1-3 most important new changes since the prior session
+- add edge and actionability to the memo
+- prevent the brief from becoming a purely structural framework without marginal information
+
+Rules:
+- include at most 3 items
+- every item must answer:
+  1. what changed
+  2. why it matters
+  3. what to watch next
+- only include changes that validate or challenge the dominant thesis, or represent a meaningful breakout, divergence, or regime-relevant move
+- do not include generic market summaries or repeated framework points
+
+### 9.4 Best Expression & Position Bias
 Include:
 - best long
 - best short
@@ -470,16 +559,16 @@ Include:
 - Position Bias
 - PM Notes / Trading Read
 
-### 9.4 What Would Change My Mind
+### 9.5 What Would Change My Mind
 Include:
 - IF / THEN triggers
 - turning-point conditions
 - risk re-rating triggers
 
-### 9.5 Macro Transmission
+### 9.6 Macro Transmission
 Use the following substructure.
 
-#### 9.5.1 Fed / Policy & Liquidity
+#### 9.6.1 Fed / Policy & Liquidity
 Focus on:
 - Fed net liquidity
 - ON RRP
@@ -488,7 +577,7 @@ Focus on:
 Output:
 - one integrated liquidity read
 
-#### 9.5.2 Rates & FX Conditions
+#### 9.6.2 Rates & FX Conditions
 Focus on:
 - US 2Y / 10Y
 - 2s10s / 3m10y
@@ -499,7 +588,7 @@ Focus on:
 Output:
 - one integrated rates & FX read
 
-#### 9.5.3 Credit Transmission
+#### 9.6.3 Credit Transmission
 Focus on:
 - HY OAS
 - IG OAS if available
@@ -509,7 +598,7 @@ Focus on:
 Output:
 - one integrated credit read
 
-#### 9.5.4 Domestic Demand / Real Economy Nowcast
+#### 9.6.4 Domestic Demand / Real Economy Nowcast
 Fetch this section automatically before each U.S. morning brief.
 Do not default this entire section to `EVIDENCE INSUFFICIENT` if stable latest-official public data is available.
 It is acceptable to use the latest official weekly or monthly reading, refreshed on each daily run.
@@ -577,7 +666,7 @@ Always end with:
   - if housing + industrial + logistics improve together -> broader growth re-acceleration
   - if all remain weak -> favor quality / defense / large-cap balance-sheet strength
 
-#### 9.5.5 U.S. Market Liquidity
+#### 9.6.5 U.S. Market Liquidity
 Focus on:
 - ETF flow proxies
 - volume / participation
@@ -587,7 +676,7 @@ Focus on:
 Output:
 - one integrated read
 
-#### 9.5.6 Price / Trend
+#### 9.6.6 Price / Trend
 Focus on:
 - SPX / NDQ / RTY
 - major factor trend
@@ -596,7 +685,7 @@ Focus on:
 Output:
 - one integrated read
 
-#### 9.5.7 Internal Structure
+#### 9.6.7 Internal Structure
 Focus on:
 - RSP / SPY
 - IWM / SPY
@@ -606,7 +695,7 @@ Focus on:
 Output:
 - one integrated read
 
-#### 9.5.8 Sector Expression
+#### 9.6.8 Sector Expression
 Focus on:
 - Tech
 - Financials
@@ -618,7 +707,7 @@ Focus on:
 Output:
 - one integrated read
 
-#### 9.5.9 Fundamental Validation
+#### 9.6.9 Fundamental Validation
 Do not default this block to `EVIDENCE INSUFFICIENT` if stable public profitability and margin proxies are available.
 
 Default stable public core:
@@ -643,7 +732,7 @@ Output:
 
 If only slow-moving official fundamental data is available, still provide a compact read from those latest official values instead of leaving the entire section empty.
 
-#### 9.5.10 Reflexivity
+#### 9.6.10 Reflexivity
 Focus on:
 - crowding
 - vol/gamma regime if available
@@ -653,7 +742,7 @@ Focus on:
 Output:
 - one integrated read
 
-### 9.6 Narrative vs Tape & Transmission
+### 9.7 Narrative vs Tape & Transmission
 Include:
 - Narrative
 - Anti-consensus
@@ -661,10 +750,42 @@ Include:
 - 2-3 throughlines
 - compressed regional scoreboard
 
-### 9.7 Evidence Anchors
+### 9.8 News Validation
+Use News Validation as a verification layer, not as the regime engine.
+
+Rules:
+- form regime and thesis from transmission first
+- use news only to confirm, challenge, or explain the current thesis
+- include 2-4 headlines max
+- for each headline, always state:
+  - source
+  - whether it Supports / Conflicts / is just Noise
+  - one-line implication
+
+U.S. source priority:
+1. Core market / macro press
+   - Bloomberg / Reuters / WSJ / FT / CNBC
+2. Official / policy
+   - Federal Reserve / Treasury / BLS / BEA / Census / CBOE
+3. Broader narrative context
+   - NYT / WaPo / AP / major sector press
+
+Do not let a single headline override the transmission framework.
+
+### 9.9 Daily proxy policy (must stabilize output)
+For the U.S. daily brief, the following should not remain routine hard gaps when a stable proxy exists:
+- Europe breadth panel -> use Europe breadth proxy
+- direct MOVE series -> use Treasury realized-volatility proxy
+- JPY 1M vol -> use USDJPY realized-volatility proxy
+- public daily sell-side revisions breadth -> downgrade to enhancement layer and use fundamental-validation proxy in daily mode
+
+Only include an item in `Evidence Gaps` if it is a missing P0 field with no acceptable stable proxy.
+Do not list optional enhancement fields as daily gaps.
+
+### 9.10 Evidence Anchors
 Use 8-12 anchors max.
 
-### 9.8 Data Panel Appendix
+### 9.11 Data Panel Appendix
 Suggested panels:
 - Fed / Policy & Liquidity
 - Credit & Stress
@@ -707,7 +828,9 @@ The skill should define:
 ### Conclusion first
 Always front-load:
 - regime
-- thesis
+- one dominant thesis
+- CAR snapshot
+- top breakouts / key moves
 - best expression
 - position bias
 - falsification
@@ -716,10 +839,12 @@ Always front-load:
 Prefer:
 - compact panel
 - one integrated read
+- one-line status blocks when a layer is slow-moving
 
 Avoid:
 - one paragraph per data point
 - repetitive `signal:` after every bullet
+- verbose daily expansion of slow-moving nowcast layers
 
 ### Reading hierarchy
 Use three layers:
@@ -737,6 +862,19 @@ Keep some human color in:
 - Trading Read / PM Notes
 - What Would Change My Mind
 - crowding / pain-trade commentary
+
+### Proxy language rule
+When using a proxy, translate it into judgment language in the final memo.
+Do not expose raw system phrasing unless the user explicitly asks for implementation detail.
+Prefer:
+- “Stock Connect breadth still looks weak”
+- “credit-sensitive proxies are not confirming”
+- “sector leadership remains defensive”
+
+Avoid:
+- “northbound proxy says…”
+- “industry-expression proxy says…”
+- “credit-risk proxy says…”
 
 Do not let the memo become a sterile database dump.
 
@@ -768,6 +906,5 @@ When users ask if this is “real Stan”, answer in two layers:
 
 ## 14) Safety Footer
 
-Use disclaimer in the user's language:
-- Chinese prompt: `免责声明：以上内容是研究框架信息，不构成投资建议或交易指令。`
-- English prompt: `Disclaimer: The above content is research framework information and does not constitute investment advice or trading instructions.`
+Always append the standard disclaimer in the resolved user language:
+- `Disclaimer: The above content is research framework information and does not constitute investment advice or trading instructions.`

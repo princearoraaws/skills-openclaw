@@ -45,8 +45,8 @@ stanley-druckenmiller-workflow/
 `market_panels.py` now has two layers:
 
 ### Global / cross-asset layer
-Per symbol, default order is:
-1. finshare（默认 `first`）
+Per symbol, the default order is:
+1. finshare (default `first` mode)
 2. Yahoo chart API
 3. Stooq CSV
 4. FRED proxy mapping
@@ -54,10 +54,10 @@ Per symbol, default order is:
 
 ### A-share structure layer
 A-share internal structure now uses **AkShare** when available, mainly for:
-- 北向资金
-- Shibor / 中国国债收益率
-- 融资融券
-- 地产链 / 运输链 / 消费分层 / 信用风险代理篮子
+- northbound flow
+- Shibor / China government bond yields
+- margin financing and securities lending
+- property-chain, transport, consumer-tiering, and credit-sensitive proxy baskets
 
 ### Runtime cache scope (security fix)
 By default, `market_panels.py` now writes cache files only inside the skill directory:
@@ -73,22 +73,22 @@ export STANLEY_RUNTIME_DIR=/your/explicit/runtime/path
 
 If unset, the script stays confined to the skill-local runtime folder.
 
-### finshare 最小可用接入（可选）
+### Minimal finshare integration (optional)
 
-默认模式是 `first`：
-- 先走 finshare
-- finshare 失败再回退到 Yahoo / Stooq / FRED / Cache
-- 仍可用 `auto` 改回“Yahoo 优先、finshare 兜底”
+Default mode is `first`:
+- try finshare first
+- if finshare fails, fall back to Yahoo / Stooq / FRED / Cache
+- use `auto` to switch back to “Yahoo first, finshare as fallback”
 
-#### 1) 安装依赖（可选）
+#### 1) Install optional dependencies
 
 ```bash
 pip install finshare akshare
 ```
 
-#### 2) 启用/关闭方式
+#### 2) Enable / disable modes
 
-- CLI 参数（单次运行）
+- CLI arguments (single run)
 
 ```bash
 python3 scripts/market_panels.py --finshare-mode first
@@ -96,32 +96,32 @@ python3 scripts/market_panels.py --finshare-mode auto
 python3 scripts/market_panels.py --finshare-mode off
 ```
 
-- 环境变量（默认全局行为）
+- Environment variables (default global behavior)
 
 ```bash
-export FINSHARE_MODE=first  # 默认，优先走 finshare
-export FINSHARE_MODE=auto   # Yahoo 优先，finshare 兜底
-export FINSHARE_MODE=off    # 完全禁用 finshare
+export FINSHARE_MODE=first  # default: prefer finshare
+export FINSHARE_MODE=auto   # Yahoo first, finshare as fallback
+export FINSHARE_MODE=off    # disable finshare completely
 ```
 
-- FRED API Key（可选，增强宏观序列稳定性）
+- FRED API key (optional, improves macro-series stability)
 
 ```bash
 export FRED_API_KEY="<your_fred_api_key>"
 ```
 
-> 当同时提供参数和环境变量时，以 `--finshare-mode` 为准。
+> If both CLI arguments and environment variables are present, `--finshare-mode` takes precedence.
 
-#### 3) 回滚方式
+#### 3) Rollback
 
-出现兼容问题时，可直接回滚到“无 finshare”行为：
+If compatibility issues appear, roll back to “no finshare” mode:
 
 ```bash
 export FINSHARE_MODE=off
 python3 scripts/market_panels.py --output /tmp/stanley-panels.json
 ```
 
-这会恢复为：Yahoo → Stooq → FRED → Cache，不依赖 finshare。
+This restores the workflow to: Yahoo -> Stooq -> FRED -> Cache, with no finshare dependency.
 
 ## Core Design Principles
 
@@ -134,31 +134,47 @@ python3 scripts/market_panels.py --output /tmp/stanley-panels.json
    - data_timestamp (ISO8601)
 6. If data is missing, downgrade safely (DATA LIMITED)
 
+## Language Resolution Policy
+
+Resolve output language in this order:
+1. explicit user instruction
+2. account-level preference
+3. current-session language habit
+4. platform locale / Accept-Language
+5. message-language detection
+
+Rules:
+- explicit instruction overrides everything
+- session habit should not silently overwrite account-level preference unless explicitly confirmed
+- if account preference and session habit conflict across multiple turns, ask once and persist at the appropriate layer
+- if ambiguity remains, default to the language of the latest user message
+- preserve equivalent analytical depth across languages
+
 ## Triggers and Modes
 
 - Mode A (AM brief):
-  - `晨报`
+  - `morning brief`
   - `macro update`
-  - `stan分析下当前市场`
-  - `今天怎么看`
+  - `analyze the market with Stan-style workflow`
+  - `how should I view today`
 
 - Mode B (EOD wrap):
   - `EOD`
-  - `收盘复盘`
-  - `今天盘面总结`
+  - `close review`
+  - `today's market recap`
 
 - Mode C (Weekly):
-  - `周报`
+  - `weekly brief`
   - `weekly review`
-  - `下周怎么看`
+  - `how to view next week`
 
 - Mode D (Pre-trade consult):
-  - `交易前看一眼`
+  - `pre-trade check`
   - `should I buy/sell`
-  - `帮我做交易前 sanity check`
+  - `sanity-check this trade`
 
 - Mode E (Monthly):
-  - `月报`
+  - `monthly brief`
   - `monthly review`
   - `regime review`
 
@@ -168,9 +184,9 @@ python3 scripts/market_panels.py --output /tmp/stanley-panels.json
   - `Q3 to Q4 holdings changes`
 
 - Mode G (Asset divergence):
-  - `盯住 [TICKER]`
+  - `watch [TICKER]`
   - `check divergence for [TICKER]`
-  - `资产背离警报`
+  - `asset divergence alert`
 
 ## Evidence and Safety Contract
 
@@ -185,8 +201,8 @@ python3 scripts/market_panels.py --output /tmp/stanley-panels.json
   - `[EVIDENCE INSUFFICIENT: missing X]`
 
 Safety footer (always append):
-- Chinese: `免责声明：以上内容是研究框架信息，不构成投资建议或交易指令。`
-- English: `Disclaimer: The above content is research framework information and does not constitute investment advice or trading instructions.`
+- append the standard disclaimer in the resolved user language:
+  `Disclaimer: The above content is research framework information and does not constitute investment advice or trading instructions.`
 
 ## Local Validation Checklist (Before Publish)
 

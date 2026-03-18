@@ -103,6 +103,10 @@ Prefer:
 - style / sector destination when available
 - ETF style flow as confirm, not thesis anchor
 
+Daily stabilization rule:
+- if northbound truth is unavailable or upstream values are clearly invalid, replace it with a northbound proxy built from Stock Connect breadth, style relative strength, and offshore China-beta confirmation
+- do not keep northbound truth as a routine daily hard gap if the proxy is available
+
 ### Sector / single-name baskets
 Use baskets, not isolated names:
 - property
@@ -114,57 +118,53 @@ Use baskets, not isolated names:
 - premium consumer vs mass consumer
 - credit-sensitive basket
 
+Daily proxy policy:
+- use these baskets to build both credit-risk proxy and industry-expression proxy when direct truth series are unstable
+- do not block the daily memo waiting for exact industry net-flow truth
+- treat true daily industry net-flow as enhancement, not hard dependency
+
 ### Preferred A-share second-order chains
-Always try to include at least one explicit chain, e.g.:
-- 外部汇率约束
-  -> 外资回流门槛变化
-  -> 北向连续性变化
-  -> 宽基 / 小盘 / 成长相对强弱
-  -> 行业表达切换
+Always try to include at least one explicit chain, for example:
+- external FX constraint
+  -> threshold for foreign capital to return changes
+  -> northbound continuity changes
+  -> broad-beta / small-cap / growth relative strength shifts
+  -> sector expression rotates
 
-- 本地流动性变化
-  -> 资金价格变化
-  -> 估值修复 or 仅结构修复
-  -> 成交与广度是否确认
+- local liquidity change
+  -> funding price changes
+  -> valuation repair or only structural repair
+  -> turnover and breadth either confirm or fail to confirm
 
-- 信用传导变化
-  -> 地产 / 银行 / 信用敏感资产确认与否
-  -> 周期主线是否成立
+- credit transmission change
+  -> property / banks / credit-sensitive assets either confirm or fail to confirm
+  -> cyclical leadership either becomes viable or does not
 
 ## 5) Domestic Demand / Real Economy Nowcast
 
 ### A-share / China side
-Preferred compact blocks:
-- Housing
-- Consumption
-- Logistics / Trade
-- Industrial Activity
+Use a compressed daily format by default.
 
-Preferred fields by block:
+Default daily format:
+- Housing: weak / stabilizing / improving
+- Consumption: weak / mixed / improving
+- Logistics / Trade: weak / mixed / improving
+- Industrial Activity: weak / mixed / improving
+- Composite Read: one sentence only
 
-#### Housing
-- core-city second-hand viewings / listings
-- 30-city new home weekly sales area
-- land purchase / premium rate or construction proxy
+Expand the sub-blocks only when:
+1. the underlying data has just updated,
+2. the update changes the day’s thesis,
+3. the market is explicitly trading this layer.
 
-#### Consumption
-- CPCA passenger car sales
-- dealer inventory coefficient or premium consumption proxy
-- express delivery activity
+Preferred fields behind the compressed read:
+- Housing: core-city second-hand viewings / listings, 30-city new home weekly sales area, land purchase / premium rate or construction proxy
+- Consumption: CPCA passenger car sales, dealer inventory coefficient or premium consumption proxy, express delivery activity
+- Logistics / Trade: SCFI, port throughput, freight / external demand proxy
+- Industrial Activity: Daqin railway throughput, electricity usage, excavator domestic sales, steel production / steel price when available
 
-#### Logistics / Trade
-- SCFI
-- port throughput
-- freight / external demand proxy
-
-#### Industrial Activity
-- Daqin railway throughput
-- electricity usage
-- excavator domestic sales
-- steel production / steel price when available
-
-Always end with a single composite read:
-- Domestic Demand Status: 修复 / 分化 / 偏弱
+Always end with:
+- Domestic Demand Status: improving / mixed / weak
 - implication for A-shares
 
 ### U.S. side
@@ -266,10 +266,10 @@ The skill should define:
 
 If data is incomplete:
 - keep the memo alive
-- explicitly name missing panels
+- explicitly name missing panels only when they are truly core and unfillable
 - reduce confidence
 - avoid fake precision
-- use a proxy only when the proxy truly preserves the transmission logic
+- use a proxy when the proxy preserves the transmission logic
 
 Field status labels:
 - ok
@@ -277,7 +277,58 @@ Field status labels:
 - proxy
 - evidence insufficient
 
-## 8) Output discipline
+### Daily A-share stabilization rule
+The daily A-share brief should not repeatedly surface the same structural missing items as hard gaps if stable proxies exist.
+
+Apply these defaults:
+- northbound net-buy truth -> northbound proxy
+- property / LGFV spread truth -> credit-risk proxy in daily mode, true spread in weekly/monthly enhancement
+- direct industry net-flow truth -> industry-expression proxy
+
+Only report `Evidence Gaps` for missing P0 fields that do not have an acceptable stable proxy.
+Do not report optional enhancement fields as daily gaps.
+
+### Daily U.S. stabilization rule
+The daily U.S. brief should not repeatedly surface the same structural missing items as hard gaps if stable proxies exist.
+
+Apply these defaults:
+- Europe breadth panel -> Europe breadth proxy
+- MOVE -> Treasury realized-volatility proxy
+- JPY 1M vol -> USDJPY 20d realized-volatility proxy
+- daily sell-side revisions breadth -> downgrade to weekly/monthly enhancement and replace in daily mode with a public fundamental-validation proxy
+
+Only report `Evidence Gaps` for missing P0 fields that do not have an acceptable stable proxy.
+Do not report optional enhancement fields as daily gaps.
+
+## 8) News validation
+
+Use news validation as a verification layer, not as the regime engine.
+
+Rules:
+- build regime from transmission and market evidence first
+- use news only to confirm, challenge, or explain the current thesis
+- include 2-4 headlines max
+- for each headline, state source, Supports / Conflicts / Noise, and one-line implication
+
+### A-share source priority
+1. Official / policy anchors
+   - State Council / China gov portal / PBOC / CSRC / NDRC / NBS / MOF / MIIT / MOFCOM / Customs / NEA / exchanges
+2. Market wires
+   - CLS / Shanghai Securities News / China Securities Journal / Securities Times / Yicai
+3. Sector verification
+   - CRIC / Cih-index / Beike Research / CPCA / Shanghai Shipping Exchange / State Post Bureau / NEA / industry associations
+
+### U.S. source priority
+1. Core market / macro press
+   - Bloomberg / Reuters / WSJ / FT / CNBC
+2. Official / policy
+   - Federal Reserve / Treasury / BLS / BEA / Census / CBOE
+3. Broader narrative context
+   - NYT / WaPo / AP / major sector press
+
+Do not let a single headline override the transmission framework.
+
+## 9) Output discipline
 
 All final memos should preserve:
 - conclusion first
@@ -291,3 +342,19 @@ Use three reading layers:
 1. decision layer
 2. reasoning layer
 3. evidence layer
+
+## 10) Language resolution
+
+Resolve language in this order:
+1. explicit user instruction
+2. account-level preference
+3. current-session language habit
+4. platform locale / Accept-Language
+5. message-language detection
+
+Rules:
+- explicit instruction overrides everything
+- session habit should not silently overwrite account-level preference
+- if account preference and session habit conflict repeatedly, ask once and persist
+- if ambiguity remains, default to the latest user message language
+- keep analytical depth equivalent across languages

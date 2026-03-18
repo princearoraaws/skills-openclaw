@@ -47,16 +47,16 @@ SYMBOLS = {
 }
 
 A_SHARE_INDEX_CODES = {
-    "sh000001": {"name": "上证指数", "yahoo": "000001.SS"},
-    "sh000300": {"name": "沪深300", "yahoo": "000300.SS"},
-    "sz399001": {"name": "深证成指", "yahoo": "399001.SZ"},
-    "sz399006": {"name": "创业板指", "yahoo": "399006.SZ"},
-    "sh000852": {"name": "中证1000", "yahoo": None},
+    "sh000001": {"name": "Shanghai Composite", "yahoo": "000001.SS"},
+    "sh000300": {"name": "CSI 300", "yahoo": "000300.SS"},
+    "sz399001": {"name": "Shenzhen Component", "yahoo": "399001.SZ"},
+    "sz399006": {"name": "ChiNext", "yahoo": "399006.SZ"},
+    "sh000852": {"name": "CSI 1000", "yahoo": None},
 }
 
 HK_INDEX_SYMBOLS = {
-    "HSI": "恒生指数",
-    "HSCEI": "国企指数",
+    "HSI": "Hang Seng Index",
+    "HSCEI": "Hang Seng China Enterprises Index",
 }
 
 A_SHARE_LEADER_BASKETS = {
@@ -258,7 +258,7 @@ def finshare_series(symbol: str) -> dict:
                 continue
 
             close_col = None
-            for c in ("close_price", "close", "Close", "收盘"):
+            for c in ("close_price", "close", "Close", "\u6536\u76d8"):
                 if c in df.columns:
                     close_col = c
                     break
@@ -753,8 +753,8 @@ def akshare_stock_hist_snapshot(symbol: str, days: int = 40) -> dict:
         points: list[tuple[int, float]] = []
         turnover = None
         for _, row in df.iterrows():
-            raw_date = row.get("日期")
-            close_val = _to_float(row.get("收盘"))
+            raw_date = row.get("\u65e5\u671f")
+            close_val = _to_float(row.get("\u6536\u76d8"))
             if close_val is None:
                 continue
             try:
@@ -762,7 +762,7 @@ def akshare_stock_hist_snapshot(symbol: str, days: int = 40) -> dict:
             except Exception:
                 continue
             points.append((int(dt.timestamp()), close_val))
-            turnover = _to_float(row.get("换手率"))
+            turnover = _to_float(row.get("\u6362\u624b\u7387"))
         if len(points) < 2:
             return {"ok": False, "symbol": symbol, "error": "insufficient akshare close points"}
         latest_ts, latest = points[-1]
@@ -819,19 +819,21 @@ def akshare_northbound_snapshot() -> dict:
         df = ak.stock_hsgt_fund_flow_summary_em()
         if df is None or df.empty:
             return {"ok": False, "error": "empty northbound frame"}
-        north = df[df["资金方向"] == "北向"].copy()
+        north = df[df["\u8d44\u91d1\u65b9\u5411"] == "\u5317\u5411"].copy()
         if north.empty:
             return {"ok": False, "error": "no northbound rows"}
-        latest_date = north["交易日"].max()
-        latest = north[north["交易日"] == latest_date]
+        latest_date = north["\u4ea4\u6613\u65e5"].max()
+        latest = north[north["\u4ea4\u6613\u65e5"] == latest_date]
+        rows = latest[["\u677f\u5757", "\u76f8\u5173\u6307\u6570", "\u6307\u6570\u6da8\u8dcc\u5e45", "\u6210\u4ea4\u51c0\u4e70\u989d", "\u8d44\u91d1\u51c0\u6d41\u5165"]].copy()
+        rows.columns = ["board", "related_index", "index_change_pct", "net_buy_amt", "net_inflow"]
         return {
             "ok": True,
             "date": _to_iso_date(latest_date),
-            "成交净买额": float(latest["成交净买额"].fillna(0).sum()),
-            "资金净流入": float(latest["资金净流入"].fillna(0).sum()),
-            "上涨数": int(latest["上涨数"].fillna(0).sum()),
-            "下跌数": int(latest["下跌数"].fillna(0).sum()),
-            "rows": latest[["板块", "相关指数", "指数涨跌幅", "成交净买额", "资金净流入"]].to_dict(orient="records"),
+            "net_buy_amt": float(latest["\u6210\u4ea4\u51c0\u4e70\u989d"].fillna(0).sum()),
+            "net_inflow": float(latest["\u8d44\u91d1\u51c0\u6d41\u5165"].fillna(0).sum()),
+            "advancers": int(latest["\u4e0a\u6da8\u6570"].fillna(0).sum()),
+            "decliners": int(latest["\u4e0b\u8dcc\u6570"].fillna(0).sum()),
+            "rows": rows.to_dict(orient="records"),
             "source": "akshare",
         }
     except Exception as exc:  # noqa: BLE001
@@ -847,10 +849,10 @@ def akshare_liquidity_snapshot() -> dict:
         if shibor is not None and not shibor.empty:
             row = shibor.iloc[-1]
             out["shibor"] = {
-                "date": _to_iso_date(row.get("日期")),
-                "1W": _to_float(row.get("1W-定价")),
-                "1W_change_bp": _to_float(row.get("1W-涨跌幅")),
-                "O/N": _to_float(row.get("O/N-定价")),
+                "date": _to_iso_date(row.get("\u65e5\u671f")),
+                "1w": _to_float(row.get("1W-\u5b9a\u4ef7")),
+                "1w_change_bp": _to_float(row.get("1W-\u6da8\u8dcc\u5e45")),
+                "overnight": _to_float(row.get("O/N-\u5b9a\u4ef7")),
             }
     except Exception as exc:  # noqa: BLE001
         out["shibor_error"] = str(exc)
@@ -859,11 +861,11 @@ def akshare_liquidity_snapshot() -> dict:
         if rates is not None and not rates.empty:
             row = rates.iloc[-1]
             out["rates"] = {
-                "date": _to_iso_date(row.get("日期")),
-                "cn_2y": _to_float(row.get("中国国债收益率2年")),
-                "cn_10y": _to_float(row.get("中国国债收益率10年")),
-                "cn_30y": _to_float(row.get("中国国债收益率30年")),
-                "cn_10y_2y": _to_float(row.get("中国国债收益率10年-2年")),
+                "date": _to_iso_date(row.get("\u65e5\u671f")),
+                "cn_2y": _to_float(row.get("\u4e2d\u56fd\u56fd\u503a\u6536\u76ca\u73872\u5e74")),
+                "cn_10y": _to_float(row.get("\u4e2d\u56fd\u56fd\u503a\u6536\u76ca\u738710\u5e74")),
+                "cn_30y": _to_float(row.get("\u4e2d\u56fd\u56fd\u503a\u6536\u76ca\u738730\u5e74")),
+                "cn_10y_minus_2y": _to_float(row.get("\u4e2d\u56fd\u56fd\u503a\u6536\u76ca\u738710\u5e74-2\u5e74")),
             }
     except Exception as exc:  # noqa: BLE001
         out["rates_error"] = str(exc)
@@ -879,14 +881,14 @@ def akshare_margin_snapshot() -> dict:
             return None
         latest = df.iloc[-1]
         prev = df.iloc[-2] if len(df) >= 2 else None
-        latest_balance = _to_float(latest.get("融资余额"))
-        prev_balance = _to_float(prev.get("融资余额")) if prev is not None else None
+        latest_balance = _to_float(latest.get("\u878d\u8d44\u4f59\u989d"))
+        prev_balance = _to_float(prev.get("\u878d\u8d44\u4f59\u989d")) if prev is not None else None
         return {
-            "date": _to_iso_date(latest.get("日期")),
-            "融资买入额": _to_float(latest.get("融资买入额")),
-            "融资余额": latest_balance,
-            "融资融券余额": _to_float(latest.get("融资融券余额")),
-            "融资余额变化": (latest_balance - prev_balance) if latest_balance is not None and prev_balance is not None else None,
+            "date": _to_iso_date(latest.get("\u65e5\u671f")),
+            "margin_buy_amt": _to_float(latest.get("\u878d\u8d44\u4e70\u5165\u989d")),
+            "margin_balance": latest_balance,
+            "margin_and_short_balance": _to_float(latest.get("\u878d\u8d44\u878d\u5238\u4f59\u989d")),
+            "margin_balance_change": (latest_balance - prev_balance) if latest_balance is not None and prev_balance is not None else None,
         }
 
     out: dict = {"ok": True, "source": "akshare"}
@@ -907,15 +909,48 @@ def akshare_a_share_structure_snapshot() -> dict:
     baskets = {name: akshare_basket_snapshot(name, symbols) for name, symbols in A_SHARE_LEADER_BASKETS.items()}
     premium = baskets.get("consumer_premium", {})
     mass = baskets.get("consumer_mass", {})
+    joint = baskets.get("banks_joint_stock", {})
+    big4 = baskets.get("banks_big4", {})
+    property_b = baskets.get("property", {})
+    brokers = baskets.get("brokers", {})
+    machinery = baskets.get("machinery", {})
+    transport = baskets.get("transport", {})
+    heavy_truck = baskets.get("heavy_truck", {})
+
     premium_minus_mass = None
     if premium.get("ok") and mass.get("ok") and premium.get("chg_1d_pct") is not None and mass.get("chg_1d_pct") is not None:
         premium_minus_mass = premium["chg_1d_pct"] - mass["chg_1d_pct"]
+
+    joint_minus_big4 = None
+    if joint.get("ok") and big4.get("ok") and joint.get("chg_1d_pct") is not None and big4.get("chg_1d_pct") is not None:
+        joint_minus_big4 = joint["chg_1d_pct"] - big4["chg_1d_pct"]
+
+    credit_proxy_vals = [
+        property_b.get("chg_1d_pct"),
+        brokers.get("chg_1d_pct"),
+        joint_minus_big4,
+    ]
+    credit_proxy_vals = [v for v in credit_proxy_vals if v is not None]
+    credit_risk_proxy = sum(credit_proxy_vals) / len(credit_proxy_vals) if credit_proxy_vals else None
+
+    industry_proxy_vals = [
+        machinery.get("chg_1d_pct"),
+        transport.get("chg_1d_pct"),
+        heavy_truck.get("chg_1d_pct"),
+        premium_minus_mass,
+    ]
+    industry_proxy_vals = [v for v in industry_proxy_vals if v is not None]
+    industry_expression_proxy = sum(industry_proxy_vals) / len(industry_proxy_vals) if industry_proxy_vals else None
+
     return {
         "ok": any(v.get("ok") for v in baskets.values()),
         "source": "akshare",
         "baskets": baskets,
         "derived": {
             "premium_minus_mass_1d_pct": premium_minus_mass,
+            "joint_stock_minus_big4_1d_pct": joint_minus_big4,
+            "credit_risk_proxy_1d_pct": credit_risk_proxy,
+            "industry_expression_proxy_1d_pct": industry_expression_proxy,
         },
     }
 
@@ -961,6 +996,7 @@ def build_snapshot(pause_s: float = 0.25, finshare_mode: str = "first") -> dict:
         ("FEZ_SPY", "FEZ", "SPY"),
         ("EWJ_SPY", "EWJ", "SPY"),
         ("FXI_SPY", "FXI", "SPY"),
+        ("VGK_SPY", "VGK", "SPY"),
     ]
 
     for name, a, b in ratio_defs:
@@ -986,12 +1022,66 @@ def build_snapshot(pause_s: float = 0.25, finshare_mode: str = "first") -> dict:
         if jpy_rv is not None:
             out["derived"]["usdjpy_realized_vol_20d_pct_ann"] = jpy_rv
 
+    # Europe breadth proxy from regional ETFs when direct internals are unavailable.
+    europe_syms = ['FEZ', 'VGK', 'EWJ']
+    europe_available = []
+    for sym in europe_syms:
+        item = flat.get(sym, {})
+        if item.get('ok') and item.get('series_close') and len(item.get('series_close')) >= 60:
+            europe_available.append((sym, item.get('series_close')))
+    if europe_available:
+        adv = 0
+        dec = 0
+        above_50d = 0
+        for sym, closes in europe_available:
+            latest = closes[-1]
+            prev = closes[-2]
+            ma50 = sum(closes[-50:]) / 50.0
+            if latest > prev:
+                adv += 1
+            elif latest < prev:
+                dec += 1
+            if latest > ma50:
+                above_50d += 1
+        out["derived"]["europe_breadth_proxy"] = {
+            "ok": True,
+            "universe": [sym for sym, _ in europe_available],
+            "advancers_1d": adv,
+            "decliners_1d": dec,
+            "pct_above_50d": (above_50d / len(europe_available)) * 100.0,
+        }
+
     out["a_share"] = {
         "internal_structure": akshare_a_share_structure_snapshot(),
         "northbound": akshare_northbound_snapshot(),
         "liquidity": akshare_liquidity_snapshot(),
         "margin": akshare_margin_snapshot(),
     }
+
+    nb = out["a_share"].get("northbound", {})
+    internal = out["a_share"].get("internal_structure", {})
+    if internal.get("ok"):
+        internal_d = internal.get("derived", {})
+        northbound_proxy = {
+            "ok": True,
+            "source": "proxy",
+            "stock_connect_breadth": None,
+            "credit_risk_proxy_1d_pct": internal_d.get("credit_risk_proxy_1d_pct"),
+            "industry_expression_proxy_1d_pct": internal_d.get("industry_expression_proxy_1d_pct"),
+            "premium_minus_mass_1d_pct": internal_d.get("premium_minus_mass_1d_pct"),
+        }
+        if nb.get("ok"):
+            up = nb.get("advancers")
+            down = nb.get("decliners")
+            if isinstance(up, int) and isinstance(down, int):
+                northbound_proxy["stock_connect_breadth"] = up - down
+            if (nb.get("net_buy_amt") in (0, 0.0) and nb.get("net_inflow") in (0, 0.0)) or not nb.get("ok"):
+                northbound_proxy["status"] = "proxy_used_due_to_invalid_or_missing_truth"
+            else:
+                northbound_proxy["status"] = "truth_plus_proxy_context"
+        else:
+            northbound_proxy["status"] = "proxy_used_due_to_missing_truth"
+        out["a_share"]["northbound_proxy"] = northbound_proxy
 
     # Persist successful series for future fallback before stripping output payload.
     save_cache(flat)
