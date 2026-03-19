@@ -495,8 +495,10 @@ def execute_trade(
     amount: float,
     price: float = None,
     source: str = None,
+    skill_slug: str = None,
     thesis: str = None,
     confidence: float = None,
+    signal_data: dict = None,
 ) -> Dict:
     """Execute trade via SDK with 5-share minimum check and journal logging."""
     source = source or TRADE_SOURCE
@@ -516,6 +518,8 @@ def execute_trade(
             side=side,
             amount=amount,
             source=source,
+            skill_slug=skill_slug or SKILL_SLUG,
+            signal_data=signal_data,
         )
         trade_result = {
             "success": result.success,
@@ -678,7 +682,20 @@ def run_scan(
 
     if not feeds:
         print("❌ No RSS feeds configured")
-        print("   Set SIMMER_SNIPER_FEEDS or use --feed URL")
+        print("")
+        print("   This skill trades on signals from YOUR RSS feeds — you bring the edge.")
+        print("")
+        print("   To configure, set the SIMMER_SNIPER_FEEDS env var to a comma-separated list of RSS URLs:")
+        print("")
+        print("   Examples:")
+        print("     SIMMER_SNIPER_FEEDS=https://feeds.feedburner.com/CoinDesk")
+        print("     SIMMER_SNIPER_FEEDS=https://cointelegraph.com/rss,https://decrypt.co/feed")
+        print("")
+        print("   Also set keywords and target markets:")
+        print("     SIMMER_SNIPER_KEYWORDS=bitcoin,btc,ethereum,crypto")
+        print("     SIMMER_SNIPER_MARKETS=<market-id>  (or leave empty to auto-discover from keywords)")
+        print("")
+        print("   Full docs: https://docs.simmer.markets/skills/signal-sniper")
         return {"error": "No feeds"}
 
     if not markets:
@@ -836,6 +853,14 @@ def run_scan(
                 action = "max_trades_reached"
             else:
                 print(f"     💰 Executing: BUY {side.upper()} for ${MAX_USD:.2f}")
+                _edge = signal_confidence - market_price if side == "yes" else signal_confidence - (1 - market_price)
+                _signal_data = {
+                    "edge": round(max(_edge, 0), 4),
+                    "confidence": round(signal_confidence, 2),
+                    "signal_source": "rss_sentiment",
+                    "headline": article["title"][:100],
+                    "sentiment_score": round(signal_confidence, 2),
+                }
                 trade_result = execute_trade(
                     market_id=market_id,
                     side=side,
@@ -844,6 +869,7 @@ def run_scan(
                     source=TRADE_SOURCE, skill_slug=SKILL_SLUG,
                     thesis=f"Signal: {article['title'][:100]}",
                     confidence=signal_confidence,
+                    signal_data=_signal_data,
                 )
                 if trade_result.get("success"):
                     shares = trade_result.get("shares", 0)
