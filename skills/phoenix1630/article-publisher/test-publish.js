@@ -1,11 +1,657 @@
-// Article Publisher Skill v1.0.0
-// This file is auto-generated, do not modify
+// src/lib/browser-manager.ts
+import { chromium } from "playwright";
 
-import{chromium as _}from"playwright";var m={zhihu:{name:"zhihu",displayName:"\u77E5\u4E4E",loginUrl:"https://www.zhihu.com/signin",publishUrl:"https://zhuanlan.zhihu.com/write",domain:"zhihu.com"},bilibili:{name:"bilibili",displayName:"Bilibili",loginUrl:"https://passport.bilibili.com/",publishUrl:"https://member.bilibili.com/platform/upload/text/edit",domain:"bilibili.com"},baijiahao:{name:"baijiahao",displayName:"\u767E\u5BB6\u53F7",loginUrl:"https://baijiahao.baidu.com/",publishUrl:"https://baijiahao.baidu.com/builder/rc/edit",domain:"baijiahao.baidu.com"},toutiao:{name:"toutiao",displayName:"\u5934\u6761\u53F7",loginUrl:"https://mp.toutiao.com/",publishUrl:"https://mp.toutiao.com/publish",domain:"toutiao.com"},xiaohongshu:{name:"xiaohongshu",displayName:"\u5C0F\u7EA2\u4E66",loginUrl:"https://www.xiaohongshu.com/",publishUrl:"https://creator.xiaohongshu.com/publish/publish",domain:"xiaohongshu.com"}};import k from"fs";import L from"path";import E from"fs";var R={cookieDir:L.join(process.cwd(),"data","cookies"),cookieExpiryDays:30,headless:!1,timeout:6e4,slowMo:100};function P(){return{...R}}function x(u){let t=P();return L.join(t.cookieDir,`${u}_cookies.json`)}function U(){let u=P();return E.existsSync(u.cookieDir)||E.mkdirSync(u.cookieDir,{recursive:!0}),u.cookieDir}var v=class{platform;constructor(t){this.platform=t}async saveCookies(t){U();let e=P(),o=new Date,i=new Date(o.getTime()+e.cookieExpiryDays*24*60*60*1e3),a={cookies:t,createdAt:o.toISOString(),expiresAt:i.toISOString()},s=x(this.platform);k.writeFileSync(s,JSON.stringify(a,null,2),"utf-8")}async loadCookies(){let t=x(this.platform);if(!k.existsSync(t))return null;try{let e=k.readFileSync(t,"utf-8"),o=JSON.parse(e);return this.isExpired(o)?(await this.clearCookies(),null):o}catch(e){return console.error(`Failed to load cookies for ${this.platform}:`,e),null}}isExpired(t){return new Date(t.expiresAt)<new Date}async clearCookies(){let t=x(this.platform);k.existsSync(t)&&k.unlinkSync(t)}async hasValidCookies(){let t=await this.loadCookies();return t!==null&&!this.isExpired(t)}async getCookieInfo(){let t=await this.loadCookies();return t?{createdAt:new Date(t.createdAt),expiresAt:new Date(t.expiresAt)}:null}};var T=class{browser=null;context=null;page=null;platform;cookieManager;constructor(t){this.platform=t,this.cookieManager=new v(t)}async launch(){if(this.browser&&this.page)return this.page;let t=P(),e=m[this.platform];this.browser=await _.launch({headless:t.headless,slowMo:t.slowMo,args:["--disable-blink-features=AutomationControlled","--disable-features=IsolateOrigins,site-per-process"]});let o=await this.cookieManager.loadCookies(),i=o?{cookies:o.cookies,origins:[]}:void 0;return this.context=await this.browser.newContext({viewport:{width:1280,height:800},userAgent:"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",storageState:i}),await this.context.addInitScript(`
+// src/types/index.ts
+var PLATFORMS = {
+  zhihu: {
+    name: "zhihu",
+    displayName: "\u77E5\u4E4E",
+    loginUrl: "https://www.zhihu.com/signin",
+    publishUrl: "https://zhuanlan.zhihu.com/write",
+    domain: "zhihu.com"
+  },
+  bilibili: {
+    name: "bilibili",
+    displayName: "Bilibili",
+    loginUrl: "https://passport.bilibili.com/",
+    publishUrl: "https://member.bilibili.com/platform/upload/text/edit",
+    domain: "bilibili.com"
+  },
+  baijiahao: {
+    name: "baijiahao",
+    displayName: "\u767E\u5BB6\u53F7",
+    loginUrl: "https://baijiahao.baidu.com/",
+    publishUrl: "https://baijiahao.baidu.com/builder/rc/edit",
+    domain: "baijiahao.baidu.com"
+  },
+  toutiao: {
+    name: "toutiao",
+    displayName: "\u5934\u6761\u53F7",
+    loginUrl: "https://mp.toutiao.com/",
+    publishUrl: "https://mp.toutiao.com/publish",
+    domain: "toutiao.com"
+  },
+  xiaohongshu: {
+    name: "xiaohongshu",
+    displayName: "\u5C0F\u7EA2\u4E66",
+    loginUrl: "https://www.xiaohongshu.com/",
+    publishUrl: "https://creator.xiaohongshu.com/publish/publish",
+    domain: "xiaohongshu.com"
+  }
+};
+
+// src/lib/cookie-manager.ts
+import fs2 from "fs";
+
+// src/lib/config.ts
+import path from "path";
+import fs from "fs";
+var defaultConfig = {
+  cookieDir: path.join(process.cwd(), "data", "cookies"),
+  cookieExpiryDays: 30,
+  headless: false,
+  timeout: 6e4,
+  slowMo: 100
+};
+function getConfig() {
+  return { ...defaultConfig };
+}
+function getCookiePath(platform) {
+  const config2 = getConfig();
+  return path.join(config2.cookieDir, `${platform}_cookies.json`);
+}
+function ensureCookieDir() {
+  const config2 = getConfig();
+  if (!fs.existsSync(config2.cookieDir)) {
+    fs.mkdirSync(config2.cookieDir, { recursive: true });
+  }
+  return config2.cookieDir;
+}
+
+// src/lib/cookie-manager.ts
+var CookieManager = class {
+  platform;
+  constructor(platform) {
+    this.platform = platform;
+  }
+  /**
+   * 保存Cookie
+   */
+  async saveCookies(cookies) {
+    ensureCookieDir();
+    const config2 = getConfig();
+    const now = /* @__PURE__ */ new Date();
+    const expiresAt = new Date(now.getTime() + config2.cookieExpiryDays * 24 * 60 * 60 * 1e3);
+    const cookieData = {
+      cookies,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString()
+    };
+    const cookiePath = getCookiePath(this.platform);
+    fs2.writeFileSync(cookiePath, JSON.stringify(cookieData, null, 2), "utf-8");
+  }
+  /**
+   * 读取Cookie
+   */
+  async loadCookies() {
+    const cookiePath = getCookiePath(this.platform);
+    if (!fs2.existsSync(cookiePath)) {
+      return null;
+    }
+    try {
+      const content = fs2.readFileSync(cookiePath, "utf-8");
+      const cookieData = JSON.parse(content);
+      if (this.isExpired(cookieData)) {
+        await this.clearCookies();
+        return null;
+      }
+      return cookieData;
+    } catch (error) {
+      console.error(`Failed to load cookies for ${this.platform}:`, error);
+      return null;
+    }
+  }
+  /**
+   * 检查Cookie是否过期
+   */
+  isExpired(cookieData) {
+    const expiresAt = new Date(cookieData.expiresAt);
+    return expiresAt < /* @__PURE__ */ new Date();
+  }
+  /**
+   * 清除Cookie
+   */
+  async clearCookies() {
+    const cookiePath = getCookiePath(this.platform);
+    if (fs2.existsSync(cookiePath)) {
+      fs2.unlinkSync(cookiePath);
+    }
+  }
+  /**
+   * 检查是否存在有效的Cookie
+   */
+  async hasValidCookies() {
+    const cookieData = await this.loadCookies();
+    return cookieData !== null && !this.isExpired(cookieData);
+  }
+  /**
+   * 获取Cookie创建时间
+   */
+  async getCookieInfo() {
+    const cookieData = await this.loadCookies();
+    if (!cookieData) {
+      return null;
+    }
+    return {
+      createdAt: new Date(cookieData.createdAt),
+      expiresAt: new Date(cookieData.expiresAt)
+    };
+  }
+};
+
+// src/lib/browser-manager.ts
+var BrowserManager = class {
+  browser = null;
+  context = null;
+  page = null;
+  platform;
+  cookieManager;
+  constructor(platform) {
+    this.platform = platform;
+    this.cookieManager = new CookieManager(platform);
+  }
+  /**
+   * 启动浏览器
+   */
+  async launch() {
+    if (this.browser && this.page) {
+      return this.page;
+    }
+    const config2 = getConfig();
+    const platformInfo = PLATFORMS[this.platform];
+    this.browser = await chromium.launch({
+      headless: config2.headless,
+      slowMo: config2.slowMo,
+      args: [
+        "--disable-blink-features=AutomationControlled",
+        "--disable-features=IsolateOrigins,site-per-process"
+      ]
+    });
+    const cookieData = await this.cookieManager.loadCookies();
+    const storageState = cookieData ? {
+      cookies: cookieData.cookies,
+      origins: []
+    } : void 0;
+    this.context = await this.browser.newContext({
+      viewport: { width: 1280, height: 800 },
+      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      storageState
+    });
+    await this.context.addInitScript(`
       Object.defineProperty(navigator, 'webdriver', {
         get: () => undefined,
       });
-    `),this.page=await this.context.newPage(),this.page.setDefaultTimeout(t.timeout),this.page}getPage(){return this.page}getContext(){return this.context}async saveCookies(){if(!this.context)throw new Error("Browser context not initialized");let t=await this.context.storageState();await this.cookieManager.saveCookies(t.cookies)}async gotoLoginPage(){if(!this.page)throw new Error("Page not initialized");let t=m[this.platform];await this.page.goto(t.loginUrl,{waitUntil:"networkidle"})}async gotoPublishPage(){if(!this.page)throw new Error("Page not initialized");let t=m[this.platform];console.log("   \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762:",t.publishUrl);try{await this.page.goto(t.publishUrl,{waitUntil:"domcontentloaded",timeout:3e4}),await this.page.waitForTimeout(2e3);let e=this.page.url();if(console.log("   \u5F53\u524D\u9875\u9762URL:",e),this.isOnLoginPage()||e.includes("login")){console.log("   \u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u9875\u9762\u5DF2\u8DF3\u8F6C\u5230\u767B\u5F55\u9875\u9762"),await this.handleBaijiahaoLoginButton();return}console.log("   \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762\u5B8C\u6BD5:",t.publishUrl),this.platform==="baijiahao"&&await this.handleBaijiahaoLoginButton()}catch(e){let o=this.page.url();if(console.log("   \u5BFC\u822A\u8FC7\u7A0B\u4E2D\u51FA\u73B0\u9519\u8BEF\uFF0C\u5F53\u524DURL:",o),this.isOnLoginPage()||o.includes("login")){console.log("   \u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u9875\u9762\u5DF2\u8DF3\u8F6C\u5230\u767B\u5F55\u9875\u9762"),await this.handleBaijiahaoLoginButton();return}throw e}}async handleBaijiahaoLoginButton(){if(this.page)try{if(await this.page.waitForTimeout(2e3),!this.page.url().includes("login"))return;console.log("   \u68C0\u6D4B\u5230\u767E\u5BB6\u53F7\u767B\u5F55\u9875\u9762\uFF0C\u5C1D\u8BD5\u70B9\u51FB\u767B\u5F55\u6309\u94AE...");let e=['[data-testid="bjh-login-btn"]',"button.loginBtn--lZVgU","header button",'button:has-text("\u767B\u5F55")',".loginBtn--lZVgU",'[class*="loginBtn"]'];for(let o of e)try{let i=await this.page.$(o);if(i&&await i.isVisible()){let s=await i.textContent();console.log(`   \u627E\u5230\u767B\u5F55\u6309\u94AE: ${s}`),await i.click(),console.log("   \u2705 \u5DF2\u70B9\u51FB\u767B\u5F55\u6309\u94AE\uFF0C\u7B49\u5F85\u626B\u7801\u754C\u9762..."),await this.page.waitForTimeout(2e3);return}}catch{continue}console.log("   \u672A\u627E\u5230\u767B\u5F55\u6309\u94AE\uFF0C\u53EF\u80FD\u9875\u9762\u5DF2\u53D8\u5316")}catch(t){console.log("   \u5904\u7406\u767B\u5F55\u6309\u94AE\u65F6\u51FA\u9519:",t)}}isOnLoginPage(){if(!this.page)return!1;let t=this.page.url();switch(this.platform){case"zhihu":return t.includes("signin")||t.includes("login");case"bilibili":return t.includes("passport");case"baijiahao":return!!t.includes("login");case"toutiao":return t.includes("login")||t.includes("passport");case"xiaohongshu":return t.includes("login")||t.includes("signup");default:return!1}}async isOnLoginPageAsync(){if(!this.page)return!1;await this.page.waitForTimeout(1e3);let t=this.page.url();switch(this.platform){case"baijiahao":if(t.includes("login"))return!0;try{let e=['[data-testid="bjh-login-btn"]',"button.loginBtn--lZVgU","header button",'button:has-text("\u767B\u5F55")'];for(let o of e){let i=await this.page.$(o);if(i&&await i.isVisible())return!0}}catch{}return!1;default:return this.isOnLoginPage()}}async checkLoginSuccess(){if(!this.page)return!1;let t=this.page.url();switch(this.platform){case"zhihu":if(t.includes("zhihu.com")&&!t.includes("signin")&&!t.includes("login"))try{return await this.page.$('.AppHeader-profile img, .GlobalSideBar-userAvatar, [class*="Avatar"]')!==null}catch{return!t.includes("signin")}return!1;case"bilibili":return!!(t.includes("bilibili.com")&&!t.includes("passport")||t.includes("member.bilibili.com"));case"baijiahao":if(t.includes("baijiahao.baidu.com")&&!t.includes("login"))try{return await this.page.$('.user-avatar, .user-info, [class*="avatar"]')!==null}catch{return!t.includes("login")}return!1;case"toutiao":if(t.includes("toutiao.com")&&!t.includes("login")&&!t.includes("passport"))try{return await this.page.$('.avatar-wrap, .user-avatar, [class*="avatar"]')!==null}catch{return!t.includes("login")}return!1;case"xiaohongshu":if(t.includes("xiaohongshu.com")&&!t.includes("login")&&!t.includes("signup"))try{return await this.page.$('.user-avatar, [class*="avatar"], [class*="user-info"]')!==null}catch{return!t.includes("login")}return!1;default:return!1}}async waitForLogin(t=12e4){if(!this.page)throw new Error("Page not initialized");let e=m[this.platform],o=2e3,i=Date.now();console.log(`\u23F3 \u7B49\u5F85 ${e.displayName} \u767B\u5F55...\uFF08\u8D85\u65F6\u65F6\u95F4: ${t/1e3}\u79D2\uFF09`);let a=0;for(;Date.now()-i<t;){if(await this.checkLoginSuccess())return console.log(""),console.log("\u2705 \u68C0\u6D4B\u5230\u767B\u5F55\u6210\u529F\uFF01"),await this.saveCookies(),!0;a=(a+1)%4;let r=".".repeat(a);process.stdout.write(`\r\u{1F50D} \u68C0\u6D4B\u767B\u5F55\u72B6\u6001\u4E2D${r}   `),await this.page.waitForTimeout(o)}return console.log(""),!1}async checkLoginStatus(){if(!this.page)return!1;let t=m[this.platform];try{await this.page.goto(t.publishUrl,{waitUntil:"domcontentloaded",timeout:3e4}),await this.page.waitForTimeout(2e3);let e=this.page.url();return!(e.includes("login")||e.includes("signin"))}catch(e){return console.error("Failed to check login status:",e),!1}}async close(){this.browser&&(await this.browser.close(),this.browser=null,this.context=null,this.page=null)}async screenshot(t){if(!this.page)throw new Error("Page not initialized");await this.page.screenshot({path:t,fullPage:!0})}};var h=class{platform;platformInfo;browserManager;cookieManager;constructor(t){this.platform=t,this.platformInfo=m[t],this.browserManager=new T(t),this.cookieManager=new v(t)}getPlatformName(){return this.platform}getDisplayName(){return this.platformInfo.displayName}async openLoginPage(){return await this.browserManager.launch(),await this.browserManager.gotoLoginPage(),`\u8BF7\u5728\u6253\u5F00\u7684\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55${this.platformInfo.displayName}\uFF0C\u767B\u5F55\u6210\u529F\u540E\u5C06\u81EA\u52A8\u4FDD\u5B58\u767B\u5F55\u72B6\u6001\u3002`}async waitForLogin(t){let e=await this.browserManager.waitForLogin(t);return e&&await this.browserManager.close(),e}async checkLoginStatus(){if(!await this.cookieManager.hasValidCookies())return!1;try{await this.browserManager.launch();let e=await this.browserManager.checkLoginStatus();return await this.browserManager.close(),e}catch{return await this.browserManager.close(),!1}}async logout(){await this.cookieManager.clearCookies()}async fillTitle(t){throw new Error("fillTitle must be implemented by subclass")}async fillContent(t){throw new Error("fillContent must be implemented by subclass")}async uploadCover(t){throw new Error("uploadCover must be implemented by subclass")}async setTags(t){throw new Error("setTags must be implemented by subclass")}async clickPublish(){throw new Error("clickPublish must be implemented by subclass")}async getArticleUrl(){throw new Error("getArticleUrl must be implemented by subclass")}async screenshot(t){await this.browserManager.screenshot(t)}};import B from"path";import V from"fs";import{fileURLToPath as K}from"url";var q=K(import.meta.url),G=B.dirname(q),F=null;function H(){return B.join(G,"..","..","config","cover-image.json")}function j(){if(F)return F;let u=H();try{if(V.existsSync(u)){let t=V.readFileSync(u,"utf-8");return F=JSON.parse(t),F}}catch(t){console.error("\u52A0\u8F7D\u914D\u7F6E\u6587\u4EF6\u5931\u8D25:",t)}return null}function D(){return j()?.pexels?.apiKey||null}var W=`\u4F60\u662F\u4E00\u4E2A\u4E13\u4E1A\u7684\u56FE\u7247\u641C\u7D22\u52A9\u624B\u3002\u8BF7\u6839\u636E\u4EE5\u4E0B\u6587\u7AE0\u6807\u9898\u548C\u5185\u5BB9\uFF0C\u63D0\u53D6\u9002\u5408\u5728 Pexels \u56FE\u7247\u5E93\u641C\u7D22\u7684\u82F1\u6587\u5173\u952E\u8BCD\u3002
+    `);
+    this.page = await this.context.newPage();
+    this.page.setDefaultTimeout(config2.timeout);
+    return this.page;
+  }
+  /**
+   * 获取当前页面
+   */
+  getPage() {
+    return this.page;
+  }
+  /**
+   * 获取浏览器上下文
+   */
+  getContext() {
+    return this.context;
+  }
+  /**
+   * 保存当前Cookie
+   */
+  async saveCookies() {
+    if (!this.context) {
+      throw new Error("Browser context not initialized");
+    }
+    const state = await this.context.storageState();
+    await this.cookieManager.saveCookies(state.cookies);
+  }
+  /**
+   * 导航到登录页面
+   */
+  async gotoLoginPage() {
+    if (!this.page) {
+      throw new Error("Page not initialized");
+    }
+    const platformInfo = PLATFORMS[this.platform];
+    await this.page.goto(platformInfo.loginUrl, { waitUntil: "networkidle" });
+  }
+  /**
+   * 导航到发布页面
+   */
+  async gotoPublishPage() {
+    if (!this.page) {
+      throw new Error("Page not initialized");
+    }
+    const platformInfo = PLATFORMS[this.platform];
+    console.log("   \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762:", platformInfo.publishUrl);
+    try {
+      await this.page.goto(platformInfo.publishUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 3e4
+      });
+      await this.page.waitForTimeout(2e3);
+      const currentUrl = this.page.url();
+      console.log("   \u5F53\u524D\u9875\u9762URL:", currentUrl);
+      if (this.isOnLoginPage() || currentUrl.includes("login")) {
+        console.log("   \u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u9875\u9762\u5DF2\u8DF3\u8F6C\u5230\u767B\u5F55\u9875\u9762");
+        await this.handleBaijiahaoLoginButton();
+        return;
+      }
+      console.log("   \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762\u5B8C\u6BD5:", platformInfo.publishUrl);
+      if (this.platform === "baijiahao") {
+        await this.handleBaijiahaoLoginButton();
+      }
+    } catch (error) {
+      const currentUrl = this.page.url();
+      console.log("   \u5BFC\u822A\u8FC7\u7A0B\u4E2D\u51FA\u73B0\u9519\u8BEF\uFF0C\u5F53\u524DURL:", currentUrl);
+      if (this.isOnLoginPage() || currentUrl.includes("login")) {
+        console.log("   \u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u9875\u9762\u5DF2\u8DF3\u8F6C\u5230\u767B\u5F55\u9875\u9762");
+        await this.handleBaijiahaoLoginButton();
+        return;
+      }
+      throw error;
+    }
+  }
+  /**
+   * 处理百家号登录按钮
+   * 百家号需要先点击右上角的【登录】按钮才会显示扫码界面
+   */
+  async handleBaijiahaoLoginButton() {
+    if (!this.page) return;
+    try {
+      await this.page.waitForTimeout(2e3);
+      const currentUrl = this.page.url();
+      if (!currentUrl.includes("login")) {
+        return;
+      }
+      console.log("   \u68C0\u6D4B\u5230\u767E\u5BB6\u53F7\u767B\u5F55\u9875\u9762\uFF0C\u5C1D\u8BD5\u70B9\u51FB\u767B\u5F55\u6309\u94AE...");
+      const loginBtnSelectors = [
+        '[data-testid="bjh-login-btn"]',
+        // 根据用户提供的HTML
+        "button.loginBtn--lZVgU",
+        // 类名
+        "header button",
+        // header 中的 button
+        'button:has-text("\u767B\u5F55")',
+        // 包含"登录"文字的按钮
+        ".loginBtn--lZVgU",
+        '[class*="loginBtn"]'
+      ];
+      for (const selector of loginBtnSelectors) {
+        try {
+          const loginBtn = await this.page.$(selector);
+          if (loginBtn) {
+            const isVisible = await loginBtn.isVisible();
+            if (isVisible) {
+              const btnText = await loginBtn.textContent();
+              console.log(`   \u627E\u5230\u767B\u5F55\u6309\u94AE: ${btnText}`);
+              await loginBtn.click();
+              console.log("   \u2705 \u5DF2\u70B9\u51FB\u767B\u5F55\u6309\u94AE\uFF0C\u7B49\u5F85\u626B\u7801\u754C\u9762...");
+              await this.page.waitForTimeout(2e3);
+              return;
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+      console.log("   \u672A\u627E\u5230\u767B\u5F55\u6309\u94AE\uFF0C\u53EF\u80FD\u9875\u9762\u5DF2\u53D8\u5316");
+    } catch (error) {
+      console.log("   \u5904\u7406\u767B\u5F55\u6309\u94AE\u65F6\u51FA\u9519:", error);
+    }
+  }
+  /**
+   * 检测当前页面是否在登录页面
+   */
+  isOnLoginPage() {
+    if (!this.page) {
+      return false;
+    }
+    const currentUrl = this.page.url();
+    switch (this.platform) {
+      case "zhihu":
+        return currentUrl.includes("signin") || currentUrl.includes("login");
+      case "bilibili":
+        return currentUrl.includes("passport");
+      case "baijiahao":
+        if (currentUrl.includes("login")) {
+          return true;
+        }
+        return false;
+      case "toutiao":
+        return currentUrl.includes("login") || currentUrl.includes("passport");
+      case "xiaohongshu":
+        return currentUrl.includes("login") || currentUrl.includes("signup");
+      default:
+        return false;
+    }
+  }
+  /**
+   * 异步检测是否在登录页面（通过检查页面元素）
+   * 用于百家号等平台，需要检查页面中是否存在登录按钮
+   */
+  async isOnLoginPageAsync() {
+    if (!this.page) {
+      return false;
+    }
+    await this.page.waitForTimeout(1e3);
+    const currentUrl = this.page.url();
+    switch (this.platform) {
+      case "baijiahao":
+        if (currentUrl.includes("login")) {
+          return true;
+        }
+        try {
+          const loginBtnSelectors = [
+            '[data-testid="bjh-login-btn"]',
+            "button.loginBtn--lZVgU",
+            "header button",
+            'button:has-text("\u767B\u5F55")'
+          ];
+          for (const selector of loginBtnSelectors) {
+            const btn = await this.page.$(selector);
+            if (btn) {
+              const isVisible = await btn.isVisible();
+              if (isVisible) {
+                return true;
+              }
+            }
+          }
+        } catch {
+        }
+        return false;
+      default:
+        return this.isOnLoginPage();
+    }
+  }
+  /**
+   * 检测登录是否成功
+   * 根据各平台的URL变化和页面特征判断登录状态
+   */
+  async checkLoginSuccess() {
+    if (!this.page) {
+      return false;
+    }
+    const currentUrl = this.page.url();
+    switch (this.platform) {
+      case "zhihu":
+        if (currentUrl.includes("zhihu.com") && !currentUrl.includes("signin") && !currentUrl.includes("login")) {
+          try {
+            const hasAvatar = await this.page.$('.AppHeader-profile img, .GlobalSideBar-userAvatar, [class*="Avatar"]');
+            return hasAvatar !== null;
+          } catch {
+            return !currentUrl.includes("signin");
+          }
+        }
+        return false;
+      case "bilibili":
+        if (currentUrl.includes("bilibili.com") && !currentUrl.includes("passport") || currentUrl.includes("member.bilibili.com")) {
+          return true;
+        }
+        return false;
+      case "baijiahao":
+        if (currentUrl.includes("baijiahao.baidu.com") && !currentUrl.includes("login")) {
+          try {
+            const hasUserAvatar = await this.page.$('.user-avatar, .user-info, [class*="avatar"]');
+            return hasUserAvatar !== null;
+          } catch {
+            return !currentUrl.includes("login");
+          }
+        }
+        return false;
+      case "toutiao":
+        if (currentUrl.includes("toutiao.com") && !currentUrl.includes("login") && !currentUrl.includes("passport")) {
+          try {
+            const hasUserAvatar = await this.page.$('.avatar-wrap, .user-avatar, [class*="avatar"]');
+            return hasUserAvatar !== null;
+          } catch {
+            return !currentUrl.includes("login");
+          }
+        }
+        return false;
+      case "xiaohongshu":
+        if (currentUrl.includes("xiaohongshu.com") && !currentUrl.includes("login") && !currentUrl.includes("signup")) {
+          try {
+            const hasUserAvatar = await this.page.$('.user-avatar, [class*="avatar"], [class*="user-info"]');
+            return hasUserAvatar !== null;
+          } catch {
+            return !currentUrl.includes("login");
+          }
+        }
+        return false;
+      default:
+        return false;
+    }
+  }
+  /**
+   * 等待登录成功
+   * 使用轮询机制检测登录状态
+   */
+  async waitForLogin(timeout = 12e4) {
+    if (!this.page) {
+      throw new Error("Page not initialized");
+    }
+    const platformInfo = PLATFORMS[this.platform];
+    const checkInterval = 2e3;
+    const startTime = Date.now();
+    console.log(`\u23F3 \u7B49\u5F85 ${platformInfo.displayName} \u767B\u5F55...\uFF08\u8D85\u65F6\u65F6\u95F4: ${timeout / 1e3}\u79D2\uFF09`);
+    let dots = 0;
+    while (Date.now() - startTime < timeout) {
+      const isLoggedIn = await this.checkLoginSuccess();
+      if (isLoggedIn) {
+        console.log("");
+        console.log("\u2705 \u68C0\u6D4B\u5230\u767B\u5F55\u6210\u529F\uFF01");
+        await this.saveCookies();
+        return true;
+      }
+      dots = (dots + 1) % 4;
+      const dotsStr = ".".repeat(dots);
+      process.stdout.write(`\r\u{1F50D} \u68C0\u6D4B\u767B\u5F55\u72B6\u6001\u4E2D${dotsStr}   `);
+      await this.page.waitForTimeout(checkInterval);
+    }
+    console.log("");
+    return false;
+  }
+  /**
+   * 检查是否已登录（通过访问发布页面检测）
+   */
+  async checkLoginStatus() {
+    if (!this.page) {
+      return false;
+    }
+    const platformInfo = PLATFORMS[this.platform];
+    try {
+      await this.page.goto(platformInfo.publishUrl, {
+        waitUntil: "domcontentloaded",
+        timeout: 3e4
+      });
+      await this.page.waitForTimeout(2e3);
+      const currentUrl = this.page.url();
+      if (currentUrl.includes("login") || currentUrl.includes("signin")) {
+        return false;
+      }
+      return true;
+    } catch (error) {
+      console.error("Failed to check login status:", error);
+      return false;
+    }
+  }
+  /**
+   * 关闭浏览器
+   */
+  async close() {
+    if (this.browser) {
+      await this.browser.close();
+      this.browser = null;
+      this.context = null;
+      this.page = null;
+    }
+  }
+  /**
+   * 截图
+   */
+  async screenshot(path3) {
+    if (!this.page) {
+      throw new Error("Page not initialized");
+    }
+    await this.page.screenshot({ path: path3, fullPage: true });
+  }
+};
+
+// src/lib/base-adapter.ts
+var BaseAdapter = class {
+  platform;
+  platformInfo;
+  browserManager;
+  cookieManager;
+  constructor(platform) {
+    this.platform = platform;
+    this.platformInfo = PLATFORMS[platform];
+    this.browserManager = new BrowserManager(platform);
+    this.cookieManager = new CookieManager(platform);
+  }
+  /**
+   * 获取平台名称
+   */
+  getPlatformName() {
+    return this.platform;
+  }
+  /**
+   * 获取平台显示名称
+   */
+  getDisplayName() {
+    return this.platformInfo.displayName;
+  }
+  /**
+   * 打开登录页面
+   */
+  async openLoginPage() {
+    await this.browserManager.launch();
+    await this.browserManager.gotoLoginPage();
+    return `\u8BF7\u5728\u6253\u5F00\u7684\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55${this.platformInfo.displayName}\uFF0C\u767B\u5F55\u6210\u529F\u540E\u5C06\u81EA\u52A8\u4FDD\u5B58\u767B\u5F55\u72B6\u6001\u3002`;
+  }
+  /**
+   * 等待登录完成
+   */
+  async waitForLogin(timeout) {
+    const success = await this.browserManager.waitForLogin(timeout);
+    if (success) {
+      await this.browserManager.close();
+    }
+    return success;
+  }
+  /**
+   * 检查登录状态
+   */
+  async checkLoginStatus() {
+    const hasCookies = await this.cookieManager.hasValidCookies();
+    if (!hasCookies) {
+      return false;
+    }
+    try {
+      await this.browserManager.launch();
+      const isLoggedIn = await this.browserManager.checkLoginStatus();
+      await this.browserManager.close();
+      return isLoggedIn;
+    } catch (error) {
+      await this.browserManager.close();
+      return false;
+    }
+  }
+  /**
+   * 清除登录状态
+   */
+  async logout() {
+    await this.cookieManager.clearCookies();
+  }
+  /**
+   * 填充文章标题
+   */
+  async fillTitle(title) {
+    throw new Error("fillTitle must be implemented by subclass");
+  }
+  /**
+   * 填充文章内容
+   */
+  async fillContent(content) {
+    throw new Error("fillContent must be implemented by subclass");
+  }
+  /**
+   * 上传封面图片
+   */
+  async uploadCover(imagePath) {
+    throw new Error("uploadCover must be implemented by subclass");
+  }
+  /**
+   * 设置标签
+   */
+  async setTags(tags) {
+    throw new Error("setTags must be implemented by subclass");
+  }
+  /**
+   * 点击发布按钮
+   */
+  async clickPublish() {
+    throw new Error("clickPublish must be implemented by subclass");
+  }
+  /**
+   * 获取发布后的文章链接
+   */
+  async getArticleUrl() {
+    throw new Error("getArticleUrl must be implemented by subclass");
+  }
+  /**
+   * 截图保存当前页面状态
+   */
+  async screenshot(path3) {
+    await this.browserManager.screenshot(path3);
+  }
+};
+
+// src/lib/cover-image.ts
+import path2 from "path";
+import fs3 from "fs";
+import { fileURLToPath } from "url";
+var __filename = fileURLToPath(import.meta.url);
+var __dirname = path2.dirname(__filename);
+var config = null;
+function getConfigPath() {
+  return path2.join(__dirname, "..", "..", "config", "cover-image.json");
+}
+function loadConfig() {
+  if (config) {
+    return config;
+  }
+  const configPath = getConfigPath();
+  try {
+    if (fs3.existsSync(configPath)) {
+      const content = fs3.readFileSync(configPath, "utf-8");
+      config = JSON.parse(content);
+      return config;
+    }
+  } catch (error) {
+    console.error("\u52A0\u8F7D\u914D\u7F6E\u6587\u4EF6\u5931\u8D25:", error);
+  }
+  return null;
+}
+function getPexelsApiKey() {
+  const cfg = loadConfig();
+  return cfg?.pexels?.apiKey || null;
+}
+var AI_PROMPT_TEMPLATE = `\u4F60\u662F\u4E00\u4E2A\u4E13\u4E1A\u7684\u56FE\u7247\u641C\u7D22\u52A9\u624B\u3002\u8BF7\u6839\u636E\u4EE5\u4E0B\u6587\u7AE0\u6807\u9898\u548C\u5185\u5BB9\uFF0C\u63D0\u53D6\u9002\u5408\u5728 Pexels \u56FE\u7247\u5E93\u641C\u7D22\u7684\u82F1\u6587\u5173\u952E\u8BCD\u3002
 
 \u6587\u7AE0\u6807\u9898\uFF1A{title}
 \u6587\u7AE0\u5185\u5BB9\u6458\u8981\uFF1A{content}
@@ -20,12 +666,2525 @@ import{chromium as _}from"playwright";var m={zhihu:{name:"zhihu",displayName:"\u
 \u793A\u4F8B\uFF1A
 - \u6807\u9898"AI\u73A9\u5177\u4EA7\u4E1A\u89C2\u5BDF" -> "smart toys technology artificial intelligence"
 - \u6807\u9898"\u7F16\u7A0B\u5165\u95E8\u6307\u5357" -> "programming coding computer technology"
-- \u6807\u9898"\u7F8E\u98DF\u63A2\u5E97\u8BB0\u5F55" -> "food restaurant dining cuisine"`,N={kimi:{name:"Kimi",url:"https://api.moonshot.cn/v1/chat/completions",defaultModel:"moonshot-v1-8k"},deepseek:{name:"DeepSeek",url:"https://api.deepseek.com/v1/chat/completions",defaultModel:"deepseek-chat"},zhipu:{name:"\u667A\u8C31 AI",url:"https://open.bigmodel.cn/api/paas/v4/chat/completions",defaultModel:"glm-4-flash"}};async function Y(u,t,e,o){let i=N[u];try{let a=await fetch(i.url,{method:"POST",headers:{Authorization:`Bearer ${t}`,"Content-Type":"application/json"},body:JSON.stringify({model:e,messages:[{role:"user",content:o}],temperature:.3,max_tokens:50})});if(!a.ok)return console.error(`${i.name} \u8C03\u7528\u5931\u8D25:`,a.status),null;let r=(await a.json()).choices?.[0]?.message?.content?.trim();return r?(console.log(`\u{1F916} ${i.name} \u63D0\u53D6\u5173\u952E\u8BCD\uFF1A${r}`),r):null}catch(a){return console.error(`${i.name} \u8C03\u7528\u5931\u8D25:`,a),null}}async function J(u,t=""){let e=j(),o=e?.ai;if(!o)return null;let i=W.replace("{title}",u).replace("{content}",t.slice(0,500)||"\u65E0"),a=e?.aiPriority||["kimi","deepseek","zhipu"];for(let s of a){let r=o[s];if(!r?.apiKey||r.apiKey==="YOUR_KIMI_API_KEY"||r.apiKey==="YOUR_DEEPSEEK_API_KEY"||r.apiKey==="YOUR_ZHIPU_API_KEY"||r.enabled===!1)continue;let n=r.model||N[s].defaultModel,l=await Y(s,r.apiKey,n,i);if(l)return l}return null}var Z={ai:"artificial intelligence",\u4EBA\u5DE5\u667A\u80FD:"artificial intelligence",\u7F16\u7A0B:"programming coding",\u4EE3\u7801:"coding programming",\u56FE\u7247:"image technology",\u622A\u56FE:"screenshot technology",\u6309\u94AE:"button interface",\u754C\u9762:"interface ui",\u5546\u4E1A:"business",\u4F1A\u8BAE:"meeting",\u5199\u4F5C:"writing",\u8BFB\u4E66:"reading books",\u81EA\u7136:"nature",\u98CE\u666F:"landscape",\u73A9\u5177:"smart toys technology",\u4EA7\u4E1A:"industry technology",\u79D1\u6280:"technology",\u65B0\u4EAE\u70B9:"innovation technology",\u7F8E\u98DF:"food cuisine",\u65C5\u6E38:"travel tourism",\u5065\u8EAB:"fitness exercise",\u97F3\u4E50:"music",\u7535\u5F71:"movie film",\u6E38\u620F:"game gaming",\u6559\u80B2:"education learning",\u91D1\u878D:"finance business",\u533B\u7597:"medical health",\u6C7D\u8F66:"car automotive",\u623F\u4EA7:"real estate house",\u65F6\u5C1A:"fashion style",\u80B2\u513F:"parenting family",\u5BA0\u7269:"pet animal",\u804C\u573A:"workplace career",\u5FC3\u7406:"psychology mind",\u5386\u53F2:"history",\u6587\u5316:"culture",\u4F53\u80B2:"sports",\u65B0\u95FB:"news media"};function Q(u){let t=u.toLowerCase(),e=[];for(let[o,i]of Object.entries(Z))(t.includes(o)||u.includes(o))&&(e.includes(i)||e.push(i));return e.length>0?e.slice(0,3).join(" "):/[\u4e00-\u9fff]/.test(u)?"technology innovation":u}async function X(u,t=""){let e=await J(u,t);return e||(console.log("\u{1F4CC} \u4F7F\u7528\u672C\u5730\u5173\u952E\u8BCD\u63D0\u53D6..."),Q(u))}async function b(u){let{title:t="",contentPreview:e="",keywords:o,orientation:i="landscape",size:a="large2x"}=u,s=D();if(!s)return console.error("\u274C Pexels API Key \u672A\u914D\u7F6E"),null;let r;o?(r=o,console.log("\u{1F4DD} \u4F7F\u7528\u5916\u90E8\u63D0\u4F9B\u7684\u5173\u952E\u8BCD")):(r=await X(t,e),console.log(`\u{1F4DD} \u6587\u7AE0\u4E3B\u9898\uFF1A${t}`)),console.log(`\u{1F50D} \u641C\u7D22\u5173\u952E\u8BCD\uFF1A${r}`);let n=new URLSearchParams({query:r,orientation:i,size:"large",per_page:"5",page:"1"});try{let l=new AbortController,c=setTimeout(()=>l.abort(),3e4),g=await fetch(`https://api.pexels.com/v1/search?${n}`,{headers:{Authorization:s},signal:l.signal});if(clearTimeout(c),!g.ok)return console.error("Pexels API \u8C03\u7528\u5931\u8D25:",g.status),null;let p=(await g.json()).photos;if(!p||p.length===0)return console.log("\u26A0\uFE0F \u672A\u627E\u5230\u76F8\u5173\u56FE\u7247\uFF0C\u4F7F\u7528\u5907\u7528\u5173\u952E\u8BCD\u91CD\u8BD5..."),tt("technology",i,a);console.log(`
-\u2705 \u627E\u5230 ${p.length} \u5F20\u5019\u9009\u5C01\u9762\u56FE\uFF1A
-`),p.forEach((w,$)=>{console.log(`\u9009\u9879 ${$+1}:`),console.log(`  \u{1F4F8} \u6444\u5F71\u5E08\uFF1A${w.photographer}`),console.log(`  \u{1F5BC}\uFE0F  \u9884\u89C8\uFF1A${w.src.medium}`),console.log(`  \u{1F517} \u9AD8\u6E05\u56FE\uFF1A${w.src[a]}`),console.log()});let y=p[0];return console.log(`\u{1F3AF} \u5DF2\u9009\u62E9\u9ED8\u8BA4\u5C01\u9762\uFF08ID: ${y.id}\uFF09`),y.src[a]||null}catch(l){return l instanceof Error&&l.name==="AbortError"?console.error("\u274C API \u8C03\u7528\u8D85\u65F6\uFF0830\u79D2\uFF09"):console.error("\u274C API \u8C03\u7528\u5931\u8D25:",l),null}}async function tt(u,t,e){let o=D();if(!o)return null;let i=new URLSearchParams({query:u,orientation:t,per_page:"1"});try{let s=await(await fetch(`https://api.pexels.com/v1/search?${i}`,{headers:{Authorization:o}})).json();if(s.photos&&s.photos.length>0)return s.photos[0].src[e]||null}catch{}return null}import{tmpdir as et}from"os";import{join as ot}from"path";import{writeFileSync as it,unlinkSync as at,existsSync as rt}from"fs";import{createHash as st}from"crypto";var C=class extends h{tempFiles=[];constructor(){super("zhihu")}async downloadImageToTemp(t){try{console.log("   \u{1F4E5} \u6B63\u5728\u4E0B\u8F7D\u5C01\u9762\u56FE\u7247...");let e=await fetch(t);if(!e.ok)return console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5931\u8D25: HTTP ${e.status}`),null;let o=Buffer.from(await e.arrayBuffer()),i=st("md5").update(t).digest("hex").slice(0,8),a=t.includes(".png")?"png":"jpg",s=ot(et(),`cover-${i}.${a}`);return it(s,o),this.tempFiles.push(s),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0B\u8F7D: ${s}`),s}catch(e){return console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5C01\u9762\u56FE\u7247\u5931\u8D25: ${e instanceof Error?e.message:String(e)}`),null}}cleanupTempFiles(){for(let t of this.tempFiles)try{rt(t)&&at(t)}catch{}this.tempFiles=[]}async publish(t,e=!1){try{console.log("\u{1F680} \u5F00\u59CB\u53D1\u5E03\u6587\u7AE0\u5230\u77E5\u4E4E..."),e&&console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u6587\u7AE0\u4F46\u4E0D\u53D1\u5E03"),await this.browserManager.launch();let o=this.browserManager.getPage();if(!o)throw new Error("Page not initialized");if(console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762..."),await this.browserManager.gotoPublishPage(),await o.waitForTimeout(2e3),this.browserManager.isOnLoginPage()){if(console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B..."),console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55\u77E5\u4E4E..."),!await this.browserManager.waitForLogin(12e4))return await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"};console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B..."),await this.browserManager.gotoPublishPage(),await o.waitForTimeout(2e3)}console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u6807\u9898..."),await this.fillTitle(t.title),console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u5185\u5BB9..."),await this.fillContent(t.content);let i=null;if(t.coverImage)console.log("\u{1F5BC}\uFE0F \u4F7F\u7528\u7528\u6237\u63D0\u4F9B\u7684\u5C01\u9762\u56FE\u7247..."),t.coverImage.startsWith("http")?i=await this.downloadImageToTemp(t.coverImage):i=t.coverImage;else{console.log("\u{1F5BC}\uFE0F \u672A\u63D0\u4F9B\u5C01\u9762\u56FE\u7247\uFF0C\u6B63\u5728\u81EA\u52A8\u751F\u6210...");let s=await b({title:t.title,contentPreview:t.content,orientation:"landscape",size:"large2x"});s?i=await this.downloadImageToTemp(s):console.warn("   \u26A0\uFE0F \u5C01\u9762\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF0C\u5C06\u4E0D\u8BBE\u7F6E\u5C01\u9762")}if(i&&(console.log("\u{1F4E4} \u4E0A\u4F20\u5C01\u9762\u56FE\u7247..."),await this.uploadCover(i)),t.tags&&t.tags.length>0&&(console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E..."),await this.setTags(t.tags)),e){console.log(""),console.log("==========================================="),console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01"),console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("==========================================="),console.log("");let s=`./test-screenshot-zhihu-${Date.now()}.png`;return await this.screenshot(s),console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${s}`),await this.browserManager.saveCookies(),console.log(""),console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3"),console.log(""),{success:!0,platform:this.platform,message:"\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",testMode:!0}}console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE..."),await this.clickPublish();let a=await this.getArticleUrl();return await this.browserManager.saveCookies(),await this.browserManager.close(),this.cleanupTempFiles(),{success:!0,platform:this.platform,message:"\u6587\u7AE0\u53D1\u5E03\u6210\u529F",url:a||void 0}}catch(o){return this.cleanupTempFiles(),await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u53D1\u5E03\u5931\u8D25",error:o instanceof Error?o.message:String(o)}}}async fillTitle(t){let e=this.browserManager.getPage();if(!e)return;let o=['textarea[placeholder*="\u6807\u9898"]','textarea[placeholder*="\u8F93\u5165\u6807\u9898"]',".WriteIndex-titleInput textarea",".title-input textarea",'textarea[class*="title"]',"textarea.Input",'input[placeholder*="\u8F93\u5165\u6807\u9898"]','input[placeholder*="\u6807\u9898"]'],i=null;for(let a of o)try{if(i=await e.$(a),i){console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846\uFF0C\u4F7F\u7528\u9009\u62E9\u5668: ${a}`);break}}catch{continue}if(!i){console.log("   \u26A0\uFE0F \u9884\u8BBE\u9009\u62E9\u5668\u672A\u627E\u5230\uFF0C\u5C1D\u8BD5\u67E5\u627E\u6240\u6709 textarea/input \u5143\u7D20...");let a=await e.$$("textarea"),s=await e.$$('input[type="text"], input:not([type])');console.log(`   \u{1F4CB} \u9875\u9762\u5171\u6709 ${a.length} \u4E2Atextarea, ${s.length} \u4E2Ainput\u5143\u7D20`);for(let r of a){let n=await r.getAttribute("placeholder");if(n?.includes("\u6807\u9898")){i=r,console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846(textarea): placeholder="${n}"`);break}}if(!i)for(let r of s){let n=await r.getAttribute("placeholder"),l=await r.getAttribute("class");if(n?.includes("\u6807\u9898")||l?.toLowerCase().includes("title")){i=r,console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846(input): placeholder="${n}", class="${l}"`);break}}}i?(await i.click(),await i.fill(t),console.log(`   \u{1F4DD} \u6807\u9898\u5DF2\u586B\u5145: ${t}`)):(console.error("   \u274C \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846\uFF0C\u5C1D\u8BD5\u4F7F\u7528\u952E\u76D8\u8F93\u5165\u4F5C\u4E3A\u540E\u5907\u65B9\u6848..."),await e.keyboard.type(t),console.log(`   \u26A0\uFE0F \u6807\u9898\u5DF2\u901A\u8FC7\u952E\u76D8\u8F93\u5165: ${t}`))}async fillContent(t){let e=this.browserManager.getPage();if(!e)return;let o=[".public-DraftEditor-content",'.DraftEditor-editorContainer [contenteditable="true"]','[data-contents="true"]',".ql-editor",'[contenteditable="true"]'],i=null;for(let a of o)try{if(i=await e.$(a),i){console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${a}`);break}}catch{continue}if(i)await i.click(),await e.waitForTimeout(500),await i.fill(""),await e.keyboard.type(t,{delay:10}),console.log(`   \u5185\u5BB9\u957F\u5EA6: ${t.length} \u5B57\u7B26`);else{console.warn("   \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668\uFF0C\u5C1D\u8BD5\u70B9\u51FB\u9875\u9762\u4E2D\u592E...");let a=e.viewportSize();a&&(await e.mouse.click(a.width/2,a.height/2),await e.keyboard.type(t,{delay:10}),console.log(`   \u5185\u5BB9\u957F\u5EA6: ${t.length} \u5B57\u7B26`))}}async uploadCover(t){let e=this.browserManager.getPage();if(e)try{console.log("   \u{1F50D} \u5BFB\u627E\u5C01\u9762\u4E0A\u4F20\u533A\u57DF...");let o=["input.UploadPicture-input",'input[type="file"][accept*=".jpg"], input[type="file"][accept*=".png"]','.UploadPicture-wrapper input[type="file"]',"label.UploadPicture-wrapper input"],i=!1;for(let a of o)try{let s=await e.$(a);if(s){let r=await s.isVisible().catch(()=>!1),n=!r;console.log(`   \u627E\u5230\u5C01\u9762\u4E0A\u4F20\u8F93\u5165\u6846: ${a} (visible: ${r})`),await s.setInputFiles(t),await e.waitForTimeout(2e3),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20\u5230\u5C01\u9762\u533A\u57DF: ${t}`),i=!0;break}}catch{continue}if(!i){let a=["label.UploadPicture-wrapper",".css-1i9x2dq","text=\u6DFB\u52A0\u6587\u7AE0\u5C01\u9762","text=\u6DFB\u52A0\u5C01\u9762"];for(let s of a)try{let r=await e.$(s);if(r){console.log(`   \u627E\u5230\u5C01\u9762\u533A\u57DF: ${s}`),await r.click(),await e.waitForTimeout(1e3);let n=await e.$('input[type="file"]');if(n){await n.setInputFiles(t),await e.waitForTimeout(2e3),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20\uFF08\u70B9\u51FB\u540E\u4E0A\u4F20\uFF09: ${t}`),i=!0;break}}}catch{continue}}if(!i){let a=await e.$$('input[type="file"]');console.log(`   \u{1F4CB} \u9875\u9762\u5171\u6709 ${a.length} \u4E2A\u6587\u4EF6\u8F93\u5165\u6846`);for(let s of a)try{let r=await s.boundingBox();if(r){console.log(`   \u8F93\u5165\u6846\u4F4D\u7F6E: x=${r.x}, y=${r.y}, width=${r.width}, height=${r.height}`);let n=e.viewportSize();if(n&&r.x>n.width/2){await s.setInputFiles(t),await e.waitForTimeout(2e3),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20\uFF08\u901A\u8FC7\u4F4D\u7F6E\u5224\u65AD\uFF09: ${t}`),i=!0;break}}}catch{continue}}i||console.warn("   \u26A0\uFE0F \u672A\u80FD\u627E\u5230\u5C01\u9762\u4E0A\u4F20\u533A\u57DF\uFF0C\u8DF3\u8FC7\u5C01\u9762\u4E0A\u4F20")}catch(o){console.warn("   \u26A0\uFE0F \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:",o instanceof Error?o.message:String(o))}}async setTags(t){let e=this.browserManager.getPage();if(e)try{let o=['button:has-text("\u8BDD\u9898")','[class*="topic"] button',".TopicSelectButton",'[class*="TagButton"]'];for(let s of o)try{let r=await e.$(s);if(r){await r.click(),await e.waitForTimeout(500),console.log("   \u70B9\u51FB\u8BDD\u9898\u6309\u94AE\u5C55\u5F00");break}}catch{continue}let i=['input[placeholder*="\u641C\u7D22\u8BDD\u9898"]:visible','input[placeholder*="\u8BDD\u9898"]:visible','input[aria-label*="\u8BDD\u9898"]:visible',".TopicSelector input",'[class*="topic"] input:visible'],a=null;for(let s of i)try{if(a=await e.$(s),a&&await a.isVisible()){console.log(`   \u627E\u5230\u8BDD\u9898\u8F93\u5165\u6846: ${s}`);break}}catch{continue}if(!a){console.warn("   \u672A\u627E\u5230\u53EF\u89C1\u7684\u8BDD\u9898\u8F93\u5165\u6846\uFF0C\u8DF3\u8FC7\u6807\u7B7E\u8BBE\u7F6E");return}for(let s of t.slice(0,5)){await a.fill(s),await e.waitForTimeout(800);let r=[".Popover-content button",'[class*="Popover"] button',".css-ogem9c button"],n=!1;for(let l of r)try{let c=await e.$(l);if(c&&await c.isVisible().catch(()=>!1)){console.log("   \u627E\u5230\u8BDD\u9898\u4E0B\u62C9\u6846\uFF0C\u70B9\u51FB\u7B2C\u4E00\u4E2A\u9009\u9879"),await c.click(),await e.waitForTimeout(500),n=!0;break}}catch{continue}n||(await e.keyboard.press("Enter"),await e.waitForTimeout(500))}console.log(`   \u6807\u7B7E: ${t.slice(0,5).join(", ")}`)}catch(o){console.warn("   \u6807\u7B7E\u8BBE\u7F6E\u5931\u8D25\uFF0C\u8DF3\u8FC7:",o instanceof Error?o.message:String(o))}}async clickPublish(){let t=this.browserManager.getPage();if(!t)return;let e='button:has-text("\u53D1\u5E03"), .publish-button, [class*="publish"]';await t.waitForSelector(e,{timeout:1e4}),await t.click(e),await t.waitForTimeout(3e3)}async getArticleUrl(){let t=this.browserManager.getPage();if(!t)return null;try{await t.waitForTimeout(2e3);let e=t.url();return e.includes("zhuanlan.zhihu.com/p/")?e:null}catch{return null}}};import{tmpdir as nt}from"os";import{join as lt}from"path";import{writeFileSync as ct,unlinkSync as gt,existsSync as ut}from"fs";import{createHash as pt}from"crypto";var I=class extends h{tempFiles=[];constructor(){super("bilibili")}getIframeLocator(){let t=this.browserManager.getPage();if(!t)throw new Error("Page not initialized");return t.frameLocator('iframe[src*="member.bilibili.com/york/read-editor"]')}async downloadImageToTemp(t){try{console.log("   \u{1F4E5} \u6B63\u5728\u4E0B\u8F7D\u5C01\u9762\u56FE\u7247...");let e=await fetch(t);if(!e.ok)return console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5931\u8D25: HTTP ${e.status}`),null;let o=Buffer.from(await e.arrayBuffer()),i=pt("md5").update(t).digest("hex").slice(0,8),a=t.includes(".png")?"png":"jpg",s=lt(nt(),`cover-${i}.${a}`);return ct(s,o),this.tempFiles.push(s),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0B\u8F7D: ${s}`),s}catch(e){return console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5C01\u9762\u56FE\u7247\u5931\u8D25: ${e instanceof Error?e.message:String(e)}`),null}}cleanupTempFiles(){for(let t of this.tempFiles)try{ut(t)&&gt(t)}catch{}this.tempFiles=[]}async publish(t,e=!1){try{console.log("\u{1F680} \u5F00\u59CB\u53D1\u5E03\u6587\u7AE0\u5230Bilibili..."),e&&console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u6587\u7AE0\u4F46\u4E0D\u53D1\u5E03"),await this.browserManager.launch();let o=this.browserManager.getPage();if(!o)throw new Error("Page not initialized");if(console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762..."),await this.browserManager.gotoPublishPage(),console.log("   \u7B49\u5F85\u9875\u9762\u52A0\u8F7D..."),await o.waitForTimeout(3e3),this.browserManager.isOnLoginPage()){if(console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B..."),console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55Bilibili..."),!await this.browserManager.waitForLogin(12e4))return await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"};console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B..."),await this.browserManager.gotoPublishPage(),await o.waitForTimeout(3e3)}console.log("\u{1F50D} \u68C0\u67E5\u9875\u9762\u5143\u7D20...");let i=o.url();console.log(`   \u5F53\u524DURL: ${i}`),console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u6807\u9898..."),await this.fillTitle(t.title),console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u5185\u5BB9..."),await this.fillContent(t.content);let a=null;if(t.coverImage)console.log("\u{1F5BC}\uFE0F \u4F7F\u7528\u7528\u6237\u63D0\u4F9B\u7684\u5C01\u9762\u56FE\u7247..."),t.coverImage.startsWith("http")?a=await this.downloadImageToTemp(t.coverImage):a=t.coverImage;else{console.log("\u{1F5BC}\uFE0F \u672A\u63D0\u4F9B\u5C01\u9762\u56FE\u7247\uFF0C\u6B63\u5728\u81EA\u52A8\u751F\u6210...");let r=await b({title:t.title,contentPreview:t.content,orientation:"landscape",size:"large2x"});r?a=await this.downloadImageToTemp(r):console.warn("   \u26A0\uFE0F \u5C01\u9762\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF0C\u5C06\u4E0D\u8BBE\u7F6E\u5C01\u9762")}if(a&&(console.log("\u{1F4E4} \u4E0A\u4F20\u5C01\u9762\u56FE\u7247..."),await this.uploadCover(a)),t.tags&&t.tags.length>0&&(console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E..."),await this.setTags(t.tags)),e){console.log(""),console.log("==========================================="),console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01"),console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("==========================================="),console.log("");let r=`./test-screenshot-bilibili-${Date.now()}.png`;return await this.screenshot(r),console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${r}`),await this.browserManager.saveCookies(),console.log(""),console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3"),console.log(""),{success:!0,platform:this.platform,message:"\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",testMode:!0}}console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE..."),await this.clickPublish();let s=await this.getArticleUrl();return await this.browserManager.saveCookies(),await this.browserManager.close(),this.cleanupTempFiles(),{success:!0,platform:this.platform,message:"\u6587\u7AE0\u53D1\u5E03\u6210\u529F",url:s||void 0}}catch(o){return this.cleanupTempFiles(),await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u53D1\u5E03\u5931\u8D25",error:o instanceof Error?o.message:String(o)}}}async fillTitle(t){let e=this.browserManager.getPage();if(!e){console.error("   \u274C \u672A\u83B7\u53D6\u5230\u6709\u6548\u9875\u9762");return}console.log("   \u7B49\u5F85iframe\u52A0\u8F7D...");try{let o=this.getIframeLocator();console.log("   \u7B49\u5F85\u6807\u9898\u8F93\u5165\u6846\u51FA\u73B0...");let i=["textarea.title-input__inner",'textarea[placeholder*="\u6807\u9898"]',".title-input textarea",'input[placeholder*="\u6807\u9898"]'],a="";for(let s of i)try{console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${s}`),await o.locator(s).waitFor({timeout:1e4,state:"visible"}),a=s,console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846: ${s}`);break}catch{console.log(`   \u274C \u672A\u627E\u5230: ${s}`);continue}if(a){let s=o.locator(a);console.log("   \u70B9\u51FB\u6807\u9898\u8F93\u5165\u6846..."),await s.click({force:!0}),await e.waitForTimeout(500),console.log("   \u6E05\u7A7A\u6807\u9898\u8F93\u5165\u6846..."),await s.fill(""),await e.waitForTimeout(300),console.log(`   \u8F93\u5165\u6807\u9898: ${t}`),await s.fill(t),await e.waitForTimeout(500),console.log("   \u2705 \u6807\u9898\u586B\u5199\u5B8C\u6210")}else console.warn("   \u274C \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846")}catch(o){console.error("   \u274C iframe\u64CD\u4F5C\u5931\u8D25:",o)}}async fillContent(t){let e=this.browserManager.getPage();if(e){console.log("   \u7B49\u5F85iframe\u52A0\u8F7D...");try{let o=this.getIframeLocator();console.log("   \u7B49\u5F85\u5185\u5BB9\u7F16\u8F91\u5668\u51FA\u73B0...");let i=[".tiptap.ProseMirror.eva3-editor",'.eva3-editor[contenteditable="true"]','.tiptap[contenteditable="true"]','[contenteditable="true"].ProseMirror',".ql-editor",'[contenteditable="true"]'],a="";for(let s of i)try{console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${s}`),await o.locator(s).waitFor({timeout:1e4,state:"visible"}),a=s,console.log(`   \u2705 \u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668: ${s}`);break}catch{console.log(`   \u274C \u672A\u627E\u5230: ${s}`);continue}if(a){let s=o.locator(a);console.log("   \u70B9\u51FB\u5185\u5BB9\u7F16\u8F91\u5668..."),await s.click({force:!0}),await e.waitForTimeout(1e3),console.log("   \u6E05\u7A7A\u7F16\u8F91\u5668\u5185\u5BB9..."),await s.press("Control+A"),await e.waitForTimeout(300),await s.press("Backspace"),await e.waitForTimeout(500),console.log("   \u5F00\u59CB\u8F93\u5165\u5185\u5BB9...");let r=t.split(`
-`);for(let n=0;n<r.length;n++)await s.type(r[n],{delay:20}),n<r.length-1&&(await s.press("Enter"),await e.waitForTimeout(200));await e.waitForTimeout(500),console.log(`   \u2705 \u5185\u5BB9\u586B\u5199\u5B8C\u6210 (${t.length} \u5B57\u7B26)`)}else console.warn("   \u274C \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668")}catch(o){console.error("   \u274C iframe\u64CD\u4F5C\u5931\u8D25:",o)}}}async uploadCover(t){let e=this.browserManager.getPage();if(e)try{console.log("   \u7B49\u5F85iframe\u52A0\u8F7D...");let o=this.getIframeLocator();console.log("   \u{1F50D} \u5BFB\u627E\u5C01\u9762\u4E0A\u4F20\u533A\u57DF...");let i=await o.locator(".form-item").all();console.log(`   \u{1F4CB} \u627E\u5230 ${i.length} \u4E2A .form-item \u5143\u7D20`);for(let r of i)try{if((await r.locator(".form-item-label").textContent())?.includes("\u81EA\u5B9A\u4E49\u5C01\u9762")){console.log('   \u627E\u5230"\u81EA\u5B9A\u4E49\u5C01\u9762"\u8868\u5355\u9879');let l=r.locator(".vui_switch--switch"),c=await l.getAttribute("aria-checked");console.log(`   \u5F00\u5173\u72B6\u6001: aria-checked=${c}`),c!=="true"?(console.log("   \u6B63\u5728\u5F00\u542F\u81EA\u5B9A\u4E49\u5C01\u9762\u5F00\u5173..."),await l.click(),await e.waitForTimeout(1e3),console.log("   \u2705 \u5DF2\u5F00\u542F\u81EA\u5B9A\u4E49\u5C01\u9762\u5F00\u5173")):console.log("   \u2705 \u81EA\u5B9A\u4E49\u5C01\u9762\u5F00\u5173\u5DF2\u5F00\u542F");break}}catch{continue}await e.waitForTimeout(1e3);let a=o.locator('.upload-button:has-text("\u6DFB\u52A0\u5C01\u9762"), .select-cover .upload-button, .upload-button').first();try{await a.waitFor({timeout:5e3,state:"visible"}),console.log("   \u627E\u5230\u5C01\u9762\u4E0A\u4F20\u6309\u94AE"),console.log('   \u70B9\u51FB"\u6DFB\u52A0\u5C01\u9762"\u6309\u94AE...'),await a.click(),await e.waitForTimeout(1e3);let r=o.locator('input[type="file"]');await r.waitFor({timeout:5e3,state:"visible"}),console.log("   \u9009\u62E9\u6587\u4EF6..."),await r.setInputFiles(t),await e.waitForTimeout(2e3),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20: ${t}`),await this.confirmCoverCrop();return}catch{console.log("   \u672A\u627E\u5230\u5C01\u9762\u4E0A\u4F20\u6309\u94AE")}console.log("   \u5C1D\u8BD5\u76F4\u63A5\u67E5\u627E\u6587\u4EF6\u8F93\u5165\u6846...");let s=await o.locator('input[type="file"]').all();console.log(`   \u{1F4CB} \u9875\u9762\u5171\u6709 ${s.length} \u4E2A\u6587\u4EF6\u8F93\u5165\u6846`);for(let r of s)try{await r.setInputFiles(t),await e.waitForTimeout(2e3),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20: ${t}`),await this.confirmCoverCrop();return}catch{continue}console.warn("   \u26A0\uFE0F \u672A\u80FD\u627E\u5230\u5C01\u9762\u4E0A\u4F20\u533A\u57DF\uFF0C\u8DF3\u8FC7\u5C01\u9762\u4E0A\u4F20")}catch(o){console.warn("   \u26A0\uFE0F \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:",o instanceof Error?o.message:String(o))}}async confirmCoverCrop(){let t=this.browserManager.getPage();if(t){console.log("   \u7B49\u5F85\u5C01\u9762\u88C1\u526A\u5BF9\u8BDD\u6846...");try{await t.waitForTimeout(2e3);let e=this.getIframeLocator(),o=['.vui_dialog--footer button.vui_button--blue:has-text("\u786E\u5B9A")','.vui_dialog--footer button:has-text("\u786E\u5B9A")',".vui_dialog--btn-confirm",'button.vui_button--blue:has-text("\u786E\u5B9A")'];for(let i of o)try{console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${i}`);let a=e.locator(i).first();await a.waitFor({timeout:5e3,state:"visible"}),console.log("   \u2705 \u627E\u5230\u786E\u8BA4\u6309\u94AE"),await a.click(),await t.waitForTimeout(1e3),console.log("   \u2705 \u5DF2\u70B9\u51FB\u786E\u8BA4\u6309\u94AE");return}catch{console.log(`   \u274C \u672A\u627E\u5230: ${i}`);continue}console.log("   \u672A\u627E\u5230\u5C01\u9762\u88C1\u526A\u5BF9\u8BDD\u6846\uFF0C\u7EE7\u7EED\u6267\u884C")}catch(e){console.log("   \u5C01\u9762\u88C1\u526A\u5BF9\u8BDD\u6846\u5904\u7406\u5931\u8D25:",e instanceof Error?e.message:String(e))}}}async setTags(t){console.log("   \u26A0\uFE0F Bilibili\u5DF2\u6539\u4E3A\u5728\u6B63\u6587\u4E2D\u4F7F\u7528 #\u6807\u7B7E# \u683C\u5F0F\u6DFB\u52A0\u6807\u7B7E"),console.log(`   \u5EFA\u8BAE\u6807\u7B7E: ${t.map(e=>`#${e}#`).join(" ")}`)}async clickPublish(){let t=this.browserManager.getPage();if(t){console.log("   \u7B49\u5F85iframe\u52A0\u8F7D...");try{let e=this.getIframeLocator(),o=['button.vui_button--blue:has-text("\u53D1\u5E03")','button:has-text("\u53D1\u5E03")',".footer-right button.vui_button--blue"];for(let i of o)try{console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${i}`);let a=e.locator(i);await a.waitFor({timeout:1e4,state:"visible"}),console.log(`   \u2705 \u627E\u5230\u53D1\u5E03\u6309\u94AE: ${i}`),await a.click(),await t.waitForTimeout(3e3),console.log("   \u2705 \u5DF2\u70B9\u51FB\u53D1\u5E03\u6309\u94AE");return}catch{console.log(`   \u274C \u672A\u627E\u5230: ${i}`);continue}console.warn("   \u26A0\uFE0F \u672A\u627E\u5230\u53D1\u5E03\u6309\u94AE")}catch(e){console.error("   \u274C iframe\u64CD\u4F5C\u5931\u8D25:",e)}}}async getArticleUrl(){let t=this.browserManager.getPage();if(!t)return null;try{await t.waitForTimeout(2e3);let e=t.url();return e.includes("bilibili.com/read/")?e:null}catch{return null}}};import{tmpdir as ft}from"os";import{join as ht}from"path";import{writeFileSync as wt,unlinkSync as mt,existsSync as dt}from"fs";import{createHash as bt}from"crypto";var M=class extends h{tempFiles=[];constructor(){super("baijiahao")}async downloadImageToTemp(t){try{console.log("   \u{1F4E5} \u6B63\u5728\u4E0B\u8F7D\u5C01\u9762\u56FE\u7247...");let e=new AbortController,o=setTimeout(()=>e.abort(),3e4),i=await fetch(t,{signal:e.signal});if(clearTimeout(o),!i.ok)return console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5931\u8D25: HTTP ${i.status}`),null;let a=Buffer.from(await i.arrayBuffer()),s=bt("md5").update(t).digest("hex").slice(0,8),r=t.includes(".png")?"png":"jpg",n=ht(ft(),`cover-${s}.${r}`);return wt(n,a),this.tempFiles.push(n),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0B\u8F7D: ${n}`),n}catch(e){return e instanceof Error&&e.name==="AbortError"?console.warn("   \u26A0\uFE0F \u4E0B\u8F7D\u5C01\u9762\u56FE\u7247\u8D85\u65F6\uFF0830\u79D2\uFF09"):console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5C01\u9762\u56FE\u7247\u5931\u8D25: ${e instanceof Error?e.message:String(e)}`),null}}cleanupTempFiles(){for(let t of this.tempFiles)try{dt(t)&&mt(t)}catch{}this.tempFiles=[]}async closeTourDialogs(){let t=this.browserManager.getPage();if(t){console.log("   \u{1F50D} \u68C0\u67E5\u662F\u5426\u6709\u65B0\u624B\u5F15\u5BFC/\u786E\u8BA4\u6846...");try{await t.waitForTimeout(1e3);let e=!0,o=5,i=0;for(;e&&i<o;){if(i++,e=!1,await t.$(".cheetah-tour-content")){console.log(`   \u53D1\u73B0\u786E\u8BA4\u6846 (\u5C1D\u8BD5 ${i}/${o})`);let r=await t.$$("div.cheetah-tour-buttons > button");if(r.length>0){console.log(`   \u627E\u5230 ${r.length} \u4E2A\u6309\u94AE`);for(let l=r.length-1;l>=0;l--){let c=r[l];if(await c.isVisible()){let f=await c.textContent();console.log(`   \u70B9\u51FB\u6309\u94AE [${l+1}]: ${f}`),await c.click(),await t.waitForTimeout(500),e=!0;break}}if(e)continue}let n=await t.$("button.cheetah-tour-close");if(n&&await n.isVisible()){console.log("   \u70B9\u51FB\u5173\u95ED\u6309\u94AE [x]"),await n.click(),await t.waitForTimeout(500),e=!0;continue}}let s=await t.$$('.cheetah-modal-content, .cheetah-dialog, [role="dialog"]');for(let r of s)if(await r.isVisible()){let l=await r.$('button[class*="close"], .cheetah-modal-close, .close-btn');if(l){console.log("   \u5173\u95ED\u5176\u4ED6\u5BF9\u8BDD\u6846"),await l.click(),await t.waitForTimeout(500),e=!0;break}}try{let r=await t.$$('.cheetah-modal-wrap, [class*="modal"]');for(let n of r)if(await n.isVisible()){let c=await n.$eval('.cheetah-modal-title, [class*="title"]',f=>f.textContent).catch(()=>""),g=await n.textContent();if(c?.includes("\u63D0\u793A")||g?.includes("\u683C\u5F0F\u4E0D\u6B63\u786E")||g?.includes("\u9519\u8BEF")){console.log(`   \u53D1\u73B0\u9519\u8BEF\u63D0\u793A\u6846: ${c||"\u63D0\u793A"}`);let f=await n.$('button:has-text("\u786E\u8BA4"), button:has-text("\u786E\u5B9A"), .cheetah-btn-primary');if(f){await f.click(),console.log("   \u70B9\u51FB\u786E\u8BA4\u6309\u94AE\u5173\u95ED\u63D0\u793A\u6846"),await t.waitForTimeout(500),e=!0;break}let p=await n.$('button[class*="close"], .cheetah-modal-close');if(p){await p.click(),console.log("   \u70B9\u51FB\u5173\u95ED\u6309\u94AE\u5173\u95ED\u63D0\u793A\u6846"),await t.waitForTimeout(500),e=!0;break}}}}catch{}}i>1?console.log("   \u2705 \u786E\u8BA4\u6846\u5DF2\u5904\u7406\u5B8C\u6210"):console.log("   \u2705 \u672A\u53D1\u73B0\u786E\u8BA4\u6846")}catch(e){console.log("   \u26A0\uFE0F \u5904\u7406\u786E\u8BA4\u6846\u65F6\u51FA\u9519:",e instanceof Error?e.message:String(e))}}}async handleErrorDialogs(){let t=this.browserManager.getPage();if(!t)return!1;let e=!1;try{let o=[".cheetah-modal-wrap",".cheetah-modal-content",'[class*="modal"]','[role="dialog"]'];for(let i of o){let a=await t.$$(i);for(let s of a){if(!await s.isVisible())continue;let n=await s.textContent();if(n?.includes("\u683C\u5F0F\u4E0D\u6B63\u786E")||n?.includes("\u89C6\u9891")||n?.includes("\u9519\u8BEF")||n?.includes("\u5931\u8D25")||n?.includes("\u63D0\u793A")){console.log(`   \u53D1\u73B0\u9519\u8BEF\u63D0\u793A: ${n?.substring(0,50)}...`);let l=await s.$('button:has-text("\u786E\u8BA4"), button:has-text("\u786E\u5B9A"), .cheetah-btn-primary, button');if(l){let g=await l.textContent();console.log(`   \u70B9\u51FB\u6309\u94AE\u5173\u95ED\u63D0\u793A: ${g}`),await l.click(),await t.waitForTimeout(500),e=!0;break}let c=await s.$('button[class*="close"], .cheetah-modal-close, [class*="close"]');if(c){await c.click(),console.log("   \u70B9\u51FB\u5173\u95ED\u6309\u94AE"),await t.waitForTimeout(500),e=!0;break}}}if(e)break}}catch(o){console.log("   \u5904\u7406\u9519\u8BEF\u63D0\u793A\u6846\u65F6\u51FA\u9519:",o)}return e}async publish(t,e=!1){try{console.log("\u{1F680} \u5F00\u59CB\u53D1\u5E03\u6587\u7AE0\u5230\u767E\u5BB6\u53F7..."),e&&console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u6587\u7AE0\u4F46\u4E0D\u53D1\u5E03"),await this.browserManager.launch();let o=this.browserManager.getPage();if(!o)throw new Error("Page not initialized");if(console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762..."),await this.browserManager.gotoPublishPage(),await o.waitForTimeout(2e3),await this.browserManager.isOnLoginPageAsync()){if(console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B..."),console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55\u767E\u5BB6\u53F7..."),!await this.browserManager.waitForLogin(12e4))return await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"};console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B..."),await this.browserManager.gotoPublishPage()}console.log("   \u7B49\u5F85\u7F16\u8F91\u5668\u52A0\u8F7D..."),await o.waitForSelector("#ueditor",{timeout:1e4}),await this.closeTourDialogs(),console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u6807\u9898..."),await this.fillTitle(t.title),console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u5185\u5BB9..."),await this.fillContent(t.content);let a=null;if(t.coverImage)console.log("\u{1F5BC}\uFE0F \u4F7F\u7528\u7528\u6237\u63D0\u4F9B\u7684\u5C01\u9762\u56FE\u7247..."),t.coverImage.startsWith("http")?a=await this.downloadImageToTemp(t.coverImage):a=t.coverImage;else{console.log("\u{1F5BC}\uFE0F \u672A\u63D0\u4F9B\u5C01\u9762\u56FE\u7247\uFF0C\u6B63\u5728\u81EA\u52A8\u751F\u6210...");let r=await b({title:t.title,contentPreview:t.content,orientation:"landscape",size:"large2x"});r?a=await this.downloadImageToTemp(r):console.warn("   \u26A0\uFE0F \u5C01\u9762\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF0C\u5C06\u4E0D\u8BBE\u7F6E\u5C01\u9762")}if(a&&(console.log("\u{1F4E4} \u4E0A\u4F20\u5C01\u9762\u56FE\u7247..."),await this.uploadCover(a),await this.handleErrorDialogs()),t.summary&&(console.log("\u{1F4DD} \u586B\u5199\u6587\u7AE0\u6458\u8981..."),await this.fillSummary(t.summary)),t.category&&(console.log("\u{1F4C1} \u9009\u62E9\u6587\u7AE0\u5206\u7C7B..."),await this.selectCategory(t.category)),t.tags&&t.tags.length>0&&(console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E..."),await this.setTags(t.tags)),e){console.log(""),console.log("==========================================="),console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01"),console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("==========================================="),console.log("");let r=`./test-screenshot-baijiahao-${Date.now()}.png`;return await this.screenshot(r),console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${r}`),await this.browserManager.saveCookies(),console.log(""),console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3"),console.log(""),{success:!0,platform:this.platform,message:"\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",testMode:!0}}console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE..."),await this.clickPublish();let s=await this.getArticleUrl();return await this.browserManager.saveCookies(),await this.browserManager.close(),this.cleanupTempFiles(),{success:!0,platform:this.platform,message:"\u6587\u7AE0\u53D1\u5E03\u6210\u529F",url:s||void 0}}catch(o){return this.cleanupTempFiles(),await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u53D1\u5E03\u5931\u8D25",error:o instanceof Error?o.message:String(o)}}}async fillTitle(t){let e=this.browserManager.getPage();if(!e)return;console.log("   \u67E5\u627E\u6807\u9898\u8F93\u5165\u6846...");let o=['#bjhNewsTitle [contenteditable="true"]','#bjhNewsTitle .input-box [contenteditable="true"]','[data-testid="news-title-input"] [contenteditable="true"]','#newsTextArea [contenteditable="true"]'];for(let i of o)try{console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${i}`);let a=await e.$(i);if(a&&await a.isVisible()){console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846: ${i}`),await a.click(),await e.waitForTimeout(300),await e.keyboard.press("Control+A"),await e.waitForTimeout(200),await e.keyboard.press("Backspace"),await e.waitForTimeout(300),await e.keyboard.type(t,{delay:50}),await e.waitForTimeout(500),console.log(`   \u2705 \u6807\u9898\u586B\u5199\u5B8C\u6210: ${t}`);return}}catch(a){console.log(`   \u9009\u62E9\u5668 ${i} \u5931\u8D25:`,a);continue}console.warn("   \u274C \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846")}async fillContent(t){let e=this.browserManager.getPage();if(!e)return;console.log("   \u67E5\u627E\u5185\u5BB9\u7F16\u8F91\u5668...");try{let i=await e.$('iframe[id*="editor"]');if(i){console.log("   \u627E\u5230\u7F16\u8F91\u5668 iframe");let a=await i.contentFrame();if(a){console.log("   \u5728 iframe \u4E2D\u67E5\u627E\u7F16\u8F91\u533A\u57DF...");let s=await a.$("body.view");if(s){console.log("   \u2705 \u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668 (iframe body)"),await s.click(),await e.waitForTimeout(500);let r=t.split(`
-`);for(let n=0;n<r.length;n++){let l=r[n];for(let c=0;c<l.length;c++){let g=l[c];g=="#"?(await e.keyboard.type(g,{delay:100}),await e.keyboard.press("Escape"),await e.waitForTimeout(100)):await e.keyboard.type(g,{delay:10})}n<r.length-1&&(await e.keyboard.press("Enter"),await e.waitForTimeout(200))}console.log(`   \u2705 \u5185\u5BB9\u586B\u5199\u5B8C\u6210 (${t.length} \u5B57\u7B26)`);return}}}}catch{console.log("   iframe \u65B9\u5F0F\u5931\u8D25\uFF0C\u5C1D\u8BD5\u5176\u4ED6\u65B9\u5F0F...")}let o=["#editor",'[contenteditable="true"]',".editor-content",".ql-editor",".ProseMirror",".public-DraftEditor-content",".edui-editor-iframeholder iframe"];for(let i of o)try{console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${i}`);let a=await e.$(i);if(a&&await a.isVisible()){console.log(`   \u2705 \u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668: ${i}`),await a.click(),await e.waitForTimeout(500),await e.keyboard.press("Control+A"),await e.waitForTimeout(300),await e.keyboard.press("Backspace"),await e.waitForTimeout(500);let r=t.split(`
-`);for(let n=0;n<r.length;n++)await e.keyboard.type(r[n],{delay:10}),n<r.length-1&&(await e.keyboard.press("Enter"),await e.waitForTimeout(200));console.log(`   \u2705 \u5185\u5BB9\u586B\u5199\u5B8C\u6210 (${t.length} \u5B57\u7B26)`);return}}catch{continue}console.warn("   \u274C \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668")}async uploadCover(t){let e=this.browserManager.getPage();if(e)try{console.log("   \u{1F50D} \u5BFB\u627E\u5C01\u9762\u4E0A\u4F20\u533A\u57DF..."),await e.waitForTimeout(1e3);let o=["._93c3fe2a3121c388-item","._73a3a52aab7e3a36-default","._73a3a52aab7e3a36-content",'[class*="list"] [class*="item"]',".bjh-news-cover-add",'[class*="cover-add"]','[class*="cover"] [class*="add"]',".cover-upload",".cover-selector",'#bjhNewsCover [class*="add"]',"#bjhNewsCover .cheetah-btn","#bjhNewsCover button"],i=!1;for(let l of o)try{let c=await e.$$(l);console.log(`   \u67E5\u627E\u9009\u62E9\u5668 ${l}, \u627E\u5230 ${c.length} \u4E2A\u5143\u7D20`);for(let g of c)if(await g.isVisible()){let p=await g.textContent();if(console.log(`   \u5143\u7D20\u6587\u672C: ${p?.substring(0,30)}`),p?.includes("\u9009\u62E9\u5C01\u9762")||p?.includes("\u5C01\u9762")||p?.includes("\u6DFB\u52A0")){console.log(`   \u2705 \u70B9\u51FB\u5C01\u9762\u89E6\u53D1\u533A\u57DF: ${l}`),await g.click(),await e.waitForTimeout(1e3),i=!0;break}}if(i)break}catch(c){console.log(`   \u9009\u62E9\u5668 ${l} \u5931\u8D25:`,c);continue}if(!i){console.log("   \u5C1D\u8BD5\u70B9\u51FB\u7B2C\u4E00\u4E2A\u53EF\u89C1\u7684\u5C01\u9762\u533A\u57DF...");for(let l of o)try{let c=await e.$(l);if(c&&await c.isVisible()){console.log(`   \u70B9\u51FB\u5C01\u9762\u533A\u57DF: ${l}`),await c.click(),await e.waitForTimeout(1e3),i=!0;break}}catch{continue}}let a=['input[type="file"][accept*="image"]:not([accept*="video"])','#bjhNewsCover input[type="file"]','[class*="cover"] input[type="file"]','.cheetah-upload input[type="file"]'],s=!1;for(let l of a){if(s)break;try{let c=await e.$$(l);console.log(`   \u67E5\u627E\u9009\u62E9\u5668 ${l}, \u627E\u5230 ${c.length} \u4E2A\u5143\u7D20`);for(let g of c){let f=await g.getAttribute("accept");if(console.log(`   file input accept: ${f}`),!f?.includes("video")){console.log(`   \u2705 \u627E\u5230\u56FE\u7247\u4E0A\u4F20\u8F93\u5165\u6846: ${l}`),await g.setInputFiles(t),await e.waitForTimeout(3e3),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20: ${t}`),s=!0;break}}}catch(c){console.log(`   \u9009\u62E9\u5668 ${l} \u5931\u8D25:`,c);continue}}if(!s)try{console.log("   \u5C1D\u8BD5\u5907\u7528\u65B9\u6848\uFF1A\u67E5\u627E\u6240\u6709 file input...");let l=await e.$$('input[type="file"]');console.log(`   \u627E\u5230 ${l.length} \u4E2A file input`);for(let c of l){let g=await c.getAttribute("accept");if(console.log(`   file input accept: ${g}`),g&&!g.includes("video")){console.log("   \u2705 \u4F7F\u7528\u5907\u7528\u65B9\u6848\u627E\u5230\u56FE\u7247\u4E0A\u4F20\u8F93\u5165\u6846"),await c.setInputFiles(t),await e.waitForTimeout(3e3),console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20: ${t}`),s=!0;break}}}catch(l){console.log("   \u5907\u7528\u65B9\u6848\u5931\u8D25:",l)}console.log("   \u70B9\u51FB\u786E\u5B9A\u6309\u94AE\u786E\u8BA4\u5C01\u9762\u9009\u62E9..."),await e.waitForTimeout(1e3);let r=[".cheetah-modal-content",".cheetah-modal-wrap",'[class*="modal-content"]','[role="dialog"]'],n=!1;for(let l of r){if(n)break;try{let c=await e.$$(l);console.log(`   \u67E5\u627E\u5F39\u51FA\u6846 ${l}, \u627E\u5230 ${c.length} \u4E2A`);for(let g of c){if(!await g.isVisible())continue;let p=[".e8c90bfac9d4eab4-confirmBtn",'button[class*="confirm"]',".cheetah-btn-primary",'button:has-text("\u786E\u5B9A")','button:has-text("\u786E\u8BA4")'];for(let y of p)try{let w=await g.$(y);if(w&&await w.isVisible()){let O=await w.textContent();console.log(`   \u2705 \u5728\u5F39\u51FA\u6846\u4E2D\u627E\u5230\u786E\u5B9A\u6309\u94AE: ${O}`),await w.click(),await e.waitForTimeout(1e3),console.log("   \u2705 \u5DF2\u70B9\u51FB\u786E\u5B9A\u6309\u94AE"),n=!0;break}}catch{continue}if(n)break}}catch{continue}}if(!n){console.log("   \u5C1D\u8BD5\u5168\u5C40\u641C\u7D22\u786E\u5B9A\u6309\u94AE...");let l=['button:has-text("\u786E\u5B9A")','button:has-text("\u786E\u8BA4")',".cheetah-btn-primary"];for(let c of l)try{let g=await e.$(c);if(g&&await g.isVisible()){let p=await g.textContent();console.log(`   \u2705 \u627E\u5230\u786E\u5B9A\u6309\u94AE: ${p}`),await g.click(),await e.waitForTimeout(1e3),console.log("   \u2705 \u5DF2\u70B9\u51FB\u786E\u5B9A\u6309\u94AE"),n=!0;break}}catch{continue}}n||console.warn("   \u26A0\uFE0F \u672A\u627E\u5230\u786E\u5B9A\u6309\u94AE");return}catch(o){console.warn("   \u26A0\uFE0F \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:",o instanceof Error?o.message:String(o))}}async fillSummary(t){let e=this.browserManager.getPage();if(e)try{console.log("   \u67E5\u627E\u6458\u8981\u8F93\u5165\u6846..."),await e.waitForTimeout(500);let o=["textarea.cheetah-ui-pro-countable-textbox-textarea",'textarea[placeholder="\u8BF7\u8F93\u5165\u6458\u8981"]','textarea[placeholder*="\u6458\u8981"]',".cheetah-ui-pro-countable-textbox-textarea"];for(let i of o)try{console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${i}`);let a=await e.$(i);if(a&&await a.isVisible()){let r=await a.getAttribute("placeholder");console.log(`   \u5143\u7D20 placeholder: ${r}`),console.log(`   \u2705 \u627E\u5230\u6458\u8981\u8F93\u5165\u6846: ${i}`),await a.click(),await e.waitForTimeout(300),await a.fill(""),await e.waitForTimeout(300),await a.fill(t),await e.waitForTimeout(500),console.log(`   \u2705 \u6458\u8981\u586B\u5199\u5B8C\u6210: ${t.substring(0,50)}...`);return}}catch{continue}try{console.log("   \u5C1D\u8BD5\u5907\u7528\u65B9\u6848\uFF1A\u67E5\u627E\u6240\u6709 textarea...");let i=await e.$$("textarea");for(let a of i)if(await a.isVisible()&&(await a.getAttribute("placeholder"))?.includes("\u6458\u8981")){console.log("   \u2705 \u901A\u8FC7\u5907\u7528\u65B9\u6848\u627E\u5230\u6458\u8981\u8F93\u5165\u6846"),await a.click(),await e.waitForTimeout(300),await a.fill(""),await e.waitForTimeout(300),await a.fill(t),await e.waitForTimeout(500),console.log(`   \u2705 \u6458\u8981\u586B\u5199\u5B8C\u6210: ${t.substring(0,50)}...`);return}}catch{}console.warn("   \u274C \u672A\u627E\u5230\u6458\u8981\u8F93\u5165\u6846")}catch(o){console.warn("   \u26A0\uFE0F \u6458\u8981\u586B\u5199\u5931\u8D25:",o instanceof Error?o.message:String(o))}}async selectCategory(t){let e=this.browserManager.getPage();if(e)try{console.log("   \u67E5\u627E\u5206\u7C7B\u9009\u62E9\u5668..."),await e.waitForTimeout(500);let o=t.split(/[\/>]/).map(i=>i.trim()).filter(i=>i);console.log(`   \u5206\u7C7B\u5C42\u7EA7: ${o.join(" > ")}`);try{let i=await e.$$(".cheetah-select-selector");console.log(`   \u627E\u5230 ${i.length} \u4E2A cheetah-select-selector \u5143\u7D20`);for(let a of i){let s=await a.textContent();if(console.log(`   \u9009\u62E9\u5668\u6587\u672C: ${s?.substring(0,50)}`),s?.includes("\u5185\u5BB9\u5206\u7C7B")||s?.includes("\u5206\u7C7B")){console.log("   \u627E\u5230\u5206\u7C7B\u9009\u62E9\u5668"),await a.click(),await e.waitForTimeout(800);for(let r=0;r<o.length;r++){let n=o[r];console.log(`   \u9009\u62E9\u7B2C ${r+1} \u7EA7\u5206\u7C7B: ${n}`),await e.waitForTimeout(500);let l=[".cheetah-cascader-menu",'[class*="cascader-menu"]',".cheetah-select-dropdown"],c=!1;for(let g of l){let f=await e.$$(g);console.log(`   \u627E\u5230 ${f.length} \u4E2A\u83DC\u5355\u5217`);let p=f[r]||f[f.length-1];if(p){let y=await p.$$('[class*="menu-item"], [class*="option"], li');console.log(`   \u7B2C ${r+1} \u5217\u6709 ${y.length} \u4E2A\u9009\u9879`);for(let w of y){let $=await w.textContent();if($?.includes(n)){console.log(`   \u627E\u5230\u5339\u914D\u9009\u9879: ${$}`),await w.click(),await e.waitForTimeout(500),c=!0;break}}}if(c)break}if(!c){console.log(`   \u5C1D\u8BD5\u5907\u7528\u65B9\u6848\u67E5\u627E: ${n}`);let g=await e.$$('[class*="cascader-menu-item"], [class*="select-option"], [class*="option"], li');for(let f of g){let p=await f.textContent();if(p?.trim()===n||p?.includes(n)){console.log(`   \u627E\u5230\u5339\u914D\u9009\u9879: ${p}`),await f.click(),await e.waitForTimeout(500),c=!0;break}}}if(!c){console.warn(`   \u26A0\uFE0F \u672A\u627E\u5230\u7B2C ${r+1} \u7EA7\u5206\u7C7B: ${n}`);break}}console.log(`   \u2705 \u5206\u7C7B\u9009\u62E9\u5B8C\u6210: ${o.join(" > ")}`);return}}}catch(i){console.log("   \u65B9\u6CD51\u5931\u8D25:",i)}try{let i=await e.$$(".cheetah-form-item");for(let a of i)if((await a.$eval(".cheetah-form-item-label",r=>r.textContent).catch(()=>""))?.includes("\u5206\u7C7B")){console.log("   \u627E\u5230\u5206\u7C7B\u8868\u5355\u9879");let r=await a.$(".cheetah-select-selector");if(r){await r.click(),await e.waitForTimeout(800);for(let n=0;n<o.length;n++){let l=o[n];console.log(`   \u9009\u62E9\u7B2C ${n+1} \u7EA7\u5206\u7C7B: ${l}`),await e.waitForTimeout(500);let c=await e.$$('[class*="cascader-menu-item"], [class*="select-option"], li');for(let g of c)if((await g.textContent())?.includes(l)){await g.click(),await e.waitForTimeout(500);break}}console.log(`   \u2705 \u5206\u7C7B\u9009\u62E9\u5B8C\u6210: ${o.join(" > ")}`);return}}}catch{}console.warn("   \u274C \u672A\u627E\u5230\u5206\u7C7B\u9009\u62E9\u5668")}catch(o){console.warn("   \u26A0\uFE0F \u5206\u7C7B\u9009\u62E9\u5931\u8D25:",o instanceof Error?o.message:String(o))}}async setTags(t){let e=this.browserManager.getPage();if(e)try{console.log("   \u67E5\u627E\u6807\u7B7E\u8F93\u5165\u6846..."),await e.waitForTimeout(500);let o=['input[placeholder*="\u6807\u7B7E"]','input[placeholder*="\u5173\u952E\u8BCD"]','input[placeholder*="tag"]',".tag-input input",'[class*="tag"] input'];for(let i of o)try{console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${i}`);let a=await e.$(i);if(a&&await a.isVisible()){console.log(`   \u2705 \u627E\u5230\u6807\u7B7E\u8F93\u5165\u6846: ${i}`);for(let r of t.slice(0,5))await a.click(),await e.waitForTimeout(300),await a.fill(r),await e.waitForTimeout(500),await e.keyboard.press("Enter"),await e.waitForTimeout(500);console.log(`   \u2705 \u6807\u7B7E\u8BBE\u7F6E\u5B8C\u6210: ${t.slice(0,5).join(", ")}`);return}}catch{continue}console.warn("   \u274C \u672A\u627E\u5230\u6807\u7B7E\u8F93\u5165\u6846")}catch(o){console.warn("   \u26A0\uFE0F \u6807\u7B7E\u8BBE\u7F6E\u5931\u8D25:",o instanceof Error?o.message:String(o))}}async clickPublish(){let t=this.browserManager.getPage();if(!t)return;let e=['button:has-text("\u53D1\u5E03")',".publish-btn",'[class*="publish"]:not([class*="draft"])','button[type="submit"]',".submit-btn"];for(let o of e)try{console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${o}`);let i=await t.$(o);if(i&&await i.isVisible()){console.log(`   \u2705 \u627E\u5230\u53D1\u5E03\u6309\u94AE: ${o}`),await i.click(),await t.waitForTimeout(3e3),console.log("   \u2705 \u5DF2\u70B9\u51FB\u53D1\u5E03\u6309\u94AE");return}}catch{continue}console.warn("   \u26A0\uFE0F \u672A\u627E\u5230\u53D1\u5E03\u6309\u94AE")}async getArticleUrl(){let t=this.browserManager.getPage();if(!t)return null;try{await t.waitForTimeout(2e3);let e=t.url();return e.includes("baijiahao.baidu.com/")?e:null}catch{return null}}};var S=class extends h{constructor(){super("toutiao")}async publish(t,e=!1){try{console.log("\u{1F680} \u5F00\u59CB\u53D1\u5E03\u6587\u7AE0\u5230\u5934\u6761\u53F7..."),e&&console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u6587\u7AE0\u4F46\u4E0D\u53D1\u5E03"),await this.browserManager.launch();let o=this.browserManager.getPage();if(!o)throw new Error("Page not initialized");if(console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762..."),await this.browserManager.gotoPublishPage(),await o.waitForTimeout(2e3),this.browserManager.isOnLoginPage()){if(console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B..."),console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55\u5934\u6761\u53F7..."),!await this.browserManager.waitForLogin(12e4))return await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"};console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B..."),await this.browserManager.gotoPublishPage(),await o.waitForTimeout(2e3)}if(console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u6807\u9898..."),await this.fillTitle(t.title),console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u5185\u5BB9..."),await this.fillContent(t.content),t.coverImage&&(console.log("\u{1F5BC}\uFE0F \u4E0A\u4F20\u5C01\u9762\u56FE\u7247..."),await this.uploadCover(t.coverImage)),t.tags&&t.tags.length>0&&(console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E..."),await this.setTags(t.tags)),e){console.log(""),console.log("==========================================="),console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01"),console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("==========================================="),console.log("");let a=`./test-screenshot-toutiao-${Date.now()}.png`;return await this.screenshot(a),console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${a}`),await this.browserManager.saveCookies(),console.log(""),console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3"),console.log(""),{success:!0,platform:this.platform,message:"\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",testMode:!0}}console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE..."),await this.clickPublish();let i=await this.getArticleUrl();return await this.browserManager.saveCookies(),await this.browserManager.close(),{success:!0,platform:this.platform,message:"\u6587\u7AE0\u53D1\u5E03\u6210\u529F",url:i||void 0}}catch(o){return await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u53D1\u5E03\u5931\u8D25",error:o instanceof Error?o.message:String(o)}}}async fillTitle(t){let e=this.browserManager.getPage();if(!e)return;let o=['input[placeholder*="\u6807\u9898"]',".article-title input",'input[class*="title"]','input[name="title"]'],i=null;for(let a of o)try{if(i=await e.$(a),i){console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${a}`);break}}catch{continue}i?(await i.click(),await i.fill(t),console.log(`   \u6807\u9898: ${t}`)):console.warn("   \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846")}async fillContent(t){let e=this.browserManager.getPage();if(!e)return;let o=[".ql-editor",'[contenteditable="true"]',".editor-content","#editor"],i=null;for(let a of o)try{if(i=await e.$(a),i){console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${a}`);break}}catch{continue}i?(await i.click(),await e.waitForTimeout(500),await i.fill(""),await e.keyboard.type(t,{delay:10}),console.log(`   \u5185\u5BB9\u957F\u5EA6: ${t.length} \u5B57\u7B26`)):console.warn("   \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668")}async uploadCover(t){let e=this.browserManager.getPage();if(e)try{await e.setInputFiles('input[type="file"][accept*="image"], .cover-upload input',t),await e.waitForTimeout(2e3),console.log(`   \u5C01\u9762\u56FE\u7247: ${t}`)}catch(o){console.warn("   \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:",o)}}async setTags(t){let e=this.browserManager.getPage();if(e)try{let o='input[placeholder*="\u6807\u7B7E"], input[placeholder*="\u8BDD\u9898"], .tag-input input';await e.waitForSelector(o,{timeout:5e3});for(let i of t.slice(0,3))await e.fill(o,i),await e.waitForTimeout(500),await e.keyboard.press("Enter"),await e.waitForTimeout(500);console.log(`   \u6807\u7B7E: ${t.slice(0,3).join(", ")}`)}catch(o){console.warn("   \u6807\u7B7E\u8BBE\u7F6E\u5931\u8D25:",o)}}async clickPublish(){let t=this.browserManager.getPage();if(!t)return;let e='button:has-text("\u53D1\u5E03"), .publish-btn, [class*="publish"]';await t.waitForSelector(e,{timeout:1e4}),await t.click(e),await t.waitForTimeout(3e3)}async getArticleUrl(){let t=this.browserManager.getPage();if(!t)return null;try{await t.waitForTimeout(2e3);let e=t.url();return e.includes("toutiao.com/")?e:null}catch{return null}}};var A=class extends h{constructor(){super("xiaohongshu")}async publish(t,e=!1){try{console.log("\u{1F680} \u5F00\u59CB\u53D1\u5E03\u7B14\u8BB0\u5230\u5C0F\u7EA2\u4E66..."),e&&console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u7B14\u8BB0\u4F46\u4E0D\u53D1\u5E03"),await this.browserManager.launch();let o=this.browserManager.getPage();if(!o)throw new Error("Page not initialized");if(console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762..."),await this.browserManager.gotoPublishPage(),await o.waitForTimeout(2e3),this.browserManager.isOnLoginPage()){if(console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B..."),console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55\u5C0F\u7EA2\u4E66..."),!await this.browserManager.waitForLogin(12e4))return await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"};console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B..."),await this.browserManager.gotoPublishPage(),await o.waitForTimeout(2e3)}if(console.log("\u{1F4DD} \u586B\u5145\u7B14\u8BB0\u6807\u9898..."),await this.fillTitle(t.title),console.log("\u{1F4DD} \u586B\u5145\u7B14\u8BB0\u5185\u5BB9..."),await this.fillContent(t.content),t.coverImage&&(console.log("\u{1F5BC}\uFE0F \u4E0A\u4F20\u5C01\u9762\u56FE\u7247..."),await this.uploadCover(t.coverImage)),t.tags&&t.tags.length>0&&(console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E..."),await this.setTags(t.tags)),e){console.log(""),console.log("==========================================="),console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u7B14\u8BB0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01"),console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("==========================================="),console.log("");let a=`./test-screenshot-xiaohongshu-${Date.now()}.png`;return await this.screenshot(a),console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${a}`),await this.browserManager.saveCookies(),console.log(""),console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9"),console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3"),console.log(""),{success:!0,platform:this.platform,message:"\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u7B14\u8BB0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",testMode:!0}}console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE..."),await this.clickPublish();let i=await this.getArticleUrl();return await this.browserManager.saveCookies(),await this.browserManager.close(),{success:!0,platform:this.platform,message:"\u7B14\u8BB0\u53D1\u5E03\u6210\u529F",url:i||void 0}}catch(o){return await this.browserManager.close(),{success:!1,platform:this.platform,message:"\u53D1\u5E03\u5931\u8D25",error:o instanceof Error?o.message:String(o)}}}async fillTitle(t){let e=this.browserManager.getPage();if(!e)return;let o=['input[placeholder*="\u6807\u9898"]',".title-input input",'input[class*="title"]','input[name="title"]'],i=null;for(let a of o)try{if(i=await e.$(a),i){console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${a}`);break}}catch{continue}i?(await i.click(),await i.fill(t),console.log(`   \u6807\u9898: ${t}`)):console.warn("   \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846")}async fillContent(t){let e=this.browserManager.getPage();if(!e)return;let o=["#post-textarea",'[contenteditable="true"]',".editor-content",'textarea[placeholder*="\u6B63\u6587"]'],i=null;for(let a of o)try{if(i=await e.$(a),i){console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${a}`);break}}catch{continue}i?(await i.click(),await e.waitForTimeout(500),await i.fill(""),await e.keyboard.type(t,{delay:10}),console.log(`   \u5185\u5BB9\u957F\u5EA6: ${t.length} \u5B57\u7B26`)):console.warn("   \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668")}async uploadCover(t){let e=this.browserManager.getPage();if(e)try{await e.setInputFiles('input[type="file"][accept*="image"], .upload-input input',t),await e.waitForTimeout(3e3),console.log(`   \u5C01\u9762\u56FE\u7247: ${t}`)}catch(o){console.warn("   \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:",o)}}async setTags(t){let e=this.browserManager.getPage();if(e)try{let o='input[placeholder*="\u8BDD\u9898"], input[placeholder*="\u6807\u7B7E"], .tag-input input';await e.waitForSelector(o,{timeout:5e3});for(let i of t.slice(0,3))await e.fill(o,"#"+i),await e.waitForTimeout(500),await e.keyboard.press("Enter"),await e.waitForTimeout(500);console.log(`   \u6807\u7B7E: ${t.slice(0,3).join(", ")}`)}catch(o){console.warn("   \u6807\u7B7E\u8BBE\u7F6E\u5931\u8D25:",o)}}async clickPublish(){let t=this.browserManager.getPage();if(!t)return;let e='button:has-text("\u53D1\u5E03"), .publish-btn, [class*="publish"]';await t.waitForSelector(e,{timeout:1e4}),await t.click(e),await t.waitForTimeout(3e3)}async getArticleUrl(){let t=this.browserManager.getPage();if(!t)return null;try{await t.waitForTimeout(2e3);let e=t.url();return e.includes("xiaohongshu.com/")?e:null}catch{return null}}};var yt={zhihu:()=>new C,bilibili:()=>new I,baijiahao:()=>new M,toutiao:()=>new S,xiaohongshu:()=>new A};function z(u){let t=yt[u];if(!t)throw new Error(`Unknown platform: ${u}`);return t()}var d={title:`\u6D4B\u8BD5\u6587\u7AE0 - ${new Date().toLocaleString("zh-CN")}`,content:`\u8FD9\u662F\u4E00\u7BC7\u6D4B\u8BD5\u6587\u7AE0\uFF0C\u7528\u4E8E\u9A8C\u8BC1\u53D1\u5E03\u529F\u80FD\u662F\u5426\u6B63\u5E38\u5DE5\u4F5C\u3002
+- \u6807\u9898"\u7F8E\u98DF\u63A2\u5E97\u8BB0\u5F55" -> "food restaurant dining cuisine"`;
+var AI_PROVIDERS = {
+  kimi: {
+    name: "Kimi",
+    url: "https://api.moonshot.cn/v1/chat/completions",
+    defaultModel: "moonshot-v1-8k"
+  },
+  deepseek: {
+    name: "DeepSeek",
+    url: "https://api.deepseek.com/v1/chat/completions",
+    defaultModel: "deepseek-chat"
+  },
+  zhipu: {
+    name: "\u667A\u8C31 AI",
+    url: "https://open.bigmodel.cn/api/paas/v4/chat/completions",
+    defaultModel: "glm-4-flash"
+  }
+};
+async function callAIProvider(provider, apiKey, model, prompt) {
+  const providerInfo = AI_PROVIDERS[provider];
+  try {
+    const response = await fetch(providerInfo.url, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${apiKey}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages: [{ role: "user", content: prompt }],
+        temperature: 0.3,
+        max_tokens: 50
+      })
+    });
+    if (!response.ok) {
+      console.error(`${providerInfo.name} \u8C03\u7528\u5931\u8D25:`, response.status);
+      return null;
+    }
+    const result = await response.json();
+    const keywords = result.choices?.[0]?.message?.content?.trim();
+    if (keywords) {
+      console.log(`\u{1F916} ${providerInfo.name} \u63D0\u53D6\u5173\u952E\u8BCD\uFF1A${keywords}`);
+      return keywords;
+    }
+    return null;
+  } catch (error) {
+    console.error(`${providerInfo.name} \u8C03\u7528\u5931\u8D25:`, error);
+    return null;
+  }
+}
+async function extractKeywordsByAI(title, content = "") {
+  const cfg = loadConfig();
+  const aiConfig = cfg?.ai;
+  if (!aiConfig) {
+    return null;
+  }
+  const prompt = AI_PROMPT_TEMPLATE.replace("{title}", title).replace("{content}", content.slice(0, 500) || "\u65E0");
+  const priority = cfg?.aiPriority || ["kimi", "deepseek", "zhipu"];
+  for (const provider of priority) {
+    const providerConfig = aiConfig[provider];
+    if (!providerConfig?.apiKey || providerConfig.apiKey === "YOUR_KIMI_API_KEY" || providerConfig.apiKey === "YOUR_DEEPSEEK_API_KEY" || providerConfig.apiKey === "YOUR_ZHIPU_API_KEY" || providerConfig.enabled === false) {
+      continue;
+    }
+    const model = providerConfig.model || AI_PROVIDERS[provider].defaultModel;
+    const keywords = await callAIProvider(provider, providerConfig.apiKey, model, prompt);
+    if (keywords) {
+      return keywords;
+    }
+  }
+  return null;
+}
+var KEYWORD_MAP = {
+  "ai": "artificial intelligence",
+  "\u4EBA\u5DE5\u667A\u80FD": "artificial intelligence",
+  "\u7F16\u7A0B": "programming coding",
+  "\u4EE3\u7801": "coding programming",
+  "\u56FE\u7247": "image technology",
+  "\u622A\u56FE": "screenshot technology",
+  "\u6309\u94AE": "button interface",
+  "\u754C\u9762": "interface ui",
+  "\u5546\u4E1A": "business",
+  "\u4F1A\u8BAE": "meeting",
+  "\u5199\u4F5C": "writing",
+  "\u8BFB\u4E66": "reading books",
+  "\u81EA\u7136": "nature",
+  "\u98CE\u666F": "landscape",
+  "\u73A9\u5177": "smart toys technology",
+  "\u4EA7\u4E1A": "industry technology",
+  "\u79D1\u6280": "technology",
+  "\u65B0\u4EAE\u70B9": "innovation technology",
+  "\u7F8E\u98DF": "food cuisine",
+  "\u65C5\u6E38": "travel tourism",
+  "\u5065\u8EAB": "fitness exercise",
+  "\u97F3\u4E50": "music",
+  "\u7535\u5F71": "movie film",
+  "\u6E38\u620F": "game gaming",
+  "\u6559\u80B2": "education learning",
+  "\u91D1\u878D": "finance business",
+  "\u533B\u7597": "medical health",
+  "\u6C7D\u8F66": "car automotive",
+  "\u623F\u4EA7": "real estate house",
+  "\u65F6\u5C1A": "fashion style",
+  "\u80B2\u513F": "parenting family",
+  "\u5BA0\u7269": "pet animal",
+  "\u804C\u573A": "workplace career",
+  "\u5FC3\u7406": "psychology mind",
+  "\u5386\u53F2": "history",
+  "\u6587\u5316": "culture",
+  "\u4F53\u80B2": "sports",
+  "\u65B0\u95FB": "news media"
+};
+function extractKeywordsLocal(title) {
+  const titleLower = title.toLowerCase();
+  const keywords = [];
+  for (const [cn, en] of Object.entries(KEYWORD_MAP)) {
+    if (titleLower.includes(cn) || title.includes(cn)) {
+      if (!keywords.includes(en)) {
+        keywords.push(en);
+      }
+    }
+  }
+  if (keywords.length > 0) {
+    return keywords.slice(0, 3).join(" ");
+  }
+  if (/[\u4e00-\u9fff]/.test(title)) {
+    return "technology innovation";
+  }
+  return title;
+}
+async function extractKeywords(title, content = "") {
+  const aiKeywords = await extractKeywordsByAI(title, content);
+  if (aiKeywords) {
+    return aiKeywords;
+  }
+  console.log("\u{1F4CC} \u4F7F\u7528\u672C\u5730\u5173\u952E\u8BCD\u63D0\u53D6...");
+  return extractKeywordsLocal(title);
+}
+async function getCoverForArticle(params) {
+  const {
+    title = "",
+    contentPreview = "",
+    keywords,
+    orientation = "landscape",
+    size = "large2x"
+  } = params;
+  const apiKey = getPexelsApiKey();
+  if (!apiKey) {
+    console.error("\u274C Pexels API Key \u672A\u914D\u7F6E");
+    return null;
+  }
+  let finalKeywords;
+  if (keywords) {
+    finalKeywords = keywords;
+    console.log("\u{1F4DD} \u4F7F\u7528\u5916\u90E8\u63D0\u4F9B\u7684\u5173\u952E\u8BCD");
+  } else {
+    finalKeywords = await extractKeywords(title, contentPreview);
+    console.log(`\u{1F4DD} \u6587\u7AE0\u4E3B\u9898\uFF1A${title}`);
+  }
+  console.log(`\u{1F50D} \u641C\u7D22\u5173\u952E\u8BCD\uFF1A${finalKeywords}`);
+  const searchParams = new URLSearchParams({
+    query: finalKeywords,
+    orientation,
+    size: "large",
+    per_page: "5",
+    page: "1"
+  });
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3e4);
+    const response = await fetch(`https://api.pexels.com/v1/search?${searchParams}`, {
+      headers: {
+        "Authorization": apiKey
+      },
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!response.ok) {
+      console.error("Pexels API \u8C03\u7528\u5931\u8D25:", response.status);
+      return null;
+    }
+    const data = await response.json();
+    const photos = data.photos;
+    if (!photos || photos.length === 0) {
+      console.log("\u26A0\uFE0F \u672A\u627E\u5230\u76F8\u5173\u56FE\u7247\uFF0C\u4F7F\u7528\u5907\u7528\u5173\u952E\u8BCD\u91CD\u8BD5...");
+      return getCoverWithFallback("technology", orientation, size);
+    }
+    console.log(`
+\u2705 \u627E\u5230 ${photos.length} \u5F20\u5019\u9009\u5C01\u9762\u56FE\uFF1A
+`);
+    photos.forEach((photo, i) => {
+      console.log(`\u9009\u9879 ${i + 1}:`);
+      console.log(`  \u{1F4F8} \u6444\u5F71\u5E08\uFF1A${photo.photographer}`);
+      console.log(`  \u{1F5BC}\uFE0F  \u9884\u89C8\uFF1A${photo.src.medium}`);
+      console.log(`  \u{1F517} \u9AD8\u6E05\u56FE\uFF1A${photo.src[size]}`);
+      console.log();
+    });
+    const selected = photos[0];
+    console.log(`\u{1F3AF} \u5DF2\u9009\u62E9\u9ED8\u8BA4\u5C01\u9762\uFF08ID: ${selected.id}\uFF09`);
+    return selected.src[size] || null;
+  } catch (error) {
+    if (error instanceof Error && error.name === "AbortError") {
+      console.error("\u274C API \u8C03\u7528\u8D85\u65F6\uFF0830\u79D2\uFF09");
+    } else {
+      console.error("\u274C API \u8C03\u7528\u5931\u8D25:", error);
+    }
+    return null;
+  }
+}
+async function getCoverWithFallback(keyword, orientation, size) {
+  const apiKey = getPexelsApiKey();
+  if (!apiKey) {
+    return null;
+  }
+  const params = new URLSearchParams({
+    query: keyword,
+    orientation,
+    per_page: "1"
+  });
+  try {
+    const response = await fetch(`https://api.pexels.com/v1/search?${params}`, {
+      headers: {
+        "Authorization": apiKey
+      }
+    });
+    const data = await response.json();
+    if (data.photos && data.photos.length > 0) {
+      return data.photos[0].src[size] || null;
+    }
+  } catch {
+  }
+  return null;
+}
+
+// src/adapters/zhihu.ts
+import { tmpdir } from "os";
+import { join } from "path";
+import { writeFileSync, unlinkSync, existsSync } from "fs";
+import { createHash } from "crypto";
+var ZhihuAdapter = class extends BaseAdapter {
+  tempFiles = [];
+  constructor() {
+    super("zhihu");
+  }
+  /**
+   * 从 URL 下载图片到临时文件
+   */
+  async downloadImageToTemp(imageUrl) {
+    try {
+      console.log(`   \u{1F4E5} \u6B63\u5728\u4E0B\u8F7D\u5C01\u9762\u56FE\u7247...`);
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5931\u8D25: HTTP ${response.status}`);
+        return null;
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const hash = createHash("md5").update(imageUrl).digest("hex").slice(0, 8);
+      const ext = imageUrl.includes(".png") ? "png" : "jpg";
+      const tempPath = join(tmpdir(), `cover-${hash}.${ext}`);
+      writeFileSync(tempPath, buffer);
+      this.tempFiles.push(tempPath);
+      console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0B\u8F7D: ${tempPath}`);
+      return tempPath;
+    } catch (error) {
+      console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5C01\u9762\u56FE\u7247\u5931\u8D25: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }
+  /**
+   * 清理临时文件
+   */
+  cleanupTempFiles() {
+    for (const file of this.tempFiles) {
+      try {
+        if (existsSync(file)) {
+          unlinkSync(file);
+        }
+      } catch {
+      }
+    }
+    this.tempFiles = [];
+  }
+  /**
+   * 发布文章到知乎
+   * @param article 文章内容
+   * @param testMode 测试模式，为true时不点击发布按钮
+   */
+  async publish(article, testMode = false) {
+    try {
+      console.log(`\u{1F680} \u5F00\u59CB\u53D1\u5E03\u6587\u7AE0\u5230\u77E5\u4E4E...`);
+      if (testMode) {
+        console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u6587\u7AE0\u4F46\u4E0D\u53D1\u5E03");
+      }
+      await this.browserManager.launch();
+      const page = this.browserManager.getPage();
+      if (!page) {
+        throw new Error("Page not initialized");
+      }
+      console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762...");
+      await this.browserManager.gotoPublishPage();
+      await page.waitForTimeout(2e3);
+      if (this.browserManager.isOnLoginPage()) {
+        console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B...");
+        console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55\u77E5\u4E4E...");
+        const loginSuccess = await this.browserManager.waitForLogin(12e4);
+        if (!loginSuccess) {
+          await this.browserManager.close();
+          return {
+            success: false,
+            platform: this.platform,
+            message: "\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"
+          };
+        }
+        console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B...");
+        await this.browserManager.gotoPublishPage();
+        await page.waitForTimeout(2e3);
+      }
+      console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u6807\u9898...");
+      await this.fillTitle(article.title);
+      console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u5185\u5BB9...");
+      await this.fillContent(article.content);
+      let coverImagePath = null;
+      if (article.coverImage) {
+        console.log("\u{1F5BC}\uFE0F \u4F7F\u7528\u7528\u6237\u63D0\u4F9B\u7684\u5C01\u9762\u56FE\u7247...");
+        if (article.coverImage.startsWith("http")) {
+          coverImagePath = await this.downloadImageToTemp(article.coverImage);
+        } else {
+          coverImagePath = article.coverImage;
+        }
+      } else {
+        console.log("\u{1F5BC}\uFE0F \u672A\u63D0\u4F9B\u5C01\u9762\u56FE\u7247\uFF0C\u6B63\u5728\u81EA\u52A8\u751F\u6210...");
+        const coverUrl = await getCoverForArticle({
+          title: article.title,
+          contentPreview: article.content,
+          orientation: "landscape",
+          size: "large2x"
+        });
+        if (coverUrl) {
+          coverImagePath = await this.downloadImageToTemp(coverUrl);
+        } else {
+          console.warn("   \u26A0\uFE0F \u5C01\u9762\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF0C\u5C06\u4E0D\u8BBE\u7F6E\u5C01\u9762");
+        }
+      }
+      if (coverImagePath) {
+        console.log("\u{1F4E4} \u4E0A\u4F20\u5C01\u9762\u56FE\u7247...");
+        await this.uploadCover(coverImagePath);
+      }
+      if (article.tags && article.tags.length > 0) {
+        console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E...");
+        await this.setTags(article.tags);
+      }
+      if (testMode) {
+        console.log("");
+        console.log("===========================================");
+        console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01");
+        console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("===========================================");
+        console.log("");
+        const screenshotPath = `./test-screenshot-zhihu-${Date.now()}.png`;
+        await this.screenshot(screenshotPath);
+        console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${screenshotPath}`);
+        await this.browserManager.saveCookies();
+        console.log("");
+        console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3");
+        console.log("");
+        return {
+          success: true,
+          platform: this.platform,
+          message: "\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",
+          testMode: true
+        };
+      }
+      console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE...");
+      await this.clickPublish();
+      const articleUrl = await this.getArticleUrl();
+      await this.browserManager.saveCookies();
+      await this.browserManager.close();
+      this.cleanupTempFiles();
+      return {
+        success: true,
+        platform: this.platform,
+        message: "\u6587\u7AE0\u53D1\u5E03\u6210\u529F",
+        url: articleUrl || void 0
+      };
+    } catch (error) {
+      this.cleanupTempFiles();
+      await this.browserManager.close();
+      return {
+        success: false,
+        platform: this.platform,
+        message: "\u53D1\u5E03\u5931\u8D25",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  /**
+   * 填充标题
+   */
+  async fillTitle(title) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const titleSelectors = [
+      'textarea[placeholder*="\u6807\u9898"]',
+      'textarea[placeholder*="\u8F93\u5165\u6807\u9898"]',
+      ".WriteIndex-titleInput textarea",
+      ".title-input textarea",
+      'textarea[class*="title"]',
+      "textarea.Input",
+      'input[placeholder*="\u8F93\u5165\u6807\u9898"]',
+      'input[placeholder*="\u6807\u9898"]'
+    ];
+    let titleInput = null;
+    for (const selector of titleSelectors) {
+      try {
+        titleInput = await page.$(selector);
+        if (titleInput) {
+          console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846\uFF0C\u4F7F\u7528\u9009\u62E9\u5668: ${selector}`);
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+    if (!titleInput) {
+      console.log("   \u26A0\uFE0F \u9884\u8BBE\u9009\u62E9\u5668\u672A\u627E\u5230\uFF0C\u5C1D\u8BD5\u67E5\u627E\u6240\u6709 textarea/input \u5143\u7D20...");
+      const textareas = await page.$$("textarea");
+      const inputs = await page.$$('input[type="text"], input:not([type])');
+      console.log(`   \u{1F4CB} \u9875\u9762\u5171\u6709 ${textareas.length} \u4E2Atextarea, ${inputs.length} \u4E2Ainput\u5143\u7D20`);
+      for (const textarea of textareas) {
+        const placeholder = await textarea.getAttribute("placeholder");
+        if (placeholder?.includes("\u6807\u9898")) {
+          titleInput = textarea;
+          console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846(textarea): placeholder="${placeholder}"`);
+          break;
+        }
+      }
+      if (!titleInput) {
+        for (const input of inputs) {
+          const placeholder = await input.getAttribute("placeholder");
+          const className = await input.getAttribute("class");
+          if (placeholder?.includes("\u6807\u9898") || className?.toLowerCase().includes("title")) {
+            titleInput = input;
+            console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846(input): placeholder="${placeholder}", class="${className}"`);
+            break;
+          }
+        }
+      }
+    }
+    if (titleInput) {
+      await titleInput.click();
+      await titleInput.fill(title);
+      console.log(`   \u{1F4DD} \u6807\u9898\u5DF2\u586B\u5145: ${title}`);
+    } else {
+      console.error("   \u274C \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846\uFF0C\u5C1D\u8BD5\u4F7F\u7528\u952E\u76D8\u8F93\u5165\u4F5C\u4E3A\u540E\u5907\u65B9\u6848...");
+      await page.keyboard.type(title);
+      console.log(`   \u26A0\uFE0F \u6807\u9898\u5DF2\u901A\u8FC7\u952E\u76D8\u8F93\u5165: ${title}`);
+    }
+  }
+  /**
+   * 填充内容
+   */
+  async fillContent(content) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const contentSelectors = [
+      ".public-DraftEditor-content",
+      '.DraftEditor-editorContainer [contenteditable="true"]',
+      '[data-contents="true"]',
+      ".ql-editor",
+      '[contenteditable="true"]'
+    ];
+    let contentEditor = null;
+    for (const selector of contentSelectors) {
+      try {
+        contentEditor = await page.$(selector);
+        if (contentEditor) {
+          console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${selector}`);
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+    if (contentEditor) {
+      await contentEditor.click();
+      await page.waitForTimeout(500);
+      await contentEditor.fill("");
+      await page.keyboard.type(content, { delay: 10 });
+      console.log(`   \u5185\u5BB9\u957F\u5EA6: ${content.length} \u5B57\u7B26`);
+    } else {
+      console.warn("   \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668\uFF0C\u5C1D\u8BD5\u70B9\u51FB\u9875\u9762\u4E2D\u592E...");
+      const viewport = page.viewportSize();
+      if (viewport) {
+        await page.mouse.click(viewport.width / 2, viewport.height / 2);
+        await page.keyboard.type(content, { delay: 10 });
+        console.log(`   \u5185\u5BB9\u957F\u5EA6: ${content.length} \u5B57\u7B26`);
+      }
+    }
+  }
+  /**
+   * 上传封面 - 修复版，上传到右侧封面区域
+   */
+  async uploadCover(imagePath) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      console.log("   \u{1F50D} \u5BFB\u627E\u5C01\u9762\u4E0A\u4F20\u533A\u57DF...");
+      const coverInputSelectors = [
+        "input.UploadPicture-input",
+        'input[type="file"][accept*=".jpg"], input[type="file"][accept*=".png"]',
+        '.UploadPicture-wrapper input[type="file"]',
+        "label.UploadPicture-wrapper input"
+      ];
+      let uploadSuccess = false;
+      for (const selector of coverInputSelectors) {
+        try {
+          const input = await page.$(selector);
+          if (input) {
+            const isVisible = await input.isVisible().catch(() => false);
+            const isHidden = !isVisible;
+            console.log(`   \u627E\u5230\u5C01\u9762\u4E0A\u4F20\u8F93\u5165\u6846: ${selector} (visible: ${isVisible})`);
+            await input.setInputFiles(imagePath);
+            await page.waitForTimeout(2e3);
+            console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20\u5230\u5C01\u9762\u533A\u57DF: ${imagePath}`);
+            uploadSuccess = true;
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+      if (!uploadSuccess) {
+        const coverAreaSelectors = [
+          "label.UploadPicture-wrapper",
+          ".css-1i9x2dq",
+          "text=\u6DFB\u52A0\u6587\u7AE0\u5C01\u9762",
+          "text=\u6DFB\u52A0\u5C01\u9762"
+        ];
+        for (const selector of coverAreaSelectors) {
+          try {
+            const area = await page.$(selector);
+            if (area) {
+              console.log(`   \u627E\u5230\u5C01\u9762\u533A\u57DF: ${selector}`);
+              await area.click();
+              await page.waitForTimeout(1e3);
+              const input = await page.$('input[type="file"]');
+              if (input) {
+                await input.setInputFiles(imagePath);
+                await page.waitForTimeout(2e3);
+                console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20\uFF08\u70B9\u51FB\u540E\u4E0A\u4F20\uFF09: ${imagePath}`);
+                uploadSuccess = true;
+                break;
+              }
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+      if (!uploadSuccess) {
+        const allInputs = await page.$$('input[type="file"]');
+        console.log(`   \u{1F4CB} \u9875\u9762\u5171\u6709 ${allInputs.length} \u4E2A\u6587\u4EF6\u8F93\u5165\u6846`);
+        for (const input of allInputs) {
+          try {
+            const box = await input.boundingBox();
+            if (box) {
+              console.log(`   \u8F93\u5165\u6846\u4F4D\u7F6E: x=${box.x}, y=${box.y}, width=${box.width}, height=${box.height}`);
+              const viewport = page.viewportSize();
+              if (viewport && box.x > viewport.width / 2) {
+                await input.setInputFiles(imagePath);
+                await page.waitForTimeout(2e3);
+                console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20\uFF08\u901A\u8FC7\u4F4D\u7F6E\u5224\u65AD\uFF09: ${imagePath}`);
+                uploadSuccess = true;
+                break;
+              }
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+      if (!uploadSuccess) {
+        console.warn("   \u26A0\uFE0F \u672A\u80FD\u627E\u5230\u5C01\u9762\u4E0A\u4F20\u533A\u57DF\uFF0C\u8DF3\u8FC7\u5C01\u9762\u4E0A\u4F20");
+      }
+    } catch (error) {
+      console.warn("   \u26A0\uFE0F \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  /**
+   * 设置标签
+   */
+  async setTags(tags) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      const topicButtonSelectors = [
+        'button:has-text("\u8BDD\u9898")',
+        '[class*="topic"] button',
+        ".TopicSelectButton",
+        '[class*="TagButton"]'
+      ];
+      for (const selector of topicButtonSelectors) {
+        try {
+          const button = await page.$(selector);
+          if (button) {
+            await button.click();
+            await page.waitForTimeout(500);
+            console.log("   \u70B9\u51FB\u8BDD\u9898\u6309\u94AE\u5C55\u5F00");
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+      const tagInputSelectors = [
+        'input[placeholder*="\u641C\u7D22\u8BDD\u9898"]:visible',
+        'input[placeholder*="\u8BDD\u9898"]:visible',
+        'input[aria-label*="\u8BDD\u9898"]:visible',
+        ".TopicSelector input",
+        '[class*="topic"] input:visible'
+      ];
+      let tagInput = null;
+      for (const selector of tagInputSelectors) {
+        try {
+          tagInput = await page.$(selector);
+          if (tagInput) {
+            const isVisible = await tagInput.isVisible();
+            if (isVisible) {
+              console.log(`   \u627E\u5230\u8BDD\u9898\u8F93\u5165\u6846: ${selector}`);
+              break;
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+      if (!tagInput) {
+        console.warn("   \u672A\u627E\u5230\u53EF\u89C1\u7684\u8BDD\u9898\u8F93\u5165\u6846\uFF0C\u8DF3\u8FC7\u6807\u7B7E\u8BBE\u7F6E");
+        return;
+      }
+      for (const tag of tags.slice(0, 5)) {
+        await tagInput.fill(tag);
+        await page.waitForTimeout(800);
+        const dropdownSelectors = [
+          ".Popover-content button",
+          '[class*="Popover"] button',
+          ".css-ogem9c button"
+        ];
+        let dropdownVisible = false;
+        for (const dropdownSelector of dropdownSelectors) {
+          try {
+            const dropdown = await page.$(dropdownSelector);
+            if (dropdown) {
+              const isVisible = await dropdown.isVisible().catch(() => false);
+              if (isVisible) {
+                console.log(`   \u627E\u5230\u8BDD\u9898\u4E0B\u62C9\u6846\uFF0C\u70B9\u51FB\u7B2C\u4E00\u4E2A\u9009\u9879`);
+                await dropdown.click();
+                await page.waitForTimeout(500);
+                dropdownVisible = true;
+                break;
+              }
+            }
+          } catch {
+            continue;
+          }
+        }
+        if (!dropdownVisible) {
+          await page.keyboard.press("Enter");
+          await page.waitForTimeout(500);
+        }
+      }
+      console.log(`   \u6807\u7B7E: ${tags.slice(0, 5).join(", ")}`);
+    } catch (error) {
+      console.warn("   \u6807\u7B7E\u8BBE\u7F6E\u5931\u8D25\uFF0C\u8DF3\u8FC7:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  /**
+   * 点击发布
+   */
+  async clickPublish() {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const publishSelector = 'button:has-text("\u53D1\u5E03"), .publish-button, [class*="publish"]';
+    await page.waitForSelector(publishSelector, { timeout: 1e4 });
+    await page.click(publishSelector);
+    await page.waitForTimeout(3e3);
+  }
+  /**
+   * 获取文章链接
+   */
+  async getArticleUrl() {
+    const page = this.browserManager.getPage();
+    if (!page) return null;
+    try {
+      await page.waitForTimeout(2e3);
+      const url = page.url();
+      if (url.includes("zhuanlan.zhihu.com/p/")) {
+        return url;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+};
+
+// src/adapters/bilibili.ts
+import { tmpdir as tmpdir2 } from "os";
+import { join as join2 } from "path";
+import { writeFileSync as writeFileSync2, unlinkSync as unlinkSync2, existsSync as existsSync2 } from "fs";
+import { createHash as createHash2 } from "crypto";
+var BilibiliAdapter = class extends BaseAdapter {
+  tempFiles = [];
+  constructor() {
+    super("bilibili");
+  }
+  /**
+   * 获取Bilibili编辑器的iframe定位器
+   * Bilibili的发布页面使用iframe加载编辑器，所有编辑元素都在iframe中
+   */
+  getIframeLocator() {
+    const page = this.browserManager.getPage();
+    if (!page) {
+      throw new Error("Page not initialized");
+    }
+    return page.frameLocator('iframe[src*="member.bilibili.com/york/read-editor"]');
+  }
+  /**
+   * 从 URL 下载图片到临时文件
+   */
+  async downloadImageToTemp(imageUrl) {
+    try {
+      console.log(`   \u{1F4E5} \u6B63\u5728\u4E0B\u8F7D\u5C01\u9762\u56FE\u7247...`);
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5931\u8D25: HTTP ${response.status}`);
+        return null;
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const hash = createHash2("md5").update(imageUrl).digest("hex").slice(0, 8);
+      const ext = imageUrl.includes(".png") ? "png" : "jpg";
+      const tempPath = join2(tmpdir2(), `cover-${hash}.${ext}`);
+      writeFileSync2(tempPath, buffer);
+      this.tempFiles.push(tempPath);
+      console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0B\u8F7D: ${tempPath}`);
+      return tempPath;
+    } catch (error) {
+      console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5C01\u9762\u56FE\u7247\u5931\u8D25: ${error instanceof Error ? error.message : String(error)}`);
+      return null;
+    }
+  }
+  /**
+   * 清理临时文件
+   */
+  cleanupTempFiles() {
+    for (const file of this.tempFiles) {
+      try {
+        if (existsSync2(file)) {
+          unlinkSync2(file);
+        }
+      } catch {
+      }
+    }
+    this.tempFiles = [];
+  }
+  /**
+   * 发布文章到Bilibili
+   * @param article 文章内容
+   * @param testMode 测试模式，为true时不点击发布按钮
+   */
+  async publish(article, testMode = false) {
+    try {
+      console.log(`\u{1F680} \u5F00\u59CB\u53D1\u5E03\u6587\u7AE0\u5230Bilibili...`);
+      if (testMode) {
+        console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u6587\u7AE0\u4F46\u4E0D\u53D1\u5E03");
+      }
+      await this.browserManager.launch();
+      const page = this.browserManager.getPage();
+      if (!page) {
+        throw new Error("Page not initialized");
+      }
+      console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762...");
+      await this.browserManager.gotoPublishPage();
+      console.log("   \u7B49\u5F85\u9875\u9762\u52A0\u8F7D...");
+      await page.waitForTimeout(3e3);
+      if (this.browserManager.isOnLoginPage()) {
+        console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B...");
+        console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55Bilibili...");
+        const loginSuccess = await this.browserManager.waitForLogin(12e4);
+        if (!loginSuccess) {
+          await this.browserManager.close();
+          return {
+            success: false,
+            platform: this.platform,
+            message: "\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"
+          };
+        }
+        console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B...");
+        await this.browserManager.gotoPublishPage();
+        await page.waitForTimeout(3e3);
+      }
+      console.log("\u{1F50D} \u68C0\u67E5\u9875\u9762\u5143\u7D20...");
+      const currentUrl = page.url();
+      console.log(`   \u5F53\u524DURL: ${currentUrl}`);
+      console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u6807\u9898...");
+      await this.fillTitle(article.title);
+      console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u5185\u5BB9...");
+      await this.fillContent(article.content);
+      let coverImagePath = null;
+      if (article.coverImage) {
+        console.log("\u{1F5BC}\uFE0F \u4F7F\u7528\u7528\u6237\u63D0\u4F9B\u7684\u5C01\u9762\u56FE\u7247...");
+        if (article.coverImage.startsWith("http")) {
+          coverImagePath = await this.downloadImageToTemp(article.coverImage);
+        } else {
+          coverImagePath = article.coverImage;
+        }
+      } else {
+        console.log("\u{1F5BC}\uFE0F \u672A\u63D0\u4F9B\u5C01\u9762\u56FE\u7247\uFF0C\u6B63\u5728\u81EA\u52A8\u751F\u6210...");
+        const coverUrl = await getCoverForArticle({
+          title: article.title,
+          contentPreview: article.content,
+          orientation: "landscape",
+          size: "large2x"
+        });
+        if (coverUrl) {
+          coverImagePath = await this.downloadImageToTemp(coverUrl);
+        } else {
+          console.warn("   \u26A0\uFE0F \u5C01\u9762\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF0C\u5C06\u4E0D\u8BBE\u7F6E\u5C01\u9762");
+        }
+      }
+      if (coverImagePath) {
+        console.log("\u{1F4E4} \u4E0A\u4F20\u5C01\u9762\u56FE\u7247...");
+        await this.uploadCover(coverImagePath);
+      }
+      if (article.tags && article.tags.length > 0) {
+        console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E...");
+        await this.setTags(article.tags);
+      }
+      if (testMode) {
+        console.log("");
+        console.log("===========================================");
+        console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01");
+        console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("===========================================");
+        console.log("");
+        const screenshotPath = `./test-screenshot-bilibili-${Date.now()}.png`;
+        await this.screenshot(screenshotPath);
+        console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${screenshotPath}`);
+        await this.browserManager.saveCookies();
+        console.log("");
+        console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3");
+        console.log("");
+        return {
+          success: true,
+          platform: this.platform,
+          message: "\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",
+          testMode: true
+        };
+      }
+      console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE...");
+      await this.clickPublish();
+      const articleUrl = await this.getArticleUrl();
+      await this.browserManager.saveCookies();
+      await this.browserManager.close();
+      this.cleanupTempFiles();
+      return {
+        success: true,
+        platform: this.platform,
+        message: "\u6587\u7AE0\u53D1\u5E03\u6210\u529F",
+        url: articleUrl || void 0
+      };
+    } catch (error) {
+      this.cleanupTempFiles();
+      await this.browserManager.close();
+      return {
+        success: false,
+        platform: this.platform,
+        message: "\u53D1\u5E03\u5931\u8D25",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  /**
+   * 填充标题
+   */
+  async fillTitle(title) {
+    const page = this.browserManager.getPage();
+    if (!page) {
+      console.error("   \u274C \u672A\u83B7\u53D6\u5230\u6709\u6548\u9875\u9762");
+      return;
+    }
+    console.log("   \u7B49\u5F85iframe\u52A0\u8F7D...");
+    try {
+      const iframeLocator = this.getIframeLocator();
+      console.log("   \u7B49\u5F85\u6807\u9898\u8F93\u5165\u6846\u51FA\u73B0...");
+      const titleSelectors = [
+        "textarea.title-input__inner",
+        'textarea[placeholder*="\u6807\u9898"]',
+        ".title-input textarea",
+        'input[placeholder*="\u6807\u9898"]'
+      ];
+      let foundSelector = "";
+      for (const selector of titleSelectors) {
+        try {
+          console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${selector}`);
+          const locator = iframeLocator.locator(selector);
+          await locator.waitFor({ timeout: 1e4, state: "visible" });
+          foundSelector = selector;
+          console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846: ${selector}`);
+          break;
+        } catch (error) {
+          console.log(`   \u274C \u672A\u627E\u5230: ${selector}`);
+          continue;
+        }
+      }
+      if (foundSelector) {
+        const titleInput = iframeLocator.locator(foundSelector);
+        console.log("   \u70B9\u51FB\u6807\u9898\u8F93\u5165\u6846...");
+        await titleInput.click({ force: true });
+        await page.waitForTimeout(500);
+        console.log("   \u6E05\u7A7A\u6807\u9898\u8F93\u5165\u6846...");
+        await titleInput.fill("");
+        await page.waitForTimeout(300);
+        console.log(`   \u8F93\u5165\u6807\u9898: ${title}`);
+        await titleInput.fill(title);
+        await page.waitForTimeout(500);
+        console.log("   \u2705 \u6807\u9898\u586B\u5199\u5B8C\u6210");
+      } else {
+        console.warn("   \u274C \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846");
+      }
+    } catch (error) {
+      console.error("   \u274C iframe\u64CD\u4F5C\u5931\u8D25:", error);
+    }
+  }
+  /**
+   * 填充内容
+   */
+  async fillContent(content) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    console.log("   \u7B49\u5F85iframe\u52A0\u8F7D...");
+    try {
+      const iframeLocator = this.getIframeLocator();
+      console.log("   \u7B49\u5F85\u5185\u5BB9\u7F16\u8F91\u5668\u51FA\u73B0...");
+      const contentSelectors = [
+        ".tiptap.ProseMirror.eva3-editor",
+        '.eva3-editor[contenteditable="true"]',
+        '.tiptap[contenteditable="true"]',
+        '[contenteditable="true"].ProseMirror',
+        ".ql-editor",
+        '[contenteditable="true"]'
+      ];
+      let foundSelector = "";
+      for (const selector of contentSelectors) {
+        try {
+          console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${selector}`);
+          const locator = iframeLocator.locator(selector);
+          await locator.waitFor({ timeout: 1e4, state: "visible" });
+          foundSelector = selector;
+          console.log(`   \u2705 \u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668: ${selector}`);
+          break;
+        } catch (error) {
+          console.log(`   \u274C \u672A\u627E\u5230: ${selector}`);
+          continue;
+        }
+      }
+      if (foundSelector) {
+        const contentEditor = iframeLocator.locator(foundSelector);
+        console.log("   \u70B9\u51FB\u5185\u5BB9\u7F16\u8F91\u5668...");
+        await contentEditor.click({ force: true });
+        await page.waitForTimeout(1e3);
+        console.log("   \u6E05\u7A7A\u7F16\u8F91\u5668\u5185\u5BB9...");
+        await contentEditor.press("Control+A");
+        await page.waitForTimeout(300);
+        await contentEditor.press("Backspace");
+        await page.waitForTimeout(500);
+        console.log("   \u5F00\u59CB\u8F93\u5165\u5185\u5BB9...");
+        const lines = content.split("\n");
+        for (let i = 0; i < lines.length; i++) {
+          await contentEditor.type(lines[i], { delay: 20 });
+          if (i < lines.length - 1) {
+            await contentEditor.press("Enter");
+            await page.waitForTimeout(200);
+          }
+        }
+        await page.waitForTimeout(500);
+        console.log(`   \u2705 \u5185\u5BB9\u586B\u5199\u5B8C\u6210 (${content.length} \u5B57\u7B26)`);
+      } else {
+        console.warn("   \u274C \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668");
+      }
+    } catch (error) {
+      console.error("   \u274C iframe\u64CD\u4F5C\u5931\u8D25:", error);
+    }
+  }
+  async uploadCover(imagePath) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      console.log("   \u7B49\u5F85iframe\u52A0\u8F7D...");
+      const iframeLocator = this.getIframeLocator();
+      console.log("   \u{1F50D} \u5BFB\u627E\u5C01\u9762\u4E0A\u4F20\u533A\u57DF...");
+      const formItems = await iframeLocator.locator(".form-item").all();
+      console.log(`   \u{1F4CB} \u627E\u5230 ${formItems.length} \u4E2A .form-item \u5143\u7D20`);
+      for (const formItem of formItems) {
+        try {
+          const labelText = await formItem.locator(".form-item-label").textContent();
+          if (labelText?.includes("\u81EA\u5B9A\u4E49\u5C01\u9762")) {
+            console.log('   \u627E\u5230"\u81EA\u5B9A\u4E49\u5C01\u9762"\u8868\u5355\u9879');
+            const switchEl = formItem.locator(".vui_switch--switch");
+            const isChecked = await switchEl.getAttribute("aria-checked");
+            console.log(`   \u5F00\u5173\u72B6\u6001: aria-checked=${isChecked}`);
+            if (isChecked !== "true") {
+              console.log("   \u6B63\u5728\u5F00\u542F\u81EA\u5B9A\u4E49\u5C01\u9762\u5F00\u5173...");
+              await switchEl.click();
+              await page.waitForTimeout(1e3);
+              console.log("   \u2705 \u5DF2\u5F00\u542F\u81EA\u5B9A\u4E49\u5C01\u9762\u5F00\u5173");
+            } else {
+              console.log("   \u2705 \u81EA\u5B9A\u4E49\u5C01\u9762\u5F00\u5173\u5DF2\u5F00\u542F");
+            }
+            break;
+          }
+        } catch {
+          continue;
+        }
+      }
+      await page.waitForTimeout(1e3);
+      const uploadButton = iframeLocator.locator('.upload-button:has-text("\u6DFB\u52A0\u5C01\u9762"), .select-cover .upload-button, .upload-button').first();
+      try {
+        await uploadButton.waitFor({ timeout: 5e3, state: "visible" });
+        console.log("   \u627E\u5230\u5C01\u9762\u4E0A\u4F20\u6309\u94AE");
+        console.log('   \u70B9\u51FB"\u6DFB\u52A0\u5C01\u9762"\u6309\u94AE...');
+        await uploadButton.click();
+        await page.waitForTimeout(1e3);
+        const fileInput = iframeLocator.locator('input[type="file"]');
+        await fileInput.waitFor({ timeout: 5e3, state: "visible" });
+        console.log("   \u9009\u62E9\u6587\u4EF6...");
+        await fileInput.setInputFiles(imagePath);
+        await page.waitForTimeout(2e3);
+        console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20: ${imagePath}`);
+        await this.confirmCoverCrop();
+        return;
+      } catch {
+        console.log("   \u672A\u627E\u5230\u5C01\u9762\u4E0A\u4F20\u6309\u94AE");
+      }
+      console.log("   \u5C1D\u8BD5\u76F4\u63A5\u67E5\u627E\u6587\u4EF6\u8F93\u5165\u6846...");
+      const fileInputs = await iframeLocator.locator('input[type="file"]').all();
+      console.log(`   \u{1F4CB} \u9875\u9762\u5171\u6709 ${fileInputs.length} \u4E2A\u6587\u4EF6\u8F93\u5165\u6846`);
+      for (const input of fileInputs) {
+        try {
+          await input.setInputFiles(imagePath);
+          await page.waitForTimeout(2e3);
+          console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20: ${imagePath}`);
+          await this.confirmCoverCrop();
+          return;
+        } catch {
+          continue;
+        }
+      }
+      console.warn("   \u26A0\uFE0F \u672A\u80FD\u627E\u5230\u5C01\u9762\u4E0A\u4F20\u533A\u57DF\uFF0C\u8DF3\u8FC7\u5C01\u9762\u4E0A\u4F20");
+    } catch (error) {
+      console.warn("   \u26A0\uFE0F \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  /**
+   * 确认封面裁剪对话框
+   */
+  async confirmCoverCrop() {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    console.log("   \u7B49\u5F85\u5C01\u9762\u88C1\u526A\u5BF9\u8BDD\u6846...");
+    try {
+      await page.waitForTimeout(2e3);
+      const iframeLocator = this.getIframeLocator();
+      const confirmSelectors = [
+        '.vui_dialog--footer button.vui_button--blue:has-text("\u786E\u5B9A")',
+        '.vui_dialog--footer button:has-text("\u786E\u5B9A")',
+        ".vui_dialog--btn-confirm",
+        'button.vui_button--blue:has-text("\u786E\u5B9A")'
+      ];
+      for (const selector of confirmSelectors) {
+        try {
+          console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${selector}`);
+          const confirmButton = iframeLocator.locator(selector).first();
+          await confirmButton.waitFor({ timeout: 5e3, state: "visible" });
+          console.log("   \u2705 \u627E\u5230\u786E\u8BA4\u6309\u94AE");
+          await confirmButton.click();
+          await page.waitForTimeout(1e3);
+          console.log("   \u2705 \u5DF2\u70B9\u51FB\u786E\u8BA4\u6309\u94AE");
+          return;
+        } catch {
+          console.log(`   \u274C \u672A\u627E\u5230: ${selector}`);
+          continue;
+        }
+      }
+      console.log("   \u672A\u627E\u5230\u5C01\u9762\u88C1\u526A\u5BF9\u8BDD\u6846\uFF0C\u7EE7\u7EED\u6267\u884C");
+    } catch (error) {
+      console.log("   \u5C01\u9762\u88C1\u526A\u5BF9\u8BDD\u6846\u5904\u7406\u5931\u8D25:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  async setTags(tags) {
+    console.log("   \u26A0\uFE0F Bilibili\u5DF2\u6539\u4E3A\u5728\u6B63\u6587\u4E2D\u4F7F\u7528 #\u6807\u7B7E# \u683C\u5F0F\u6DFB\u52A0\u6807\u7B7E");
+    console.log(`   \u5EFA\u8BAE\u6807\u7B7E: ${tags.map((t) => `#${t}#`).join(" ")}`);
+  }
+  async clickPublish() {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    console.log("   \u7B49\u5F85iframe\u52A0\u8F7D...");
+    try {
+      const iframeLocator = this.getIframeLocator();
+      const publishSelectors = [
+        'button.vui_button--blue:has-text("\u53D1\u5E03")',
+        'button:has-text("\u53D1\u5E03")',
+        ".footer-right button.vui_button--blue"
+      ];
+      for (const selector of publishSelectors) {
+        try {
+          console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${selector}`);
+          const button = iframeLocator.locator(selector);
+          await button.waitFor({ timeout: 1e4, state: "visible" });
+          console.log(`   \u2705 \u627E\u5230\u53D1\u5E03\u6309\u94AE: ${selector}`);
+          await button.click();
+          await page.waitForTimeout(3e3);
+          console.log("   \u2705 \u5DF2\u70B9\u51FB\u53D1\u5E03\u6309\u94AE");
+          return;
+        } catch (error) {
+          console.log(`   \u274C \u672A\u627E\u5230: ${selector}`);
+          continue;
+        }
+      }
+      console.warn("   \u26A0\uFE0F \u672A\u627E\u5230\u53D1\u5E03\u6309\u94AE");
+    } catch (error) {
+      console.error("   \u274C iframe\u64CD\u4F5C\u5931\u8D25:", error);
+    }
+  }
+  async getArticleUrl() {
+    const page = this.browserManager.getPage();
+    if (!page) return null;
+    try {
+      await page.waitForTimeout(2e3);
+      const url = page.url();
+      if (url.includes("bilibili.com/read/")) {
+        return url;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+};
+
+// src/adapters/baijiahao.ts
+import { tmpdir as tmpdir3 } from "os";
+import { join as join3 } from "path";
+import { writeFileSync as writeFileSync3, unlinkSync as unlinkSync3, existsSync as existsSync3 } from "fs";
+import { createHash as createHash3 } from "crypto";
+var BaijiahaoAdapter = class extends BaseAdapter {
+  tempFiles = [];
+  constructor() {
+    super("baijiahao");
+  }
+  /**
+   * 从 URL 下载图片到临时文件
+   */
+  async downloadImageToTemp(imageUrl) {
+    try {
+      console.log(`   \u{1F4E5} \u6B63\u5728\u4E0B\u8F7D\u5C01\u9762\u56FE\u7247...`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3e4);
+      const response = await fetch(imageUrl, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      if (!response.ok) {
+        console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5931\u8D25: HTTP ${response.status}`);
+        return null;
+      }
+      const buffer = Buffer.from(await response.arrayBuffer());
+      const hash = createHash3("md5").update(imageUrl).digest("hex").slice(0, 8);
+      const ext = imageUrl.includes(".png") ? "png" : "jpg";
+      const tempPath = join3(tmpdir3(), `cover-${hash}.${ext}`);
+      writeFileSync3(tempPath, buffer);
+      this.tempFiles.push(tempPath);
+      console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0B\u8F7D: ${tempPath}`);
+      return tempPath;
+    } catch (error) {
+      if (error instanceof Error && error.name === "AbortError") {
+        console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5C01\u9762\u56FE\u7247\u8D85\u65F6\uFF0830\u79D2\uFF09`);
+      } else {
+        console.warn(`   \u26A0\uFE0F \u4E0B\u8F7D\u5C01\u9762\u56FE\u7247\u5931\u8D25: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      return null;
+    }
+  }
+  /**
+   * 清理临时文件
+   */
+  cleanupTempFiles() {
+    for (const file of this.tempFiles) {
+      try {
+        if (existsSync3(file)) {
+          unlinkSync3(file);
+        }
+      } catch {
+      }
+    }
+    this.tempFiles = [];
+  }
+  /**
+   * 关闭百家号新手引导/确认框
+   * 百家号在打开发布页面时可能会显示以下确认框：
+   * 1. "新增风险检测" 确认框 - 点击 "我知道了" 按钮关闭
+   * 2. "AI工具收起" 说明框 - 点击右上角 [x] 关闭按钮关闭
+   */
+  async closeTourDialogs() {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    console.log("   \u{1F50D} \u68C0\u67E5\u662F\u5426\u6709\u65B0\u624B\u5F15\u5BFC/\u786E\u8BA4\u6846...");
+    try {
+      await page.waitForTimeout(1e3);
+      let hasDialog = true;
+      let maxAttempts = 5;
+      let attempt = 0;
+      while (hasDialog && attempt < maxAttempts) {
+        attempt++;
+        hasDialog = false;
+        const tourContent = await page.$(".cheetah-tour-content");
+        if (tourContent) {
+          console.log(`   \u53D1\u73B0\u786E\u8BA4\u6846 (\u5C1D\u8BD5 ${attempt}/${maxAttempts})`);
+          const allButtons = await page.$$("div.cheetah-tour-buttons > button");
+          if (allButtons.length > 0) {
+            console.log(`   \u627E\u5230 ${allButtons.length} \u4E2A\u6309\u94AE`);
+            for (let i = allButtons.length - 1; i >= 0; i--) {
+              const btn = allButtons[i];
+              const isVisible = await btn.isVisible();
+              if (isVisible) {
+                const btnText = await btn.textContent();
+                console.log(`   \u70B9\u51FB\u6309\u94AE [${i + 1}]: ${btnText}`);
+                await btn.click();
+                await page.waitForTimeout(500);
+                hasDialog = true;
+                break;
+              }
+            }
+            if (hasDialog) continue;
+          }
+          const closeBtn = await page.$("button.cheetah-tour-close");
+          if (closeBtn) {
+            const isVisible = await closeBtn.isVisible();
+            if (isVisible) {
+              console.log("   \u70B9\u51FB\u5173\u95ED\u6309\u94AE [x]");
+              await closeBtn.click();
+              await page.waitForTimeout(500);
+              hasDialog = true;
+              continue;
+            }
+          }
+        }
+        const otherDialogs = await page.$$('.cheetah-modal-content, .cheetah-dialog, [role="dialog"]');
+        for (const dialog of otherDialogs) {
+          const isVisible = await dialog.isVisible();
+          if (isVisible) {
+            const closeBtn = await dialog.$('button[class*="close"], .cheetah-modal-close, .close-btn');
+            if (closeBtn) {
+              console.log("   \u5173\u95ED\u5176\u4ED6\u5BF9\u8BDD\u6846");
+              await closeBtn.click();
+              await page.waitForTimeout(500);
+              hasDialog = true;
+              break;
+            }
+          }
+        }
+        try {
+          const tipDialogs = await page.$$('.cheetah-modal-wrap, [class*="modal"]');
+          for (const dialog of tipDialogs) {
+            const isVisible = await dialog.isVisible();
+            if (isVisible) {
+              const titleEl = await dialog.$('.cheetah-modal-title, [class*="title"]');
+              const title = titleEl ? await titleEl.textContent() : "";
+              const content = await dialog.textContent();
+              if (title?.includes("\u63D0\u793A") || content?.includes("\u683C\u5F0F\u4E0D\u6B63\u786E") || content?.includes("\u9519\u8BEF")) {
+                console.log(`   \u53D1\u73B0\u9519\u8BEF\u63D0\u793A\u6846: ${title || "\u63D0\u793A"}`);
+                const confirmBtn = await dialog.$('button:has-text("\u786E\u8BA4"), button:has-text("\u786E\u5B9A"), .cheetah-btn-primary');
+                if (confirmBtn) {
+                  await confirmBtn.click();
+                  console.log("   \u70B9\u51FB\u786E\u8BA4\u6309\u94AE\u5173\u95ED\u63D0\u793A\u6846");
+                  await page.waitForTimeout(500);
+                  hasDialog = true;
+                  break;
+                }
+                const closeBtn = await dialog.$('button[class*="close"], .cheetah-modal-close');
+                if (closeBtn) {
+                  await closeBtn.click();
+                  console.log("   \u70B9\u51FB\u5173\u95ED\u6309\u94AE\u5173\u95ED\u63D0\u793A\u6846");
+                  await page.waitForTimeout(500);
+                  hasDialog = true;
+                  break;
+                }
+              }
+            }
+          }
+        } catch {
+        }
+      }
+      if (attempt > 1) {
+        console.log("   \u2705 \u786E\u8BA4\u6846\u5DF2\u5904\u7406\u5B8C\u6210");
+      } else {
+        console.log("   \u2705 \u672A\u53D1\u73B0\u786E\u8BA4\u6846");
+      }
+    } catch (error) {
+      console.log("   \u26A0\uFE0F \u5904\u7406\u786E\u8BA4\u6846\u65F6\u51FA\u9519:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  /**
+   * 处理错误提示框
+   * 用于处理发布过程中出现的各种错误提示
+   */
+  async handleErrorDialogs() {
+    const page = this.browserManager.getPage();
+    if (!page) return false;
+    let handled = false;
+    try {
+      const errorSelectors = [
+        ".cheetah-modal-wrap",
+        ".cheetah-modal-content",
+        '[class*="modal"]',
+        '[role="dialog"]'
+      ];
+      for (const selector of errorSelectors) {
+        const dialogs = await page.$$(selector);
+        for (const dialog of dialogs) {
+          const isVisible = await dialog.isVisible();
+          if (!isVisible) continue;
+          const text = await dialog.textContent();
+          if (text?.includes("\u683C\u5F0F\u4E0D\u6B63\u786E") || text?.includes("\u89C6\u9891") || text?.includes("\u9519\u8BEF") || text?.includes("\u5931\u8D25") || text?.includes("\u63D0\u793A")) {
+            console.log(`   \u53D1\u73B0\u9519\u8BEF\u63D0\u793A: ${text?.substring(0, 50)}...`);
+            const confirmBtn = await dialog.$('button:has-text("\u786E\u8BA4"), button:has-text("\u786E\u5B9A"), .cheetah-btn-primary, button');
+            if (confirmBtn) {
+              const btnText = await confirmBtn.textContent();
+              console.log(`   \u70B9\u51FB\u6309\u94AE\u5173\u95ED\u63D0\u793A: ${btnText}`);
+              await confirmBtn.click();
+              await page.waitForTimeout(500);
+              handled = true;
+              break;
+            }
+            const closeBtn = await dialog.$('button[class*="close"], .cheetah-modal-close, [class*="close"]');
+            if (closeBtn) {
+              await closeBtn.click();
+              console.log("   \u70B9\u51FB\u5173\u95ED\u6309\u94AE");
+              await page.waitForTimeout(500);
+              handled = true;
+              break;
+            }
+          }
+        }
+        if (handled) break;
+      }
+    } catch (error) {
+      console.log("   \u5904\u7406\u9519\u8BEF\u63D0\u793A\u6846\u65F6\u51FA\u9519:", error);
+    }
+    return handled;
+  }
+  /**
+   * 发布文章到百家号
+   * @param article 文章内容
+   * @param testMode 测试模式，为true时不点击发布按钮
+   */
+  async publish(article, testMode = false) {
+    try {
+      console.log(`\u{1F680} \u5F00\u59CB\u53D1\u5E03\u6587\u7AE0\u5230\u767E\u5BB6\u53F7...`);
+      if (testMode) {
+        console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u6587\u7AE0\u4F46\u4E0D\u53D1\u5E03");
+      }
+      await this.browserManager.launch();
+      const page = this.browserManager.getPage();
+      if (!page) {
+        throw new Error("Page not initialized");
+      }
+      console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762...");
+      await this.browserManager.gotoPublishPage();
+      await page.waitForTimeout(2e3);
+      const isOnLoginPage = await this.browserManager.isOnLoginPageAsync();
+      if (isOnLoginPage) {
+        console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B...");
+        console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55\u767E\u5BB6\u53F7...");
+        const loginSuccess = await this.browserManager.waitForLogin(12e4);
+        if (!loginSuccess) {
+          await this.browserManager.close();
+          return {
+            success: false,
+            platform: this.platform,
+            message: "\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"
+          };
+        }
+        console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B...");
+        await this.browserManager.gotoPublishPage();
+      }
+      console.log("   \u7B49\u5F85\u7F16\u8F91\u5668\u52A0\u8F7D...");
+      await page.waitForSelector("#ueditor", { timeout: 1e4 });
+      await this.closeTourDialogs();
+      console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u6807\u9898...");
+      await this.fillTitle(article.title);
+      console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u5185\u5BB9...");
+      await this.fillContent(article.content);
+      let coverImagePath = null;
+      if (article.coverImage) {
+        console.log("\u{1F5BC}\uFE0F \u4F7F\u7528\u7528\u6237\u63D0\u4F9B\u7684\u5C01\u9762\u56FE\u7247...");
+        if (article.coverImage.startsWith("http")) {
+          coverImagePath = await this.downloadImageToTemp(article.coverImage);
+        } else {
+          coverImagePath = article.coverImage;
+        }
+      } else {
+        console.log("\u{1F5BC}\uFE0F \u672A\u63D0\u4F9B\u5C01\u9762\u56FE\u7247\uFF0C\u6B63\u5728\u81EA\u52A8\u751F\u6210...");
+        const coverUrl = await getCoverForArticle({
+          title: article.title,
+          contentPreview: article.content,
+          orientation: "landscape",
+          size: "large2x"
+        });
+        if (coverUrl) {
+          coverImagePath = await this.downloadImageToTemp(coverUrl);
+        } else {
+          console.warn("   \u26A0\uFE0F \u5C01\u9762\u56FE\u7247\u751F\u6210\u5931\u8D25\uFF0C\u5C06\u4E0D\u8BBE\u7F6E\u5C01\u9762");
+        }
+      }
+      if (coverImagePath) {
+        console.log("\u{1F4E4} \u4E0A\u4F20\u5C01\u9762\u56FE\u7247...");
+        await this.uploadCover(coverImagePath);
+        await this.handleErrorDialogs();
+      }
+      if (article.summary) {
+        console.log("\u{1F4DD} \u586B\u5199\u6587\u7AE0\u6458\u8981...");
+        await this.fillSummary(article.summary);
+      }
+      if (article.category) {
+        console.log("\u{1F4C1} \u9009\u62E9\u6587\u7AE0\u5206\u7C7B...");
+        await this.selectCategory(article.category);
+      }
+      if (article.tags && article.tags.length > 0) {
+        console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E...");
+        await this.setTags(article.tags);
+      }
+      if (testMode) {
+        console.log("");
+        console.log("===========================================");
+        console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01");
+        console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("===========================================");
+        console.log("");
+        const screenshotPath = `./test-screenshot-baijiahao-${Date.now()}.png`;
+        await this.screenshot(screenshotPath);
+        console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${screenshotPath}`);
+        await this.browserManager.saveCookies();
+        console.log("");
+        console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3");
+        console.log("");
+        return {
+          success: true,
+          platform: this.platform,
+          message: "\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",
+          testMode: true
+        };
+      }
+      console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE...");
+      await this.clickPublish();
+      const articleUrl = await this.getArticleUrl();
+      await this.browserManager.saveCookies();
+      await this.browserManager.close();
+      this.cleanupTempFiles();
+      return {
+        success: true,
+        platform: this.platform,
+        message: "\u6587\u7AE0\u53D1\u5E03\u6210\u529F",
+        url: articleUrl || void 0
+      };
+    } catch (error) {
+      this.cleanupTempFiles();
+      await this.browserManager.close();
+      return {
+        success: false,
+        platform: this.platform,
+        message: "\u53D1\u5E03\u5931\u8D25",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  async fillTitle(title) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    console.log("   \u67E5\u627E\u6807\u9898\u8F93\u5165\u6846...");
+    const titleSelectors = [
+      '#bjhNewsTitle [contenteditable="true"]',
+      '#bjhNewsTitle .input-box [contenteditable="true"]',
+      '[data-testid="news-title-input"] [contenteditable="true"]',
+      '#newsTextArea [contenteditable="true"]'
+    ];
+    for (const selector of titleSelectors) {
+      try {
+        console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${selector}`);
+        const titleInput = await page.$(selector);
+        if (titleInput) {
+          const isVisible = await titleInput.isVisible();
+          if (isVisible) {
+            console.log(`   \u2705 \u627E\u5230\u6807\u9898\u8F93\u5165\u6846: ${selector}`);
+            await titleInput.click();
+            await page.waitForTimeout(300);
+            await page.keyboard.press("Control+A");
+            await page.waitForTimeout(200);
+            await page.keyboard.press("Backspace");
+            await page.waitForTimeout(300);
+            await page.keyboard.type(title, { delay: 50 });
+            await page.waitForTimeout(500);
+            console.log(`   \u2705 \u6807\u9898\u586B\u5199\u5B8C\u6210: ${title}`);
+            return;
+          }
+        }
+      } catch (error) {
+        console.log(`   \u9009\u62E9\u5668 ${selector} \u5931\u8D25:`, error);
+        continue;
+      }
+    }
+    console.warn("   \u274C \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846");
+  }
+  async fillContent(content) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    console.log("   \u67E5\u627E\u5185\u5BB9\u7F16\u8F91\u5668...");
+    try {
+      const iframeElement = await page.$('iframe[id*="editor"]');
+      if (iframeElement) {
+        console.log("   \u627E\u5230\u7F16\u8F91\u5668 iframe");
+        const frame = await iframeElement.contentFrame();
+        if (frame) {
+          console.log("   \u5728 iframe \u4E2D\u67E5\u627E\u7F16\u8F91\u533A\u57DF...");
+          const body = await frame.$("body.view");
+          if (body) {
+            console.log("   \u2705 \u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668 (iframe body)");
+            await body.click();
+            await page.waitForTimeout(500);
+            const lines = content.split("\n");
+            for (let i = 0; i < lines.length; i++) {
+              const line = lines[i];
+              for (let j = 0; j < line.length; j++) {
+                const char = line[j];
+                if (char == "#") {
+                  await page.keyboard.type(char, { delay: 100 });
+                  await page.keyboard.press("Escape");
+                  await page.waitForTimeout(100);
+                } else {
+                  await page.keyboard.type(char, { delay: 10 });
+                }
+              }
+              if (i < lines.length - 1) {
+                await page.keyboard.press("Enter");
+                await page.waitForTimeout(200);
+              }
+            }
+            console.log(`   \u2705 \u5185\u5BB9\u586B\u5199\u5B8C\u6210 (${content.length} \u5B57\u7B26)`);
+            return;
+          }
+        }
+      }
+    } catch (error) {
+      console.log("   iframe \u65B9\u5F0F\u5931\u8D25\uFF0C\u5C1D\u8BD5\u5176\u4ED6\u65B9\u5F0F...");
+    }
+    const contentSelectors = [
+      "#editor",
+      '[contenteditable="true"]',
+      ".editor-content",
+      ".ql-editor",
+      ".ProseMirror",
+      ".public-DraftEditor-content",
+      ".edui-editor-iframeholder iframe"
+    ];
+    for (const selector of contentSelectors) {
+      try {
+        console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${selector}`);
+        const contentEditor = await page.$(selector);
+        if (contentEditor) {
+          const isVisible = await contentEditor.isVisible();
+          if (isVisible) {
+            console.log(`   \u2705 \u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668: ${selector}`);
+            await contentEditor.click();
+            await page.waitForTimeout(500);
+            await page.keyboard.press("Control+A");
+            await page.waitForTimeout(300);
+            await page.keyboard.press("Backspace");
+            await page.waitForTimeout(500);
+            const lines = content.split("\n");
+            for (let i = 0; i < lines.length; i++) {
+              await page.keyboard.type(lines[i], { delay: 10 });
+              if (i < lines.length - 1) {
+                await page.keyboard.press("Enter");
+                await page.waitForTimeout(200);
+              }
+            }
+            console.log(`   \u2705 \u5185\u5BB9\u586B\u5199\u5B8C\u6210 (${content.length} \u5B57\u7B26)`);
+            return;
+          }
+        }
+      } catch {
+        continue;
+      }
+    }
+    console.warn("   \u274C \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668");
+  }
+  async uploadCover(imagePath) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      console.log("   \u{1F50D} \u5BFB\u627E\u5C01\u9762\u4E0A\u4F20\u533A\u57DF...");
+      await page.waitForTimeout(1e3);
+      const coverTriggerSelectors = [
+        "._93c3fe2a3121c388-item",
+        // 封面项容器
+        "._73a3a52aab7e3a36-default",
+        // 封面默认区域
+        "._73a3a52aab7e3a36-content",
+        // 封面内容区域
+        '[class*="list"] [class*="item"]',
+        // 通用列表项
+        ".bjh-news-cover-add",
+        '[class*="cover-add"]',
+        '[class*="cover"] [class*="add"]',
+        ".cover-upload",
+        ".cover-selector",
+        '#bjhNewsCover [class*="add"]',
+        "#bjhNewsCover .cheetah-btn",
+        "#bjhNewsCover button"
+      ];
+      let clickedTrigger = false;
+      for (const selector of coverTriggerSelectors) {
+        try {
+          const triggers = await page.$$(selector);
+          console.log(`   \u67E5\u627E\u9009\u62E9\u5668 ${selector}, \u627E\u5230 ${triggers.length} \u4E2A\u5143\u7D20`);
+          for (const trigger of triggers) {
+            const isVisible = await trigger.isVisible();
+            if (isVisible) {
+              const text = await trigger.textContent();
+              console.log(`   \u5143\u7D20\u6587\u672C: ${text?.substring(0, 30)}`);
+              if (text?.includes("\u9009\u62E9\u5C01\u9762") || text?.includes("\u5C01\u9762") || text?.includes("\u6DFB\u52A0")) {
+                console.log(`   \u2705 \u70B9\u51FB\u5C01\u9762\u89E6\u53D1\u533A\u57DF: ${selector}`);
+                await trigger.click();
+                await page.waitForTimeout(1e3);
+                clickedTrigger = true;
+                break;
+              }
+            }
+          }
+          if (clickedTrigger) break;
+        } catch (error) {
+          console.log(`   \u9009\u62E9\u5668 ${selector} \u5931\u8D25:`, error);
+          continue;
+        }
+      }
+      if (!clickedTrigger) {
+        console.log("   \u5C1D\u8BD5\u70B9\u51FB\u7B2C\u4E00\u4E2A\u53EF\u89C1\u7684\u5C01\u9762\u533A\u57DF...");
+        for (const selector of coverTriggerSelectors) {
+          try {
+            const trigger = await page.$(selector);
+            if (trigger) {
+              const isVisible = await trigger.isVisible();
+              if (isVisible) {
+                console.log(`   \u70B9\u51FB\u5C01\u9762\u533A\u57DF: ${selector}`);
+                await trigger.click();
+                await page.waitForTimeout(1e3);
+                clickedTrigger = true;
+                break;
+              }
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+      const fileInputSelectors = [
+        'input[type="file"][accept*="image"]:not([accept*="video"])',
+        '#bjhNewsCover input[type="file"]',
+        '[class*="cover"] input[type="file"]',
+        '.cheetah-upload input[type="file"]'
+      ];
+      let uploaded = false;
+      for (const selector of fileInputSelectors) {
+        if (uploaded) break;
+        try {
+          const fileInputs = await page.$$(selector);
+          console.log(`   \u67E5\u627E\u9009\u62E9\u5668 ${selector}, \u627E\u5230 ${fileInputs.length} \u4E2A\u5143\u7D20`);
+          for (const fileInput of fileInputs) {
+            const accept = await fileInput.getAttribute("accept");
+            console.log(`   file input accept: ${accept}`);
+            if (!accept?.includes("video")) {
+              console.log(`   \u2705 \u627E\u5230\u56FE\u7247\u4E0A\u4F20\u8F93\u5165\u6846: ${selector}`);
+              await fileInput.setInputFiles(imagePath);
+              await page.waitForTimeout(3e3);
+              console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20: ${imagePath}`);
+              uploaded = true;
+              break;
+            }
+          }
+        } catch (error) {
+          console.log(`   \u9009\u62E9\u5668 ${selector} \u5931\u8D25:`, error);
+          continue;
+        }
+      }
+      if (!uploaded) {
+        try {
+          console.log("   \u5C1D\u8BD5\u5907\u7528\u65B9\u6848\uFF1A\u67E5\u627E\u6240\u6709 file input...");
+          const allFileInputs = await page.$$('input[type="file"]');
+          console.log(`   \u627E\u5230 ${allFileInputs.length} \u4E2A file input`);
+          for (const fileInput of allFileInputs) {
+            const accept = await fileInput.getAttribute("accept");
+            console.log(`   file input accept: ${accept}`);
+            if (accept && !accept.includes("video")) {
+              console.log("   \u2705 \u4F7F\u7528\u5907\u7528\u65B9\u6848\u627E\u5230\u56FE\u7247\u4E0A\u4F20\u8F93\u5165\u6846");
+              await fileInput.setInputFiles(imagePath);
+              await page.waitForTimeout(3e3);
+              console.log(`   \u2705 \u5C01\u9762\u56FE\u7247\u5DF2\u4E0A\u4F20: ${imagePath}`);
+              uploaded = true;
+              break;
+            }
+          }
+        } catch (error) {
+          console.log("   \u5907\u7528\u65B9\u6848\u5931\u8D25:", error);
+        }
+      }
+      console.log("   \u70B9\u51FB\u786E\u5B9A\u6309\u94AE\u786E\u8BA4\u5C01\u9762\u9009\u62E9...");
+      await page.waitForTimeout(1e3);
+      const modalSelectors = [
+        ".cheetah-modal-content",
+        ".cheetah-modal-wrap",
+        '[class*="modal-content"]',
+        '[role="dialog"]'
+      ];
+      let confirmed = false;
+      for (const modalSelector of modalSelectors) {
+        if (confirmed) break;
+        try {
+          const modals = await page.$$(modalSelector);
+          console.log(`   \u67E5\u627E\u5F39\u51FA\u6846 ${modalSelector}, \u627E\u5230 ${modals.length} \u4E2A`);
+          for (const modal of modals) {
+            const isVisible = await modal.isVisible();
+            if (!isVisible) continue;
+            const confirmBtnSelectors = [
+              ".e8c90bfac9d4eab4-confirmBtn",
+              'button[class*="confirm"]',
+              ".cheetah-btn-primary",
+              'button:has-text("\u786E\u5B9A")',
+              'button:has-text("\u786E\u8BA4")'
+            ];
+            for (const btnSelector of confirmBtnSelectors) {
+              try {
+                const confirmBtn = await modal.$(btnSelector);
+                if (confirmBtn) {
+                  const isVisible2 = await confirmBtn.isVisible();
+                  if (isVisible2) {
+                    const btnText = await confirmBtn.textContent();
+                    console.log(`   \u2705 \u5728\u5F39\u51FA\u6846\u4E2D\u627E\u5230\u786E\u5B9A\u6309\u94AE: ${btnText}`);
+                    await confirmBtn.click();
+                    await page.waitForTimeout(1e3);
+                    console.log("   \u2705 \u5DF2\u70B9\u51FB\u786E\u5B9A\u6309\u94AE");
+                    confirmed = true;
+                    break;
+                  }
+                }
+              } catch {
+                continue;
+              }
+            }
+            if (confirmed) break;
+          }
+        } catch {
+          continue;
+        }
+      }
+      if (!confirmed) {
+        console.log("   \u5C1D\u8BD5\u5168\u5C40\u641C\u7D22\u786E\u5B9A\u6309\u94AE...");
+        const globalBtnSelectors = [
+          'button:has-text("\u786E\u5B9A")',
+          'button:has-text("\u786E\u8BA4")',
+          ".cheetah-btn-primary"
+        ];
+        for (const selector of globalBtnSelectors) {
+          try {
+            const confirmBtn = await page.$(selector);
+            if (confirmBtn) {
+              const isVisible = await confirmBtn.isVisible();
+              if (isVisible) {
+                const btnText = await confirmBtn.textContent();
+                console.log(`   \u2705 \u627E\u5230\u786E\u5B9A\u6309\u94AE: ${btnText}`);
+                await confirmBtn.click();
+                await page.waitForTimeout(1e3);
+                console.log("   \u2705 \u5DF2\u70B9\u51FB\u786E\u5B9A\u6309\u94AE");
+                confirmed = true;
+                break;
+              }
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+      if (!confirmed) {
+        console.warn("   \u26A0\uFE0F \u672A\u627E\u5230\u786E\u5B9A\u6309\u94AE");
+      }
+      return;
+    } catch (error) {
+      console.warn("   \u26A0\uFE0F \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  /**
+   * 填写文章摘要
+   * 百家号摘要输入框：textarea.cheetah-ui-pro-countable-textbox-textarea，placeholder="请输入摘要"
+   */
+  async fillSummary(summary) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      console.log("   \u67E5\u627E\u6458\u8981\u8F93\u5165\u6846...");
+      await page.waitForTimeout(500);
+      const summarySelectors = [
+        "textarea.cheetah-ui-pro-countable-textbox-textarea",
+        'textarea[placeholder="\u8BF7\u8F93\u5165\u6458\u8981"]',
+        'textarea[placeholder*="\u6458\u8981"]',
+        ".cheetah-ui-pro-countable-textbox-textarea"
+      ];
+      for (const selector of summarySelectors) {
+        try {
+          console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${selector}`);
+          const summaryInput = await page.$(selector);
+          if (summaryInput) {
+            const isVisible = await summaryInput.isVisible();
+            if (isVisible) {
+              const placeholder = await summaryInput.getAttribute("placeholder");
+              console.log(`   \u5143\u7D20 placeholder: ${placeholder}`);
+              console.log(`   \u2705 \u627E\u5230\u6458\u8981\u8F93\u5165\u6846: ${selector}`);
+              await summaryInput.click();
+              await page.waitForTimeout(300);
+              await summaryInput.fill("");
+              await page.waitForTimeout(300);
+              await summaryInput.fill(summary);
+              await page.waitForTimeout(500);
+              console.log(`   \u2705 \u6458\u8981\u586B\u5199\u5B8C\u6210: ${summary.substring(0, 50)}...`);
+              return;
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+      try {
+        console.log("   \u5C1D\u8BD5\u5907\u7528\u65B9\u6848\uFF1A\u67E5\u627E\u6240\u6709 textarea...");
+        const allTextareas = await page.$$("textarea");
+        for (const textarea of allTextareas) {
+          const isVisible = await textarea.isVisible();
+          if (isVisible) {
+            const placeholder = await textarea.getAttribute("placeholder");
+            if (placeholder?.includes("\u6458\u8981")) {
+              console.log(`   \u2705 \u901A\u8FC7\u5907\u7528\u65B9\u6848\u627E\u5230\u6458\u8981\u8F93\u5165\u6846`);
+              await textarea.click();
+              await page.waitForTimeout(300);
+              await textarea.fill("");
+              await page.waitForTimeout(300);
+              await textarea.fill(summary);
+              await page.waitForTimeout(500);
+              console.log(`   \u2705 \u6458\u8981\u586B\u5199\u5B8C\u6210: ${summary.substring(0, 50)}...`);
+              return;
+            }
+          }
+        }
+      } catch {
+      }
+      console.warn("   \u274C \u672A\u627E\u5230\u6458\u8981\u8F93\u5165\u6846");
+    } catch (error) {
+      console.warn("   \u26A0\uFE0F \u6458\u8981\u586B\u5199\u5931\u8D25:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  /**
+   * 选择文章分类
+   * 百家号分类选择器：cheetah-select cheetah-cascader 组件
+   * 支持级联选择，category 可以用 "/" 或 ">" 分隔多级分类
+   * 例如: "科技/互联网" 或 "科技>互联网"
+   */
+  async selectCategory(category) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      console.log("   \u67E5\u627E\u5206\u7C7B\u9009\u62E9\u5668...");
+      await page.waitForTimeout(500);
+      const categories = category.split(/[\/>]/).map((c) => c.trim()).filter((c) => c);
+      console.log(`   \u5206\u7C7B\u5C42\u7EA7: ${categories.join(" > ")}`);
+      try {
+        const allSelects = await page.$$(".cheetah-select-selector");
+        console.log(`   \u627E\u5230 ${allSelects.length} \u4E2A cheetah-select-selector \u5143\u7D20`);
+        for (const select of allSelects) {
+          const text = await select.textContent();
+          console.log(`   \u9009\u62E9\u5668\u6587\u672C: ${text?.substring(0, 50)}`);
+          if (text?.includes("\u5185\u5BB9\u5206\u7C7B") || text?.includes("\u5206\u7C7B")) {
+            console.log("   \u627E\u5230\u5206\u7C7B\u9009\u62E9\u5668");
+            await select.click();
+            await page.waitForTimeout(800);
+            for (let level = 0; level < categories.length; level++) {
+              const cat = categories[level];
+              console.log(`   \u9009\u62E9\u7B2C ${level + 1} \u7EA7\u5206\u7C7B: ${cat}`);
+              await page.waitForTimeout(500);
+              const menuSelectors = [
+                ".cheetah-cascader-menu",
+                '[class*="cascader-menu"]',
+                ".cheetah-select-dropdown"
+              ];
+              let found = false;
+              for (const menuSelector of menuSelectors) {
+                const menus = await page.$$(menuSelector);
+                console.log(`   \u627E\u5230 ${menus.length} \u4E2A\u83DC\u5355\u5217`);
+                const targetMenu = menus[level] || menus[menus.length - 1];
+                if (targetMenu) {
+                  const options = await targetMenu.$$('[class*="menu-item"], [class*="option"], li');
+                  console.log(`   \u7B2C ${level + 1} \u5217\u6709 ${options.length} \u4E2A\u9009\u9879`);
+                  for (const opt of options) {
+                    const optText = await opt.textContent();
+                    if (optText?.includes(cat)) {
+                      console.log(`   \u627E\u5230\u5339\u914D\u9009\u9879: ${optText}`);
+                      await opt.click();
+                      await page.waitForTimeout(500);
+                      found = true;
+                      break;
+                    }
+                  }
+                }
+                if (found) break;
+              }
+              if (!found) {
+                console.log(`   \u5C1D\u8BD5\u5907\u7528\u65B9\u6848\u67E5\u627E: ${cat}`);
+                const allOptions = await page.$$('[class*="cascader-menu-item"], [class*="select-option"], [class*="option"], li');
+                for (const opt of allOptions) {
+                  const optText = await opt.textContent();
+                  if (optText?.trim() === cat || optText?.includes(cat)) {
+                    console.log(`   \u627E\u5230\u5339\u914D\u9009\u9879: ${optText}`);
+                    await opt.click();
+                    await page.waitForTimeout(500);
+                    found = true;
+                    break;
+                  }
+                }
+              }
+              if (!found) {
+                console.warn(`   \u26A0\uFE0F \u672A\u627E\u5230\u7B2C ${level + 1} \u7EA7\u5206\u7C7B: ${cat}`);
+                break;
+              }
+            }
+            console.log(`   \u2705 \u5206\u7C7B\u9009\u62E9\u5B8C\u6210: ${categories.join(" > ")}`);
+            return;
+          }
+        }
+      } catch (error) {
+        console.log("   \u65B9\u6CD51\u5931\u8D25:", error);
+      }
+      try {
+        const allFormItems = await page.$$(".cheetah-form-item");
+        for (const formItem of allFormItems) {
+          const labelEl = await formItem.$(".cheetah-form-item-label");
+          const labelText = labelEl ? await labelEl.textContent() : "";
+          if (labelText?.includes("\u5206\u7C7B")) {
+            console.log("   \u627E\u5230\u5206\u7C7B\u8868\u5355\u9879");
+            const selector = await formItem.$(".cheetah-select-selector");
+            if (selector) {
+              await selector.click();
+              await page.waitForTimeout(800);
+              for (let level = 0; level < categories.length; level++) {
+                const cat = categories[level];
+                console.log(`   \u9009\u62E9\u7B2C ${level + 1} \u7EA7\u5206\u7C7B: ${cat}`);
+                await page.waitForTimeout(500);
+                const allOptions = await page.$$('[class*="cascader-menu-item"], [class*="select-option"], li');
+                for (const opt of allOptions) {
+                  const optText = await opt.textContent();
+                  if (optText?.includes(cat)) {
+                    await opt.click();
+                    await page.waitForTimeout(500);
+                    break;
+                  }
+                }
+              }
+              console.log(`   \u2705 \u5206\u7C7B\u9009\u62E9\u5B8C\u6210: ${categories.join(" > ")}`);
+              return;
+            }
+          }
+        }
+      } catch {
+      }
+      console.warn("   \u274C \u672A\u627E\u5230\u5206\u7C7B\u9009\u62E9\u5668");
+    } catch (error) {
+      console.warn("   \u26A0\uFE0F \u5206\u7C7B\u9009\u62E9\u5931\u8D25:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  async setTags(tags) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      console.log("   \u67E5\u627E\u6807\u7B7E\u8F93\u5165\u6846...");
+      await page.waitForTimeout(500);
+      const tagInputSelectors = [
+        'input[placeholder*="\u6807\u7B7E"]',
+        'input[placeholder*="\u5173\u952E\u8BCD"]',
+        'input[placeholder*="tag"]',
+        ".tag-input input",
+        '[class*="tag"] input'
+      ];
+      for (const selector of tagInputSelectors) {
+        try {
+          console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${selector}`);
+          const tagInput = await page.$(selector);
+          if (tagInput) {
+            const isVisible = await tagInput.isVisible();
+            if (isVisible) {
+              console.log(`   \u2705 \u627E\u5230\u6807\u7B7E\u8F93\u5165\u6846: ${selector}`);
+              for (const tag of tags.slice(0, 5)) {
+                await tagInput.click();
+                await page.waitForTimeout(300);
+                await tagInput.fill(tag);
+                await page.waitForTimeout(500);
+                await page.keyboard.press("Enter");
+                await page.waitForTimeout(500);
+              }
+              console.log(`   \u2705 \u6807\u7B7E\u8BBE\u7F6E\u5B8C\u6210: ${tags.slice(0, 5).join(", ")}`);
+              return;
+            }
+          }
+        } catch {
+          continue;
+        }
+      }
+      console.warn("   \u274C \u672A\u627E\u5230\u6807\u7B7E\u8F93\u5165\u6846");
+    } catch (error) {
+      console.warn("   \u26A0\uFE0F \u6807\u7B7E\u8BBE\u7F6E\u5931\u8D25:", error instanceof Error ? error.message : String(error));
+    }
+  }
+  async clickPublish() {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const publishSelectors = [
+      'button:has-text("\u53D1\u5E03")',
+      ".publish-btn",
+      '[class*="publish"]:not([class*="draft"])',
+      'button[type="submit"]',
+      ".submit-btn"
+    ];
+    for (const selector of publishSelectors) {
+      try {
+        console.log(`   \u5C1D\u8BD5\u9009\u62E9\u5668: ${selector}`);
+        const publishBtn = await page.$(selector);
+        if (publishBtn) {
+          const isVisible = await publishBtn.isVisible();
+          if (isVisible) {
+            console.log(`   \u2705 \u627E\u5230\u53D1\u5E03\u6309\u94AE: ${selector}`);
+            await publishBtn.click();
+            await page.waitForTimeout(3e3);
+            console.log("   \u2705 \u5DF2\u70B9\u51FB\u53D1\u5E03\u6309\u94AE");
+            return;
+          }
+        }
+      } catch {
+        continue;
+      }
+    }
+    console.warn("   \u26A0\uFE0F \u672A\u627E\u5230\u53D1\u5E03\u6309\u94AE");
+  }
+  async getArticleUrl() {
+    const page = this.browserManager.getPage();
+    if (!page) return null;
+    try {
+      await page.waitForTimeout(2e3);
+      const url = page.url();
+      if (url.includes("baijiahao.baidu.com/")) {
+        return url;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+};
+
+// src/adapters/toutiao.ts
+var ToutiaoAdapter = class extends BaseAdapter {
+  constructor() {
+    super("toutiao");
+  }
+  /**
+   * 发布文章到头条号
+   * @param article 文章内容
+   * @param testMode 测试模式，为true时不点击发布按钮
+   */
+  async publish(article, testMode = false) {
+    try {
+      console.log(`\u{1F680} \u5F00\u59CB\u53D1\u5E03\u6587\u7AE0\u5230\u5934\u6761\u53F7...`);
+      if (testMode) {
+        console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u6587\u7AE0\u4F46\u4E0D\u53D1\u5E03");
+      }
+      await this.browserManager.launch();
+      const page = this.browserManager.getPage();
+      if (!page) {
+        throw new Error("Page not initialized");
+      }
+      console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762...");
+      await this.browserManager.gotoPublishPage();
+      await page.waitForTimeout(2e3);
+      if (this.browserManager.isOnLoginPage()) {
+        console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B...");
+        console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55\u5934\u6761\u53F7...");
+        const loginSuccess = await this.browserManager.waitForLogin(12e4);
+        if (!loginSuccess) {
+          await this.browserManager.close();
+          return {
+            success: false,
+            platform: this.platform,
+            message: "\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"
+          };
+        }
+        console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B...");
+        await this.browserManager.gotoPublishPage();
+        await page.waitForTimeout(2e3);
+      }
+      console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u6807\u9898...");
+      await this.fillTitle(article.title);
+      console.log("\u{1F4DD} \u586B\u5145\u6587\u7AE0\u5185\u5BB9...");
+      await this.fillContent(article.content);
+      if (article.coverImage) {
+        console.log("\u{1F5BC}\uFE0F \u4E0A\u4F20\u5C01\u9762\u56FE\u7247...");
+        await this.uploadCover(article.coverImage);
+      }
+      if (article.tags && article.tags.length > 0) {
+        console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E...");
+        await this.setTags(article.tags);
+      }
+      if (testMode) {
+        console.log("");
+        console.log("===========================================");
+        console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01");
+        console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("===========================================");
+        console.log("");
+        const screenshotPath = `./test-screenshot-toutiao-${Date.now()}.png`;
+        await this.screenshot(screenshotPath);
+        console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${screenshotPath}`);
+        await this.browserManager.saveCookies();
+        console.log("");
+        console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3");
+        console.log("");
+        return {
+          success: true,
+          platform: this.platform,
+          message: "\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u6587\u7AE0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",
+          testMode: true
+        };
+      }
+      console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE...");
+      await this.clickPublish();
+      const articleUrl = await this.getArticleUrl();
+      await this.browserManager.saveCookies();
+      await this.browserManager.close();
+      return {
+        success: true,
+        platform: this.platform,
+        message: "\u6587\u7AE0\u53D1\u5E03\u6210\u529F",
+        url: articleUrl || void 0
+      };
+    } catch (error) {
+      await this.browserManager.close();
+      return {
+        success: false,
+        platform: this.platform,
+        message: "\u53D1\u5E03\u5931\u8D25",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  async fillTitle(title) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const titleSelectors = [
+      'input[placeholder*="\u6807\u9898"]',
+      ".article-title input",
+      'input[class*="title"]',
+      'input[name="title"]'
+    ];
+    let titleInput = null;
+    for (const selector of titleSelectors) {
+      try {
+        titleInput = await page.$(selector);
+        if (titleInput) {
+          console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${selector}`);
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+    if (titleInput) {
+      await titleInput.click();
+      await titleInput.fill(title);
+      console.log(`   \u6807\u9898: ${title}`);
+    } else {
+      console.warn("   \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846");
+    }
+  }
+  async fillContent(content) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const contentSelectors = [
+      ".ql-editor",
+      '[contenteditable="true"]',
+      ".editor-content",
+      "#editor"
+    ];
+    let contentEditor = null;
+    for (const selector of contentSelectors) {
+      try {
+        contentEditor = await page.$(selector);
+        if (contentEditor) {
+          console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${selector}`);
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+    if (contentEditor) {
+      await contentEditor.click();
+      await page.waitForTimeout(500);
+      await contentEditor.fill("");
+      await page.keyboard.type(content, { delay: 10 });
+      console.log(`   \u5185\u5BB9\u957F\u5EA6: ${content.length} \u5B57\u7B26`);
+    } else {
+      console.warn("   \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668");
+    }
+  }
+  async uploadCover(imagePath) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      const coverSelector = 'input[type="file"][accept*="image"], .cover-upload input';
+      await page.setInputFiles(coverSelector, imagePath);
+      await page.waitForTimeout(2e3);
+      console.log(`   \u5C01\u9762\u56FE\u7247: ${imagePath}`);
+    } catch (error) {
+      console.warn("   \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:", error);
+    }
+  }
+  async setTags(tags) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      const tagInputSelector = 'input[placeholder*="\u6807\u7B7E"], input[placeholder*="\u8BDD\u9898"], .tag-input input';
+      await page.waitForSelector(tagInputSelector, { timeout: 5e3 });
+      for (const tag of tags.slice(0, 3)) {
+        await page.fill(tagInputSelector, tag);
+        await page.waitForTimeout(500);
+        await page.keyboard.press("Enter");
+        await page.waitForTimeout(500);
+      }
+      console.log(`   \u6807\u7B7E: ${tags.slice(0, 3).join(", ")}`);
+    } catch (error) {
+      console.warn("   \u6807\u7B7E\u8BBE\u7F6E\u5931\u8D25:", error);
+    }
+  }
+  async clickPublish() {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const publishSelector = 'button:has-text("\u53D1\u5E03"), .publish-btn, [class*="publish"]';
+    await page.waitForSelector(publishSelector, { timeout: 1e4 });
+    await page.click(publishSelector);
+    await page.waitForTimeout(3e3);
+  }
+  async getArticleUrl() {
+    const page = this.browserManager.getPage();
+    if (!page) return null;
+    try {
+      await page.waitForTimeout(2e3);
+      const url = page.url();
+      if (url.includes("toutiao.com/")) {
+        return url;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+};
+
+// src/adapters/xiaohongshu.ts
+var XiaohongshuAdapter = class extends BaseAdapter {
+  constructor() {
+    super("xiaohongshu");
+  }
+  /**
+   * 发布笔记到小红书
+   * @param article 文章内容
+   * @param testMode 测试模式，为true时不点击发布按钮
+   */
+  async publish(article, testMode = false) {
+    try {
+      console.log(`\u{1F680} \u5F00\u59CB\u53D1\u5E03\u7B14\u8BB0\u5230\u5C0F\u7EA2\u4E66...`);
+      if (testMode) {
+        console.log("\u{1F4DD} \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u5C06\u586B\u5199\u7B14\u8BB0\u4F46\u4E0D\u53D1\u5E03");
+      }
+      await this.browserManager.launch();
+      const page = this.browserManager.getPage();
+      if (!page) {
+        throw new Error("Page not initialized");
+      }
+      console.log("\u{1F4F1} \u5BFC\u822A\u5230\u53D1\u5E03\u9875\u9762...");
+      await this.browserManager.gotoPublishPage();
+      await page.waitForTimeout(2e3);
+      if (this.browserManager.isOnLoginPage()) {
+        console.log("\u26A0\uFE0F \u68C0\u6D4B\u5230\u672A\u767B\u5F55\uFF0C\u5F00\u59CB\u767B\u5F55\u6D41\u7A0B...");
+        console.log("\u8BF7\u5728\u6D4F\u89C8\u5668\u4E2D\u626B\u7801\u767B\u5F55\u5C0F\u7EA2\u4E66...");
+        const loginSuccess = await this.browserManager.waitForLogin(12e4);
+        if (!loginSuccess) {
+          await this.browserManager.close();
+          return {
+            success: false,
+            platform: this.platform,
+            message: "\u767B\u5F55\u8D85\u65F6\uFF0C\u8BF7\u91CD\u8BD5"
+          };
+        }
+        console.log("\u{1F4F1} \u767B\u5F55\u6210\u529F\uFF0C\u7EE7\u7EED\u53D1\u5E03\u6D41\u7A0B...");
+        await this.browserManager.gotoPublishPage();
+        await page.waitForTimeout(2e3);
+      }
+      console.log("\u{1F4DD} \u586B\u5145\u7B14\u8BB0\u6807\u9898...");
+      await this.fillTitle(article.title);
+      console.log("\u{1F4DD} \u586B\u5145\u7B14\u8BB0\u5185\u5BB9...");
+      await this.fillContent(article.content);
+      if (article.coverImage) {
+        console.log("\u{1F5BC}\uFE0F \u4E0A\u4F20\u5C01\u9762\u56FE\u7247...");
+        await this.uploadCover(article.coverImage);
+      }
+      if (article.tags && article.tags.length > 0) {
+        console.log("\u{1F3F7}\uFE0F \u8BBE\u7F6E\u6807\u7B7E...");
+        await this.setTags(article.tags);
+      }
+      if (testMode) {
+        console.log("");
+        console.log("===========================================");
+        console.log("\u2705 \u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u7B14\u8BB0\u5DF2\u586B\u5199\u5B8C\u6210\uFF01");
+        console.log("\u26A0\uFE0F  \u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("===========================================");
+        console.log("");
+        const screenshotPath = `./test-screenshot-xiaohongshu-${Date.now()}.png`;
+        await this.screenshot(screenshotPath);
+        console.log(`\u{1F4F8} \u622A\u56FE\u5DF2\u4FDD\u5B58: ${screenshotPath}`);
+        await this.browserManager.saveCookies();
+        console.log("");
+        console.log("\u{1F4A1} \u6D4F\u89C8\u5668\u5C06\u4FDD\u6301\u6253\u5F00\u72B6\u6001\uFF0C\u8BF7\u624B\u52A8\u68C0\u67E5\u9875\u9762\u5185\u5BB9");
+        console.log("   \u68C0\u67E5\u5B8C\u6210\u540E\uFF0C\u8BF7\u624B\u52A8\u5173\u95ED\u6D4F\u89C8\u5668\u7A97\u53E3");
+        console.log("");
+        return {
+          success: true,
+          platform: this.platform,
+          message: "\u6D4B\u8BD5\u6A21\u5F0F\uFF1A\u7B14\u8BB0\u5DF2\u586B\u5199\u5B8C\u6210\uFF0C\u672A\u53D1\u5E03",
+          testMode: true
+        };
+      }
+      console.log("\u{1F4E4} \u70B9\u51FB\u53D1\u5E03\u6309\u94AE...");
+      await this.clickPublish();
+      const articleUrl = await this.getArticleUrl();
+      await this.browserManager.saveCookies();
+      await this.browserManager.close();
+      return {
+        success: true,
+        platform: this.platform,
+        message: "\u7B14\u8BB0\u53D1\u5E03\u6210\u529F",
+        url: articleUrl || void 0
+      };
+    } catch (error) {
+      await this.browserManager.close();
+      return {
+        success: false,
+        platform: this.platform,
+        message: "\u53D1\u5E03\u5931\u8D25",
+        error: error instanceof Error ? error.message : String(error)
+      };
+    }
+  }
+  async fillTitle(title) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const titleSelectors = [
+      'input[placeholder*="\u6807\u9898"]',
+      ".title-input input",
+      'input[class*="title"]',
+      'input[name="title"]'
+    ];
+    let titleInput = null;
+    for (const selector of titleSelectors) {
+      try {
+        titleInput = await page.$(selector);
+        if (titleInput) {
+          console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${selector}`);
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+    if (titleInput) {
+      await titleInput.click();
+      await titleInput.fill(title);
+      console.log(`   \u6807\u9898: ${title}`);
+    } else {
+      console.warn("   \u672A\u627E\u5230\u6807\u9898\u8F93\u5165\u6846");
+    }
+  }
+  async fillContent(content) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const contentSelectors = [
+      "#post-textarea",
+      '[contenteditable="true"]',
+      ".editor-content",
+      'textarea[placeholder*="\u6B63\u6587"]'
+    ];
+    let contentEditor = null;
+    for (const selector of contentSelectors) {
+      try {
+        contentEditor = await page.$(selector);
+        if (contentEditor) {
+          console.log(`   \u4F7F\u7528\u9009\u62E9\u5668: ${selector}`);
+          break;
+        }
+      } catch {
+        continue;
+      }
+    }
+    if (contentEditor) {
+      await contentEditor.click();
+      await page.waitForTimeout(500);
+      await contentEditor.fill("");
+      await page.keyboard.type(content, { delay: 10 });
+      console.log(`   \u5185\u5BB9\u957F\u5EA6: ${content.length} \u5B57\u7B26`);
+    } else {
+      console.warn("   \u672A\u627E\u5230\u5185\u5BB9\u7F16\u8F91\u5668");
+    }
+  }
+  async uploadCover(imagePath) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      const coverSelector = 'input[type="file"][accept*="image"], .upload-input input';
+      await page.setInputFiles(coverSelector, imagePath);
+      await page.waitForTimeout(3e3);
+      console.log(`   \u5C01\u9762\u56FE\u7247: ${imagePath}`);
+    } catch (error) {
+      console.warn("   \u5C01\u9762\u4E0A\u4F20\u5931\u8D25:", error);
+    }
+  }
+  async setTags(tags) {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    try {
+      const tagInputSelector = 'input[placeholder*="\u8BDD\u9898"], input[placeholder*="\u6807\u7B7E"], .tag-input input';
+      await page.waitForSelector(tagInputSelector, { timeout: 5e3 });
+      for (const tag of tags.slice(0, 3)) {
+        await page.fill(tagInputSelector, "#" + tag);
+        await page.waitForTimeout(500);
+        await page.keyboard.press("Enter");
+        await page.waitForTimeout(500);
+      }
+      console.log(`   \u6807\u7B7E: ${tags.slice(0, 3).join(", ")}`);
+    } catch (error) {
+      console.warn("   \u6807\u7B7E\u8BBE\u7F6E\u5931\u8D25:", error);
+    }
+  }
+  async clickPublish() {
+    const page = this.browserManager.getPage();
+    if (!page) return;
+    const publishSelector = 'button:has-text("\u53D1\u5E03"), .publish-btn, [class*="publish"]';
+    await page.waitForSelector(publishSelector, { timeout: 1e4 });
+    await page.click(publishSelector);
+    await page.waitForTimeout(3e3);
+  }
+  async getArticleUrl() {
+    const page = this.browserManager.getPage();
+    if (!page) return null;
+    try {
+      await page.waitForTimeout(2e3);
+      const url = page.url();
+      if (url.includes("xiaohongshu.com/")) {
+        return url;
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+};
+
+// src/adapters/index.ts
+var adapterMap = {
+  zhihu: () => new ZhihuAdapter(),
+  bilibili: () => new BilibiliAdapter(),
+  baijiahao: () => new BaijiahaoAdapter(),
+  toutiao: () => new ToutiaoAdapter(),
+  xiaohongshu: () => new XiaohongshuAdapter()
+};
+function getAdapter(platform) {
+  const createAdapter = adapterMap[platform];
+  if (!createAdapter) {
+    throw new Error(`Unknown platform: ${platform}`);
+  }
+  return createAdapter();
+}
+
+// src/test-publish.ts
+var testArticle = {
+  title: `\u6D4B\u8BD5\u6587\u7AE0 - ${(/* @__PURE__ */ new Date()).toLocaleString("zh-CN")}`,
+  content: `\u8FD9\u662F\u4E00\u7BC7\u6D4B\u8BD5\u6587\u7AE0\uFF0C\u7528\u4E8E\u9A8C\u8BC1\u53D1\u5E03\u529F\u80FD\u662F\u5426\u6B63\u5E38\u5DE5\u4F5C\u3002
 
 ## \u6587\u7AE0\u5185\u5BB9
 
@@ -37,4 +3196,82 @@ import{chromium as _}from"playwright";var m={zhihu:{name:"zhihu",displayName:"\u
 3. \u9875\u9762\u662F\u5426\u6B63\u5E38\u663E\u793A
 
 ---
-\u6B64\u6587\u7AE0\u7531\u81EA\u52A8\u5316\u6D4B\u8BD5\u811A\u672C\u751F\u6210\uFF0C\u8BF7\u52FF\u53D1\u5E03\u3002`,tags:["\u6D4B\u8BD5","\u81EA\u52A8\u5316"],summary:"\u8FD9\u662F\u4E00\u7BC7\u6D4B\u8BD5\u6587\u7AE0\u7684\u6458\u8981\uFF0C\u7528\u4E8E\u9A8C\u8BC1\u6458\u8981\u529F\u80FD\u662F\u5426\u6B63\u5E38\u5DE5\u4F5C\u3002",category:"\u79D1\u6280/\u4E92\u8054\u7F51",coverImage:void 0};async function Pt(u){let t=m[u];if(!t){console.log("\u274C \u4E0D\u652F\u6301\u7684\u5E73\u53F0:",u),console.log("\u652F\u6301\u7684\u5E73\u53F0:",Object.keys(m).join(", "));return}if(console.log(""),console.log("==========================================="),console.log(`\u{1F9EA} \u5F00\u59CB\u6D4B\u8BD5 ${t.displayName} \u53D1\u5E03\u529F\u80FD`),console.log("==========================================="),console.log(""),console.log("\u{1F4CB} \u6D4B\u8BD5\u6587\u7AE0\u4FE1\u606F:"),console.log(`   \u6807\u9898: ${d.title}`),console.log(`   \u5185\u5BB9\u957F\u5EA6: ${d.content.length} \u5B57\u7B26`),console.log(`   \u6807\u7B7E: ${d.tags?.join(", ")}`),console.log(`   \u6458\u8981: ${d.summary}`),console.log(`   \u5206\u7C7B: ${d.category}`),console.log(""),!d.coverImage){console.log("\u{1F5BC}\uFE0F  \u672A\u6307\u5B9A\u5C01\u9762\u56FE\uFF0C\u6B63\u5728\u81EA\u52A8\u751F\u6210..."),console.log("");let e=await b({title:d.title,contentPreview:d.content,orientation:"landscape",size:"large2x"});e?(d.coverImage=e,console.log(`\u2705 \u5C01\u9762\u56FE\u5DF2\u751F\u6210: ${e}`)):console.log("\u26A0\uFE0F  \u5C01\u9762\u56FE\u751F\u6210\u5931\u8D25\uFF0C\u5C06\u4E0D\u4F7F\u7528\u5C01\u9762\u56FE"),console.log("")}try{console.log("\u{1F680} \u5F00\u59CB\u6D4B\u8BD5\u53D1\u5E03\u6D41\u7A0B\uFF08\u6D4B\u8BD5\u6A21\u5F0F\uFF09..."),console.log("   \u5982\u679C\u672A\u767B\u5F55\uFF0C\u5C06\u81EA\u52A8\u8FDB\u5165\u767B\u5F55\u6D41\u7A0B"),console.log("");let o=await z(u).publish(d,!0);console.log(""),console.log("==========================================="),o.success?(console.log("\u2705 \u6D4B\u8BD5\u5B8C\u6210\uFF01"),console.log(""),console.log("\u{1F4DD} \u7ED3\u679C:",o.message),o.testMode&&(console.log(""),console.log("\u{1F4A1} \u63D0\u793A: \u6D4B\u8BD5\u6A21\u5F0F\u4E0B\u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE"),console.log("   \u8BF7\u68C0\u67E5\u6D4F\u89C8\u5668\u4E2D\u7684\u9875\u9762\u5185\u5BB9\u662F\u5426\u6B63\u786E\u586B\u5145"))):(console.log("\u274C \u6D4B\u8BD5\u5931\u8D25"),console.log(""),console.log("\u{1F4DD} \u9519\u8BEF:",o.message),o.error&&console.log("   \u8BE6\u60C5:",o.error)),console.log("==========================================="),console.log("")}catch(e){console.log(""),console.log("\u274C \u6D4B\u8BD5\u8FC7\u7A0B\u4E2D\u53D1\u751F\u9519\u8BEF:"),console.log(e),console.log("")}}var vt=process.argv[2];Pt(vt).catch(console.error);
+\u6B64\u6587\u7AE0\u7531\u81EA\u52A8\u5316\u6D4B\u8BD5\u811A\u672C\u751F\u6210\uFF0C\u8BF7\u52FF\u53D1\u5E03\u3002`,
+  tags: ["\u6D4B\u8BD5", "\u81EA\u52A8\u5316"],
+  summary: "\u8FD9\u662F\u4E00\u7BC7\u6D4B\u8BD5\u6587\u7AE0\u7684\u6458\u8981\uFF0C\u7528\u4E8E\u9A8C\u8BC1\u6458\u8981\u529F\u80FD\u662F\u5426\u6B63\u5E38\u5DE5\u4F5C\u3002",
+  category: "\u79D1\u6280/\u4E92\u8054\u7F51",
+  // 使用 "/" 分隔多级分类
+  coverImage: void 0
+};
+async function testPublish(platformKey) {
+  const platform = PLATFORMS[platformKey];
+  if (!platform) {
+    console.log("\u274C \u4E0D\u652F\u6301\u7684\u5E73\u53F0:", platformKey);
+    console.log("\u652F\u6301\u7684\u5E73\u53F0:", Object.keys(PLATFORMS).join(", "));
+    return;
+  }
+  console.log("");
+  console.log("===========================================");
+  console.log(`\u{1F9EA} \u5F00\u59CB\u6D4B\u8BD5 ${platform.displayName} \u53D1\u5E03\u529F\u80FD`);
+  console.log("===========================================");
+  console.log("");
+  console.log("\u{1F4CB} \u6D4B\u8BD5\u6587\u7AE0\u4FE1\u606F:");
+  console.log(`   \u6807\u9898: ${testArticle.title}`);
+  console.log(`   \u5185\u5BB9\u957F\u5EA6: ${testArticle.content.length} \u5B57\u7B26`);
+  console.log(`   \u6807\u7B7E: ${testArticle.tags?.join(", ")}`);
+  console.log(`   \u6458\u8981: ${testArticle.summary}`);
+  console.log(`   \u5206\u7C7B: ${testArticle.category}`);
+  console.log("");
+  if (!testArticle.coverImage) {
+    console.log("\u{1F5BC}\uFE0F  \u672A\u6307\u5B9A\u5C01\u9762\u56FE\uFF0C\u6B63\u5728\u81EA\u52A8\u751F\u6210...");
+    console.log("");
+    const coverUrl = await getCoverForArticle({
+      title: testArticle.title,
+      contentPreview: testArticle.content,
+      orientation: "landscape",
+      size: "large2x"
+    });
+    if (coverUrl) {
+      testArticle.coverImage = coverUrl;
+      console.log(`\u2705 \u5C01\u9762\u56FE\u5DF2\u751F\u6210: ${coverUrl}`);
+    } else {
+      console.log("\u26A0\uFE0F  \u5C01\u9762\u56FE\u751F\u6210\u5931\u8D25\uFF0C\u5C06\u4E0D\u4F7F\u7528\u5C01\u9762\u56FE");
+    }
+    console.log("");
+  }
+  try {
+    console.log("\u{1F680} \u5F00\u59CB\u6D4B\u8BD5\u53D1\u5E03\u6D41\u7A0B\uFF08\u6D4B\u8BD5\u6A21\u5F0F\uFF09...");
+    console.log("   \u5982\u679C\u672A\u767B\u5F55\uFF0C\u5C06\u81EA\u52A8\u8FDB\u5165\u767B\u5F55\u6D41\u7A0B");
+    console.log("");
+    const adapter = getAdapter(platformKey);
+    const result = await adapter.publish(testArticle, true);
+    console.log("");
+    console.log("===========================================");
+    if (result.success) {
+      console.log("\u2705 \u6D4B\u8BD5\u5B8C\u6210\uFF01");
+      console.log("");
+      console.log("\u{1F4DD} \u7ED3\u679C:", result.message);
+      if (result.testMode) {
+        console.log("");
+        console.log("\u{1F4A1} \u63D0\u793A: \u6D4B\u8BD5\u6A21\u5F0F\u4E0B\u672A\u70B9\u51FB\u53D1\u5E03\u6309\u94AE");
+        console.log("   \u8BF7\u68C0\u67E5\u6D4F\u89C8\u5668\u4E2D\u7684\u9875\u9762\u5185\u5BB9\u662F\u5426\u6B63\u786E\u586B\u5145");
+      }
+    } else {
+      console.log("\u274C \u6D4B\u8BD5\u5931\u8D25");
+      console.log("");
+      console.log("\u{1F4DD} \u9519\u8BEF:", result.message);
+      if (result.error) {
+        console.log("   \u8BE6\u60C5:", result.error);
+      }
+    }
+    console.log("===========================================");
+    console.log("");
+  } catch (error) {
+    console.log("");
+    console.log("\u274C \u6D4B\u8BD5\u8FC7\u7A0B\u4E2D\u53D1\u751F\u9519\u8BEF:");
+    console.log(error);
+    console.log("");
+  }
+}
+var platformArg = process.argv[2];
+testPublish(platformArg).catch(console.error);

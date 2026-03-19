@@ -1,8 +1,9 @@
 ---
 name: article-publisher
 description: 自媒体文章多平台发布工具，支持知乎、Bilibili、百家号、头条号、小红书等平台的一键发布。使用Playwright实现浏览器自动化，支持扫码登录和Cookie持久化。首次使用会自动安装依赖。
-version: 1.2.2
+version: 1.2.6
 author: OpenClaw
+license: GPL-3.0
 keywords:
   - 自媒体
   - 文章发布
@@ -67,18 +68,28 @@ keywords:
 
 ## 注意事项
 
-- 首次使用会自动安装依赖（npm依赖 + Playwright浏览器）
+- 首次使用需要手动安装依赖（见下方安装说明）
 - 需要扫码登录各平台
 - Cookie有效期一般为7-30天，过期后需重新登录
 - 发布时请确保文章内容符合各平台规范
 
+## 安装依赖
+
+首次使用前，请运行以下命令安装依赖：
+
+```bash
+# 安装 npm 依赖
+npm install --registry=https://registry.npmmirror.com
+
+# 安装 Playwright 浏览器
+npm run install:browser:cn
+# 或者
+npx playwright install chromium
+```
+
 ## 安全说明
 
-本工具的安全扫描可能会显示以下警告，这些是**正常功能所需**，不构成安全风险：
-
-1. **Shell command execution** - 用于首次使用时自动安装 Playwright 浏览器依赖（`npm install` 和 `npx playwright install`），这是自动化工具的必要操作。
-
-2. **Dynamic code execution** - 来自 Playwright 的 `$eval` API，用于在浏览器上下文中安全地执行 DOM 操作，这是 Playwright 的标准用法。
+本工具使用 Playwright 进行浏览器自动化，所有操作均在本地执行：
 
 本工具**不会**：
 - 执行任意用户输入的代码
