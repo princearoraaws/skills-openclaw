@@ -3,11 +3,16 @@
   "slug": "article-publisher",
   "displayName": "Article Publisher",
   "latest": {
-    "version": "1.2.6",
-    "publishedAt": 1773880201386,
-    "commit": "https://github.com/openclaw/skills/commit/6705ccfd9b69e055098a5f69a1f0226edce16775"
+    "version": "1.4.0",
+    "publishedAt": 1773921326839,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.2.6",
+      "publishedAt": 1773880201386,
+      "commit": "https://github.com/openclaw/skills/commit/6705ccfd9b69e055098a5f69a1f0226edce16775"
+    },
     {
       "version": "1.2.2",
       "publishedAt": 1773822448820,
