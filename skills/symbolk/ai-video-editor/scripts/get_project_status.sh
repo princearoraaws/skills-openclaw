@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Query the status of a Sparki video processing project.
+# Query the status of a Sparki Business API video processing project using batch query.
 #
 # Usage: get_project_status.sh <project_id>
 #
@@ -7,12 +7,12 @@
 #   project_id: UUID returned by create_project.sh
 #
 # Outputs (stdout):
-#   - On COMPLETED:  "COMPLETED <result_url>"
-#   - On FAILED:     "FAILED <error_message>"
-#   - On other:      "<status>"   (e.g. INIT, CHAT, PLAN, EXECUTOR, QUEUED)
+#   - On completed:  "completed <result_url>"
+#   - On failed:     "failed <error_message>"
+#   - On other:      "processing"
 #
 # Exit codes:
-#   0 — terminal state (COMPLETED or FAILED)
+#   0 — terminal state (completed or failed)
 #   2 — still in progress (poll again)
 #   1 — argument or API error
 
@@ -21,7 +21,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-SPARKI_API_BASE="https://agent-api-test.aicoding.live/api/v1"
+SPARKI_API_BASE="${SPARKI_API_BASE:-https://business-agent-api.sparki.io/api/v1}"
 RATE_LIMIT_SLEEP=3
 
 # ---------------------------------------------------------------------------
@@ -40,43 +40,46 @@ fi
 PROJECT_ID="$1"
 
 # ---------------------------------------------------------------------------
-# Query project status
+# Query project status via POST /projects/batch
 # ---------------------------------------------------------------------------
 sleep "$RATE_LIMIT_SLEEP"
 
 RESPONSE=$(curl -sS \
-  -X GET "${SPARKI_API_BASE}/business/projects/${PROJECT_ID}" \
-  -H "X-API-Key: $SPARKI_API_KEY")
+  -X POST "${SPARKI_API_BASE}/business/projects/batch" \
+  -H "X-API-Key: $SPARKI_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"project_ids\":[\"${PROJECT_ID}\"]}")
 
-# Check API-level error
 HTTP_CODE=$(echo "$RESPONSE" | jq -r '.code // "unknown"')
 MESSAGE=$(echo "$RESPONSE" | jq -r '.message // "unknown"')
+
+echo "$RESPONSE"
 
 if [[ "$HTTP_CODE" != "200" && "$HTTP_CODE" != "0" ]]; then
   echo "Error: Query failed (code=$HTTP_CODE): $MESSAGE" >&2
   exit 1
 fi
 
-STATUS=$(echo "$RESPONSE" | jq -r '.data.status // "UNKNOWN"')
+STATUS=$(echo "$RESPONSE" | jq -r '.data.projects[0].status // empty')
+if [[ -z "$STATUS" ]]; then
+  echo "Error: Project not found: $PROJECT_ID" >&2
+  exit 1
+fi
 
 case "$STATUS" in
-  COMPLETED)
-    RESULT_URL=$(echo "$RESPONSE" | jq -r '.data.result_url // empty')
-    echo "COMPLETED ${RESULT_URL}"
+  completed)
+    RESULT_URL=$(echo "$RESPONSE" | jq -r '.data.projects[0].result_url // .data.projects[0].output_videos[0].url // empty')
+    echo "completed ${RESULT_URL}"
     exit 0
     ;;
-  FAILED)
-    ERROR_MSG=$(echo "$RESPONSE" | jq -r '.data.error // "unknown error"')
-    echo "FAILED ${ERROR_MSG}"
+  failed)
+    ERROR_MSG=$(echo "$RESPONSE" | jq -r '.data.projects[0].error // "unknown error"')
+    echo "failed ${ERROR_MSG}"
     exit 0
-    ;;
-  INIT|CHAT|PLAN|EXECUTOR|QUEUED|processing)
-    # Still in progress — caller should poll
-    echo "$STATUS"
-    exit 2
     ;;
   *)
-    echo "$STATUS"
+    # Still in progress — caller should poll
+    echo "processing"
     exit 2
     ;;
 esac

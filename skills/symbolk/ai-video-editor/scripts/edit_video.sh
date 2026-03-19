@@ -1,170 +1,280 @@
 #!/usr/bin/env bash
-# End-to-end Sparki video processing workflow.
-#
-# Orchestrates upload → wait for asset ready → create project → poll until done.
-# Progress logs are written to stderr; only the final result_url is written to stdout,
-# making this script safe to use in pipelines.
-#
-# Usage:
-#   edit_video.sh <file_path> <tips> [user_prompt] [aspect_ratio] [duration]
-#
-# Args:
-#   file_path:    Local path to a video file (mp4 or mov, max 3GB)
-#   tips:         Comma-separated tip IDs or descriptions (e.g. "1,2")
-#   user_prompt:  (optional) Free-text requirement
-#   aspect_ratio: (optional) "9:16" (default) | "1:1" | "16:9"
-#   duration:     (optional) Target duration in seconds
-#
-# Environment variables:
-#   SPARKI_API_KEY        Required. Your Sparki Business API key.
-#   WORKFLOW_TIMEOUT      Optional. Max seconds to wait for project completion (default: 3600).
-#   ASSET_TIMEOUT         Optional. Max seconds to wait for asset upload (default: 60).
-#
-# Outputs (stdout): result_url — the 24-hour pre-signed download URL of the processed video.
-# Exit codes:
-#   0 — success
-#   1 — input/config error
-#   2 — asset processing timed out
-#   3 — project processing timed out
-#   4 — project failed
-
 set -euo pipefail
 
-# ---------------------------------------------------------------------------
-# Constants
-# ---------------------------------------------------------------------------
-SPARKI_API_BASE="https://agent-api-test.aicoding.live/api/v1"
-RATE_LIMIT_SLEEP=3
-ASSET_POLL_INTERVAL=2
-PROJECT_POLL_INTERVAL=5
-WORKFLOW_TIMEOUT="${WORKFLOW_TIMEOUT:-3600}"
-ASSET_TIMEOUT="${ASSET_TIMEOUT:-60}"
+CONFIG_FILE="$HOME/.openclaw/config/sparki.env"
+[ -f "$CONFIG_FILE" ] && source "$CONFIG_FILE"
 
-# Resolve scripts directory relative to this script
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+API_URL="${SPARKI_API_URL:-https://business-agent-api.sparki.io}"
+API_KEY="${SPARKI_API_KEY:?ERROR: SPARKI_API_KEY not set. Run setup.sh or edit $CONFIG_FILE}"
+OUTPUT_DIR="${SPARKI_OUTPUT_DIR:-$HOME/Movies/sparki}"
+BUSINESS_API_BASE="$API_URL/api/v1/business"
+ASSET_POLL_INTERVAL="${ASSET_POLL_INTERVAL:-2}"
+ASSET_POLL_MAX_INTERVAL="${ASSET_POLL_MAX_INTERVAL:-30}"
+PROJECT_POLL_INTERVAL="${PROJECT_POLL_INTERVAL:-10}"
+PROJECT_POLL_MAX_INTERVAL="${PROJECT_POLL_MAX_INTERVAL:-60}"
+ASSET_TIMEOUT="${ASSET_TIMEOUT:-300}"
+PROJECT_TIMEOUT="${PROJECT_TIMEOUT:-3600}"
 
-# ---------------------------------------------------------------------------
-# Validate environment
-# ---------------------------------------------------------------------------
-: "${SPARKI_API_KEY:?Error: SPARKI_API_KEY environment variable is required}"
-
-# ---------------------------------------------------------------------------
-# Validate arguments
-# ---------------------------------------------------------------------------
-if [[ $# -lt 2 ]]; then
-  echo "Usage: edit_video.sh <file_path> <tips> [user_prompt] [aspect_ratio] [duration]" >&2
-  echo "  Example: edit_video.sh my_video.mp4 '1,2' 'make it dynamic' '9:16' 60" >&2
-  exit 1
-fi
-
-FILE_PATH="$1"
-TIPS="$2"
+VIDEO_PATH="${1:?Usage: edit_video.sh <video_path> <tips> [user_prompt] [aspect_ratio] [duration]}"
+TIPS_ARG="${2:-}"
 USER_PROMPT="${3:-}"
 ASPECT_RATIO="${4:-9:16}"
 DURATION="${5:-}"
 
-# ---------------------------------------------------------------------------
-# Step 1: Upload asset
-# ---------------------------------------------------------------------------
-echo "[1/4] Uploading asset: $FILE_PATH" >&2
+VIDEO_PATH="${VIDEO_PATH/#\~/$HOME}"
+OUTPUT_DIR="${OUTPUT_DIR/#\~/$HOME}"
 
-OBJECT_KEY=$(bash "${SCRIPT_DIR}/upload_asset.sh" "$FILE_PATH")
-
-if [[ -z "$OBJECT_KEY" ]]; then
-  echo "Error: upload_asset.sh returned empty object_key" >&2
+if [ ! -f "$VIDEO_PATH" ]; then
+  echo "ERROR: Video file not found: $VIDEO_PATH"
   exit 1
 fi
 
-echo "[1/4] Asset accepted. object_key=$OBJECT_KEY" >&2
+case "${VIDEO_PATH##*.}" in
+  mp4|MP4) ;;
+  *)
+    echo "ERROR: Only MP4 is supported by this documented Business API"
+    exit 1
+    ;;
+esac
 
-# ---------------------------------------------------------------------------
-# Step 2: Poll until asset status = completed
-# ---------------------------------------------------------------------------
-echo "[2/4] Waiting for asset upload to complete (timeout=${ASSET_TIMEOUT}s)..." >&2
+if [ -z "$TIPS_ARG" ] && [ ${#USER_PROMPT} -lt 10 ]; then
+  echo "ERROR: When tips is empty, user_prompt must be at least 10 characters"
+  exit 1
+fi
 
+mkdir -p "$OUTPUT_DIR"
+
+calculate_backoff_seconds() {
+  local attempt="$1"
+  local initial_interval="$2"
+  local max_interval="$3"
+  local delay="$initial_interval"
+
+  if [ "$attempt" -le 0 ]; then
+    echo "$delay"
+    return
+  fi
+
+  while [ "$attempt" -gt 0 ]; do
+    if [ "$delay" -ge "$max_interval" ]; then
+      echo "$max_interval"
+      return
+    fi
+
+    delay=$((delay * 2))
+    if [ "$delay" -gt "$max_interval" ]; then
+      delay="$max_interval"
+    fi
+    attempt=$((attempt - 1))
+  done
+
+  echo "$delay"
+}
+
+echo "=== Sparki AI Video Editor ==="
+echo "Video: $VIDEO_PATH"
+echo "Tips: ${TIPS_ARG:-<empty>}"
+echo "Prompt: ${USER_PROMPT:-<empty>}"
+echo "Aspect Ratio: $ASPECT_RATIO"
+echo "Duration: ${DURATION:-<empty>}"
+echo "API: $API_URL"
+echo ""
+
+echo "[1/4] Uploading asset..."
+UPLOAD_RESPONSE=$(curl -s -X POST "$BUSINESS_API_BASE/assets/upload" \
+  -H "X-API-Key: $API_KEY" \
+  -F "files=@$VIDEO_PATH")
+
+OBJECT_KEY=$(echo "$UPLOAD_RESPONSE" | python3 -c '
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    uploads = ((data.get("data") or {}).get("uploads") or [])
+    first = uploads[0] if uploads else {}
+    print(first.get("object_key", ""))
+except Exception:
+    print("")
+' 2>/dev/null)
+
+if [ -z "$OBJECT_KEY" ]; then
+  echo "ERROR: Upload failed: $UPLOAD_RESPONSE"
+  exit 1
+fi
+
+echo "  Uploaded object_key: $OBJECT_KEY"
+
+echo "[2/4] Waiting for asset processing..."
 ASSET_START=$(date +%s)
+ASSET_ATTEMPT=0
 while true; do
-  sleep "$ASSET_POLL_INTERVAL"
+  ASSET_BATCH_PAYLOAD=$(python3 -c '
+import json, sys
+print(json.dumps({"object_keys": [sys.argv[1]]}))
+' "$OBJECT_KEY")
 
-  ASSET_RESP=$(curl -sS \
-    -X GET "${SPARKI_API_BASE}/business/assets/${OBJECT_KEY}/status" \
-    -H "X-API-Key: $SPARKI_API_KEY")
+  ASSET_BATCH_RESPONSE=$(curl -s -X POST "$BUSINESS_API_BASE/assets/batch" \
+    -H "X-API-Key: $API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$ASSET_BATCH_PAYLOAD")
 
-  ASSET_STATUS=$(echo "$ASSET_RESP" | jq -r '.data.status // "unknown"')
-  echo "[2/4] Asset status: $ASSET_STATUS" >&2
+  ASSET_STATUS=$(echo "$ASSET_BATCH_RESPONSE" | python3 -c '
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    assets = ((data.get("data") or {}).get("assets") or [])
+    first = assets[0] if assets else {}
+    print(first.get("status", "unknown"))
+except Exception:
+    print("unknown")
+' 2>/dev/null || echo "unknown")
 
-  if [[ "$ASSET_STATUS" == "completed" ]]; then
-    echo "[2/4] Asset ready." >&2
+  echo "  Asset status: $ASSET_STATUS"
+
+  if [ "$ASSET_STATUS" = "completed" ]; then
     break
   fi
-
-  if [[ "$ASSET_STATUS" == "failed" ]]; then
-    echo "Error: Asset processing failed." >&2
-    exit 2
+  if [ "$ASSET_STATUS" = "failed" ] || [ "$ASSET_STATUS" = "error" ]; then
+    echo "ERROR: Asset processing failed: $ASSET_BATCH_RESPONSE"
+    exit 1
   fi
 
-  ELAPSED=$(( $(date +%s) - ASSET_START ))
-  if (( ELAPSED >= ASSET_TIMEOUT )); then
-    echo "Error: Asset upload timed out after ${ASSET_TIMEOUT}s (status=$ASSET_STATUS)." >&2
-    exit 2
+  NOW=$(date +%s)
+  if [ $((NOW - ASSET_START)) -ge "$ASSET_TIMEOUT" ]; then
+    echo "ERROR: Asset processing timed out after ${ASSET_TIMEOUT}s"
+    exit 1
   fi
+
+  ASSET_DELAY=$(calculate_backoff_seconds "$ASSET_ATTEMPT" "$ASSET_POLL_INTERVAL" "$ASSET_POLL_MAX_INTERVAL")
+  echo "  Retrying asset status in ${ASSET_DELAY}s..."
+  sleep "$ASSET_DELAY"
+  ASSET_ATTEMPT=$((ASSET_ATTEMPT + 1))
 done
 
-# ---------------------------------------------------------------------------
-# Step 3: Create project
-# ---------------------------------------------------------------------------
-echo "[3/4] Creating video project (tips=$TIPS, aspect_ratio=$ASPECT_RATIO)..." >&2
+echo "[3/4] Creating render project..."
+PROJECT_PAYLOAD=$(python3 -c '
+import json, sys
 
-sleep "$RATE_LIMIT_SLEEP"
+def parse_tips(raw: str):
+    values = []
+    for item in raw.split(","):
+        item = item.strip()
+        if not item:
+            continue
+        values.append(int(item) if item.isdigit() else item)
+    return values
 
-PROJECT_ID=$(bash "${SCRIPT_DIR}/create_project.sh" \
-  "$OBJECT_KEY" "$TIPS" "$USER_PROMPT" "$ASPECT_RATIO" "$DURATION")
+object_key, tips_arg, user_prompt, aspect_ratio, duration = sys.argv[1:6]
+payload = {
+    "object_keys": [object_key],
+    "aspect_ratio": aspect_ratio or "9:16",
+}
 
-if [[ -z "$PROJECT_ID" ]]; then
-  echo "Error: create_project.sh returned empty project_id" >&2
+tips = parse_tips(tips_arg)
+if tips:
+    payload["tips"] = tips
+if user_prompt:
+    payload["user_prompt"] = user_prompt
+if duration:
+    payload["duration"] = int(duration)
+
+print(json.dumps(payload))
+' "$OBJECT_KEY" "$TIPS_ARG" "$USER_PROMPT" "$ASPECT_RATIO" "$DURATION")
+
+PROJECT_RESPONSE=$(curl -s -X POST "$BUSINESS_API_BASE/projects/render" \
+  -H "X-API-Key: $API_KEY" \
+  -H "Content-Type: application/json" \
+  -d "$PROJECT_PAYLOAD")
+
+PROJECT_ID=$(echo "$PROJECT_RESPONSE" | python3 -c '
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    print(((data.get("data") or {}).get("project_id", "")))
+except Exception:
+    print("")
+' 2>/dev/null)
+
+if [ -z "$PROJECT_ID" ]; then
+  echo "ERROR: Project creation failed: $PROJECT_RESPONSE"
   exit 1
 fi
 
-echo "[3/4] Project created. project_id=$PROJECT_ID" >&2
+echo "  Project ID: $PROJECT_ID"
 
-# ---------------------------------------------------------------------------
-# Step 4: Poll until project completes
-# ---------------------------------------------------------------------------
-echo "[4/4] Waiting for video processing (timeout=${WORKFLOW_TIMEOUT}s)..." >&2
-
+echo "[4/4] Waiting for render completion..."
 PROJECT_START=$(date +%s)
+PROJECT_ATTEMPT=0
 while true; do
-  sleep "$PROJECT_POLL_INTERVAL"
+  PROJECT_BATCH_PAYLOAD=$(python3 -c '
+import json, sys
+print(json.dumps({"project_ids": [sys.argv[1]]}))
+' "$PROJECT_ID")
 
-  # Use get_project_status.sh; disable errexit around it since exit code 2 = in-progress
-  set +e
-  STATUS_LINE=$(bash "${SCRIPT_DIR}/get_project_status.sh" "$PROJECT_ID" 2>/dev/null)
-  STATUS_EXIT=$?
-  set -e
+  PROJECT_BATCH_RESPONSE=$(curl -s -X POST "$BUSINESS_API_BASE/projects/batch" \
+    -H "X-API-Key: $API_KEY" \
+    -H "Content-Type: application/json" \
+    -d "$PROJECT_BATCH_PAYLOAD")
 
-  # STATUS_LINE format: "COMPLETED <url>" | "FAILED <msg>" | "<status>"
-  STATUS_WORD="${STATUS_LINE%% *}"
+  PROJECT_STATUS=$(echo "$PROJECT_BATCH_RESPONSE" | python3 -c '
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    projects = ((data.get("data") or {}).get("projects") or [])
+    first = projects[0] if projects else {}
+    print(first.get("status", "unknown"))
+except Exception:
+    print("unknown")
+' 2>/dev/null || echo "unknown")
 
-  echo "[4/4] Project status: $STATUS_WORD" >&2
+  echo "  Project status: $PROJECT_STATUS"
 
-  if [[ "$STATUS_WORD" == "COMPLETED" ]]; then
-    RESULT_URL="${STATUS_LINE#COMPLETED }"
-    echo "[4/4] Processing complete!" >&2
-    # Write result_url to stdout — safe for pipeline capture
-    echo "$RESULT_URL"
-    exit 0
+  if [ "$PROJECT_STATUS" = "completed" ]; then
+    break
+  fi
+  if [ "$PROJECT_STATUS" = "failed" ] || [ "$PROJECT_STATUS" = "error" ]; then
+    echo "ERROR: Project failed: $PROJECT_BATCH_RESPONSE"
+    exit 1
   fi
 
-  if [[ "$STATUS_WORD" == "FAILED" ]]; then
-    ERROR_MSG="${STATUS_LINE#FAILED }"
-    echo "Error: Project failed — $ERROR_MSG" >&2
-    exit 4
+  NOW=$(date +%s)
+  if [ $((NOW - PROJECT_START)) -ge "$PROJECT_TIMEOUT" ]; then
+    echo "ERROR: Project processing timed out after ${PROJECT_TIMEOUT}s"
+    exit 1
   fi
 
-  ELAPSED=$(( $(date +%s) - PROJECT_START ))
-  if (( ELAPSED >= WORKFLOW_TIMEOUT )); then
-    echo "Error: Project processing timed out after ${WORKFLOW_TIMEOUT}s (status=$STATUS_WORD)." >&2
-    echo "Tip: Query the project manually: bash get_project_status.sh $PROJECT_ID" >&2
-    exit 3
-  fi
+  PROJECT_DELAY=$(calculate_backoff_seconds "$PROJECT_ATTEMPT" "$PROJECT_POLL_INTERVAL" "$PROJECT_POLL_MAX_INTERVAL")
+  echo "  Retrying project status in ${PROJECT_DELAY}s..."
+  sleep "$PROJECT_DELAY"
+  PROJECT_ATTEMPT=$((PROJECT_ATTEMPT + 1))
 done
+
+RESULT_URL=$(echo "$PROJECT_BATCH_RESPONSE" | python3 -c '
+import sys, json
+try:
+    data = json.load(sys.stdin)
+    projects = ((data.get("data") or {}).get("projects") or [])
+    project = projects[0] if projects else {}
+    videos = project.get("output_videos") or []
+    first = videos[0] if videos else {}
+    print(first.get("url", ""))
+except Exception:
+    print("")
+' 2>/dev/null)
+
+if [ -z "$RESULT_URL" ]; then
+  echo "ERROR: Missing output video URL: $PROJECT_BATCH_RESPONSE"
+  exit 1
+fi
+
+OUTPUT_FILE="$OUTPUT_DIR/${PROJECT_ID}.mp4"
+curl -s -L -o "$OUTPUT_FILE" "$RESULT_URL"
+
+if [ ! -f "$OUTPUT_FILE" ]; then
+  echo "ERROR: Download failed"
+  exit 1
+fi
+
+FILE_SIZE=$(ls -lh "$OUTPUT_FILE" | awk '{print $5}')
+echo ""
+echo "=== Done! ==="
+echo "Output: $OUTPUT_FILE ($FILE_SIZE)"

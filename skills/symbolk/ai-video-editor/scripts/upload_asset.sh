@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# Upload a video asset to Sparki for processing.
+# Upload a video asset to Sparki Business API for processing.
 #
 # Usage: upload_asset.sh <file_path>
 #
 # Args:
-#   file_path: Local path to the video file (mp4 or mov, max 3GB)
+#   file_path: Local path to the video file (mp4 only, max 3GB)
 #
 # Outputs (stdout): object_key on success
 # Exits with 1 on validation error, 2 on API error.
@@ -14,7 +14,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-SPARKI_API_BASE="https://agent-api-test.aicoding.live/api/v1"
+SPARKI_API_BASE="https://business-agent-api.sparki.io/api/v1"
 RATE_LIMIT_SLEEP=3
 
 # ---------------------------------------------------------------------------
@@ -37,11 +37,11 @@ if [[ ! -f "$FILE_PATH" ]]; then
   exit 1
 fi
 
-# Check extension (mp4 or mov only)
+# Check extension (mp4 only per API spec)
 FILE_EXT="${FILE_PATH##*.}"
 FILE_EXT_LOWER="$(echo "$FILE_EXT" | tr '[:upper:]' '[:lower:]')"
-if [[ "$FILE_EXT_LOWER" != "mp4" && "$FILE_EXT_LOWER" != "mov" ]]; then
-  echo "Error: Unsupported format '$FILE_EXT_LOWER'. Only mp4 and mov are accepted." >&2
+if [[ "$FILE_EXT_LOWER" != "mp4" ]]; then
+  echo "Error: Unsupported format '$FILE_EXT_LOWER'. Only mp4 is accepted." >&2
   exit 1
 fi
 
@@ -54,14 +54,14 @@ if (( FILE_BYTES > MAX_BYTES )); then
 fi
 
 # ---------------------------------------------------------------------------
-# Upload via multipart POST
+# Upload via multipart POST (field name is "file" per API spec)
 # ---------------------------------------------------------------------------
 sleep "$RATE_LIMIT_SLEEP"
 
 RESPONSE=$(curl -sS \
   -X POST "${SPARKI_API_BASE}/business/assets/upload" \
   -H "X-API-Key: $SPARKI_API_KEY" \
-  -F "file=@${FILE_PATH};type=video/${FILE_EXT_LOWER}")
+  -F "files=@${FILE_PATH};type=video/mp4")
 
 # Parse response
 HTTP_CODE=$(echo "$RESPONSE" | jq -r '.code // "unknown"')
@@ -72,7 +72,7 @@ if [[ "$HTTP_CODE" != "200" && "$HTTP_CODE" != "0" ]]; then
   exit 2
 fi
 
-OBJECT_KEY=$(echo "$RESPONSE" | jq -r '.data.object_key // empty')
+OBJECT_KEY=$(echo "$RESPONSE" | jq -r '.data.uploads[0].object_key // empty')
 if [[ -z "$OBJECT_KEY" ]]; then
   echo "Error: No object_key in response. Full response:" >&2
   echo "$RESPONSE" >&2

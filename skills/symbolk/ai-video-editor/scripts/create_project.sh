@@ -5,7 +5,8 @@
 #
 # Args:
 #   object_keys:   Comma-separated list of object_key values from upload_asset.sh
-#   tips:          Comma-separated list of tip IDs or descriptions (e.g. "1,2" or "dynamic,trendy")
+#   tips:          Single tip ID integer (e.g. "22"). Single selection only.
+#                  Leave empty ("") to use Prompt Freely Mode (user_prompt required).
 #   user_prompt:   (optional) Free-text requirement description
 #   aspect_ratio:  (optional) Output aspect ratio — "9:16" (default), "1:1", "16:9"
 #   duration:      (optional) Target output duration in seconds (integer)
@@ -18,7 +19,7 @@ set -euo pipefail
 # ---------------------------------------------------------------------------
 # Constants
 # ---------------------------------------------------------------------------
-SPARKI_API_BASE="https://agent-api-test.aicoding.live/api/v1"
+SPARKI_API_BASE="https://business-agent-api.sparki.io/api/v1"
 RATE_LIMIT_SLEEP=3
 
 # ---------------------------------------------------------------------------
@@ -32,7 +33,7 @@ RATE_LIMIT_SLEEP=3
 if [[ $# -lt 2 ]]; then
   echo "Usage: create_project.sh <object_keys> <tips> [user_prompt] [aspect_ratio] [duration]" >&2
   echo "  object_keys:  comma-separated (e.g. 'assets/98/abc.mp4')" >&2
-  echo "  tips:         comma-separated IDs or text (e.g. '1,2')" >&2
+  echo "  tips:         single tip ID integer (e.g. '22')" >&2
   exit 1
 fi
 
@@ -69,7 +70,7 @@ REQUEST_BODY=$(jq -n \
 sleep "$RATE_LIMIT_SLEEP"
 
 RESPONSE=$(curl -sS \
-  -X POST "${SPARKI_API_BASE}/business/projects" \
+  -X POST "${SPARKI_API_BASE}/business/projects/render" \
   -H "X-API-Key: $SPARKI_API_KEY" \
   -H "Content-Type: application/json" \
   -d "$REQUEST_BODY")
