@@ -26,6 +26,11 @@ API_BASE = "https://api.listonic.com"
 LOGIN_ENDPOINT = "/api/loginextended"
 LISTS_ENDPOINT = "/api/lists"
 
+# OIDC token endpoint (discovered via /.well-known/openid-configuration)
+# This is the correct endpoint for refresh_token grants; the legacy
+# /api/loginextended endpoint does NOT support refresh properly.
+OIDC_TOKEN_URL = "https://api2022auth.ts.listonic.com/identity/connect/token"
+
 # Defaults from reverse-engineered Listonic web integration
 DEFAULT_CLIENT_ID = "listonicv2"
 DEFAULT_CLIENT_SECRET = "fjdfsoj9874jdfhjkh34jkhffdfff"
@@ -33,9 +38,18 @@ DEFAULT_REDIRECT_URI = "https://listonicv2api.jestemkucharzem.pl"
 
 CONFIG_PATH = Path.home() / ".openclaw" / "credentials" / "listonic" / "config.json"
 
+# Runtime auth state (allows one-shot token refresh + retry on 401)
+_RUNTIME_CFG: dict[str, Any] | None = None
+_RUNTIME_TOKEN: str | None = None
+
 
 class ListonicError(Exception):
     pass
+
+
+def _save_config(cfg: dict[str, Any]) -> None:
+    CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n")
 
 
 def _load_config() -> dict[str, Any]:
@@ -48,6 +62,12 @@ def _load_config() -> dict[str, Any]:
         cfg = json.loads(CONFIG_PATH.read_text())
     except json.JSONDecodeError as exc:
         raise ListonicError(f"Invalid JSON in {CONFIG_PATH}: {exc}") from exc
+
+    # Be tolerant to common token payload formats
+    if cfg.get("access_token") and not cfg.get("accessToken"):
+        cfg["accessToken"] = cfg.get("access_token")
+    if cfg.get("refresh_token") and not cfg.get("refreshToken"):
+        cfg["refreshToken"] = cfg.get("refresh_token")
 
     has_token_mode = bool(cfg.get("refreshToken") or cfg.get("accessToken"))
     has_password_mode = bool(cfg.get("email") and cfg.get("password"))
@@ -122,28 +142,40 @@ def _refresh_access_token(cfg: dict[str, Any]) -> str | None:
 
     client_id = cfg.get("clientId", DEFAULT_CLIENT_ID)
     client_secret = cfg.get("clientSecret", DEFAULT_CLIENT_SECRET)
-    client_auth = base64.b64encode(f"{client_id}:{client_secret}".encode("utf-8")).decode(
-        "utf-8"
+
+    # Use the proper OIDC token endpoint for refresh_token grants.
+    # The legacy /api/loginextended endpoint does NOT support refresh properly
+    # and returns "Unauthorized token. Token is invalid".
+    form_data = urllib.parse.urlencode({
+        "grant_type": "refresh_token",
+        "refresh_token": refresh_token,
+        "client_id": client_id,
+        "client_secret": client_secret,
+    }).encode("utf-8")
+
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Accept": "application/json",
+    }
+
+    req = urllib.request.Request(
+        url=OIDC_TOKEN_URL, method="POST", headers=headers, data=form_data
     )
 
-    status, data = _http_request(
-        "POST",
-        LOGIN_ENDPOINT,
-        params={
-            "provider": "password",
-            "autoMerge": "1",
-            "autoDestruct": "1",
-        },
-        form_body={
-            "grant_type": "refresh_token",
-            "refresh_token": refresh_token,
-            "client_id": client_id,
-            "client_secret": client_secret,
-        },
-        extra_headers={
-            "clientauthorization": f"Bearer {client_auth}",
-        },
-    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            raw = resp.read().decode("utf-8")
+            data = json.loads(raw) if raw else None
+            status = resp.status
+    except urllib.error.HTTPError as err:
+        raw = err.read().decode("utf-8", errors="replace")
+        try:
+            data = json.loads(raw) if raw else None
+        except json.JSONDecodeError:
+            data = raw
+        status = err.code
+    except urllib.error.URLError:
+        return None
 
     if status != 200 or not isinstance(data, dict):
         return None
@@ -151,11 +183,14 @@ def _refresh_access_token(cfg: dict[str, Any]) -> str | None:
     access = data.get("access_token")
     new_refresh = data.get("refresh_token")
 
-    if access and (new_refresh and new_refresh != refresh_token):
-        cfg["refreshToken"] = new_refresh
+    if access:
+        # Persist the latest usable tokens so long-running automations recover better.
+        # Listonic rotates refresh tokens (single-use), so saving the new one is critical.
+        cfg["accessToken"] = access
+        if new_refresh:
+            cfg["refreshToken"] = new_refresh
         try:
-            CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
-            CONFIG_PATH.write_text(json.dumps(cfg, indent=2) + "\n")
+            _save_config(cfg)
         except OSError:
             # Non-fatal: continue with working access token
             pass
@@ -215,18 +250,67 @@ def _authenticate(cfg: dict[str, Any]) -> str:
     if not token:
         raise ListonicError("Authentication succeeded but no access_token returned")
 
+    cfg["accessToken"] = token
+    if data.get("refresh_token"):
+        cfg["refreshToken"] = data.get("refresh_token")
+    try:
+        _save_config(cfg)
+    except OSError:
+        pass
+
     return token
+
+
+def _api_request(
+    method: str,
+    path: str,
+    *,
+    params: dict[str, str] | None = None,
+    json_body: dict[str, Any] | None = None,
+    form_body: dict[str, str] | None = None,
+    extra_headers: dict[str, str] | None = None,
+) -> tuple[int, Any]:
+    global _RUNTIME_TOKEN
+
+    if not _RUNTIME_TOKEN:
+        raise ListonicError("Not authenticated")
+
+    status, data = _http_request(
+        method,
+        path,
+        token=_RUNTIME_TOKEN,
+        params=params,
+        json_body=json_body,
+        form_body=form_body,
+        extra_headers=extra_headers,
+    )
+
+    # Access token can expire during long-running automations; refresh once and retry.
+    if status == 401 and _RUNTIME_CFG and _RUNTIME_CFG.get("refreshToken"):
+        refreshed = _refresh_access_token(_RUNTIME_CFG)
+        if refreshed:
+            _RUNTIME_TOKEN = refreshed
+            status, data = _http_request(
+                method,
+                path,
+                token=_RUNTIME_TOKEN,
+                params=params,
+                json_body=json_body,
+                form_body=form_body,
+                extra_headers=extra_headers,
+            )
+
+    return status, data
 
 
 def _print_json(data: Any) -> None:
     print(json.dumps(data, indent=2, ensure_ascii=False))
 
 
-def _get_lists(token: str) -> list[dict[str, Any]]:
-    status, data = _http_request(
+def _get_lists() -> list[dict[str, Any]]:
+    status, data = _api_request(
         "GET",
         LISTS_ENDPOINT,
-        token=token,
         params={
             "includeShares": "true",
             "archive": "false",
@@ -246,7 +330,7 @@ def _find_list_id(token: str, name_or_id: str) -> int:
     except ValueError:
         pass
 
-    lists = _get_lists(token)
+    lists = _get_lists()
     name_norm = name_or_id.strip().lower()
     exact = [lst for lst in lists if str(lst.get("Name", "")).strip().lower() == name_norm]
 
@@ -273,7 +357,7 @@ def _find_list_id(token: str, name_or_id: str) -> int:
 
 
 def cmd_lists(token: str, as_json: bool) -> None:
-    lists = _get_lists(token)
+    lists = _get_lists()
 
     if as_json:
         _print_json(lists)
@@ -294,7 +378,7 @@ def cmd_lists(token: str, as_json: bool) -> None:
 
 def cmd_items(token: str, list_ref: str, as_json: bool) -> None:
     list_id = _find_list_id(token, list_ref)
-    status, data = _http_request("GET", f"{LISTS_ENDPOINT}/{list_id}/items", token=token)
+    status, data = _api_request("GET", f"{LISTS_ENDPOINT}/{list_id}/items")
     if status != 200:
         raise ListonicError(f"Failed to fetch items ({status}): {data}")
 
@@ -320,7 +404,7 @@ def cmd_items(token: str, list_ref: str, as_json: bool) -> None:
 
 
 def cmd_add_list(token: str, name: str, as_json: bool) -> None:
-    status, data = _http_request("POST", LISTS_ENDPOINT, token=token, json_body={"Name": name})
+    status, data = _api_request("POST", LISTS_ENDPOINT, json_body={"Name": name})
     if status not in (200, 201):
         raise ListonicError(f"Failed to create list ({status}): {data}")
 
@@ -332,8 +416,8 @@ def cmd_add_list(token: str, name: str, as_json: bool) -> None:
 
 def cmd_rename_list(token: str, list_ref: str, new_name: str, as_json: bool) -> None:
     list_id = _find_list_id(token, list_ref)
-    status, data = _http_request(
-        "PATCH", f"{LISTS_ENDPOINT}/{list_id}", token=token, json_body={"Name": new_name}
+    status, data = _api_request(
+        "PATCH", f"{LISTS_ENDPOINT}/{list_id}", json_body={"Name": new_name}
     )
     if status != 200:
         raise ListonicError(f"Failed to rename list ({status}): {data}")
@@ -346,7 +430,7 @@ def cmd_rename_list(token: str, list_ref: str, new_name: str, as_json: bool) -> 
 
 def cmd_delete_list(token: str, list_ref: str, as_json: bool) -> None:
     list_id = _find_list_id(token, list_ref)
-    status, data = _http_request("DELETE", f"{LISTS_ENDPOINT}/{list_id}", token=token)
+    status, data = _api_request("DELETE", f"{LISTS_ENDPOINT}/{list_id}")
     if status != 200:
         raise ListonicError(f"Failed to delete list ({status}): {data}")
 
@@ -371,8 +455,8 @@ def cmd_add_item(
     if unit:
         payload["Unit"] = unit
 
-    status, data = _http_request(
-        "POST", f"{LISTS_ENDPOINT}/{list_id}/items", token=token, json_body=payload
+    status, data = _api_request(
+        "POST", f"{LISTS_ENDPOINT}/{list_id}/items", json_body=payload
     )
     if status not in (200, 201):
         raise ListonicError(f"Failed to add item ({status}): {data}")
@@ -392,10 +476,9 @@ def cmd_set_item_checked(
     as_json: bool,
 ) -> None:
     list_id = _find_list_id(token, list_ref)
-    status, data = _http_request(
+    status, data = _api_request(
         "PATCH",
         f"{LISTS_ENDPOINT}/{list_id}/items/{item_id}",
-        token=token,
         json_body={"Checked": 1 if checked else 0},
     )
     if status != 200:
@@ -409,10 +492,9 @@ def cmd_set_item_checked(
 
 def cmd_delete_item(token: str, list_ref: str, item_id: int, as_json: bool) -> None:
     list_id = _find_list_id(token, list_ref)
-    status, data = _http_request(
+    status, data = _api_request(
         "DELETE",
         f"{LISTS_ENDPOINT}/{list_id}/items/{item_id}",
-        token=token,
     )
     if status != 200:
         raise ListonicError(f"Failed to delete item ({status}): {data}")
@@ -466,12 +548,16 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> int:
+    global _RUNTIME_CFG, _RUNTIME_TOKEN
+
     parser = build_parser()
     args = parser.parse_args()
 
     try:
         cfg = _load_config()
         token = _authenticate(cfg)
+        _RUNTIME_CFG = cfg
+        _RUNTIME_TOKEN = token
 
         if args.command == "lists":
             cmd_lists(token, args.json)

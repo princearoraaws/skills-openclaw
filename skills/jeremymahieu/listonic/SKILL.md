@@ -21,6 +21,9 @@ Create `~/.openclaw/credentials/listonic/config.json` using **one** auth mode.
 }
 ```
 
+Tip: the script now auto-refreshes access tokens and persists updated tokens back to config.
+It also accepts `refresh_token` / `access_token` keys if you paste raw OAuth payload JSON.
+
 Optional (advanced):
 
 ```json
