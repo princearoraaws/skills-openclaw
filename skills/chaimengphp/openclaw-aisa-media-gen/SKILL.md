@@ -7,39 +7,23 @@ metadata: {"openclaw":{"emoji":"🎬","requires":{"bins":["python3","curl"],"env
 
 # OpenClaw Media Gen 🎬
 
-Generate **images** and **videos** with one AIsa API key:
+用 AIsa API 一把钥匙生成**图片**与**视频**：
 
-- **Image**: `gemini-3-pro-image-preview` (Gemini GenerateContent)
-- **Video**: `wan2.6-t2v` (Qwen Wan 2.6 / Tongyi Wanxiang, async task)
+- **图片**：`gemini-3-pro-image-preview`（Gemini GenerateContent）
+- **视频**：`wan2.6-t2v`（通义万相 / Qwen Wan 2.6，异步任务）
 
-API Reference: [AIsa API Reference](https://aisa.mintlify.app/api-reference/introduction) (all pages available at `https://aisa.mintlify.app/llms.txt`)
+API 文档索引见 [AIsa API Reference](https://docs.aisa.one/reference/)（可从 `https://docs.aisa.one/llms.txt` 找到所有页面）。
 
-## 🎯 Pricing Advantage
+## 🔥 你可以做什么
 
-### Video Generation (WAN) - Cost Comparison
-
-| Resolution | AIsa (Contract) | AIsa (Official) | Bailian (Official) | OpenRouter |
-|------------|-----------------|-----------------|-------------------|------------|
-| 720P | **$0.06/sec** | ~$0.08 | ~$0.10 | ❌ |
-| 1080P | **$0.09/sec** | ~$0.12 | ~$0.15 | ❌ |
-| Pro/Animate | **$0.108–0.156** | ~$0.18 | ~$0.25 | ❌ |
-
-**Key Benefits**:
-- **25-40% cheaper** than Bailian official pricing
-- **OpenRouter doesn't support video** - AIsa is the only unified API with video generation
-- Contract pricing available for production workloads
-- Single API key for both image and video generation
-
-## 🔥 What You Can Do
-
-### Image Generation (Gemini)
+### 图片生成（Gemini）
 ```
-"Generate a cyberpunk cityscape at night, neon lights, rainy, cinematic"
+"生成一张赛博朋克风格的城市夜景，霓虹灯，雨夜，电影感"
 ```
 
-### Video Generation (Wan 2.6)
+### 视频生成（Wan 2.6）
 ```
-"Use a reference image to generate a 5-second shot: slow camera push-in, wind blowing hair, cinematic, shallow depth of field"
+"用一张参考图生成 5 秒镜头：镜头缓慢推进，风吹动头发，电影感，浅景深"
 ```
 
 ## Quick Start
@@ -57,9 +41,9 @@ export AISA_API_KEY="your-key"
 - Base URL: `https://api.aisa.one/v1`
 - `POST /models/{model}:generateContent`
 
-Documentation: `google-gemini-chat` (GenerateContent) at `https://aisa.mintlify.app/api-reference/chat/chat-api/google-gemini-chat.md`
+文档：`google-gemini-chat`（GenerateContent）见 `https://docs.aisa.one/reference/generatecontent`。
 
-### curl Example (returns inline_data for images)
+### curl 示例（返回 inline_data 时为图片）
 
 ```bash
 curl -X POST "https://api.aisa.one/v1/models/gemini-3-pro-image-preview:generateContent" \
@@ -72,19 +56,19 @@ curl -X POST "https://api.aisa.one/v1/models/gemini-3-pro-image-preview:generate
   }'
 ```
 
-> Note: Response may contain `candidates[].parts[].inline_data` (typically with base64 data and mime type); client script automatically parses and saves the file.
+> 说明：该接口的响应中可能出现 `candidates[].parts[].inline_data`（通常包含 base64 数据与 mime 类型）；客户端脚本会自动解析并保存文件。
 
 ---
 
 ## 🎞️ Video Generation (Qwen Wan 2.6 / Tongyi Wanxiang)
 
-### Create Task
+### Create task
 
 - Base URL: `https://api.aisa.one/apis/v1`
 - `POST /services/aigc/video-generation/video-synthesis`
-- Header: `X-DashScope-Async: enable` (required for async)
+- Header：`X-DashScope-Async: enable`（必填，异步）
 
-Documentation: `video-generation` at `https://aisa.mintlify.app/api-reference/aliyun/video/video-generation.md`
+文档：`video-generation` 见 `https://docs.aisa.one/reference/post_services-aigc-video-generation-video-synthesis`。
 
 ```bash
 curl -X POST "https://api.aisa.one/apis/v1/services/aigc/video-generation/video-synthesis" \
@@ -106,11 +90,11 @@ curl -X POST "https://api.aisa.one/apis/v1/services/aigc/video-generation/video-
   }'
 ```
 
-### Poll Task Status
+### Poll task
 
 - `GET /services/aigc/tasks?task_id=...`
 
-Documentation: `task` at `https://aisa.mintlify.app/api-reference/aliyun/video/task.md`
+文档：`task` 见 `https://docs.aisa.one/reference/get_services-aigc-tasks`。
 
 ```bash
 curl "https://api.aisa.one/apis/v1/services/aigc/tasks?task_id=YOUR_TASK_ID" \
@@ -122,38 +106,24 @@ curl "https://api.aisa.one/apis/v1/services/aigc/tasks?task_id=YOUR_TASK_ID" \
 ## Python Client
 
 ```bash
-# Generate image (save to local file)
+# 生成图片（保存到本地文件）
 python3 {baseDir}/scripts/media_gen_client.py image \
   --prompt "A cute red panda, cinematic lighting" \
   --out "out.png"
 
-# Create video task (requires img_url)
+# 创建视频任务（需要 img_url）
 python3 {baseDir}/scripts/media_gen_client.py video-create \
   --prompt "cinematic close-up, slow push-in" \
   --img-url "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Cat03.jpg/320px-Cat03.jpg" \
   --duration 5
 
-# Poll task status
+# 轮询任务状态
 python3 {baseDir}/scripts/media_gen_client.py video-status --task-id YOUR_TASK_ID
 
-# Wait until success (optional: print video_url on success)
+# 等待直到成功（可选：成功后打印 video_url）
 python3 {baseDir}/scripts/media_gen_client.py video-wait --task-id YOUR_TASK_ID --poll 10 --timeout 600
 
-# Wait until success and auto-download mp4
+# 等待直到成功并自动下载 mp4
 python3 {baseDir}/scripts/media_gen_client.py video-wait --task-id YOUR_TASK_ID --download --out out.mp4
 ```
 
-## 💡 Use Cases
-
-- **AI Agents**: Automate visual content generation for social media, marketing materials
-- **Content Creators**: Generate custom images and videos programmatically
-- **Developers**: Build apps with multimodal generation capabilities
-- **Businesses**: Cost-effective alternative to Bailian with better pricing
-
-## 🚀 Why AIsa for Media Generation?
-
-1. **Unified API**: Single key for both images (Gemini) and videos (WAN)
-2. **Best Pricing**: 25-40% cheaper than alternatives
-3. **Production Ready**: Contract pricing and enterprise support available
-4. **No Competition**: OpenRouter doesn't support video generation
-5. **Simple Integration**: Python client with async task management built-in

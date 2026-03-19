@@ -1,29 +1,19 @@
 ## OpenClaw Media Gen
 
-Generate images and videos using AIsa API:
+使用 AIsa API 生成图片与视频：
 
-- **Gemini Image**: `gemini-3-pro-image-preview` (`/v1/models/{model}:generateContent`)
-- **Wan 2.6 Video**: `wan2.6-t2v` (`/apis/v1/services/aigc/...` async task + polling)
+- **Gemini 图片**：`gemini-3-pro-image-preview`（`/v1/models/{model}:generateContent`）
+- **Wan 2.6 视频**：`wan2.6-t2v`（`/apis/v1/services/aigc/...` 异步任务 + 轮询）
 
-API Documentation: [`https://aisa.mintlify.app/api-reference/introduction`](https://aisa.mintlify.app/api-reference/introduction)
+相关 API 文档索引：[`https://docs.aisa.one/reference/`](https://docs.aisa.one/reference/)
 
-### Pricing Comparison - Video (WAN)
-
-| Resolution | AIsa (Contract) | AIsa (Official) | Bailian (Official) | OpenRouter |
-|------------|-----------------|-----------------|-------------------|------------|
-| 720P | $0.06/sec | ~$0.08 | ~$0.10 | ❌ |
-| 1080P | $0.09/sec | ~$0.12 | ~$0.15 | ❌ |
-| Pro/Animate | $0.108–0.156 | ~$0.18 | ~$0.25 | ❌ |
-
-**Competitive Advantage**: AIsa offers the lowest pricing for WAN video generation with contract rates, and remains competitive even at official pricing. OpenRouter does not currently support video generation.
-
-### Quick Start
+### 快速开始
 
 ```bash
 export AISA_API_KEY="your-key"
 ```
 
-### Generate Image
+### 生成图片
 
 ```bash
 python scripts/media_gen_client.py image \
@@ -31,7 +21,7 @@ python scripts/media_gen_client.py image \
   --out out.png
 ```
 
-### Generate Video (Create Task + Poll)
+### 生成视频（创建任务 + 轮询）
 
 ```bash
 python scripts/media_gen_client.py video-create \
@@ -45,7 +35,7 @@ python scripts/media_gen_client.py video-wait \
   --timeout 600
 ```
 
-### Auto-download Generated Video (mp4)
+### 自动下载生成的视频（mp4）
 
 ```bash
 python scripts/media_gen_client.py video-wait \
@@ -53,3 +43,4 @@ python scripts/media_gen_client.py video-wait \
   --download \
   --out out.mp4
 ```
+
