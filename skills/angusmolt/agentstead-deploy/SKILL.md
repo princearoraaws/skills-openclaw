@@ -20,10 +20,17 @@ cat > /tmp/agentstead-deploy.sh << 'SCRIPT'
 set -e
 
 API="https://www.agentstead.com/api"
-TOKEN_FILE="/tmp/.agentstead-token"
+TOKEN_FILE="$HOME/.agentstead-token"
 
 cmd_login() {
-  local email="$1" password="$2"
+  local email="${1:-$AGENTSTEAD_EMAIL}" password="${2:-$AGENTSTEAD_PASSWORD}"
+  if [ -z "$email" ]; then
+    read -p "Email: " email
+  fi
+  if [ -z "$password" ]; then
+    read -sp "Password: " password
+    echo
+  fi
   local body
   body=$(jq -n --arg e "$email" --arg p "$password" '{email: $e, password: $p}')
   local resp
@@ -137,7 +144,16 @@ chmod +x /tmp/agentstead-deploy.sh
 ### 1. Log in
 
 ```bash
-/tmp/agentstead-deploy.sh login "user@example.com" "password123"
+# Option A: Use environment variables (recommended)
+export AGENTSTEAD_EMAIL="user@example.com"
+export AGENTSTEAD_PASSWORD="password123"
+/tmp/agentstead-deploy.sh login
+
+# Option B: Interactive prompts (password hidden)
+/tmp/agentstead-deploy.sh login
+
+# Option C: Pass email only, prompt for password
+/tmp/agentstead-deploy.sh login "user@example.com"
 ```
 
 ### 2. Create an agent
@@ -196,6 +212,7 @@ chmod +x /tmp/agentstead-deploy.sh
 ## Security
 
 - All user input is passed through `jq` for safe JSON encoding — never interpolated directly into shell commands
-- Auth tokens are stored in a file with 600 permissions (owner-only read)
+- Auth tokens are stored in `$HOME/.agentstead-token` with 600 permissions (owner-only read)
+- Credentials are read from environment variables or interactive prompts — never passed as CLI arguments
 - All API calls use HTTPS
 - Network access is restricted to agentstead.com only
