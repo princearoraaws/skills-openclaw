@@ -86,6 +86,8 @@ After installation is complete and verified working, you may delete this install
 | `airsstool list paths -U <user> -S <name>` | List paths in a subscription | "What's in tech_news group?" |
 | `airsstool add-subscription -U <user> -S <name>` | Create subscription group | "Create a news subscription" |
 | `airsstool subscribe -U <user> -S <name> -P <path> -D <desc>` | Add path to subscription | "Subscribe to GitHub trending" |
+| `airsstool unsubscribe -U <user> -S <name>` | Delete subscription group | "Delete my tech_news group" |
+| `airsstool remove-subscription -U <user> -S <name> -P <path>` | Remove path from subscription | "Remove GitHub trending from tech_news" |
 
 ## Common Workflows
 
@@ -228,6 +230,25 @@ airsstool subscribe -U user -S daily_tech -P /github/trending/daily/any/en -D "G
 airsstool subscribe -U user -S daily_tech -P /hackernews/best -D "Hacker News"
 
 airsstool fetch -U user -S daily_tech --limit 5
+```
+
+**User: "Remove a specific feed from my subscription"**
+
+```bash
+airsstool list paths -U user -S daily_tech
+# Shows all feeds in the subscription
+
+airsstool remove-subscription -U user -S daily_tech -P /hackernews/best
+# Removes only Hacker News, keeps other feeds
+```
+
+**User: "Delete my entire subscription group"**
+
+⚠️ This action cannot be undone. Ask the user to confirm before proceeding:
+
+```bash
+airsstool unsubscribe -U user -S daily_tech
+# Deletes the group and all its feeds
 ```
 
 ## Error Handling
