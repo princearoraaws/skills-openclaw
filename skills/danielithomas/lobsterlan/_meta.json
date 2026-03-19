@@ -3,9 +3,15 @@
   "slug": "lobsterlan",
   "displayName": "LobsterLAN",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1772360965393,
-    "commit": "https://github.com/openclaw/skills/commit/13cb1f7e02fbae62db3b2845f4c536067e40977c"
+    "version": "1.0.1",
+    "publishedAt": 1773810370721,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1772360965393,
+      "commit": "https://github.com/openclaw/skills/commit/13cb1f7e02fbae62db3b2845f4c536067e40977c"
+    }
+  ]
 }
