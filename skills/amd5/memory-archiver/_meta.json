@@ -1,0 +1,11 @@
+{
+  "owner": "amd5",
+  "slug": "memory-archiver",
+  "displayName": "Memory Archiver",
+  "latest": {
+    "version": "2.0.0",
+    "publishedAt": 1773886321854,
+    "commit": null
+  },
+  "history": []
+}
