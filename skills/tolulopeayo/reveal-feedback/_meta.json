@@ -3,9 +3,15 @@
   "slug": "reveal-feedback",
   "displayName": "Reveal Product Feedback",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1771509677852,
-    "commit": "https://github.com/openclaw/skills/commit/b9bddbb1ea20f3b758dafe4e8e12ecbcb47a813b"
+    "version": "1.0.2",
+    "publishedAt": 1773718467252,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1771509677852,
+      "commit": "https://github.com/openclaw/skills/commit/b9bddbb1ea20f3b758dafe4e8e12ecbcb47a813b"
+    }
+  ]
 }
