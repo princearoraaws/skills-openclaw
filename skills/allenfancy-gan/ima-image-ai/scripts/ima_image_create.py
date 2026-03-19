@@ -19,8 +19,10 @@ Logs: ~/.openclaw/logs/ima_skills/ima_create_YYYYMMDD.log
 import argparse
 import hashlib
 import json
+import math
 import mimetypes
 import os
+import re
 import sys
 import time
 import uuid
@@ -64,8 +66,8 @@ PREFS_PATH = os.path.expanduser("~/.openclaw/memory/ima_prefs.json")
 # Poll interval (seconds) and max wait (seconds) per task type
 # Image generation only
 POLL_CONFIG = {
-    "text_to_image":  {"interval": 5, "max_wait": 300},
-    "image_to_image": {"interval": 5, "max_wait": 300},
+    "text_to_image":  {"interval": 5, "max_wait": 600},
+    "image_to_image": {"interval": 5, "max_wait": 600},
 }
 
 # App Key configuration (for OSS upload authentication)
@@ -869,7 +871,6 @@ def extract_error_info(exception: Exception) -> dict:
             }
     
     # Check for API error codes in RuntimeError message (6009, 6010, etc.)
-    import re
     code_match = re.search(r'code[=:]?\s*(\d+)', error_str, re.IGNORECASE)
     if code_match:
         code = int(code_match.group(1))
@@ -893,6 +894,223 @@ def extract_error_info(exception: Exception) -> dict:
         "message": error_str,
         "type": "unknown"
     }
+
+
+def _normalize_compare_value(value) -> str:
+    if isinstance(value, bool):
+        return str(value).lower()
+    return str(value).strip().upper()
+
+
+def _parse_min_pixels(text: str) -> int | None:
+    match = re.search(
+        r"(?:at\s+least\s+(\d+)\s+pixels|pixels?\s+should\s+be\s+at\s+least\s+(\d+))",
+        text,
+        re.IGNORECASE,
+    )
+    if not match:
+        return None
+    return int(match.group(1) or match.group(2))
+
+
+def _parse_size_dims(value) -> tuple[int, int] | None:
+    if not isinstance(value, str):
+        return None
+    match = re.search(r"(\d{2,5})\s*[xX×]\s*(\d{2,5})", value)
+    if not match:
+        return None
+    return int(match.group(1)), int(match.group(2))
+
+
+def _format_rule_attributes(rule: dict, max_items: int = 4) -> str:
+    attrs = rule.get("attributes") or {}
+    parts = [f"{k}={v}" for k, v in attrs.items() if not (k == "default" and v == "enabled")]
+    if not parts:
+        return "<default rule>"
+    return ", ".join(parts[:max_items])
+
+
+def _best_rule_mismatch(credit_rules: list, merged_params: dict) -> dict | None:
+    if not credit_rules:
+        return None
+    best = None
+    normalized_params = {
+        str(k).strip().lower(): _normalize_compare_value(v)
+        for k, v in merged_params.items()
+    }
+    for rule in credit_rules:
+        attrs = rule.get("attributes") or {}
+        if not attrs:
+            continue
+        missing: list[str] = []
+        conflicts: list[tuple[str, str, str]] = []
+        matched = 0
+        for key, expected in attrs.items():
+            if key == "default" and expected == "enabled":
+                continue
+            k = str(key).strip().lower()
+            expected_norm = _normalize_compare_value(expected)
+            actual_norm = normalized_params.get(k)
+            if actual_norm is None:
+                missing.append(str(key))
+            elif actual_norm == expected_norm:
+                matched += 1
+            else:
+                actual_raw = merged_params.get(key, merged_params.get(k, ""))
+                conflicts.append((str(key), str(actual_raw), str(expected)))
+        score = matched * 3 - len(missing) * 2 - len(conflicts) * 3
+        candidate = {
+            "rule": rule,
+            "missing": missing,
+            "conflicts": conflicts,
+            "score": score,
+        }
+        if best is None or candidate["score"] > best["score"]:
+            best = candidate
+    return best
+
+
+def build_contextual_diagnosis(error_info: dict,
+                               task_type: str,
+                               model_params: dict,
+                               current_params: dict | None,
+                               input_images: list[str] | None,
+                               credit_rules: list | None) -> dict:
+    code = error_info.get("code")
+    raw_message = str(error_info.get("message") or "")
+    msg_lower = raw_message.lower()
+    merged_params = dict(model_params.get("form_params") or {})
+    merged_params.update(current_params or {})
+    media_inputs = input_images or []
+    model_name = model_params.get("model_name") or "unknown_model"
+    model_id = model_params.get("model_id") or "unknown_model_id"
+
+    diagnosis = {
+        "code": code,
+        "confidence": "medium",
+        "headline": "Model task failed with current configuration",
+        "reasoning": [],
+        "actions": [],
+        "model_name": model_name,
+        "model_id": model_id,
+        "task_type": task_type,
+    }
+
+    if task_type == "image_to_image" and not media_inputs:
+        diagnosis["confidence"] = "high"
+        diagnosis["headline"] = "Missing required reference image for image_to_image"
+        diagnosis["reasoning"].append("image_to_image requires at least one input image URL/path.")
+        diagnosis["actions"].append("Provide --input-images with at least one image URL/path.")
+        return diagnosis
+
+    if code == 401 or "unauthorized" in msg_lower:
+        diagnosis["confidence"] = "high"
+        diagnosis["headline"] = "API key is invalid or unauthorized"
+        diagnosis["actions"].append("Regenerate API key: https://www.imaclaw.ai/imaclaw/apikey")
+        diagnosis["actions"].append("Retry with the new key in --api-key.")
+        return diagnosis
+
+    if code == 4008 or "insufficient points" in msg_lower:
+        diagnosis["confidence"] = "high"
+        diagnosis["headline"] = "Account points are not enough for this image request"
+        diagnosis["actions"].append("Top up credits: https://www.imaclaw.ai/imaclaw/subscription")
+        diagnosis["actions"].append("Or switch to a lower-cost model/size.")
+        return diagnosis
+
+    min_pixels = _parse_min_pixels(raw_message)
+    dims = _parse_size_dims(str(merged_params.get("size") or "")) or _parse_size_dims(raw_message)
+    if min_pixels is not None and dims is not None:
+        requested_pixels = dims[0] * dims[1]
+        if requested_pixels < min_pixels:
+            diagnosis["confidence"] = "high"
+            diagnosis["headline"] = "Output size is below this model's minimum pixel requirement"
+            diagnosis["reasoning"].append(
+                f"Requested size {dims[0]}x{dims[1]} ({requested_pixels} px) is below required {min_pixels} px."
+            )
+            target = int(math.ceil(math.sqrt(min_pixels)))
+            diagnosis["actions"].append(f"Increase --size to at least around {target}x{target}.")
+            diagnosis["actions"].append("Retry with the same model.")
+            return diagnosis
+
+    credit_rules = credit_rules or []
+    rule_mismatch = _best_rule_mismatch(credit_rules, merged_params)
+    if (
+        code in (6009, 6010)
+        or "invalid product attribute" in msg_lower
+        or "no matching" in msg_lower
+        or "attribute" in msg_lower
+    ):
+        diagnosis["confidence"] = "high" if code in (6009, 6010) else "medium"
+        diagnosis["headline"] = "Current parameter combination does not fit this model rule set"
+        if rule_mismatch:
+            if rule_mismatch["missing"]:
+                diagnosis["reasoning"].append(
+                    "Missing parameters for best-matching rule: "
+                    + ", ".join(rule_mismatch["missing"][:4])
+                )
+            if rule_mismatch["conflicts"]:
+                compact = ", ".join(
+                    f"{k}={got} (expected {expected})"
+                    for k, got, expected in rule_mismatch["conflicts"][:3]
+                )
+                diagnosis["reasoning"].append(f"Conflicting values: {compact}")
+            diagnosis["actions"].append(
+                "Use a rule-compatible profile: " + _format_rule_attributes(rule_mismatch["rule"])
+            )
+        diagnosis["actions"].append("Remove custom --extra-params and retry with defaults.")
+        return diagnosis
+
+    if code == "timeout" or "timed out" in msg_lower:
+        diagnosis["headline"] = "Task exceeded polling timeout for current image settings"
+        diagnosis["actions"].append("Retry with lower size/quality.")
+        diagnosis["actions"].append("Check task status in dashboard: https://imagent.bot")
+        return diagnosis
+
+    if code == 500 or "internal server error" in msg_lower:
+        diagnosis["headline"] = "Backend rejected current parameter complexity"
+        for key in ("size", "quality"):
+            if key in merged_params:
+                fallback = get_param_degradation_strategy(key, str(merged_params[key]))
+                if fallback:
+                    diagnosis["actions"].append(f"Try {key}={fallback[0]} (current {merged_params[key]}).")
+                    break
+        diagnosis["actions"].append("Retry after simplifying parameters.")
+        return diagnosis
+
+    diagnosis["reasoning"].append(
+        f"Model context: {model_name} ({model_id}), task={task_type}, media_count={len(media_inputs)}."
+    )
+    diagnosis["actions"].append("Retry with defaults (remove --extra-params).")
+    diagnosis["actions"].append("Use --list-models to verify supported settings.")
+    return diagnosis
+
+
+def format_user_failure_message(diagnosis: dict,
+                                attempts_used: int,
+                                max_attempts: int) -> str:
+    lines = [
+        f"Task failed after {attempts_used}/{max_attempts} attempt(s).",
+        (
+            f"Model: {diagnosis.get('model_name')} ({diagnosis.get('model_id')}) | "
+            f"Task: {diagnosis.get('task_type')}"
+        ),
+        f"Likely cause ({diagnosis.get('confidence', 'medium')} confidence): {diagnosis.get('headline')}",
+    ]
+    reasoning = diagnosis.get("reasoning") or []
+    if reasoning:
+        lines.append("Why this diagnosis:")
+        for item in reasoning[:3]:
+            lines.append(f"- {item}")
+    actions = diagnosis.get("actions") or []
+    if actions:
+        lines.append("What to do next:")
+        for i, action in enumerate(actions[:4], 1):
+            lines.append(f"{i}. {action}")
+    code = diagnosis.get("code")
+    if code not in (None, "", "unknown"):
+        lines.append(f"Reference code: {code}")
+    lines.append("Technical details were recorded in local logs.")
+    return "\n".join(lines)
 
 
 def get_param_degradation_strategy(param_key: str, current_value: str) -> list:
@@ -1157,41 +1375,51 @@ def create_task_with_reflection(base_url: str, api_key: str,
                 else:
                     # Reflection says give up early
                     logger.error(f"💡 Reflection suggests giving up: {reflection.get('suggestion')}")
+                    diagnosis = build_contextual_diagnosis(
+                        error_info=error_info,
+                        task_type=task_type,
+                        model_params=model_params,
+                        current_params=current_params,
+                        input_images=input_images,
+                        credit_rules=credit_rules,
+                    )
+                    logger.error(
+                        "Contextual diagnosis (early give-up): %s",
+                        json.dumps(diagnosis, ensure_ascii=False),
+                    )
                     raise RuntimeError(
-                        f"Task creation failed after {attempt} attempt(s).\n\n"
-                        f"💡 Suggestion: {reflection.get('suggestion')}\n\n"
-                        f"Attempt log:\n" + json.dumps(attempt_log, indent=2, ensure_ascii=False)
+                        format_user_failure_message(
+                            diagnosis=diagnosis,
+                            attempts_used=attempt,
+                            max_attempts=max_attempts,
+                        )
                     ) from e
             else:
                 # Max attempts reached
                 logger.error(f"❌ All {max_attempts} attempts failed")
-                
-                # Generate final suggestion
                 last_error = attempt_log[-1]["error"]
-                suggestion = f"All {max_attempts} attempts failed. Last error: {last_error['message']}"
-                
-                if last_error['code'] in [401, 500, 4008, 6009, 6010]:
-                    suggestion += f"\n\n💡 This may indicate:\n"
-                    if last_error['code'] == 401:
-                        suggestion += "  - API key is invalid or unauthorized\n"
-                        suggestion += "  - 🔗 Generate API Key: https://www.imaclaw.ai/imaclaw/apikey\n"
-                    elif last_error['code'] == 4008:
-                        suggestion += "  - Insufficient points to create this task\n"
-                        suggestion += "  - 🔗 Buy Credits: https://www.imaclaw.ai/imaclaw/subscription\n"
-                    elif last_error['code'] == 500:
-                        suggestion += "  - Backend server issue or unsupported parameter\n"
-                        suggestion += "  - Try a different model or simpler parameters\n"
-                    elif last_error['code'] == 6009:
-                        suggestion += "  - No matching pricing rule for your parameters\n"
-                        suggestion += "  - Try using default parameters or check available options\n"
-                    elif last_error['code'] == 6010:
-                        suggestion += "  - Parameter/pricing rule mismatch\n"
-                        suggestion += "  - Refresh the model list or use recommended parameters\n"
-                
+                diagnosis = build_contextual_diagnosis(
+                    error_info=last_error,
+                    task_type=task_type,
+                    model_params=model_params,
+                    current_params=current_params,
+                    input_images=input_images,
+                    credit_rules=credit_rules,
+                )
+                logger.error(
+                    "Contextual diagnosis (max attempts): %s",
+                    json.dumps(diagnosis, ensure_ascii=False),
+                )
+                logger.error(
+                    "Attempt log (debug only): %s",
+                    json.dumps(attempt_log, ensure_ascii=False),
+                )
                 raise RuntimeError(
-                    f"Task creation failed after {max_attempts} attempts.\n\n"
-                    f"{suggestion}\n\n"
-                    f"Full attempt log:\n" + json.dumps(attempt_log, indent=2, ensure_ascii=False)
+                    format_user_failure_message(
+                        diagnosis=diagnosis,
+                        attempts_used=max_attempts,
+                        max_attempts=max_attempts,
+                    )
                 ) from e
 
 
@@ -1266,8 +1494,9 @@ Examples:
                    help="Specific version ID — overrides auto-select of latest")
     p.add_argument("--prompt",
                    help="Generation prompt (required unless --list-models)")
-    p.add_argument("--input-images", nargs="*", default=[],
+    p.add_argument("--input-images", nargs="*", action="append", default=[],
                    help="Input image URLs or local file paths (required for image_to_image). "
+                        "Can be repeated multiple times; values are merged. "
                         "Local files will be automatically uploaded using the API key.")
     p.add_argument("--size",
                    help="Override size parameter (e.g. 4k, 2k, 2048x2048)")
@@ -1285,6 +1514,17 @@ Examples:
                    help="Output final result as JSON (for agent parsing)")
 
     return p
+
+
+def flatten_input_images_args(raw_groups) -> list[str]:
+    """Merge repeated --input-images groups into one flat list."""
+    flattened: list[str] = []
+    for group in raw_groups or []:
+        if isinstance(group, list):
+            flattened.extend([str(v) for v in group if str(v).strip()])
+        elif group is not None and str(group).strip():
+            flattened.append(str(group))
+    return flattened
 
 
 def main():
@@ -1377,12 +1617,13 @@ def main():
             sys.exit(1)
 
     # ── 4. Process input images (upload if needed) ────────────────────────────
+    input_images_args = flatten_input_images_args(args.input_images)
     processed_images: list[str] = []
-    if args.input_images:
+    if input_images_args:
         im_base = os.getenv("IMA_IM_BASE_URL", DEFAULT_IM_BASE_URL)
         
-        print(f"\n📤 Processing {len(args.input_images)} input image(s)…", flush=True)
-        for i, img_source in enumerate(args.input_images, 1):
+        print(f"\n📤 Processing {len(input_images_args)} input image(s)…", flush=True)
+        for i, img_source in enumerate(input_images_args, 1):
             try:
                 # Use API key directly for upload authentication
                 img_url = prepare_image_url(img_source, apikey, im_base)
@@ -1415,7 +1656,24 @@ def main():
         )
     except RuntimeError as e:
         logger.error(f"Task creation failed after reflection: {str(e)}")
-        print(f"❌ Create task failed:\n{e}", file=sys.stderr)
+        create_error = extract_error_info(e)
+        diagnosis = build_contextual_diagnosis(
+            error_info=create_error,
+            task_type=args.task_type,
+            model_params=mp,
+            current_params=extra if extra else {},
+            input_images=processed_images,
+            credit_rules=mp.get("all_credit_rules", []),
+        )
+        print(
+            "❌ "
+            + format_user_failure_message(
+                diagnosis=diagnosis,
+                attempts_used=1,
+                max_attempts=1,
+            ),
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     print(f"✅ Task created: {task_id}", flush=True)
@@ -1433,7 +1691,28 @@ def main():
                           max_wait=cfg["max_wait"])
     except (TimeoutError, RuntimeError) as e:
         logger.error(f"Task polling failed: {str(e)}")
-        print(f"\n❌ {e}", file=sys.stderr)
+        poll_error = extract_error_info(e)
+        diagnosis = build_contextual_diagnosis(
+            error_info=poll_error,
+            task_type=args.task_type,
+            model_params=mp,
+            current_params=extra if extra else {},
+            input_images=processed_images,
+            credit_rules=mp.get("all_credit_rules", []),
+        )
+        logger.error(
+            "Polling contextual diagnosis: %s",
+            json.dumps(diagnosis, ensure_ascii=False),
+        )
+        print(
+            "\n❌ "
+            + format_user_failure_message(
+                diagnosis=diagnosis,
+                attempts_used=1,
+                max_attempts=1,
+            ),
+            file=sys.stderr,
+        )
         sys.exit(1)
 
     # ── 6. Save preference ────────────────────────────────────────────────────

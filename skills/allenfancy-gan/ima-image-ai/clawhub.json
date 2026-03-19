@@ -6,12 +6,29 @@
   "requiredEnvVars": ["IMA_API_KEY"],
   "credentialNotice": "The IMA API key is required at runtime (--api-key or IMA_API_KEY). It is sent to api.imastudio.com (generation) and, for image_to_image with local files, to imapi.liveme.com (upload). Both are IMA Studio. Obtain keys at https://www.imaclaw.ai/. Use a scoped/test key for initial testing.",
   "optionalDependencyNote": "When ima-knowledge-ai is installed, this skill may instruct the agent to read that skill's reference files (~/.openclaw/skills/ima-knowledge-ai/references/*) for workflow and visual-consistency guidance. The skill works standalone without it; those reads are optional.",
+  "requires": {
+    "env": ["IMA_API_KEY"],
+    "primaryCredential": "IMA_API_KEY",
+    "credentialNote": "IMA_API_KEY is required at runtime. It is sent to api.imastudio.com and, for local image uploads, to imapi.liveme.com."
+  },
   "localPaths": {
     "readWrite": [
       "~/.openclaw/memory/ima_prefs.json",
       "~/.openclaw/logs/ima_skills/"
     ],
     "purpose": "Preferences (model defaults) and generation logs; logs auto-deleted after 7 days. User can delete anytime."
+  },
+  "persistence": {
+    "readWrite": [
+      "~/.openclaw/memory/ima_prefs.json",
+      "~/.openclaw/logs/ima_skills/"
+    ],
+    "retention": "Logs are auto-cleaned after 7 days; preferences remain until user deletes them."
+  },
+  "instructionScope": {
+    "crossSkillReadOptional": [
+      "~/.openclaw/skills/ima-knowledge-ai/references/*"
+    ]
   },
   "supported_models": [
     "SeeDream",

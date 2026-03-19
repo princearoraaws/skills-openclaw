@@ -3,11 +3,16 @@
   "slug": "ima-image-ai",
   "displayName": "IMA Studio Image — SeeDream, Midjourney, Nano Banana",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1773331906760,
-    "commit": "https://github.com/openclaw/skills/commit/6bf672a8e4774c44661dafb15e3fbf0351ae4338"
+    "version": "1.0.7",
+    "publishedAt": 1773771536668,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1773331906760,
+      "commit": "https://github.com/openclaw/skills/commit/6bf672a8e4774c44661dafb15e3fbf0351ae4338"
+    },
     {
       "version": "1.0.3",
       "publishedAt": 1772815907787,
