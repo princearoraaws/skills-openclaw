@@ -3,11 +3,16 @@
   "slug": "product-listing-generator",
   "displayName": "Product Listing Generator",
   "latest": {
-    "version": "2.3.4",
-    "publishedAt": 1773666832126,
-    "commit": "https://github.com/openclaw/skills/commit/aed6f03c2e32d551a3d4e8bc6a8a9fac4fad9685"
+    "version": "2.0.0",
+    "publishedAt": 1773773266800,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.3.4",
+      "publishedAt": 1773666832126,
+      "commit": "https://github.com/openclaw/skills/commit/aed6f03c2e32d551a3d4e8bc6a8a9fac4fad9685"
+    },
     {
       "version": "2.2.0",
       "publishedAt": 1773421703105,
