@@ -26,7 +26,8 @@ function getPool() {
   if (pool) return pool;
   
   try {
-    const pg = require('pg');
+    // 使用绝对路径加载 pg（Hook 环境需要）
+    const pg = require(path.join(SKILL_DIR, 'node_modules', 'pg'));
     const config = loadConfig();
     const dbConfig = config.storage?.primary || {
       host: 'localhost',
@@ -64,7 +65,8 @@ async function getRedisClient() {
   if (redisClient) return redisClient;
   
   try {
-    const redis = require('redis');
+    // 使用绝对路径加载 redis（Hook 环境需要）
+    const redis = require(path.join(SKILL_DIR, 'node_modules', 'redis'));
     const config = loadConfig();
     const cacheConfig = config.storage?.cache || {
       host: 'localhost',

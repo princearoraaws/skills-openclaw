@@ -1,3 +1,129 @@
+## [5.3.25] - 2026-03-20
+
+### 🐛 Bug Fixes
+- **修复 Hook 模块加载** - `db.cjs` 使用绝对路径加载 `pg` 和 `redis`，解决 Hook 环境下模块找不到的问题
+
+### 📁 Changed Files
+- `scripts/core/db.cjs` - 使用绝对路径加载依赖
+
+---
+
+## [5.3.24] - 2026-03-20
+
+### 🐛 Bug Fixes
+- **修复类型验证错误** - `type: 'conversation'` 改为 `type: 'episodic'`（有效类型）
+- **修复 Embedding 路径** - `embedding_service.cjs` 中 embed.py 路径错误
+
+### 📦 Dependencies
+- 添加 `sentence-transformers` 依赖说明
+
+### 📁 Changed Files
+- `hooks/cognitive-recall/handler.js` - 修复 type 值
+- `scripts/tools/capture_assistant_daemon.cjs` - 修复 type 值
+- `scripts/core/embedding_service.cjs` - 修复 embed.py 路径
+
+---
+
+## [5.3.23] - 2026-03-20
+
+### 🚀 Major Features
+- **自动配置 Gateway Hooks** - 安装时自动配置 `hooks.internal.extraDirs`，无需手动复制文件
+- **安装状态记录** - 生成 `.installed.json` 记录安装信息（版本、时间、配置摘要）
+- **彩色输出与进度条** - 终端彩色日志输出，实时进度条显示安装进度
+
+### 🛠️ New Tools
+- `npm run check` - 系统要求检查（Node.js、OpenClaw、PostgreSQL、Redis 版本）
+- `npm run verify` - Hook 健康验证工具
+- `npm run diagnose` - 诊断工具（同 verify）
+- `npm run migrate` - 旧版本迁移工具
+
+### 🔧 Improvements
+- **自动配置备份** - 修改 Gateway 配置前自动备份到 `.bak`
+- **错误回滚机制** - 安装失败时自动恢复配置
+- **幂等性安装** - 多次安装不重复添加配置
+- **版本兼容检查** - 检测 Node.js、OpenClaw、PostgreSQL、Redis 版本兼容性
+- **卸载清理** - 卸载时自动清理 Gateway hooks 配置
+
+### 🐛 Bug Fixes
+- **修复主会话中断** - 检测主会话环境，跳过自动重启 Gateway
+- **修复状态记录** - 调整执行顺序，确保 `.installed.json` 正确生成
+- **修复备份残留** - 安装完成后自动清理备份文件
+
+### 📁 Changed Files
+- `scripts/tools/postinstall.cjs` - 重构安装流程
+- `scripts/tools/uninstall.cjs` - 新增配置清理
+- `scripts/tools/verify-hooks.cjs` - 新增 Hook 验证
+- `scripts/tools/check-requirements.cjs` - 重写版本检查
+- `scripts/tools/migrate.cjs` - 新增迁移工具
+- `package.json` - 新增脚本命令
+
+### 📋 Requirements
+| 组件 | 最低版本 | 推荐版本 |
+|------|----------|----------|
+| Node.js | 18.0.0 | 20.0.0+ |
+| OpenClaw | 2026.1.0 | 2026.3.0+ |
+| PostgreSQL | 14.0 | 16.0+ |
+| Redis | 6.0 | 7.0+ |
+
+---
+
+## [5.3.19] - 2026-03-18
+
+### 🧹 Cleanup
+- **删除未使用导入** - 清理 MemoryService.js 中未使用的 withRetry 和 transactionWithRetry
+- **代码精简** - 减少不必要的依赖
+
+## [5.3.18] - 2026-03-18
+
+### 🔒 Security
+- **信息泄露修复** - API 错误响应不再暴露内部错误详情 (e.message)
+- **统一错误处理** - 所有 500 错误返回通用消息，详细错误记录到日志
+
+## [5.3.17] - 2026-03-18
+
+### 🐛 Bug Fix
+- **修复并发安全问题** - MemoryService 限流使用 Map 存储每个客户端状态，避免竞态条件
+- **修复 JSON 解析错误** - 为 shared_memory.cjs 和 handler.js 的 JSON.parse 添加 try-catch
+- **防止缓存损坏** - Redis 缓存解析失败时自动删除损坏条目
+
+## [5.3.16] - 2026-03-18
+
+### 🐛 Bug Fix
+- **添加全局异常处理** - 捕获 uncaughtException 和 unhandledRejection
+- **防止进程崩溃** - 异常发生时记录日志后优雅退出
+
+## [5.3.15] - 2026-03-18
+
+### 🐛 Bug Fix
+- **修复内存泄漏** - rate limit map 添加自动清理机制（每5分钟清理过期条目）
+- **修复定时器泄漏** - 服务器关闭时正确清理 rate limit 清理定时器
+
+## [5.3.14] - 2026-03-18
+
+### 🔧 Code Quality
+- **统一 Logger 使用** - MemoryService.js 和 UnitOfWork.js 使用 logger 替代 console
+- **日志一致性** - 运行时日志统一使用 Winston logger
+
+## [5.3.13] - 2026-03-18
+
+### 📄 Documentation
+- **添加 LICENSE** - MIT 许可证
+
+### ✅ Final Review
+- **版本一致性** - 所有文件版本号统一为 5.3.13
+- **文件完整性** - 所有必要文件已就位
+- **代码质量** - 通过语法检查
+
+## [5.3.12] - 2026-03-18
+
+### 🔒 Security
+- **修复 SQL 注入** - 验证事务隔离级别，只允许预定义值
+- **错误处理统一** - server.js 中使用 logger 替代 console.error
+
+### ⚙️ Configuration
+- **API 配置化** - config.json 新增 api 配置节，支持自定义端口和 CORS
+- **动态配置加载** - server.js 自动加载 config.json 中的 API 配置
+
 ## [5.3.11] - 2026-03-18
 
 ### 📐 Constants

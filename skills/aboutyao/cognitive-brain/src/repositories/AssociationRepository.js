@@ -16,7 +16,7 @@ class AssociationRepository extends BaseRepository {
     const result = await this.pool.query(
       `INSERT INTO associations (id, from_id, to_id, type, weight, bidirectional, created_at, updated_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       ON CONFLICT (from_id, to_id) DO UPDATE SET
+       ON CONFLICT ON CONSTRAINT unique_association DO UPDATE SET
          weight = LEAST(1.0, associations.weight + EXCLUDED.weight),
          updated_at = NOW()
        RETURNING *`,
@@ -137,7 +137,7 @@ class AssociationRepository extends BaseRepository {
          unnest($5::boolean[]),
          NOW(),
          NOW()
-       ON CONFLICT (from_id, to_id) DO UPDATE SET
+       ON CONFLICT ON CONSTRAINT unique_association DO UPDATE SET
          weight = LEAST(1.0, associations.weight + EXCLUDED.weight),
          updated_at = NOW()
        RETURNING *`,

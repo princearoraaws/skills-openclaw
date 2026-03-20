@@ -177,7 +177,7 @@ Redis 端口 [6379]:
 
 ```json
 {
-  "version": "5.3.11",
+  "version": "5.3.25",
   "storage": {
     "primary": {
       "type": "postgresql",

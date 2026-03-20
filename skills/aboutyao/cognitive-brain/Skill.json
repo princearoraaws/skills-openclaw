@@ -1,9 +1,10 @@
 {
   "name": "cognitive-brain",
-  "version": "5.3.11",
+  "version": "5.3.25",
   "description": "类脑认知系统 - 四层记忆架构 + 联想网络 + 元认知反思 + 自我意识 + 自主学习 + 跨会话记忆注入",
   "author": "AI Self-Design",
   "license": "MIT",
+  "installCommand": "npm install && node scripts/tools/postinstall.cjs --default-config --auto-deps",
   "keywords": [
     "memory",
     "cognitive",

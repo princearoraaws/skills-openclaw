@@ -75,7 +75,7 @@ async function runTests() {
     const assoc = new Association({
       fromId: c1.id,
       toId: c2.id,
-      type: 'test',
+      type: 'related',
       weight: 0.5
     });
     const savedAssoc = await assocRepo.create(assoc);
@@ -93,8 +93,8 @@ async function runTests() {
     // Test createMany (batch)
     const c3 = await conceptRepo.create(new Concept({ name: 'BatchAssoc3_' + Date.now() }));
     const assocs = [
-      new Association({ fromId: c1.id, toId: c3.id, type: 'batch', weight: 0.3 }),
-      new Association({ fromId: c2.id, toId: c3.id, type: 'batch', weight: 0.4 })
+      new Association({ fromId: c1.id, toId: c3.id, type: 'related', weight: 0.3 }),
+      new Association({ fromId: c2.id, toId: c3.id, type: 'related', weight: 0.4 })
     ];
     const batchAssocs = await assocRepo.createMany(assocs);
     assert.strictEqual(batchAssocs.length, 2, 'Should create 2 associations');

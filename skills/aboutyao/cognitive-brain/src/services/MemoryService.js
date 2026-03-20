@@ -17,10 +17,11 @@ const { hybridSearch } = require('../../scripts/core/search_strategies.cjs');
 const { predictAndPreload } = require('../../scripts/core/prediction_client.cjs');
 const { getCache, setCache } = require('../../scripts/core/cache.cjs');
 const { Association } = require('../domain/Association');
-const { withRetry, transactionWithRetry } = require('../utils/retry.cjs');
 const { metrics } = require('../utils/metrics.cjs');
 const { getCircuitBreaker } = require('../utils/circuit_breaker.cjs');
 const { CONSTANTS } = require('../utils/constants.cjs');
+const { createLogger } = require('../utils/logger.cjs');
+const logger = createLogger('MemoryService');
 
 class MemoryService {
   constructor(pool) {
@@ -28,8 +29,9 @@ class MemoryService {
     this.memoryRepo = new MemoryRepository(pool);
     this.conceptRepo = new ConceptRepository(pool);
     this.embeddingService = null;
-    this.encodeCount = 0;
-    this.encodeResetTime = Date.now();
+    
+    // 限流状态（使用 Map 存储每个 IP 的限流状态，避免并发问题）
+    this.rateLimitMap = new Map();
     
     // 熔断器
     this.dbBreaker = getCircuitBreaker('database', {
@@ -40,19 +42,40 @@ class MemoryService {
   }
 
   /**
-   * 限流检查
+   * 限流检查（基于 IP，避免并发问题）
    */
-  checkRateLimit() {
+  checkRateLimit(clientId = 'default') {
     const now = Date.now();
-    // 每分钟重置计数
-    if (now - this.encodeResetTime > CONSTANTS.ENCODING.RATE_LIMIT_WINDOW_MS) {
-      this.encodeCount = 0;
-      this.encodeResetTime = now;
+    let clientData = this.rateLimitMap.get(clientId);
+    
+    if (!clientData || now - clientData.resetTime > CONSTANTS.ENCODING.RATE_LIMIT_WINDOW_MS) {
+      // 重置或新建
+      clientData = { count: 0, resetTime: now };
     }
-    this.encodeCount++;
+    
+    clientData.count++;
+    this.rateLimitMap.set(clientId, clientData);
+    
     // 检查是否超过限制
-    if (this.encodeCount > CONSTANTS.ENCODING.RATE_LIMIT_MAX) {
-      throw new Error(`Rate limit exceeded: max ${CONSTANTS.ENCODING.RATE_LIMIT_MAX} encodes per minute`);
+    if (clientData.count > CONSTANTS.ENCODING.RATE_LIMIT_MAX) {
+      throw new Error(`Rate limit exceeded: max ${CONSTANTS.ENCODING.RATE_LIMIT_MAX} encodes per minute for client ${clientId}`);
+    }
+    
+    // 清理过期条目（每100次检查清理一次）
+    if (clientData.count % 100 === 0) {
+      this.cleanupRateLimitMap();
+    }
+  }
+  
+  /**
+   * 清理过期限流条目
+   */
+  cleanupRateLimitMap() {
+    const now = Date.now();
+    for (const [key, data] of this.rateLimitMap) {
+      if (now - data.resetTime > CONSTANTS.ENCODING.RATE_LIMIT_WINDOW_MS * 2) {
+        this.rateLimitMap.delete(key);
+      }
     }
   }
 
@@ -69,12 +92,12 @@ class MemoryService {
   /**
    * 编码记忆（创建新记忆）- 完整版
    */
-  async encode(content, metadata = {}) {
+  async encode(content, metadata = {}, clientId = 'default') {
     const timer = metrics.startTimer('encode_duration');
-    
+
     try {
       // 0. 限流检查
-      this.checkRateLimit();
+      this.checkRateLimit(clientId);
 
       // 1. 提取实体
     const entities = metadata.entities || extractEntities(content);
@@ -101,7 +124,7 @@ class MemoryService {
         embedding = await embeddingService.embed(content);
       }
     } catch (e) {
-      console.warn('[MemoryService] Embedding 生成失败:', e.message);
+      logger.warn('Embedding 生成失败', { error: e.message });
     }
 
     // 7. 创建记忆实体
@@ -281,7 +304,7 @@ class MemoryService {
         preloadedMemories: result.memories || []
       };
     } catch (e) {
-      console.warn('[MemoryService] 预测失败:', e.message);
+      logger.warn('预测失败', { error: e.message });
       return { predictions: [], preloadedMemories: [] };
     }
   }

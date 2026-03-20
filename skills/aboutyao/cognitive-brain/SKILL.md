@@ -4,7 +4,7 @@
 > 
 > 让 AI 拥有像人类一样的记忆、思考和预测能力
 
-**Version: 5.3.11** | **License: MIT**
+**Version: 5.3.30** | **License: MIT**
 
 ---
 
@@ -27,54 +27,51 @@
 
 ## 🚀 快速开始 | Quick Start
 
-### 安装前检查 | Pre-install Check
-
-```bash
-# 检查系统是否满足安装要求
-node scripts/tools/check-requirements.cjs
-
-# 输出示例:
-# ✅ Node.js v20.11.0
-# ✅ PostgreSQL 15.4
-# ✅ PostgreSQL 服务 running
-# ✅ Redis running
-# ✅ pgvector available
-# 
-# ✅ 系统检查通过，可以安装
-```
-
-### 安装 | Installation
+### 一键安装 | Quick Install
 
 ```bash
 # 方式1: ClawHub 安装（推荐）
 clawhub install cognitive-brain
+cd ~/.openclaw/workspace/skills/cognitive-brain
+npm run setup:auto    # 非交互模式，自动安装所有依赖
 
 # 方式2: 手动安装
-cd ~/.openclaw/workspace/skills
-git clone <repository> cognitive-brain
-cd cognitive-brain
-
-# 检查依赖
-node scripts/tools/check-requirements.cjs
-
-# 安装
+cd ~/.openclaw/workspace/skills/cognitive-brain
 npm install
-# 安装脚本会自动:
-# - 提示输入数据库配置
-# - 测试数据库连接
-# - 初始化数据库表
-# - 同步 hooks
-# - 运行测试验证
+npm run setup         # 交互式配置
 ```
+
+### 安装模式 | Install Modes
+
+| 命令 | 说明 |
+|------|------|
+| `npm run check` | 检查系统依赖（PostgreSQL, Redis, pgvector） |
+| `npm run setup` | 交互式安装，会提示输入数据库配置 |
+| `npm run setup:auto` | 自动安装，使用默认配置，自动安装缺失依赖 |
+| `npm run setup:resume` | 从断点恢复安装（安装失败后使用） |
+| `npm run health` | 健康检查 |
+| `npm run reset` | 重置数据库（清空记忆，保留表结构） |
+| `npm run uninstall` | 卸载（清理数据库、hooks、配置文件） |
+
+### 安装特性 | Install Features
+
+| 特性 | 说明 |
+|------|------|
+| 🔄 断点恢复 | 安装失败后运行 `npm run setup:resume` 继续 |
+| 📋 安装日志 | 记录到 `install.log`，便于排查问题 |
+| 🔍 已安装检测 | 自动检测是否已安装，避免重复 |
+| ⚡ 一键安装 | `installCommand` 自动执行完整安装流程 |
 
 ### 系统要求 | Requirements
 
 | 依赖 | 版本 | 安装命令 (Ubuntu) |
 |------|------|-------------------|
-| Node.js | >= 18 | `sudo apt install nodejs npm` |
-| PostgreSQL | >= 14 | `sudo apt install postgresql` |
-| Redis | >= 6 | `sudo apt install redis-server` |
-| pgvector | - | `sudo apt install postgresql-14-pgvector` |
+| Node.js | >= 18 | `apt install nodejs npm` |
+| PostgreSQL | >= 14 | `apt install postgresql` |
+| Redis | >= 6 | `apt install redis-server` |
+| pgvector | - | `apt install postgresql-16-pgvector` |
+
+> 💡 `npm run setup:auto` 会自动安装这些依赖（需要 root 权限）
 
 ### 基础使用 | Basic Usage
 
@@ -321,7 +318,7 @@ node scripts/tools/health_check.cjs
 
 ```json
 {
-  "version": "5.3.11",
+  "version": "5.3.25",
   "storage": {
     "primary": {
       "type": "postgresql",
@@ -342,6 +339,13 @@ node scripts/tools/health_check.cjs
 
 ## 📈 版本历史
 
+### v5.3.25 (2026-03-20)
+- 🐛 **修复类型验证** - `type: 'conversation'` 改为有效类型 `'episodic'`
+- 🐛 **修复 Embedding 路径** - embed.py 路径错误导致 embedding 生成失败
+
+### v5.3.22 (2026-03-20)
+- 发布版本更新
+
 ### v5.3.11 (2026-03-18)
 - 🧪 **测试覆盖率提升** - 新增 Repository/Service/API 测试 (7个测试文件)
 - 🧹 **事件监听器清理** - 优雅关闭时清理所有监听器，防止内存泄漏
@@ -355,6 +359,15 @@ node scripts/tools/health_check.cjs
 - 🔧 **统一 Logger** - Winston logger 替代 console.log
 - 🔒 **事务安全** - 隔离级别 + 死锁重试 + 熔断器
 - ⚙️ **配置增强** - 连接池可配置 + 日志配置
+
+### v5.3.20 (2026-03-19)
+- ✨ **安装流程优化** - 非交互模式、断点恢复、安装日志
+- ✨ **Skill.json installCommand** - 支持一键自动安装
+- ✨ **卸载脚本** - `npm run uninstall` 清理所有组件
+- ✨ **重置脚本** - `npm run reset` 清空记忆数据
+- 🔧 **修复 create_indexes.cjs** - 模块路径错误
+- 🔧 **修复 health_check.cjs** - SQL 语法错误
+- 📝 **文档更新** - 安装指南、命令说明
 
 ### v5.0.0 (2026-03-18)
 - ✨ 重构为分层架构 (Domain/Repository/Service)

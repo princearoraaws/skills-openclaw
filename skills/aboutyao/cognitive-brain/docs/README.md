@@ -4,7 +4,7 @@
 
 Cognitive Brain 是 OpenClaw 的记忆系统，提供跨会话的记忆存储、检索、联想和学习能力。
 
-**版本**: 5.3.11  
+**版本**: 5.3.25  
 **架构**: 分层架构（Domain → Repository → Service → API）
 
 ---
@@ -363,7 +363,7 @@ node tests/v5.test.cjs
 
 ```json
 {
-  "version": "5.3.11",
+  "version": "5.3.25",
   "storage": {
     "primary": {
       "type": "postgresql",

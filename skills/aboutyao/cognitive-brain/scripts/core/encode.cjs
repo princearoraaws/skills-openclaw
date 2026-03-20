@@ -140,7 +140,7 @@ async function storeInDB(memory) {
     
     await client.query(`
       INSERT INTO episodes (id, content, summary, type, importance, 
-        emotions, created_at, tags, role, source_channel)
+        emotion, created_at, tags, role, source_channel)
       VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7, $8::jsonb, $9, $10)
     `, [
       memory.id,

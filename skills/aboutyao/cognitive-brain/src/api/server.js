@@ -6,6 +6,8 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
+const fs = require('fs');
+const path = require('path');
 const { getBrain } = require('../index.js');
 const { metrics } = require('../utils/metrics.cjs');
 const { createLogger } = require('../utils/logger.cjs');
@@ -13,8 +15,34 @@ const { validateEncode, validateRecall, validateId } = require('../utils/validat
 const { WebSocketManager } = require('./websocket.js');
 const { CONSTANTS } = require('../utils/constants.cjs');
 
+// 加载配置
+function loadConfig() {
+  try {
+    const configPath = path.join(process.cwd(), 'config.json');
+    if (fs.existsSync(configPath)) {
+      return JSON.parse(fs.readFileSync(configPath, 'utf8'));
+    }
+  } catch (e) {
+    console.warn('Warning: Could not load config.json');
+  }
+  return { api: { port: CONSTANTS.API.DEFAULT_PORT } };
+}
+
 // 简单的速率限制中间件
 const rateLimitMap = new Map();
+let rateLimitCleanupInterval = null;
+
+function startRateLimitCleanup() {
+  // 定期清理过期的 rate limit 条目（每5分钟）
+  rateLimitCleanupInterval = setInterval(() => {
+    const now = Date.now();
+    for (const [key, data] of rateLimitMap) {
+      if (now > data.resetTime + CONSTANTS.API.RATE_LIMIT_WINDOW_MS) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }, 5 * 60 * 1000);
+}
 
 function rateLimitMiddleware(req, res, next) {
   const key = req.ip || 'unknown';
@@ -46,9 +74,10 @@ function rateLimitMiddleware(req, res, next) {
 }
 
 const logger = createLogger('api');
+const apiConfig = loadConfig().api || {};
 
 class ApiServer {
-  constructor(port = CONSTANTS.API.DEFAULT_PORT) {
+  constructor(port = apiConfig.port || CONSTANTS.API.DEFAULT_PORT) {
     this.app = express();
     this.port = port;
     this.brain = null;
@@ -62,8 +91,8 @@ class ApiServer {
     
     // CORS
     this.app.use(cors({
-      origin: process.env.CORS_ORIGIN || '*',
-      methods: ['GET', 'POST', 'PUT', 'DELETE'],
+      origin: process.env.CORS_ORIGIN || apiConfig.cors?.origin || '*',
+      methods: apiConfig.cors?.methods || ['GET', 'POST', 'PUT', 'DELETE'],
       allowedHeaders: ['Content-Type', 'Authorization']
     }));
     
@@ -134,7 +163,8 @@ class ApiServer {
         res.status(201).json(memory);
       } catch (e) {
         metrics.inc('encode_errors_total');
-        res.status(500).json({ error: e.message });
+        logger.error('编码记忆失败', { error: e.message, stack: e.stack });
+        res.status(500).json({ error: 'Internal server error' });
       }
     });
 
@@ -142,18 +172,18 @@ class ApiServer {
     this.app.get('/api/memories', validateRecall, async (req, res) => {
       try {
         const { q, limit = 10, type } = req.query;
-        
+
         if (!q) {
           return res.status(400).json({ error: 'q (query) is required' });
         }
-        
+
         const timer = metrics.startTimer('recall_duration');
         const memories = await this.brain.memory.recall(q, {
           limit: parseInt(limit),
           type
         });
         timer.end();
-        
+
         metrics.inc('memories_recalled_total');
         res.json({
           query: q,
@@ -162,7 +192,8 @@ class ApiServer {
         });
       } catch (e) {
         metrics.inc('recall_errors_total');
-        res.status(500).json({ error: e.message });
+        logger.error('检索记忆失败', { error: e.message, stack: e.stack });
+        res.status(500).json({ error: 'Internal server error' });
       }
     });
 
@@ -175,7 +206,8 @@ class ApiServer {
         }
         res.json(memory);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        logger.error('获取记忆详情失败', { error: e.message, id: req.params.id });
+        res.status(500).json({ error: 'Internal server error' });
       }
     });
 
@@ -185,7 +217,8 @@ class ApiServer {
         const stats = await this.brain.stats();
         res.json(stats);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        logger.error('获取统计失败', { error: e.message });
+        res.status(500).json({ error: 'Internal server error' });
       }
     });
 
@@ -196,7 +229,8 @@ class ApiServer {
         const concepts = await this.brain.concept.getTopConcepts(parseInt(limit));
         res.json(concepts);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        logger.error('获取概念失败', { error: e.message });
+        res.status(500).json({ error: 'Internal server error' });
       }
     });
 
@@ -207,7 +241,8 @@ class ApiServer {
         const result = await this.brain.memory.predictAndPreload(userId, messages);
         res.json(result);
       } catch (e) {
-        res.status(500).json({ error: e.message });
+        logger.error('预测失败', { error: e.message, userId });
+        res.status(500).json({ error: 'Internal server error' });
       }
     });
 
@@ -224,14 +259,17 @@ class ApiServer {
 
     // 错误处理
     this.app.use((err, req, res, next) => {
-      console.error('[API Error]', err);
+      logger.error('API Error', { error: err.message, stack: err.stack });
       res.status(500).json({ error: 'Internal server error' });
     });
   }
 
   async start() {
     this.brain = getBrain ? getBrain() : new (require('../index.js').CognitiveBrain)();
-    
+
+    // 启动 rate limit 清理定时器
+    startRateLimitCleanup();
+
     return new Promise((resolve) => {
       this.server = this.app.listen(this.port, () => {
         console.log(`🚀 API Server running on http://localhost:${this.port}`);
@@ -240,7 +278,7 @@ class ApiServer {
         console.log(`   WebSocket: ws://localhost:${this.port}`);
         resolve();
       });
-      
+
       // 启动 WebSocket
       this.wsManager = new WebSocketManager(this.server);
     });
@@ -274,12 +312,27 @@ class ApiServer {
       await this.brain.pool.end();
     }
 
-    // 清理 rate limit map
+    // 清理 rate limit map 和定时器
+    if (rateLimitCleanupInterval) {
+      clearInterval(rateLimitCleanupInterval);
+      rateLimitCleanupInterval = null;
+    }
     rateLimitMap.clear();
 
     logger.info('服务已关闭');
   }
 }
+
+// 全局异常处理
+process.on('uncaughtException', (err) => {
+  logger.error('未捕获的异常', { error: err.message, stack: err.stack });
+  // 给日志系统时间写入后退出
+  setTimeout(() => process.exit(1), 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  logger.error('未处理的 Promise 拒绝', { reason, promise });
+});
 
 // 优雅关闭处理
 process.on('SIGTERM', async () => {

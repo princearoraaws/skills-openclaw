@@ -1,0 +1,24 @@
+{
+  "basic": {
+    "name": "master",
+    "communicationStyle": "casual",
+    "timezone": "Asia/Shanghai"
+  },
+  "preferences": {
+    "topics": {}
+  },
+  "patterns": {
+    "activeHours": [
+      21
+    ],
+    "commonTasks": {}
+  },
+  "knowledge": {
+    "knownConcepts": [],
+    "expertiseAreas": []
+  },
+  "stats": {
+    "totalInteractions": 1,
+    "lastInteraction": 1774012063117
+  }
+}

@@ -53,7 +53,7 @@ async function encodeAssistantReply(content, metadata) {
     `, [
       content,
       content.slice(0, 200),
-      metadata.type || 'conversation',
+      metadata.type || 'episodic',
       'assistant',
       metadata.channel || 'unknown',
       0.5 // AI 回复默认重要性
@@ -101,7 +101,7 @@ async function scanSessionFile(filename) {
           
           if (content && content.length > 10) {
             const id = await encodeAssistantReply(content, {
-              type: 'conversation',
+              type: 'episodic',
               channel: 'unknown'
             });
             if (id) {

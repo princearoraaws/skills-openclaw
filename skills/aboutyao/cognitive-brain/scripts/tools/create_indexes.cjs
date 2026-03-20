@@ -4,7 +4,7 @@
  * 添加必要的索引以提高查询性能
  */
 
-const { getPool } = require('./db.cjs');
+const { getPool } = require('../core/db.cjs');
 
 const INDEXES = [
   {

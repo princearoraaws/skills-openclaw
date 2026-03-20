@@ -165,11 +165,11 @@ async function predictByHistory(pool) {
     // 5. 分析情感趋势
     const emotionTrends = await pool.query(`
       SELECT 
-        emotions->>'dominantEmotion' as emotion,
+        emotion->>'dominantEmotion' as emotion,
         COUNT(*) as count
       FROM episodes
       WHERE timestamp > NOW() - INTERVAL '7 days'
-        AND emotions IS NOT NULL
+        AND emotion IS NOT NULL
       GROUP BY emotion
       ORDER BY count DESC
       LIMIT 3

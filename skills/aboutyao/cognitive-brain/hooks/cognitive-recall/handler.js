@@ -10,6 +10,7 @@ const logger = createLogger('cognitive-recall');
 const HOME = process.env.HOME || '/root';
 const SKILL_DIR = path.join(HOME, '.openclaw/workspace/skills/cognitive-brain');
 const CONFIG_PATH = path.join(SKILL_DIR, 'config.json');
+const USER_MODEL_PATH = path.join(SKILL_DIR, 'data/user_model.json');
 
 // v5.0 新架构导入
 let CognitiveBrain = null;
@@ -53,7 +54,12 @@ function getConfig() {
     if (!fs.existsSync(CONFIG_PATH)) {
       return null;
     }
-    cachedConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    try {
+      cachedConfig = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+    } catch (e) {
+      console.error('[cognitive-recall] 解析配置失败:', e.message);
+      return null;
+    }
   }
   return cachedConfig;
 }
@@ -669,7 +675,7 @@ const encodeMemory = async (content, metadata = {}) => {
     try {
       const entities = extractEntities(content);
       const memory = await brain.encode(content, {
-        type: metadata.type || 'conversation',
+        type: metadata.type || 'episodic',
         importance: calculateImportance(content, metadata),
         sourceChannel: metadata.channel || 'unknown',
         role: metadata.role || 'user',
@@ -719,7 +725,7 @@ const encodeMemory = async (content, metadata = {}) => {
     `, [
       content.slice(0, 200),
       content,
-      metadata.type || 'conversation',
+      metadata.type || 'episodic',
       metadata.channel || 'unknown',
       importance,
       JSON.stringify(entities),
@@ -953,8 +959,6 @@ const handler = async (event) => {
   if (event.type === 'message' && event.action === 'preprocessed') {
     return handlePreprocessed(event);
   }
-  
-  // Note: completed event not supported by OpenClaw, removed
 };
 
 // Handle preprocessed event - recall memory
@@ -1062,7 +1066,7 @@ const handlePreprocessed = async (event) => {
       role: 'user',
       sender,
       channel: event.context.channel || 'unknown',
-      type: 'conversation'
+      type: 'episodic'
     }).then(id => {
       if (id) {
         logger.info('[cognitive-recall] Auto-encoded user message:', id);
@@ -1070,8 +1074,8 @@ const handlePreprocessed = async (event) => {
     }).catch(() => {});
     
     // 延迟捕获 AI 回复（5秒后）
-    const sessionId = event.context?.sessionId || event.session_id;
-    const messageId = event.context?.messageId || event.message_id;
+    const sessionId = event.context?.sessionId || event.context?.conversationId || event.session_id || event.conversation_id;
+    const messageId = event.context?.messageId || event.context?.message_id || event.messageId;
     logger.info('[cognitive-recall] Debug - sessionId:', sessionId, 'messageId:', messageId?.substring(0, 20));
     if (sessionId && messageId) {
       logger.info('[cognitive-recall] Scheduling assistant capture in 5s...');
@@ -1152,7 +1156,7 @@ const captureAssistantReply = async (sessionId, userMessageId, sender, channel) 
               role: 'assistant',
               sender: 'assistant',
               channel,
-              type: 'conversation',
+              type: 'episodic',
               replyTo: userMessageId
             });
             if (id) {

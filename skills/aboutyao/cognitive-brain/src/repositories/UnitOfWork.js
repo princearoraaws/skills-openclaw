@@ -2,6 +2,9 @@
  * Unit of Work 模式
  * 管理事务中的多个操作
  */
+const { createLogger } = require('../utils/logger.cjs');
+const logger = createLogger('UnitOfWork');
+
 class UnitOfWork {
   constructor(pool) {
     this.pool = pool;
@@ -17,7 +20,13 @@ class UnitOfWork {
     if (this.isInTransaction) {
       throw new Error('Transaction already started');
     }
-    
+
+    // 验证隔离级别，防止 SQL 注入
+    const validLevels = ['READ UNCOMMITTED', 'READ COMMITTED', 'REPEATABLE READ', 'SERIALIZABLE'];
+    if (!validLevels.includes(isolationLevel)) {
+      throw new Error(`Invalid isolation level: ${isolationLevel}. Must be one of: ${validLevels.join(', ')}`);
+    }
+
     this.client = await this.pool.connect();
     await this.client.query(`BEGIN TRANSACTION ISOLATION LEVEL ${isolationLevel}`);
     this.isInTransaction = true;
@@ -117,7 +126,7 @@ class UnitOfWork {
           throw error;
         }
         
-        console.log(`[UnitOfWork] 检测到死锁/锁超时，${retryDelay}ms后重试 (尝试 ${attempt + 1}/${maxRetries})`);
+        logger.info(`检测到死锁/锁超时，${retryDelay}ms后重试 (尝试 ${attempt + 1}/${maxRetries})`);
         await new Promise(resolve => setTimeout(resolve, retryDelay * (attempt + 1)));
       }
     }

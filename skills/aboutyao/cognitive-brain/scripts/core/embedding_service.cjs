@@ -10,7 +10,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const EventEmitter = require('events');
 
-const EMBED_SCRIPT = path.join(__dirname, 'embed.py');
+const EMBED_SCRIPT = path.join(__dirname, '..', 'embed.py');
 
 class EmbeddingService extends EventEmitter {
   constructor() {
@@ -133,7 +133,7 @@ class EmbeddingService extends EventEmitter {
           this.pendingRequests.delete(id);
           reject(new Error('请求超时'));
         }
-      }, 10000);
+      }, 60000);  // 增加到 60 秒
 
       this.pendingRequests.set(id, { resolve, reject, timer: timeoutTimer });
 

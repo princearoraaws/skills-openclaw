@@ -12,6 +12,8 @@
 const fs = require('fs');
 const path = require('path');
 const { resolveModule } = require('../module_resolver.cjs');
+const { createLogger } = require('../../src/utils/logger.cjs');
+const logger = createLogger('shared_memory');
 
 const HOME = process.env.HOME || '/root';
 const SKILL_DIR = path.join(HOME, '.openclaw/workspace/skills/cognitive-brain');
@@ -44,9 +46,10 @@ class SharedMemory {
     const { Pool } = pg;
     this.pool = new Pool(config.storage.primary);
     
-    // 初始化 Redis
+    // 初始化 Redis（使用绝对路径）
     try {
-      const { createClient } = require('redis');
+      const redisPath = path.join(SKILL_DIR, 'node_modules', 'redis');
+      const { createClient } = require(redisPath);
       this.redis = createClient({
         socket: {
           host: config.storage.cache?.host || 'localhost',
@@ -162,7 +165,13 @@ class SharedMemory {
       const cacheKey = `shared:${sessionId}:${contextType}`;
       const cached = await this.redis.get(cacheKey);
       if (cached) {
-        return JSON.parse(cached);
+        try {
+          return JSON.parse(cached);
+        } catch (e) {
+          logger.warn('Redis 缓存解析失败', { error: e.message, cacheKey });
+          // 删除损坏的缓存
+          await this.redis.del(cacheKey);
+        }
       }
     }
     

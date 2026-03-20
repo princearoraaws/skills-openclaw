@@ -49,7 +49,7 @@ async function healthCheck() {
       const pool = getPool();
       const tables = await pool.query(`
         SELECT table_name 
-        FROM information.tables 
+        FROM information_schema.tables 
         WHERE table_schema = 'public' 
         AND table_name IN ('episodes', 'concepts', 'associations')
       `);

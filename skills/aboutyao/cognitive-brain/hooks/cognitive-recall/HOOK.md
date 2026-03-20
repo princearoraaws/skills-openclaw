@@ -6,7 +6,7 @@ metadata:
     "openclaw":
       {
         "emoji": "🧠",
-        "events": ["message:preprocessed", "message:completed"],
+        "events": ["message:preprocessed"],
         "requires": { "bins": ["node"] }
       }
   }
