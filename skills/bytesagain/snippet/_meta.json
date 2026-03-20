@@ -3,9 +3,15 @@
   "slug": "snippet",
   "displayName": "Snippet",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1773664155628,
-    "commit": "https://github.com/openclaw/skills/commit/8010c1b133068111d694bbb39af86479c44a6b55"
+    "version": "3.0.1",
+    "publishedAt": 1773914052606,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1773664155628,
+      "commit": "https://github.com/openclaw/skills/commit/8010c1b133068111d694bbb39af86479c44a6b55"
+    }
+  ]
 }
