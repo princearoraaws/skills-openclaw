@@ -176,54 +176,20 @@ mma list
 所有 Meteor Master AI 的 API 方法都通过以下统一格式进行调用：
 
 ```bash
-mma post --method <methodName> [--port <port>] [--data '<json>']
+mma post --method <methodName> [--port <port>] --data-file <filePath>
 ```
 
 **参数说明：**
 
 - `--method <methodName>`: 必需，指定要调用的 API 方法名称
 - `--port <port>`: 可选，指定 API 服务器端口（默认：9000）
-- `--data '<json>'`: 可选，指定 JSON 格式的请求数据
+- `--data-file <filePath>`: 必需，指定包含 JSON 数据的文件路径
 
+**注意：** `--data-file` 参数是必需的（即使是空对象 `{}` 也需要）。需要先将 JSON 数据写入文件，再通过文件路径传递。
 
-### API 方法 methodName列表
+### 获取 API 详情
 
-#### getCurrentInfo
-
-请参考 [getCurrentInfo.md](./getCurrentInfo.md)
-
-#### getFilterList
-
-请参考 [getFilterList.md](./getFilterList.md)
-
-#### getDataList
-
-请参考 [getDataList.md](./getDataList.md)
-
-#### getDataDetail
-
-请参考 [getDataDetail.md](./getDataDetail.md)
-
-#### exportTrackImg
-
-请参考 [exportTrackImg.md](./exportTrackImg.md)
-
-#### exportGroupVideo
-
-请参考 [exportGroupVideo.md](./exportGroupVideo.md)
-
-#### 其他方法
-
-此处将添加更多 API 方法，所有方法都使用相同的调用格式：
-
-```bash
-mma post --method <methodName> [--port <port>] [--data '<json>']
-```
-
-**注意：** 
-
-重要！具体可用的方法的详细参数必须仔细阅读每个API接口的详细说明，就在这个SKILL的同一文件夹下，一定要仔细熟读！
-随着应用版本的更新，可能会添加新的方法或修改现有方法的参数。
+当需要调用任何 `mma post` 命令时（不包括 `start`、`check`、`list` 等非 post 调用），**必须先查阅 [references/api_spec.md](./references/api_spec.md)** 获取该方法的功能描述、请求参数、响应格式等详细信息。
 
 ## 使用示例
 
@@ -251,8 +217,20 @@ mma list
 ### 与 MMA 进行交互
 
 ```bash
-# 使用默认端口获取当前信息
+# 使用默认端口获取当前信息（无需传递数据）
 mma post --method getCurrentInfo
+```
+
+### 传递 JSON 数据
+
+当需要传递请求参数时，必须先将 JSON 数据写入文件：
+
+```bash
+# 第一步：创建包含 JSON 数据的文件
+echo '{"key": "value"}' > data.json
+
+# 第二步：使用 --data-file 传递数据
+mma post --method someMethod --data-file data.json
 ```
 
 ### 自定义端口
@@ -260,6 +238,10 @@ mma post --method getCurrentInfo
 ```bash
 # 使用自定义端口以指定特定的MMA实例
 mma post --method getCurrentInfo --port 9000
+
+# 指定端口并传递数据
+echo '{}' > data.json
+mma post --method someMethod --port 9000 --data-file data.json
 ```
 
 ## 错误处理
