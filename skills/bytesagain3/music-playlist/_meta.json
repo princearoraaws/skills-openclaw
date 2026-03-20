@@ -3,11 +3,16 @@
   "slug": "music-playlist",
   "displayName": "Music Playlist",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1773666546503,
-    "commit": "https://github.com/openclaw/skills/commit/9af1b50c41a64008d93e0f6d5e07088ae4d6ef75"
+    "version": "2.0.0",
+    "publishedAt": 1773773872460,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1773666546503,
+      "commit": "https://github.com/openclaw/skills/commit/9af1b50c41a64008d93e0f6d5e07088ae4d6ef75"
+    },
     {
       "version": "1.0.5",
       "publishedAt": 1773662783317,

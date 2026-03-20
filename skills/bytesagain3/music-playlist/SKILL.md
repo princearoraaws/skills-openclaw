@@ -4,6 +4,8 @@ name: Music Playlist
 description: "Music Playlist. Use when you need music playlist capabilities. Triggers on: music playlist."
   歌单推荐/乐评。场景歌单、心情推荐、音乐分析、歌词解读、播放列表、年度总结。Music playlist curator with mood, scene recommendations. 歌单、音乐、推荐。
 author: BytesAgain
+homepage: https://bytesagain.com
+source: https://github.com/bytesagain/ai-skills
 ---
 # Music Playlist
 
