@@ -3,11 +3,16 @@
   "slug": "aerobase-jetlag",
   "displayName": "Aerobase Jetlag",
   "latest": {
-    "version": "3.1.6",
-    "publishedAt": 1773944189472,
-    "commit": "https://github.com/openclaw/skills/commit/704f6d1e5fddeebb174874564b3bdc1bd5ec556f"
+    "version": "3.2.0",
+    "publishedAt": 1773946192203,
+    "commit": null
   },
   "history": [
+    {
+      "version": "3.1.6",
+      "publishedAt": 1773944189472,
+      "commit": "https://github.com/openclaw/skills/commit/704f6d1e5fddeebb174874564b3bdc1bd5ec556f"
+    },
     {
       "version": "3.0.8",
       "publishedAt": 1773443407576,
