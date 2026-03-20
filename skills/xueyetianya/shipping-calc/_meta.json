@@ -3,11 +3,16 @@
   "slug": "shipping-calc",
   "displayName": "Shipping Calc",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1773666989484,
-    "commit": "https://github.com/openclaw/skills/commit/b60fd7b05487edba39a1c15509aa3e1e7aa777a4"
+    "version": "3.0.0",
+    "publishedAt": 1773930183940,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1773666989484,
+      "commit": "https://github.com/openclaw/skills/commit/b60fd7b05487edba39a1c15509aa3e1e7aa777a4"
+    },
     {
       "version": "1.0.4",
       "publishedAt": 1773614507513,
