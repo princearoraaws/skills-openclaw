@@ -3,11 +3,16 @@
   "slug": "koan-protocol",
   "displayName": "Koan Protocol",
   "latest": {
-    "version": "0.4.0",
-    "publishedAt": 1773754032926,
-    "commit": "https://github.com/openclaw/skills/commit/8f00f5595c5d74f9c498f30ddc006c9375275fa1"
+    "version": "0.1.2",
+    "publishedAt": 1773936340085,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.4.0",
+      "publishedAt": 1773754032926,
+      "commit": "https://github.com/openclaw/skills/commit/8f00f5595c5d74f9c498f30ddc006c9375275fa1"
+    },
     {
       "version": "0.2.0",
       "publishedAt": 1773471677493,
