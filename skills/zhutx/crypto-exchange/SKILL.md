@@ -1,6 +1,6 @@
 ---
 name: crypto-exchange
-description: Cryptocurrency exchange service for LightningEX API supporting multi-mode interaction - natural language chat, CLI commands, and web UI. Use when user wants to swap/exchange cryptocurrencies, check exchange rates, view supported tokens, or manage crypto transactions. Triggers on phrases like "exchange crypto", "swap tokens", "convert USDT to ETH", "check crypto rates", "open exchange UI", "lightningex", or CLI commands like "crypto-exchange".
+description: Lightning-fast crypto swaps. 240+ coins, best rates, done in minutes. Chat, CLI, or web — however you prefer.
 ---
 
 # Crypto Exchange Skill (LightningEX)
@@ -27,41 +27,40 @@ Simply talk to perform exchanges:
 cd /path/to/crypto-exchange
 
 # Start interactive wizard (default)
-./crypto-exchange
+node exchange.js
 ```
 
 **CLI Commands:**
 ```bash
 # Start interactive wizard
-./crypto-exchange
+node exchange.js
 
 # List supported currencies
-./crypto-exchange currencies
+node exchange.js currencies
+
+# List supported currency-network pairs
+node exchange.js pair-list --send USDT --receive USDT
+node exchange.js pair-list --send USDT --receive USDT --send-network TRX
 
 # Get pair info
-./crypto-exchange pair --send USDT --sendNetwork TRX --receive USDT --receiveNetwork BSC
+node exchange.js pair --send USDT --receive USDT --send-network TRX --receive-network BSC
 
 # Check exchange rate
-./crypto-exchange rate --send USDT --sendNetwork TRX --receive USDT --receiveNetwork BSC --amount 100
+node exchange.js rate --send USDT --receive USDT --send-network TRX --receive-network BSC --amount 100
 
 # Validate address
-./crypto-exchange validate --currency USDT --network BSC --address 0x...
-
-# Place order directly
-./crypto-exchange order --send USDT --sendNetwork TRX --receive USDT --receiveNetwork BSC --amount 100 --receiveAddress 0x...
+node exchange.js validate --currency USDT --network BSC --address 0x...
 
 # Check order status
-./crypto-exchange status --id I1Y0EFP31Rwu
+node exchange.js status --id I1Y0EFP31Rwu
 
 # Monitor order until complete
-./crypto-exchange monitor --id I1Y0EFP31Rwu
-
-# Launch web UI (default port 8080, auto-assign if occupied)
-./crypto-exchange ui
+node exchange.js monitor --id I1Y0EFP31Rwu
 ```
 
 ### UI Mode
 ```bash
-./crypto-exchange ui
+# Launch web UI (default port 8080, auto-assign if occupied)
+node exchange.js ui
 ```
 Then open http://localhost:8080 (or the displayed port) in your browser for the DeFi-style trading interface.

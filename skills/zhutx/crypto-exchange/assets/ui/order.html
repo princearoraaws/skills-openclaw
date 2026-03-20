@@ -1,839 +1,707 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Order Status - LightningEX</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <style>
-        :root {
-            --neon-cyan: #00f5ff;
-            --neon-purple: #b829dd;
-            --neon-pink: #ff00ff;
-            --neon-green: #00ff88;
-            --neon-orange: #ff8800;
-            --neon-yellow: #ffdd00;
-            --dark-bg: #0a0a0f;
-            --card-bg: rgba(20, 20, 35, 0.9);
-            --border-glow: rgba(0, 245, 255, 0.3);
-            --text-primary: #ffffff;
-            --text-secondary: #a0a0b0;
-        }
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Rajdhani', sans-serif;
-            background: var(--dark-bg);
-            color: var(--text-primary);
-            min-height: 100vh;
-        }
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-image: 
-                linear-gradient(rgba(0, 245, 255, 0.03) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0, 245, 255, 0.03) 1px, transparent 1px);
-            background-size: 50px 50px;
-            pointer-events: none;
-            z-index: -1;
-        }
-        header {
-            padding: 20px 40px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-bottom: 1px solid rgba(0, 245, 255, 0.1);
-            background: rgba(10, 10, 15, 0.9);
-        }
-        .logo {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            cursor: pointer;
-        }
-        .logo-icon {
-            width: 40px; height: 40px;
-            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-        }
-        .logo-text {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
-            font-weight: 700;
-            background: linear-gradient(90deg, var(--neon-cyan), var(--neon-purple));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 40px 20px;
-        }
-        .page-title {
-            text-align: center;
-            margin-bottom: 40px;
-        }
-        .page-title h1 {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 32px;
-            color: var(--neon-cyan);
-            margin-bottom: 8px;
-        }
-        .order-id {
-            color: var(--text-secondary);
-            font-size: 14px;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order Details - LightningEX</title>
+  <meta name="description" content="View your LightningEX exchange order details and track status.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/layout.css">
+  <link rel="stylesheet" href="./css/components.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <style>
+    /* Top Logo Bar */
+    .top-logo-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 100;
+    }
 
-        /* Progress Steps */
-        .progress-container {
-            background: var(--card-bg);
-            border: 1px solid var(--border-glow);
-            border-radius: 20px;
-            padding: 40px;
-            margin-bottom: 30px;
-        }
-        .steps {
-            display: flex;
-            justify-content: space-between;
-            position: relative;
-            margin-bottom: 40px;
-        }
-        .steps::before {
-            content: '';
-            position: absolute;
-            top: 20px;
-            left: 10%;
-            right: 10%;
-            height: 2px;
-            background: rgba(255, 255, 255, 0.1);
-            z-index: 0;
-        }
-        .step {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            position: relative;
-            z-index: 1;
-            flex: 1;
-        }
-        .step-circle {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.1);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        .step-label {
-            margin-top: 8px;
-            font-size: 12px;
-            color: var(--text-secondary);
-            text-align: center;
-            max-width: 80px;
-        }
-        .step.active .step-circle {
-            background: var(--neon-cyan);
-            border-color: var(--neon-cyan);
-            color: var(--dark-bg);
-            box-shadow: 0 0 20px var(--neon-cyan);
-        }
-        .step.active .step-label {
-            color: var(--neon-cyan);
-        }
-        .step.completed .step-circle {
-            background: var(--neon-green);
-            border-color: var(--neon-green);
-            color: var(--dark-bg);
-        }
-        .step.completed .step-label {
-            color: var(--neon-green);
-        }
+    .top-logo-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      transition: opacity 0.3s ease;
+    }
 
-        /* Status Content */
-        .status-content {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 16px;
-            padding: 30px;
-        }
-        .status-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 24px;
-        }
-        .status-badge {
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-weight: 600;
-            font-size: 14px;
-            text-transform: uppercase;
-        }
-        .status-badge.awaiting {
-            background: rgba(255, 221, 0, 0.2);
-            border: 1px solid var(--neon-yellow);
-            color: var(--neon-yellow);
-        }
-        .status-badge.confirming {
-            background: rgba(0, 245, 255, 0.2);
-            border: 1px solid var(--neon-cyan);
-            color: var(--neon-cyan);
-        }
-        .status-badge.exchanging {
-            background: rgba(184, 41, 221, 0.2);
-            border: 1px solid var(--neon-purple);
-            color: var(--neon-purple);
-        }
-        .status-badge.sending {
-            background: rgba(255, 0, 255, 0.2);
-            border: 1px solid var(--neon-pink);
-            color: var(--neon-pink);
-        }
-        .status-badge.complete {
-            background: rgba(0, 255, 136, 0.2);
-            border: 1px solid var(--neon-green);
-            color: var(--neon-green);
-        }
-        .status-badge.failed, .status-badge.refund {
-            background: rgba(255, 68, 68, 0.2);
-            border: 1px solid #ff4444;
-            color: #ff4444;
-        }
+    .top-logo-link:hover {
+      opacity: 0.8;
+    }
 
-        /* Status message highlight */
-        .status-highlight {
-            color: var(--neon-cyan);
-            font-weight: 600;
-            font-family: 'Orbitron', sans-serif;
-            background: rgba(0, 245, 255, 0.1);
-            padding: 2px 8px;
-            border-radius: 4px;
-        }
+    .top-logo-icon {
+      width: 36px;
+      height: 36px;
+      background: linear-gradient(135deg, #00f5ff 0%, #b829dd 100%);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+      box-shadow: 0 0 15px rgba(0, 245, 255, 0.3);
+    }
 
-        /* Deposit Section */
-        .deposit-section {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 30px;
-            align-items: start;
-        }
-        .qr-container {
-            background: white;
-            padding: 16px;
-            border-radius: 12px;
-            width: 180px;
-            height: 180px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .deposit-info {
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-        .info-row {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
-        }
-        .info-label {
-            color: var(--text-secondary);
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-        .info-value {
-            font-family: 'Orbitron', monospace;
-            font-size: 14px;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 12px 16px;
-            border-radius: 8px;
-            border: 1px solid rgba(0, 245, 255, 0.2);
-            word-break: break-all;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 12px;
-        }
-        .copy-btn {
-            background: rgba(0, 245, 255, 0.1);
-            border: 1px solid var(--neon-cyan);
-            color: var(--neon-cyan);
-            padding: 6px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 12px;
-            transition: all 0.3s;
-        }
-        .copy-btn:hover {
-            background: var(--neon-cyan);
-            color: var(--dark-bg);
-        }
-        .warning-box {
-            background: rgba(255, 136, 0, 0.1);
-            border: 1px solid var(--neon-orange);
-            border-radius: 8px;
-            padding: 12px 16px;
-            color: var(--neon-orange);
-            font-size: 13px;
-        }
+    .top-logo-text {
+      font-size: 1.5rem;
+      font-weight: 800;
+      background: linear-gradient(90deg, #00f5ff 0%, #b829dd 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
 
-        /* Transaction Details */
-        .details-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 20px;
-        }
-        .detail-card {
-            background: rgba(0, 0, 0, 0.3);
-            border-radius: 12px;
-            padding: 20px;
-        }
-        .detail-card h3 {
-            font-size: 12px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            margin-bottom: 12px;
-        }
-        .detail-amount {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
-            color: var(--neon-cyan);
-        }
-        .detail-currency {
-            font-size: 14px;
-            color: var(--text-secondary);
-        }
+    .top-logo-highlight {
+      background: linear-gradient(90deg, #ffd700 0%, #ffaa00 50%, #ff6b00 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
 
-        /* Transaction Links */
-        .tx-links {
-            margin-top: 20px;
-            padding-top: 20px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        .tx-link {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 12px 0;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        }
-        .tx-link:last-child {
-            border-bottom: none;
-        }
-        .tx-link a {
-            color: var(--neon-cyan);
-            text-decoration: none;
-            font-size: 13px;
-        }
-        .tx-link a:hover {
-            text-decoration: underline;
-        }
+    * {
+      box-sizing: border-box;
+    }
 
-        /* Timer */
-        .timer {
-            text-align: center;
-            padding: 20px;
-            background: rgba(0, 245, 255, 0.05);
-            border-radius: 12px;
-            margin-top: 20px;
-        }
-        .timer-label {
-            color: var(--text-secondary);
-            font-size: 12px;
-            margin-bottom: 8px;
-        }
-        .timer-value {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 32px;
-            color: var(--neon-cyan);
-        }
+    html, body {
+      min-height: 100vh;
+      padding: 80px 20px 60px 20px;
+      overflow-x: hidden;
+      max-width: 100vw;
+    }
 
-        /* Loading */
-        .loading-container {
-            text-align: center;
-            padding: 60px;
-        }
-        .loading-spinner {
-            width: 50px;
-            height: 50px;
-            border: 3px solid rgba(0, 245, 255, 0.2);
-            border-top-color: var(--neon-cyan);
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin: 0 auto 20px;
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+    .page-header {
+      padding: 40px 0;
+      text-align: center;
+    }
+    
+    .page-title {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+    
+    .order-id-display {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-family: var(--font-mono);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
 
-        /* Error */
-        .error-container {
-            text-align: center;
-            padding: 60px;
-        }
-        .error-icon {
-            font-size: 48px;
-            margin-bottom: 20px;
-        }
+    .copy-icon {
+      width: 16px;
+      height: 16px;
+      cursor: pointer;
+      opacity: 0.6;
+      transition: opacity 0.2s;
+    }
 
-        @media (max-width: 768px) {
-            .steps::before {
-                left: 20px;
-                right: 20px;
-            }
-            .step-label {
-                font-size: 10px;
-                max-width: 60px;
-            }
-            .deposit-section {
-                grid-template-columns: 1fr;
-                justify-items: center;
-            }
-            .details-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-    </style>
+    .copy-icon:hover {
+      opacity: 1;
+      color: var(--neon-cyan);
+    }
+    
+    .order-content {
+      padding: var(--space-xl) 0;
+    }
+    
+    .order-container {
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    .progress-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(0, 245, 255, 0.1);
+      border-radius: var(--radius-lg);
+      padding: var(--space-2xl);
+      margin-bottom: var(--space-xl);
+    }
+    
+    .steps {
+      display: flex;
+      justify-content: space-between;
+      position: relative;
+      margin-bottom: var(--space-2xl);
+    }
+    
+    .steps::before {
+      content: '';
+      position: absolute;
+      top: 20px;
+      left: 10%;
+      right: 10%;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.1);
+      z-index: 0;
+    }
+    
+    .step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+      z-index: 1;
+      flex: 1;
+    }
+    
+    .step-circle {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s;
+      color: var(--text-secondary);
+    }
+    
+    .step-label {
+      margin-top: 8px;
+      font-size: 11px;
+      color: var(--text-muted);
+      text-align: center;
+      max-width: 80px;
+    }
+    
+    .step.active .step-circle {
+      background: var(--neon-cyan);
+      border-color: var(--neon-cyan);
+      color: var(--bg-primary);
+      box-shadow: 0 0 20px rgba(0, 245, 255, 0.5);
+    }
+    
+    .step.active .step-label {
+      color: var(--neon-cyan);
+    }
+    
+    .step.completed .step-circle {
+      background: var(--neon-green);
+      border-color: var(--neon-green);
+      color: var(--bg-primary);
+    }
+    
+    .step.completed .step-label {
+      color: var(--neon-green);
+    }
+    
+    .status-content {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+    }
+    
+    .status-header {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      margin-bottom: var(--space-lg);
+    }
+    
+    .status-badge {
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+      text-transform: uppercase;
+    }
+    
+    .status-badge.awaiting {
+      background: rgba(255, 221, 0, 0.2);
+      border: 1px solid var(--neon-yellow);
+      color: var(--neon-yellow);
+    }
+    
+    .status-badge.confirming {
+      background: rgba(0, 245, 255, 0.2);
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+    }
+    
+    .status-badge.exchanging {
+      background: rgba(184, 41, 221, 0.2);
+      border: 1px solid var(--neon-purple);
+      color: var(--neon-purple);
+    }
+    
+    .status-badge.sending {
+      background: rgba(255, 0, 255, 0.2);
+      border: 1px solid var(--neon-pink);
+      color: var(--neon-pink);
+    }
+    
+    .status-badge.complete {
+      background: rgba(0, 255, 136, 0.2);
+      border: 1px solid var(--neon-green);
+      color: var(--neon-green);
+    }
+    
+    .status-badge.failed,
+    .status-badge.refund,
+    .status-badge.action-request,
+    .status-badge.request-overdue {
+      background: rgba(255, 68, 68, 0.2);
+      border: 1px solid #ff4444;
+      color: #ff4444;
+    }
+    
+    .status-highlight {
+      color: var(--neon-cyan);
+      font-weight: 600;
+      background: rgba(0, 245, 255, 0.1);
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+    
+    .status-message-box {
+      background: rgba(0, 245, 255, 0.05);
+      border-left: 3px solid var(--neon-cyan);
+      padding: 16px 20px;
+      margin-bottom: var(--space-lg);
+      border-radius: 0 var(--radius-md) var(--radius-md) 0;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .status-message-box p {
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin: 0;
+    }
+    
+    .deposit-section {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: var(--space-xl);
+      align-items: start;
+    }
+    
+    .qr-container {
+      background: white;
+      padding: 16px;
+      border-radius: var(--radius-md);
+      width: 180px;
+      height: 180px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .deposit-info {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+    }
+    
+    .info-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    
+    .info-label {
+      color: var(--text-muted);
+      font-size: 12px;
+      text-transform: uppercase;
+    }
+    
+    .info-value {
+      font-family: var(--font-mono);
+      font-size: 14px;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 12px 16px;
+      border-radius: var(--radius-md);
+      border: 1px solid rgba(0, 245, 255, 0.2);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .address-value {
+      word-break: break-all;
+      overflow-wrap: break-word;
+    }
+    
+    .copy-btn {
+      background: rgba(0, 245, 255, 0.1);
+      border: 1px solid var(--neon-cyan);
+      color: var(--neon-cyan);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      font-size: 12px;
+      transition: var(--transition-fast);
+      white-space: nowrap;
+    }
+    
+    .copy-btn:hover {
+      background: var(--neon-cyan);
+      color: var(--bg-primary);
+    }
+    
+    .warning-box {
+      background: rgba(255, 136, 0, 0.1);
+      border: 1px solid var(--neon-orange);
+      border-radius: var(--radius-md);
+      padding: 12px 16px;
+      color: var(--neon-orange);
+      font-size: 13px;
+    }
+    
+    .details-card {
+      background: var(--bg-card);
+      border: 1px solid rgba(0, 245, 255, 0.1);
+      border-radius: var(--radius-lg);
+      padding: var(--space-xl);
+      margin-bottom: var(--space-xl);
+    }
+    
+    .details-card h3 {
+      margin-bottom: var(--space-lg);
+      color: var(--neon-cyan);
+    }
+    
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--space-lg);
+    }
+    
+    .detail-card {
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+    }
+    
+    .detail-card h4 {
+      font-size: 12px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      margin-bottom: var(--space-sm);
+      font-weight: 500;
+    }
+    
+    .detail-amount {
+      font-family: var(--font-mono);
+      font-size: 24px;
+      color: var(--neon-cyan);
+    }
+    
+    .detail-currency {
+      font-size: 14px;
+      color: var(--text-secondary);
+    }
+    
+    .tx-links {
+      margin-top: var(--space-lg);
+      padding-top: var(--space-lg);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .tx-link {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .tx-link:last-child {
+      border-bottom: none;
+    }
+    
+    .tx-link a {
+      color: var(--neon-cyan);
+      text-decoration: none;
+      font-size: 13px;
+    }
+    
+    .tx-link a:hover {
+      text-decoration: underline;
+    }
+    
+    .loading-container {
+      text-align: center;
+      padding: 60px;
+    }
+    
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(0, 245, 255, 0.2);
+      border-top-color: var(--neon-cyan);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    .error-container {
+      text-align: center;
+      padding: 60px;
+      background: var(--bg-card);
+      border-radius: var(--radius-lg);
+      border: 1px solid rgba(255, 68, 68, 0.3);
+    }
+    
+    .error-icon {
+      font-size: 48px;
+      margin-bottom: 20px;
+    }
+    
+    .processing-container {
+      text-align: center;
+      padding: var(--space-xl);
+    }
+    
+    .processing-container .loading-spinner {
+      width: 40px;
+      height: 40px;
+      margin: 0 auto var(--space-md);
+    }
+    
+    .complete-container {
+      text-align: center;
+      padding: var(--space-xl);
+    }
+    
+    .complete-icon {
+      font-size: 48px;
+      margin-bottom: var(--space-md);
+    }
+    
+    .failed-container {
+      text-align: center;
+      padding: var(--space-xl);
+    }
+    
+    .failed-icon {
+      font-size: 48px;
+      margin-bottom: var(--space-md);
+    }
+    
+    .detail-list {
+      margin-top: var(--space-lg);
+    }
+    
+    .detail-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 12px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .detail-item:last-child {
+      border-bottom: none;
+    }
+    
+    .detail-item-label {
+      color: var(--text-muted);
+      font-size: 14px;
+    }
+    
+    .detail-item-value {
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 14px;
+      text-align: right;
+      word-break: break-all;
+      overflow-wrap: break-word;
+    }
+    
+    @media (max-width: 768px) {
+      html, body {
+        padding: 80px 12px 60px 12px;
+        overflow-x: hidden;
+      }
+
+      .container {
+        padding: 0;
+        width: 100%;
+      }
+
+      .order-container {
+        width: 100%;
+        max-width: 100%;
+      }
+
+      .progress-card {
+        padding: var(--space-md);
+      }
+
+      .status-message-box {
+        padding: 12px;
+        margin-bottom: var(--space-md);
+      }
+
+      .status-content {
+        padding: var(--space-md);
+      }
+
+      .steps::before {
+        left: 20px;
+        right: 20px;
+      }
+      
+      .step-label {
+        font-size: 9px;
+        max-width: 50px;
+      }
+      
+      .deposit-section {
+        grid-template-columns: 1fr;
+        justify-items: center;
+      }
+      
+      .details-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .details-card {
+        padding: var(--space-md);
+      }
+      
+      .info-value {
+        font-size: 11px;
+        padding: 10px 12px;
+        gap: 8px;
+      }
+
+      .detail-item-value {
+        font-size: 12px;
+        word-break: break-all;
+        max-width: 60%;
+      }
+
+      .tx-link {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <header>
-        <div class="logo" onclick="window.location.href='index.html'">
-            <div class="logo-icon">⚡</div>
-            <div class="logo-text">LightningEX</div>
-        </div>
-    </header>
+  <!-- Top Logo Bar -->
+  <div class="top-logo-bar">
+    <a href="https://www.lightningex.io" target="_blank" class="top-logo-link">
+      <div class="top-logo-icon">⚡</div>
+      <span class="top-logo-text">Lightning<span class="top-logo-highlight">EX</span></span>
+    </a>
+  </div>
 
+  <section class="page-header">
     <div class="container">
-        <div class="page-title">
-            <h1>Exchange Order</h1>
-            <div class="order-id">Order ID: <span id="displayOrderId">-</span></div>
-        </div>
-
-        <div id="loadingState" class="loading-container">
-            <div class="loading-spinner"></div>
-            <p>Loading order details...</p>
-        </div>
-
-        <div id="errorState" class="error-container" style="display: none;">
-            <div class="error-icon">⚠️</div>
-            <h2>Order Not Found</h2>
-            <p>The order ID is invalid or has expired.</p>
-        </div>
-
-        <div id="orderContent" style="display: none;">
-            <!-- Progress Steps -->
-            <div class="progress-container">
-                <div class="steps" id="progressSteps">
-                    <div class="step" data-status="Awaiting Deposit">
-                        <div class="step-circle">1</div>
-                        <div class="step-label">Awaiting Deposit</div>
-                    </div>
-                    <div class="step" data-status="Confirming Deposit">
-                        <div class="step-circle">2</div>
-                        <div class="step-label">Confirming</div>
-                    </div>
-                    <div class="step" data-status="Exchanging">
-                        <div class="step-circle">3</div>
-                        <div class="step-label">Exchanging</div>
-                    </div>
-                    <div class="step" data-status="Sending">
-                        <div class="step-circle">4</div>
-                        <div class="step-label">Sending</div>
-                    </div>
-                    <div class="step" data-status="Complete">
-                        <div class="step-circle">5</div>
-                        <div class="step-label">Complete</div>
-                    </div>
-                </div>
-
-                <!-- Status Content -->
-                <div class="status-content" id="statusContent">
-                    <!-- Dynamic content based on status -->
-                </div>
-            </div>
-
-            <!-- Transaction Details -->
-            <div class="progress-container">
-                <h3 style="font-family: 'Orbitron'; color: var(--neon-cyan); margin-bottom: 20px;">Transaction Details</h3>
-                <div class="details-grid">
-                    <div class="detail-card">
-                        <h3>You Send</h3>
-                        <div class="detail-amount" id="sendAmount">-</div>
-                        <div class="detail-currency" id="sendCurrency">-</div>
-                    </div>
-                    <div class="detail-card">
-                        <h3>You Receive</h3>
-                        <div class="detail-amount" id="receiveAmount">-</div>
-                        <div class="detail-currency" id="receiveCurrency">-</div>
-                    </div>
-                </div>
-                <div class="tx-links" id="txLinks"></div>
-            </div>
-        </div>
+      <h1 class="page-title">Exchange Order</h1>
+      <div class="order-id-display">
+        Order ID: <span id="displayOrderId">-</span>
+        <svg class="copy-icon" onclick="copyOrderId()" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+          <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+        </svg>
+      </div>
     </div>
+  </section>
 
-    <footer style="text-align: center; padding: 20px; color: var(--text-secondary); font-size: 14px; border-top: 1px solid rgba(0, 245, 255, 0.1); margin-top: 40px;">
-        supported by <a href="https://lightningex.io" target="_blank" style="color: var(--neon-cyan); text-decoration: none;">lightningex.io</a>
-    </footer>
+  <section class="order-content">
+    <div class="container order-container">
+      <div id="loadingState" class="loading-container">
+        <div class="loading-spinner"></div>
+        <p style="color: var(--text-secondary);">Loading order details...</p>
+      </div>
 
-    <script>
-        const API_BASE = 'https://api.lightningex.io';
-        let orderId = null;
-        let pollInterval = null;
+      <div id="errorState" class="error-container hidden">
+        <div class="error-icon">⚠️</div>
+        <h2 style="color: var(--text-primary); margin-bottom: 12px;">Order Not Found</h2>
+        <p style="color: var(--text-secondary);">The order ID is invalid or has expired.</p>
+        <a href="./index.html" class="btn btn-primary" style="margin-top: 24px;">Start New Exchange</a>
+      </div>
 
-        // Get order ID from URL
-        function getOrderIdFromUrl() {
-            const params = new URLSearchParams(window.location.search);
-            return params.get('id');
-        }
+      <div id="orderContent" class="hidden">
+        <div class="progress-card">
+          <div class="steps" id="progressSteps">
+            <div class="step" data-status="Awaiting Deposit">
+              <div class="step-circle">1</div>
+              <div class="step-label">Awaiting Deposit</div>
+            </div>
+            <div class="step" data-status="Confirming Deposit">
+              <div class="step-circle">2</div>
+              <div class="step-label">Confirming</div>
+            </div>
+            <div class="step" data-status="Exchanging">
+              <div class="step-circle">3</div>
+              <div class="step-label">Exchanging</div>
+            </div>
+            <div class="step" data-status="Sending">
+              <div class="step-circle">4</div>
+              <div class="step-label">Sending</div>
+            </div>
+            <div class="step" data-status="Complete">
+              <div class="step-circle">5</div>
+              <div class="step-label">Complete</div>
+            </div>
+          </div>
 
-        // Initialize page
-        document.addEventListener('DOMContentLoaded', () => {
-            orderId = getOrderIdFromUrl();
-            if (!orderId) {
-                showError();
-                return;
-            }
-            document.getElementById('displayOrderId').textContent = orderId;
-            loadOrderStatus();
-            // Poll every 15 seconds
-            pollInterval = setInterval(loadOrderStatus, 15000);
-        });
+          <div class="status-content" id="statusContent">
+          </div>
+        </div>
 
-        function showError() {
-            document.getElementById('loadingState').style.display = 'none';
-            document.getElementById('errorState').style.display = 'block';
-        }
+        <div class="details-card">
+          <h3>Transaction Details</h3>
+          <div class="details-grid">
+            <div class="detail-card">
+              <h4>You Send</h4>
+              <div class="detail-amount" id="sendAmount">-</div>
+              <div class="detail-currency" id="sendCurrency">-</div>
+            </div>
+            <div class="detail-card">
+              <h4>You Receive</h4>
+              <div class="detail-amount" id="receiveAmount">-</div>
+              <div class="detail-currency" id="receiveCurrency">-</div>
+            </div>
+          </div>
+          
+          <div class="detail-list" id="detailList">
+          </div>
+          
+          <div class="tx-links" id="txLinks"></div>
+        </div>
+        
+        <div class="details-card" style="background: rgba(0, 245, 255, 0.05);">
+          <h3 style="font-size: 16px; margin-bottom: 12px;">📌 Save this page</h3>
+          <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: 16px;">
+            Bookmark this page or save the URL to track your order status. You can return anytime to check the progress.
+          </p>
+          <button class="btn btn-secondary" onclick="copyOrderUrl()" id="copyUrlBtn">
+            Copy Order URL
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
 
-        async function loadOrderStatus() {
-            try {
-                const response = await fetch(`${API_BASE}/exchange/order/get?id=${orderId}`);
-                const result = await response.json();
-                
-                if (result.code !== 200) {
-                    showError();
-                    return;
-                }
+  <!-- Footer -->
+  <footer style="position: fixed; bottom: 0; left: 0; right: 0; text-align: center; padding: 16px; font-size: 0.85rem; color: var(--text-muted); background: rgba(10, 10, 15, 0.8); backdrop-filter: blur(10px); border-top: 1px solid rgba(0, 245, 255, 0.1); z-index: 100;">
+    Supported by <a href="https://www.lightningex.io" target="_blank" style="color: var(--neon-cyan); text-decoration: none;">LightningEX</a>
+  </footer>
 
-                const data = result.data;
-                document.getElementById('loadingState').style.display = 'none';
-                document.getElementById('orderContent').style.display = 'block';
-
-                updateProgressSteps(data.status);
-                updateStatusContent(data);
-                updateTransactionDetails(data);
-
-                // Stop polling if order is complete or failed
-                if (['Complete', 'Failed', 'Refund'].includes(data.status)) {
-                    clearInterval(pollInterval);
-                }
-            } catch (error) {
-                console.error('Failed to load order:', error);
-            }
-        }
-
-        function updateProgressSteps(currentStatus) {
-            const steps = document.querySelectorAll('.step');
-            const statusOrder = ['Awaiting Deposit', 'Confirming Deposit', 'Exchanging', 'Sending', 'Complete'];
-            const currentIndex = statusOrder.indexOf(currentStatus);
-
-            steps.forEach((step, index) => {
-                step.classList.remove('active', 'completed');
-                if (index < currentIndex) {
-                    step.classList.add('completed');
-                    step.querySelector('.step-circle').textContent = '✓';
-                } else if (index === currentIndex) {
-                    step.classList.add('active');
-                    step.querySelector('.step-circle').textContent = index + 1;
-                } else {
-                    step.querySelector('.step-circle').textContent = index + 1;
-                }
-            });
-
-            // Handle special statuses
-            if (['Failed', 'Refund', 'Volatility Protection', 'Action Request'].includes(currentStatus)) {
-                steps.forEach(step => step.classList.remove('active'));
-            }
-        }
-
-        // Status messages from API documentation
-        // highlight: text to be highlighted with special styling
-        const STATUS_MESSAGES = {
-            'Awaiting Deposit': {
-                title: 'Awaiting Deposit',
-                lines: [
-                    { text: 'Your order will automatically proceed to the next step once your deposit receives its first confirmation on the blockchain.' },
-                    { text: 'If you do not deposit the amount shown above, or your deposit does not arrive within 1 hour, for security purposes your order will not be processed automatically.' }
-                ]
-            },
-            'Confirming Deposit': {
-                title: 'Confirming Deposit',
-                lines: [
-                    { text: 'You successfully sent {sendAmount} {send}! Please wait while your deposit is being confirmed.', highlight: 'You successfully sent {sendAmount} {send}!' },
-                    { text: 'Your order will automatically proceed to the next step after the deposit transaction gets 1 confirmation.' },
-                    { text: 'Nothing more is expected from you in this step.' }
-                ]
-            },
-            'Exchanging': {
-                title: 'Exchanging',
-                lines: [
-                    { text: 'Your deposit has been confirmed! We are now exchanging your {sendAmount} {send} to {receiveAmount} {receive}.', highlight: 'We are now exchanging your {sendAmount} {send} to {receiveAmount} {receive}' },
-                    { text: 'This may take a few minutes, please be patient.' }
-                ]
-            },
-            'Sending': {
-                title: 'Sending',
-                lines: [
-                    { text: 'Your order is almost complete! We are forwarding {receiveAmount} {receive} to the following address: {receiveAddress}', highlight: 'We are forwarding {receiveAmount} {receive}' }
-                ]
-            },
-            'Complete': {
-                title: 'Complete',
-                lines: [
-                    { text: 'Your order is successfully completed! We forwarded {receiveAmount} {receive} to the following address: {receiveAddress}', highlight: 'We forwarded {receiveAmount} {receive}' }
-                ]
-            },
-            'Action Request': {
-                title: 'Action Request',
-                lines: [
-                    { text: 'This transaction has been detected with risks and needs to be verified before proceeding.' },
-                    { text: 'Please contact lightningex.io for support.' }
-                ]
-            },
-            'Failed': {
-                title: 'Failed',
-                lines: [
-                    { text: 'The order failed because of one of the following reasons:', highlight: 'The order failed' },
-                    { text: '• You didn\'t send {sendAmount} {send} on the {sendNetwork} network.' },
-                    { text: '• Your deposit was not confirmed within 2 hours.' },
-                    { text: '• For any other reason.' }
-                ]
-            },
-            'Request Overdue': {
-                title: 'Request Overdue',
-                lines: [
-                    { text: 'The transaction request has expired.', highlight: 'expired' },
-                    { text: 'If you have other questions, please seek support from lightningex.io.' }
-                ]
-            }
-        };
-
-        function formatStatusMessage(status, data) {
-            const msgInfo = STATUS_MESSAGES[status];
-            if (!msgInfo) return '';
-
-            return msgInfo.lines.map(lineObj => {
-                const line = typeof lineObj === 'string' ? lineObj : lineObj.text;
-                const highlight = typeof lineObj === 'object' ? lineObj.highlight : null;
-
-                // Replace placeholders with actual data
-                let formatted = line;
-                Object.keys(data).forEach(key => {
-                    if (data[key] !== null && data[key] !== undefined) {
-                        formatted = formatted.replace(new RegExp(`{${key}}`, 'g'), data[key]);
-                    }
-                });
-
-                // Apply highlight styling to key phrases
-                if (highlight) {
-                    let highlightText = highlight;
-                    Object.keys(data).forEach(key => {
-                        if (data[key] !== null && data[key] !== undefined) {
-                            highlightText = highlightText.replace(new RegExp(`{${key}}`, 'g'), data[key]);
-                        }
-                    });
-                    formatted = formatted.replace(highlightText, `<span class="status-highlight">${highlightText}</span>`);
-                }
-
-                return formatted;
-            }).join('<br>');
-        }
-
-        function updateStatusContent(data) {
-            const container = document.getElementById('statusContent');
-            const statusClass = getStatusClass(data.status);
-
-            // Get status message
-            const statusMessage = formatStatusMessage(data.status, data);
-
-            let html = `
-                <div class="status-header">
-                    <div class="status-badge ${statusClass}">${data.status}</div>
-                </div>
-            `;
-
-            // Show status message box if available
-            if (statusMessage) {
-                html += `
-                    <div style="background: rgba(0, 245, 255, 0.05); border-left: 3px solid var(--neon-cyan); padding: 16px 20px; margin-bottom: 24px; border-radius: 0 8px 8px 0;">
-                        <p style="color: var(--text-secondary); line-height: 1.6; margin: 0;">${statusMessage}</p>
-                    </div>
-                `;
-            }
-
-            // Show deposit info for Awaiting Deposit
-            if (data.status === 'Awaiting Deposit') {
-                html += `
-                    <div class="deposit-section">
-                        <div class="qr-container">
-                            <div id="qrcode"></div>
-                        </div>
-                        <div class="deposit-info">
-                            <div class="info-row">
-                                <span class="info-label">Send ${data.send} to this address</span>
-                                <div class="info-value">
-                                    <span>${data.sendAddress}</span>
-                                    <button class="copy-btn" onclick="copyToClipboard('${data.sendAddress}')">Copy</button>
-                                </div>
-                            </div>
-                            ${data.sendTag ? `
-                            <div class="info-row">
-                                <span class="info-label">Tag/MEMO (Required)</span>
-                                <div class="info-value">
-                                    <span>${data.sendTag}</span>
-                                    <button class="copy-btn" onclick="copyToClipboard('${data.sendTag}')">Copy</button>
-                                </div>
-                            </div>
-                            ` : ''}
-                            <div class="info-row">
-                                <span class="info-label">Amount to Send</span>
-                                <div class="info-value">
-                                    <span>${data.sendAmount} ${data.send}</span>
-                                    <button class="copy-btn" onclick="copyToClipboard('${data.sendAmount}')">Copy</button>
-                                </div>
-                            </div>
-                            <div class="warning-box">
-                                ⚠️ Please send exactly the specified amount. Sending a different amount may result in delays or additional fees.
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                // Generate QR code
-                setTimeout(() => {
-                    const qrContainer = document.getElementById('qrcode');
-                    qrContainer.innerHTML = '';
-                    new QRCode(qrContainer, {
-                        text: data.sendAddress,
-                        width: 140,
-                        height: 140,
-                        colorDark: '#000000',
-                        colorLight: '#ffffff'
-                    });
-                }, 0);
-            }
-
-            // Show processing spinner for active statuses
-            if (['Confirming Deposit', 'Exchanging', 'Sending'].includes(data.status)) {
-                html += `
-                    <div style="text-align: center; padding: 20px;">
-                        <div class="loading-spinner" style="margin: 0 auto 20px; width: 40px; height: 40px;"></div>
-                        <p style="color: var(--neon-cyan);">Estimated time: ${data.processingTime || '3-5'} minutes</p>
-                    </div>
-                `;
-            }
-
-            // Show completion for Complete status
-            if (data.status === 'Complete') {
-                html += `
-                    <div style="text-align: center; padding: 30px;">
-                        <div style="font-size: 48px; margin-bottom: 20px;">🎉</div>
-                        <h2 style="color: var(--neon-green); margin-bottom: 20px;">Exchange Complete!</h2>
-                        <button onclick="window.location.href='index.html'" style="
-                            background: linear-gradient(135deg, var(--neon-cyan), var(--neon-purple));
-                            border: none;
-                            border-radius: 12px;
-                            padding: 16px 32px;
-                            color: white;
-                            font-family: 'Orbitron', sans-serif;
-                            font-size: 16px;
-                            font-weight: 600;
-                            cursor: pointer;
-                            text-transform: uppercase;
-                            letter-spacing: 1px;
-                            transition: all 0.3s;
-                        " onmouseover="this.style.transform='scale(1.05)'" onmouseout="this.style.transform='scale(1)'">
-                            Start New Exchange →
-                        </button>
-                    </div>
-                `;
-            }
-
-            // Show error for failed/refund/action request/overdue statuses
-            if (['Failed', 'Refund', 'Action Request', 'Request Overdue'].includes(data.status)) {
-                const icon = data.status === 'Action Request' ? '⚠️' : (data.status === 'Request Overdue' ? '⏰' : '❌');
-                html += `
-                    <div style="text-align: center; padding: 30px;">
-                        <div style="font-size: 48px; margin-bottom: 20px;">${icon}</div>
-                        ${data.statusNote ? `<p style="color: var(--text-secondary); margin-top: 10px;">${data.statusNote}</p>` : ''}
-                    </div>
-                `;
-            }
-
-            container.innerHTML = html;
-        }
-
-        function updateTransactionDetails(data) {
-            document.getElementById('sendAmount').textContent = data.sendAmount;
-            document.getElementById('sendCurrency').textContent = `${data.send} (${data.sendNetwork})`;
-            document.getElementById('receiveAmount').textContent = data.receiveAmount;
-            document.getElementById('receiveCurrency').textContent = `${data.receive} (${data.receiveNetwork})`;
-
-            // Update transaction links
-            const txLinksContainer = document.getElementById('txLinks');
-            let linksHtml = '';
-            
-            if (data.hashIn && data.hashIn.length > 0) {
-                linksHtml += `
-                    <div class="tx-link">
-                        <span>Incoming Transaction</span>
-                        <a href="${data.hashInExplorer.replace('{{txid}}', data.hashIn[0])}" target="_blank">View on Explorer →</a>
-                    </div>
-                `;
-            }
-            
-            if (data.hashOut && data.hashOut.length > 0) {
-                linksHtml += `
-                    <div class="tx-link">
-                        <span>Outgoing Transaction</span>
-                        <a href="${data.hashOutExplorer.replace('{{txid}}', data.hashOut[0])}" target="_blank">View on Explorer →</a>
-                    </div>
-                `;
-            }
-            
-            txLinksContainer.innerHTML = linksHtml;
-        }
-
-        function getStatusClass(status) {
-            const statusClasses = {
-                'Awaiting Deposit': 'awaiting',
-                'Confirming Deposit': 'confirming',
-                'Exchanging': 'exchanging',
-                'Sending': 'sending',
-                'Complete': 'complete',
-                'Failed': 'failed',
-                'Refund': 'refund',
-                'Volatility Protection': 'awaiting',
-                'Action Request': 'awaiting'
-            };
-            return statusClasses[status] || 'awaiting';
-        }
-
-        function copyToClipboard(text) {
-            navigator.clipboard.writeText(text).then(() => {
-                // Visual feedback could be added here
-            });
-        }
-    </script>
+  <script src="./js/order.js"></script>
 </body>
 </html>

@@ -1,10 +1,10 @@
 {
   "name": "crypto-exchange-cli",
-  "version": "1.3.2",
+  "version": "1.3.5",
   "description": "LightningEX Cryptocurrency Exchange CLI",
   "main": "scripts/cli.js",
   "bin": {
-    "crypto-exchange": "./scripts/cli.js"
+    "crypto-exchange": "./exchange.js"
   },
   "scripts": {
     "start": "node scripts/cli.js"
