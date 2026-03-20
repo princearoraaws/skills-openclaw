@@ -3,9 +3,15 @@
   "slug": "seedgen",
   "displayName": "Seedgen",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1773664100092,
-    "commit": "https://github.com/openclaw/skills/commit/69556c7264d226cb1c9de6f42ea9a9ec5adeff8e"
+    "version": "3.0.1",
+    "publishedAt": 1773917950079,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1773664100092,
+      "commit": "https://github.com/openclaw/skills/commit/69556c7264d226cb1c9de6f42ea9a9ec5adeff8e"
+    }
+  ]
 }
