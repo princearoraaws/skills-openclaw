@@ -1,6 +1,6 @@
 ---
 name: telegram-footer-patch
-description: Patch OpenClaw Telegram private-chat replies to append a footer at the platform layer (`🧠 Model + 💭 Think + 📊 Context`), with backup, syntax validation, upgrade-aware reapply hints, rollback, and restart workflow.
+description: Add a Telegram private-chat footer (`🧠 Model + 💭 Think + 📊 Context`) to OpenClaw replies, with dry-run preview, backup, syntax validation, rollback, and restart guidance.
 license: MIT
 spdx: MIT
 ---

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.8
+- Remove stray Python bytecode/cache artifacts from the package again.
+- Tighten README/SKILL wording to reduce false-positive suspicious scanning while keeping behavior unchanged.
+
 ## 1.0.7
 - Fix: footer now appends correctly for Telegram streaming replies that use HTML payloads (not just text payloads).
 - Fix: patch reapply uses a function replacement to avoid accidental backslash/escape expansion when updating marker blocks.
