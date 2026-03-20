@@ -28,21 +28,8 @@
   // Always use same-origin /transcribe when served via HTTPS proxy; only fall back to localhost for dev
   const TRANSCRIBE_URL = (location.protocol === 'https:') ? '/transcribe' : 'http://127.0.0.1:18790/transcribe';
 
-  // --- Auth: read gateway token from Control UI localStorage ---
-  function getAuthToken() {
-    try {
-      const raw = localStorage.getItem('openclaw.control.settings.v1');
-      if (!raw) return null;
-      const settings = JSON.parse(raw);
-      return (settings && typeof settings.token === 'string' && settings.token) ? settings.token : null;
-    } catch (_) { return null; }
-  }
-
   function getAuthHeaders() {
-    const token = getAuthToken();
-    const headers = { 'Content-Type': 'application/octet-stream' };
-    if (token) headers['Authorization'] = 'Bearer ' + token;
-    return headers;
+    return { 'Content-Type': 'application/octet-stream' };
   }
   const STORAGE_KEY = 'oc-voice-beep';
   const MODE_KEY = 'oc-voice-mode';
@@ -192,9 +179,49 @@
 
   function sendMessage(text) {
     const app = getApp();
-    if (!app || typeof app.handleSendChat !== 'function') return false;
-    app.handleSendChat(text);
-    return true;
+    const normalized = (text || '').trim();
+    if (!normalized) return false;
+
+    if (app) {
+      try {
+        if (typeof app.chatMessage === 'string') app.chatMessage = normalized;
+        if (typeof app.requestUpdate === 'function') app.requestUpdate();
+        if (typeof app.handleSendChat === 'function') {
+          app.handleSendChat(normalized);
+          return true;
+        }
+      } catch (_) {}
+    }
+
+    const ta = document.querySelector('textarea');
+    if (ta) {
+      try {
+        ta.value = normalized;
+        ta.dispatchEvent(new Event('input', { bubbles: true }));
+        ta.dispatchEvent(new Event('change', { bubbles: true }));
+      } catch (_) {}
+    }
+
+    if (app) {
+      try {
+        if (typeof app.chatMessage === 'string') app.chatMessage = normalized;
+        if (typeof app.requestUpdate === 'function') app.requestUpdate();
+        if (typeof app.handleSendChat === 'function') {
+          app.handleSendChat();
+          return true;
+        }
+      } catch (_) {}
+    }
+
+    const sendBtn = document.querySelector('.chat-send-btn:not(.chat-send-btn--stop)');
+    if (sendBtn) {
+      try {
+        sendBtn.click();
+        return true;
+      } catch (_) {}
+    }
+
+    return false;
   }
 
   function setIdleStyle() {
@@ -399,7 +426,12 @@
   }
 
   function findSendButton() {
-    return Array.from(document.querySelectorAll('button')).find((b) => /send/i.test((b.textContent || '').trim()));
+    return document.querySelector('.chat-send-btn:not(.chat-send-btn--stop)')
+      || Array.from(document.querySelectorAll('button')).find((b) => /send/i.test((b.textContent || '').trim()));
+  }
+
+  function hasNativeVoiceButton() {
+    return !!document.querySelector('.agent-chat__input-btn[title*="Voice input"], .agent-chat__input-btn[title*="record"], .agent-chat__input-btn[aria-label*="Voice input"]');
   }
 
   function renderButton() {
@@ -410,6 +442,11 @@
       btn.title = '';
       btn.setAttribute('aria-label', 'Voice input');
       bindButton(btn);
+    }
+
+    if (hasNativeVoiceButton()) {
+      btn.remove();
+      return;
     }
 
     const sendBtn = findSendButton();

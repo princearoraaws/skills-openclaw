@@ -1,11 +1,17 @@
 {
   "owner": "neldar",
   "slug": "webchat-voice-gui",
-  "displayName": "Webchat Voice Gui",
+  "displayName": "WebChat Voice GUI",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1772756813728,
-    "commit": "https://github.com/openclaw/skills/commit/712dcfd773d71732bb34bc89a7afde8e0c50d5e6"
+    "version": "0.1.1",
+    "publishedAt": 1773972057344,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1772756813728,
+      "commit": "https://github.com/openclaw/skills/commit/712dcfd773d71732bb34bc89a7afde8e0c50d5e6"
+    }
+  ]
 }

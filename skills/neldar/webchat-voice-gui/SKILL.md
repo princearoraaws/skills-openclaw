@@ -80,7 +80,7 @@ bash scripts/status.sh
 - **No dynamic code execution**: No `eval()`, `new Function()`, or `innerHTML` with user data.
 - **HTTPS-first**: Transcription requests use same-origin `/transcribe` when served over HTTPS. Only falls back to `http://127.0.0.1:18790` in local dev.
 - **No external servers**: Audio is never sent outside the local machine.
-- **Auth forwarding**: Bearer token from Control UI is forwarded to `/transcribe` proxy.
+- **No token scraping**: Client JS does not read gateway auth from browser storage. `/transcribe` is accepted via same-origin browser requests; Bearer auth remains optional fallback at the proxy.
 - Uses `textContent` for all toast messages (no XSS vector).
 - **Bounded memory**: Continuous recording mode enforces a 120-chunk limit (~2 minutes), preventing unbounded memory growth.
 
