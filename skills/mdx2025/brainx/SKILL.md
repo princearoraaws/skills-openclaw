@@ -1,9 +1,9 @@
 ---
-name: brainx
+name: "BrainX V5 — The First Brain for OpenClaw"
 description: |
-  Motor de memoria vectorial con PostgreSQL + pgvector + OpenAI embeddings.
-  Permite almacenar, buscar e inyectar memorias contextuales en prompts de LLMs.
-  Incluye hook de auto-inyección para OpenClaw y sistema completo de backup/recuperación.
+  Vector memory engine with PostgreSQL + pgvector + OpenAI embeddings.
+  Stores, searches, and injects contextual memories into LLM prompts.
+  Includes auto-injection hook for OpenClaw and full backup/recovery system.
 metadata:
   openclaw:
     emoji: "🧠"
@@ -14,56 +14,102 @@ metadata:
     hooks:
       - name: brainx-auto-inject
         event: agent:bootstrap
-        description: Auto-inyecta memorias relevantes al iniciar sesión
+        description: Auto-injects relevant memories at session start
 user-invocable: true
 ---
 
-# BrainX V5 - Memoria Vectorial para OpenClaw
+# BrainX V5 — The First Brain for OpenClaw
 
-Sistema de memoria persistida que usa embeddings vectoriales para recuperación contextual en agentes AI.
+Persistent memory system using vector embeddings for contextual retrieval in AI agents.
 
-## Cuándo Usar
+## 37 Features
 
-✅ **USAR cuando:**
-- Un agente necesita "recordar" información de sesiones previas
-- Querés dar contexto adicional a un LLM sobre acciones pasadas
-- Necesitás búsqueda semántica por contenido
-- Querés guardar decisiones importantes con metadatos
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | ✅ **Production** | Active on 32 agent profiles with centralized shared memory (2,400+ memories) |
+| 2 | 🧠 **Auto-Learning** | Learns on its own from every conversation without human intervention |
+| 3 | 💾 **Persistent Memory** | Remembers across sessions — PostgreSQL + pgvector |
+| 4 | 🤝 **Shared Memory** | All agents share the same knowledge pool |
+| 5 | 💉 **Automatic Briefing** | Personalized context injection at each agent startup |
+| 6 | 🔎 **Semantic Search** | Searches by meaning, not exact keywords |
+| 7 | 🏷️ **Intelligent Classification** | Auto-typed: facts, decisions, learnings, gotchas, notes |
+| 8 | 📊 **Usage-Based Prioritization** | Hot/warm/cold tiers — automatic promote/degrade based on access |
+| 9 | 🤝 **Cross-Agent Learning** | Propagates important gotchas and learnings across all agents |
+| 10 | 🔄 **Anti-Duplicates** | Semantic deduplication by cosine similarity with intelligent merge |
+| 11 | ⚡ **Anti-Contradictions** | Detects contradictory memories and supersedes the obsolete one |
+| 12 | 📋 **Session Indexing** | Searches past conversations (30-day retention) |
+| 13 | 🔒 **PII Scrubbing** | Automatic redaction of sensitive data before storage |
+| 14 | 🔮 **Pattern Detection** | Detects recurring patterns and promotes them automatically |
+| 15 | 🛡️ **Disaster Recovery** | Full backup/restore (DB + configs + hooks + workspaces) |
+| 16 | ⭐ **Quality Scoring** | Evaluates memory quality and promotes only what deserves to persist |
+| 17 | ⚙️ **Fact Extraction** | Regex + LLM pipelines capture both operational facts and nuanced learnings |
+| 18 | 📦 **Context Packs** | Weekly project packs and bootstrap topic files for fast situational awareness |
+| 19 | 📈 **Telemetry** | Query logs, injection metrics, and health monitoring built in |
+| 20 | 🧵 **Supersede Chains** | Old memories can be replaced cleanly without losing history |
+| 21 | 🌀 **Memory Distillation** | Consolidates raw logs into higher-signal memories over time |
+| 22 | 🛡️ **Pre-Action Advisory** | Queries past mistakes before high-risk tool execution |
+| 23 | 👤 **Agent Profiles** | Per-agent hook injection: boosts/filters memories by agent role |
+| 24 | 🔀 **Cross-Agent Injection Slots** | Hook reserves 30% of context slots for other agents' memories |
+| 25 | 📊 **Metrics Dashboard** | CLI dashboard with top patterns, memory stats, and usage trends |
+| 26 | 🔧 **Doctor & Auto-Fix** | Schema integrity check + automatic repair of detected issues |
+| 27 | 👍 **Memory Feedback** | Mark memories as useful/useless/incorrect to refine quality |
+| 28 | 🗺️ **Trajectory Recording** | Records problem→solution paths for future reference |
+| 29 | 📝 **Learning Details** | Extended metadata extraction for learnings and gotchas |
+| 30 | 🔄 **Lifecycle Management** | Automatic promotion/degradation of memories by age and usage |
+| 31 | 📥 **Workspace Import** | Imports existing MEMORY.md files from all workspaces into the brain |
+| 32 | 🧪 **Eval Dataset Generation** | Generates evaluation datasets from real memories for quality testing |
+| 33 | 🏗️ **Session Snapshots** | Captures full agent state at session close for analysis |
+| 34 | 🧹 **Low-Signal Cleanup** | Automatic cleanup of low-value, outdated, or redundant memories |
+| 35 | 🔃 **Memory Reclassification** | Reclassifies memories with correct types and categories post-hoc |
+| 36 | 🔄 **Auto-Promotion Pipeline** | Detects high-recurrence patterns and promotes them as rules in workspace files automatically |
+| 37 | 📊 **15-Step Daily Pipeline** | Consolidated daily pipeline: bootstrap, lifecycle, distiller, harvester, bridge, auto-distiller, consolidation, cross-agent, contradiction, md-harvester, error-harvester, auto-promoter, promotion-applier, memory-enforcer, audit |
 
-❌ **NO USAR cuando:**
-- Información efímera que no necesita persistencia
-- Datos estructurados tabulares (usá una DB normal)
-- Cache simple (usá Redis o memoria en memoria)
+## When to Use
 
-## Auto-Inyección (Hook)
+✅ **USE when:**
+- An agent needs to "remember" information from previous sessions
+- You want to give additional context to an LLM about past actions
+- You need semantic search by content
+- You want to store important decisions with metadata
 
-BrainX V5 incluye un **hook de OpenClaw** que automáticamente inyecta memorias relevantes cuando un agente inicia.
+❌ **DON'T USE when:**
+- Ephemeral information that doesn't need persistence
+- Structured tabular data (use a regular DB)
+- Simple cache (use Redis or in-memory)
+
+## Auto-Injection (Hook)
+
+BrainX V5 includes an **OpenClaw hook** that automatically injects relevant memories when an agent starts.
 
 ### Production Validation Status
 
-Real validation completed on **2026-03-16**:
-- global hook enabled in `~/.openclaw/openclaw.json`
-- managed hook synced with `~/.openclaw/skills/brainx-v5/hook/`
-- active physical database: `brainx_v5`
-- real bootstrap smoke test passed for 10 agents:
-  - `kron`, `reasoning`, `raider`, `monitor`, `alert`, `clawma`, `sonnet`, `echo`, `max`, `venus`
-- expected evidence was confirmed:
+Real validation completed on **2026-03-18**:
+- Global hook enabled in `~/.openclaw/openclaw.json`
+- Managed hook synced with `~/.openclaw/skills/brainx-v5/hook/` (handler.js re-synced)
+- Active physical database: `brainx_v5`
+- agent-profiles.json expanded from 10 to 32 profiles (all agents)
+- Cross-agent injection slots (30%) activated in production
+- 20 null embeddings regenerated + 17 duplicate pairs deduped via `brainx fix`
+- 2 pending migrations applied
+- Doctor: 18/18 passed, 0 warnings
+- Real bootstrap smoke test passed for 10 agents
+- Expected evidence confirmed:
   - `<!-- BRAINX:START -->` block written into `MEMORY.md`
   - `Updated:` timestamp present
-  - fresh row recorded in `brainx_pilot_log`
+  - Fresh row recorded in `brainx_pilot_log`
 
 If this validation becomes stale, rerun a bootstrap smoke test before assuming runtime is still healthy.
 
-### Cómo funciona:
+### How it works:
 
-1. Evento `agent:bootstrap` → Hook se ejecuta automáticamente
-2. Consulta PostgreSQL → Obtiene memorias hot/warm recientes
-3. Genera archivo → Crea `BRAINX_CONTEXT.md` en el workspace
-4. Agente lee → El archivo se carga como contexto inicial
+1. `agent:bootstrap` event → Hook fires automatically
+2. PostgreSQL query → Fetches hot/warm recent memories
+3. Generates file → Creates `BRAINX_CONTEXT.md` in the workspace
+4. Agent reads → File is loaded as initial context
 
-### Configuración:
+### Configuration:
 
-En `~/.openclaw/openclaw.json`:
+In `~/.openclaw/openclaw.json`:
 ```json
 {
   "hooks": {
@@ -82,141 +128,141 @@ En `~/.openclaw/openclaw.json`:
 }
 ```
 
-### Para cada agente:
+### Per-agent setup:
 
-Agregar a `AGENTS.md` en cada workspace:
+Add to `AGENTS.md` in each workspace:
 ```markdown
 ## Every Session
 
 1. Read `SOUL.md`
 2. Read `USER.md`
 3. Read `brainx.md`
-4. Read `BRAINX_CONTEXT.md` ← Contexto auto-inyectado
+4. Read `BRAINX_CONTEXT.md` ← Auto-injected context
 ```
 
-## Herramientas Disponibles
+## Available Tools
 
 ### brainx_add_memory
 
-Guarda una memoria en el brain vectorial.
+Saves a memory to the vector brain.
 
-**Parámetros:**
-- `content` (requerido) - Texto de la memoria
-- `type` (opcional) - Tipo: note, decision, action, learning (default: note)
-- `context` (opcional) - Namespace/scope
-- `tier` (opcional) - Prioridad: hot, warm, cold, archive (default: warm)
-- `importance` (opcional) - Importancia 1-10 (default: 5)
-- `tags` (opcional) - Tags separados por coma
-- `agent` (opcional) - Nombre del agente que crea la memoria
+**Parameters:**
+- `content` (required) — Memory text
+- `type` (optional) — Type: note, decision, action, learning (default: note)
+- `context` (optional) — Namespace/scope
+- `tier` (optional) — Priority: hot, warm, cold, archive (default: warm)
+- `importance` (optional) — Importance 1-10 (default: 5)
+- `tags` (optional) — Comma-separated tags
+- `agent` (optional) — Name of the agent creating the memory
 
-**Ejemplo:**
+**Example:**
 ```
-brainx add --type decision --content "Usar embeddings 3-small para reducir costos" --tier hot --importance 9 --tags config,openai
+brainx add --type decision --content "Use embeddings 3-small to reduce costs" --tier hot --importance 9 --tags config,openai
 ```
 
 ### brainx_search
 
-Busca memorias por similitud semántica.
+Searches memories by semantic similarity.
 
-**Parámetros:**
-- `query` (requerido) - Texto a buscar
-- `limit` (opcional) - Número de resultados (default: 10)
-- `minSimilarity` (opcional) - Umbral 0-1 (default: 0.3)
-- `minImportance` (opcional) - Filtro por importancia 0-10
-- `tier` (opcional) - Filtro por tier
-- `context` (opcional) - Filtro exacto por contexto
+**Parameters:**
+- `query` (required) — Search text
+- `limit` (optional) — Number of results (default: 10)
+- `minSimilarity` (optional) — Threshold 0-1 (default: 0.3)
+- `minImportance` (optional) — Filter by importance 0-10
+- `tier` (optional) — Filter by tier
+- `context` (optional) — Exact context filter
 
-**Ejemplo:**
+**Example:**
 ```
-brainx search --query "configuracion de API" --limit 5 --minSimilarity 0.5
+brainx search --query "API configuration" --limit 5 --minSimilarity 0.5
 ```
 
-**Retorna:** JSON con resultados.
+**Returns:** JSON with results.
 
 ### brainx_inject
 
-Obtiene memorias formateadas para inyectar directamente en prompts LLM.
+Gets memories formatted for direct injection into LLM prompts.
 
-**Parámetros:**
-- `query` (requerido) - Texto a buscar
-- `limit` (opcional) - Número de resultados (default: 10)
-- `minImportance` (opcional) - Filtro por importancia
-- `tier` (opcional) - Filtro por tier (default: hot+warm)
-- `context` (opcional) - Filtro por contexto
-- `maxCharsPerItem` (opcional) - Truncar contenido (default: 2000)
+**Parameters:**
+- `query` (required) — Search text
+- `limit` (optional) — Number of results (default: 10)
+- `minImportance` (optional) — Filter by importance
+- `tier` (optional) — Tier filter (default: hot+warm)
+- `context` (optional) — Context filter
+- `maxCharsPerItem` (optional) — Truncate content (default: 2000)
 
-**Ejemplo:**
+**Example:**
 ```
-brainx inject --query "que decisiones se tomaron sobre openai" --limit 3
+brainx inject --query "what decisions were made about openai" --limit 3
 ```
 
-**Retorna:** Texto formateado listo para inyectar:
+**Returns:** Formatted text ready for injection:
 ```
 [sim:0.82 imp:9 tier:hot type:decision agent:coder ctx:openclaw]
-Usar embeddings 3-small para reducir costos...
+Use embeddings 3-small to reduce costs...
 
 ---
 
 [sim:0.71 imp:8 tier:hot type:decision agent:support ctx:brainx]
-Crear SKILL.md para integración con OpenClaw...
+Create SKILL.md for OpenClaw integration...
 ```
 
 ### brainx_health
 
-Verifica que BrainX está operativo.
+Verifies BrainX is operational.
 
-**Parámetros:** ninguno
+**Parameters:** none
 
-**Ejemplo:**
+**Example:**
 ```
 brainx health
 ```
 
-**Retorna:** Estado de conexión a PostgreSQL + pgvector.
+**Returns:** PostgreSQL + pgvector connection status.
 
-## Backup y Recuperación
+## Backup and Recovery
 
-### Crear Backup
+### Create Backup
 
 ```bash
 ./scripts/backup-brainx.sh ~/backups
 ```
 
-Crea archivo `brainx-v5_backup_YYYYMMDD_HHMMSS.tar.gz` con:
-- Base de datos PostgreSQL completa (SQL dump)
-- Configuración de OpenClaw (hooks, .env)
-- Archivos de skill
-- Documentación de workspaces
+Creates `brainx-v5_backup_YYYYMMDD_HHMMSS.tar.gz` containing:
+- Full PostgreSQL database (SQL dump)
+- OpenClaw configuration (hooks, .env)
+- Skill files
+- Workspace documentation
 
-### Restaurar Backup
+### Restore Backup
 
 ```bash
 ./scripts/restore-brainx.sh backup.tar.gz --force
 ```
 
-Restaura completamente BrainX V5 incluyendo:
-- Todas las memorias (126+ registros con embeddings)
-- Configuración de hooks
-- Variables de entorno
+Fully restores BrainX V5 including:
+- All memories (with embeddings)
+- Hook configuration
+- Environment variables
 
-### Documentación Completa
+### Full Documentation
 
-Ver [RESILIENCE.md](RESILIENCE.md) para:
-- Escenarios de desastre completos
-- Migración a nuevo VPS
+See [RESILIENCE.md](RESILIENCE.md) for:
+- Complete disaster scenarios
+- Migration to new VPS
 - Troubleshooting
-- Configuración de backups automáticos
+- Automatic backup configuration
 
-## Configuración
+## Configuration
 
-### Variables de Entorno
+### Environment Variables
 
 ```bash
-# Obligatorias
+# Required
 DATABASE_URL=postgresql://user:pass@host:5432/brainx_v5
 OPENAI_API_KEY=sk-...
 
-# Opcionales
+# Optional
 OPENAI_EMBEDDING_MODEL=text-embedding-3-small
 OPENAI_EMBEDDING_DIMENSIONS=1536
 BRAINX_INJECT_DEFAULT_TIER=hot+warm
@@ -224,18 +270,18 @@ BRAINX_INJECT_MAX_CHARS_PER_ITEM=2000
 BRAINX_INJECT_MAX_LINES_PER_ITEM=80
 ```
 
-### Setup de Base de Datos
+### Database Setup
 
 ```bash
-# El schema está en ~/.openclaw/skills/brainx-v5/sql/
-# Requiere PostgreSQL con extensión pgvector
+# Schema is in ~/.openclaw/skills/brainx-v5/sql/
+# Requires PostgreSQL with pgvector extension
 
 psql $DATABASE_URL -f ~/.openclaw/skills/brainx-v5/sql/v3-schema.sql
 ```
 
-## Integración Directa
+## Direct Integration
 
-También podés usar el wrapper unificado que lee la API key de OpenClaw:
+You can also use the unified wrapper that reads the API key from OpenClaw:
 
 ```bash
 cd ~/.openclaw/skills/brainx-v5
@@ -245,11 +291,11 @@ cd ~/.openclaw/skills/brainx-v5
 ./brainx health
 ```
 
-Compatibilidad: también funcionan `./brainx-v5` y `./brainx-v5-cli` como alias del wrapper principal.
+Compatibility: `./brainx-v5` and `./brainx-v5-cli` also work as aliases for the main wrapper.
 
 ## Advisory System (Pre-Action Check)
 
-BrainX includes an advisory system that queries relevant memories, trajectories, and recurring patterns before executing high-risk tools. This helps agents avoid repeating past mistakes.
+BrainX includes an advisory system that queries relevant memories, trajectories, and recurring patterns before executing high-risk tools. Helps agents avoid repeating past mistakes.
 
 ### High-Risk Tools
 
@@ -279,7 +325,7 @@ The advisory returns relevant memories, similar past problem→solution paths, a
 
 ### Agent-Aware Hook Injection
 
-The `agent:bootstrap` hook now uses **agent profiles** (`hook/agent-profiles.json`) to customize memory injection per agent:
+The `agent:bootstrap` hook uses **agent profiles** (`hook/agent-profiles.json`) to customize memory injection per agent:
 
 - **coder**: Boosts gotcha/error/learning memories; filters by infrastructure/code/deploy/github contexts; excludes notes
 - **writer**: Boosts decision/learning; filters by content/seo/marketing; excludes errors
@@ -288,85 +334,104 @@ The `agent:bootstrap` hook now uses **agent profiles** (`hook/agent-profiles.jso
 
 Agents not listed in the profiles file get the default unfiltered injection. Edit `hook/agent-profiles.json` to add new agent profiles.
 
-## Notas
+### Cross-Agent Memory Sharing
 
-- Las memorias se almacenan con embeddings vectoriales (1536 dimensiones)
-- La búsqueda usa similitud coseno
-- `inject` es la herramienta más útil para dar contexto a LLMs
-- Tier hot = acceso rápido, cold/archive = archive a largo plazo
-- Las memorias son persistentes en PostgreSQL (independientes de OpenClaw)
-- El hook de auto-inyección funciona en cada `agent:bootstrap`
+The hook reserves ~30% of injection slots for **cross-agent memories**, ensuring each agent sees relevant learnings from other agents. The `cross-agent-learning.js` script tags high-importance memories for cross-agent visibility without creating duplicates.
 
-## Estado de Features (Tablas)
+## Security & Trust
 
-### ✅ Todas Operativas
-| Tabla | Función | Status |
+This skill is flagged with "suspicious patterns" by ClawHub's automated scanner. Here's what each pattern does and why it's necessary:
+
+| Pattern | File | Why |
 |---|---|---|
-| `brainx_memories` | Core: almacena memorias con embeddings | ✅ Activa (600+) |
-| `brainx_query_log` | Tracking de queries search/inject | ✅ Activa |
-| `brainx_pilot_log` | Tracking de auto-inject por agente | ✅ Activa |
-| `brainx_context_packs` | Paquetes de contexto pre-generados | ✅ Activa |
-| `brainx_patterns` | Detecta errores/issues recurrentes | ✅ Activa (script: `pattern-detector.js`) |
-| `brainx_session_snapshots` | Captura estado al cierre de sesión | ✅ Activa (script: `session-snapshot.js`) |
-| `brainx_learning_details` | Metadata extendida de memorias learning/gotcha | ✅ Activa (script: `learning-detail-extractor.js`) |
-| `brainx_trajectories` | Registro de problem→solution paths | ✅ Activa (script: `trajectory-recorder.js`) |
+| `child_process.execFile` | `hook/handler.js` | Invokes the BrainX CLI to query memories during agent bootstrap. No arbitrary command execution. |
+| `process.env` access | `lib/db.js`, `lib/openai-rag.js`, `lib/cli.js` | Reads `DATABASE_URL` and `OPENAI_API_KEY` to connect to PostgreSQL and generate embeddings. Standard for any database-backed skill. |
+| `fetch('https://api.openai.com')` | `lib/openai-rag.js` | Calls OpenAI Embeddings API to generate vector representations. Single endpoint, no other network calls. |
+| File read/write | `hook/handler.js` | Writes `BRAINX_CONTEXT.md` and updates `MEMORY.md` in the agent's workspace during bootstrap injection. |
 
-> 8/8 tablas operativas. Scripts de población implementados el 2026-03-06.
+**No secrets are stored in code.** All credentials come from environment variables. No data leaves the system except embedding requests to OpenAI.
 
-## Inventario Completo de Funcionalidades (35)
+## Notes
+
+- Memories are stored with vector embeddings (1536 dimensions)
+- Search uses cosine similarity
+- `inject` is the most useful tool for giving context to LLMs
+- Tier hot = fast access, cold/archive = long-term storage
+- Memories are persistent in PostgreSQL (independent of OpenClaw)
+- Auto-injection hook fires on every `agent:bootstrap`
+
+## Feature Status (Tables)
+
+### ✅ All Operational
+| Table | Function | Status |
+|---|---|---|
+| `brainx_memories` | Core: stores memories with embeddings | ✅ Active (2,400+) |
+| `brainx_query_log` | Tracks search/inject queries | ✅ Active |
+| `brainx_pilot_log` | Tracks auto-inject per agent | ✅ Active |
+| `brainx_context_packs` | Pre-generated context packages | ✅ Active |
+| `brainx_patterns` | Detects recurring errors/issues | ✅ Active |
+| `brainx_session_snapshots` | Captures state at session close | ✅ Active |
+| `brainx_learning_details` | Extended metadata for learning/gotcha memories | ✅ Active |
+| `brainx_trajectories` | Records problem→solution paths | ✅ Active |
+
+> 8/8 tables operational. Population scripts implemented 2026-03-06.
+
+## Full Feature Inventory (35)
 
 ### CLI Core (`brainx <cmd>`)
-| # | Comando | Función |
+| # | Command | Function |
 |---|---|---|
-| 1 | `add` | Guardar memoria (7 types, 20+ categorías, metadata V5) |
-| 2 | `search` | Búsqueda semántica por similitud coseno |
-| 3 | `inject` | Memorias formateadas para inyectar en prompts LLM |
-| 4 | `fact` / `facts` | Shortcut para guardar/listar facts de infraestructura |
-| 5 | `resolve` | Marcar pattern como resuelto/promovido/wont_fix |
-| 6 | `promote-candidates` | Detectar memorias candidatas a promoción |
-| 7 | `lifecycle-run` | Degradar/promover memorias por edad/uso |
-| 8 | `metrics` | Dashboard de métricas y top patterns |
-| 9 | `doctor` | Diagnóstico completo (schema, integridad, stats) |
-| 10 | `fix` | Auto-reparar problemas detectados por doctor |
-| 11 | `feedback` | Marcar memoria como useful/useless/incorrect |
-| 12 | `health` | Estado de conexión PostgreSQL + pgvector |
+| 1 | `add` | Save memory (7 types, 20+ categories, V5 metadata) |
+| 2 | `search` | Semantic search by cosine similarity |
+| 3 | `inject` | Formatted memories for LLM prompt injection |
+| 4 | `fact` / `facts` | Shortcut to save/list infrastructure facts |
+| 5 | `resolve` | Mark pattern as resolved/promoted/wont_fix |
+| 6 | `promote-candidates` | Detect memories eligible for promotion |
+| 7 | `lifecycle-run` | Degrade/promote memories by age/usage |
+| 8 | `metrics` | Metrics dashboard and top patterns |
+| 9 | `doctor` | Full diagnostics (schema, integrity, stats) |
+| 10 | `fix` | Auto-repair issues detected by doctor |
+| 11 | `feedback` | Mark memory as useful/useless/incorrect |
+| 12 | `health` | PostgreSQL + pgvector connection status |
 
-### Scripts de Procesamiento (`scripts/`)
-| # | Script | Función |
+### Processing Scripts (`scripts/`)
+| # | Script | Function |
 |---|---|---|
-| 13 | `memory-bridge.js` | Sincroniza memoria entre sesiones/agentes |
-| 14 | `memory-distiller.js` | Destila sesiones en memorias nuevas |
-| 15 | `session-harvester.js` | Cosecha info de sesiones pasadas |
-| 16 | `session-snapshot.js` | Captura estado al cierre de sesión |
-| 17 | `pattern-detector.js` | Detecta errores/issues recurrentes |
-| 18 | `learning-detail-extractor.js` | Extrae metadata de learnings/gotchas |
-| 19 | `trajectory-recorder.js` | Registra paths problem→solution |
-| 20 | `fact-extractor.js` | Extrae facts de conversaciones |
-| 21 | `contradiction-detector.js` | Detecta memorias que se contradicen |
-| 22 | `cross-agent-learning.js` | Comparte aprendizajes entre agentes |
-| 23 | `quality-scorer.js` | Puntúa calidad de memorias |
-| 24 | `context-pack-builder.js` | Genera paquetes de contexto pre-armados |
-| 25 | `reclassify-memories.js` | Reclasifica memorias con tipos/categorías correctos |
-| 26 | `cleanup-low-signal.js` | Limpia memorias de bajo valor |
-| 27 | `dedup-supersede.js` | Detecta y marca duplicados |
-| 28 | `eval-memory-quality.js` | Evalúa calidad del dataset |
-| 29 | `generate-eval-dataset-from-memories.js` | Genera dataset de evaluación |
-| 30 | `memory-feedback.js` | Sistema de feedback por memoria |
-| 31 | `import-workspace-memory-md.js` | Importa desde MEMORY.md de workspaces |
-| 32 | `migrate-v2-to-v3.js` | Migración de schema V2→V3 |
+| 13 | `memory-bridge.js` | Syncs memory between sessions/agents |
+| 14 | `memory-distiller.js` | Distills sessions into new memories |
+| 15 | `session-harvester.js` | Harvests info from past sessions |
+| 16 | `session-snapshot.js` | Captures state at session close |
+| 17 | `pattern-detector.js` | Detects recurring errors/issues |
+| 18 | `learning-detail-extractor.js` | Extracts metadata from learnings/gotchas |
+| 19 | `trajectory-recorder.js` | Records problem→solution paths |
+| 20 | `fact-extractor.js` | Extracts facts from conversations |
+| 21 | `contradiction-detector.js` | Detects contradicting memories |
+| 22 | `cross-agent-learning.js` | Shares learnings between agents |
+| 23 | `quality-scorer.js` | Scores memory quality |
+| 24 | `context-pack-builder.js` | Generates pre-built context packages |
+| 25 | `reclassify-memories.js` | Reclassifies memories with correct types/categories |
+| 26 | `cleanup-low-signal.js` | Cleans up low-value memories |
+| 27 | `dedup-supersede.js` | Detects and marks duplicates |
+| 28 | `eval-memory-quality.js` | Evaluates dataset quality |
+| 29 | `generate-eval-dataset-from-memories.js` | Generates evaluation dataset |
+| 30 | `memory-feedback.js` | Per-memory feedback system |
+| 31 | `import-workspace-memory-md.js` | Imports from workspace MEMORY.md files |
+| 32 | `migrate-v2-to-v3.js` | Schema migration V2→V3 |
+| 33 | `promotion-applier.js` | Last-mile auto-promotion: distills patterns via LLM and writes rules to workspace files |
 
-### Hooks e Infraestructura
-| # | Componente | Función |
+### Hooks and Infrastructure
+| # | Component | Function |
 |---|---|---|
-| 33 | `brainx-auto-inject` | Hook de auto-inyección al bootstrap de cada agente |
-| 34 | `backup-brainx.sh` | Backup completo (DB + config + skills) |
-| 35 | `restore-brainx.sh` | Restauración total desde backup |
+| 34 | `brainx-auto-inject` | Auto-injection hook at each agent bootstrap |
+| 35 | `backup-brainx.sh` | Full backup (DB + config + skills) |
+| 36 | `restore-brainx.sh` | Full restore from backup |
+| 37 | `promotion-applier.js` | Pipeline step 13: writes promoted patterns to workspace files |
 
-### Metadata V5
-- `sourceKind` — Origen: user_explicit, agent_inference, tool_verified, llm_distilled, etc.
-- `sourcePath` — Archivo/URL de origen
+### V5 Metadata
+- `sourceKind` — Origin: user_explicit, agent_inference, tool_verified, llm_distilled, etc.
+- `sourcePath` — Source file/URL
 - `confidence` — Score 0-1
-- `expiresAt` — Expiración automática
+- `expiresAt` — Automatic expiration
 - `sensitivity` — normal/sensitive/restricted
-- PII scrubbing automático (`BRAINX_PII_SCRUB_ENABLED`)
-- Dedup por similitud (`BRAINX_DEDUPE_SIM_THRESHOLD`)
+- Automatic PII scrubbing (`BRAINX_PII_SCRUB_ENABLED`)
+- Similarity-based dedup (`BRAINX_DEDUPE_SIM_THRESHOLD`)

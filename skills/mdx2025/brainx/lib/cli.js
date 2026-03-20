@@ -27,6 +27,10 @@ Commands:
       Shortcut for: add --type fact --tier hot --category infrastructure
   facts [--context <ctx>] [--limit <n>]
       List all stored facts (infrastructure, URLs, services)
+  feature --content <text> [--context <project:name>] [--importance <1-10>] [--tags a,b,c]
+      Shortcut for: add --type feature_request --tier warm --category feature_request
+  features [--context <ctx>] [--limit <n>] [--status <pending|in_progress|resolved|promoted|wont_fix>]
+      List all stored feature requests
   search --query <text> [--limit <n>] [--minSimilarity <0-1>] [--context <ctx>] [--tier <tier>] [--minImportance <n>]
   inject --query <text> [--limit <n>] [--context <ctx>] [--tier <tier>] [--minImportance <n>] [--minScore <n>] [--maxTotalChars <n>] [--maxCharsPerItem <n>] [--maxLinesPerItem <n>]
   resolve (--id <id> | --patternKey <key>) --status <pending|in_progress|resolved|promoted|wont_fix> [--resolvedAt <iso>] [--promotedTo <target>] [--resolutionNotes <text>]
@@ -37,6 +41,11 @@ Commands:
       --useful    Boost importance +1 (max 10), increment access_count, feedback_score +1
       --useless   Lower importance -1 (min 1), feedback_score -1
       --incorrect Mark memory as superseded (soft delete)
+
+Scripts (run via node scripts/<name>.js):
+  reclassify-memories [--dry-run] [--limit <n>]     Reclassify memory types based on content analysis
+  cleanup-low-signal [--dry-run]                     Remove or archive low-quality memories
+  generate-eval-dataset [--dry-run] [--limit <n>]    Generate eval fixtures from live data
 
 Types: decision, action, learning, gotcha, note, feature_request, fact
 Categories: learning, error, feature_request, correction, knowledge_gap, best_practice,
@@ -184,8 +193,8 @@ async function cmdHealth(_args, deps = {}) {
 
 async function cmdAdd(args, deps = {}) {
   const type = args.type || 'note';
-  const content = args.content;
-  if (!content) throw new Error('--content is required');
+  const content = args.content || args._[0] || null;
+  if (!content) throw new Error('--content is required (or pass as positional argument)');
 
   const memory = {
     id: args.id || makeId(),
@@ -378,8 +387,8 @@ async function cmdResolve(args, deps = {}) {
   const id = args.id || null;
   const patternKey = getArg(args, 'patternKey', 'pattern-key') || null;
   const status = getArg(args, 'status');
-  if (!id && !patternKey) throw new Error('--id or --patternKey is required');
-  if (!status) throw new Error('--status is required');
+  if (!id && !patternKey) throw new Error('--id or --patternKey is required\n  Usage: brainx resolve --id <memory_id> --status <resolved|promoted|wont_fix>\n         brainx resolve --patternKey <key> --status <status>');
+  if (!status) throw new Error('--status is required (resolved|promoted|wont_fix)');
 
   const resolvedAtArg = getArg(args, 'resolvedAt', 'resolved-at');
   const promotedTo = getArg(args, 'promotedTo', 'promoted-to') || null;
@@ -523,9 +532,9 @@ async function cmdMetrics(args, deps = {}) {
 }
 
 async function cmdFact(args, deps = {}) {
-  // Shortcut: brainx fact --content "..." → add --type fact --tier hot --category infrastructure
-  const content = args.content;
-  if (!content) throw new Error('--content is required');
+  // Shortcut: brainx fact "..." → add --type fact --tier hot --category infrastructure
+  const content = args.content || args._[0] || null;
+  if (!content) throw new Error('--content is required (or pass as positional argument)');
   return cmdAdd({
     ...args,
     type: 'fact',
@@ -562,6 +571,54 @@ async function cmdFacts(args, deps = {}) {
   const res = await dbApi.query(sql, params);
   const io = getIo(deps);
   io.log(JSON.stringify({ ok: true, count: res.rows.length, facts: res.rows }, null, 2));
+}
+
+async function cmdFeature(args, deps = {}) {
+  // Shortcut: brainx feature "..." → add --type feature_request --tier warm --category feature_request
+  const content = args.content || args._[0] || null;
+  if (!content) throw new Error('--content is required (or pass as positional argument)');
+  return cmdAdd({
+    ...args,
+    type: 'feature_request',
+    tier: args.tier || 'warm',
+    importance: args.importance || '6',
+    category: args.category || 'feature_request',
+    status: args.status || 'pending',
+  }, deps);
+}
+
+async function cmdFeatures(args, deps = {}) {
+  const dbApi = getDb(deps);
+  const limit = parseIntArg(args.limit, 30);
+  const contextFilter = args.context || null;
+  const statusFilter = args.status || null;
+
+  let sql = `
+    SELECT id, content, tier, importance, context, category, tags, status, created_at, last_seen
+    FROM brainx_memories
+    WHERE type = 'feature_request'
+      AND superseded_by IS NULL
+  `;
+  const params = [];
+  let i = 1;
+
+  if (contextFilter) {
+    sql += ` AND context = $${i}`;
+    params.push(contextFilter);
+    i++;
+  }
+  if (statusFilter) {
+    sql += ` AND status = $${i}`;
+    params.push(statusFilter);
+    i++;
+  }
+
+  sql += ` ORDER BY importance DESC, created_at DESC LIMIT $${i}`;
+  params.push(limit);
+
+  const res = await dbApi.query(sql, params);
+  const io = getIo(deps);
+  io.log(JSON.stringify({ ok: true, count: res.rows.length, features: res.rows }, null, 2));
 }
 
 async function cmdLifecycleRun(args, deps = {}) {
@@ -673,7 +730,7 @@ async function cmdLifecycleRun(args, deps = {}) {
 // ── V5: Advisory System ─────────────────────────────
 async function cmdAdvisory(args, deps = {}) {
   const tool = args.tool;
-  if (!tool) throw new Error('--tool is required');
+  if (!tool) throw new Error('--tool is required\n  Usage: brainx advisory --tool <tool_name> [--agent <agent>] [--project <project>] [--json]');
   const argsJson = args.args || '{}';
   const agent = args.agent || process.env.OPENCLAW_AGENT || 'unknown';
   const project = args.project || null;
@@ -717,7 +774,7 @@ async function cmdAdvisoryFeedback(args, deps = {}) {
 // ── V5: EIDOS Loop ──────────────────────────────────
 async function cmdEidos(args, deps = {}) {
   const subCmd = args._[0];
-  if (!subCmd) throw new Error('eidos subcommand required: predict|evaluate|distill|stats');
+  if (!subCmd) throw new Error('eidos subcommand required: predict|evaluate|distill|stats\n  Usage:\n    brainx eidos predict --prediction "..." [--tool <t>] [--project <p>]\n    brainx eidos evaluate --id <id> --outcome "..." --accuracy <0-1>\n    brainx eidos distill --id <id>\n    brainx eidos stats [--agent <a>] [--json]');
 
   const eidos = require('./eidos');
   const io = getIo(deps);
@@ -810,6 +867,8 @@ async function main(argvIn = process.argv.slice(2), deps = {}) {
   if (cmd === 'add') return cmdAdd(args, deps);
   if (cmd === 'fact') return cmdFact(args, deps);
   if (cmd === 'facts') return cmdFacts(args, deps);
+  if (cmd === 'feature') return cmdFeature(args, deps);
+  if (cmd === 'features') return cmdFeatures(args, deps);
   if (cmd === 'search') return cmdSearch(args, deps);
   if (cmd === 'inject') return cmdInject(args, deps);
   if (cmd === 'resolve') return cmdResolve(args, deps);
