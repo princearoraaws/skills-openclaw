@@ -3,11 +3,16 @@
   "slug": "youdaonote-news",
   "displayName": "YoudaoNote News",
   "latest": {
-    "version": "1.7.7",
-    "publishedAt": 1773331771140,
-    "commit": "https://github.com/openclaw/skills/commit/c72f00e5a69b9e2fb531eb4bde94d9ea93b2b023"
+    "version": "1.7.8",
+    "publishedAt": 1773753706444,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.7.7",
+      "publishedAt": 1773331771140,
+      "commit": "https://github.com/openclaw/skills/commit/c72f00e5a69b9e2fb531eb4bde94d9ea93b2b023"
+    },
     {
       "version": "1.5.0",
       "publishedAt": 1772802407687,
