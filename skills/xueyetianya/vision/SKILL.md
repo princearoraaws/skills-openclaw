@@ -1,7 +1,7 @@
 ---
 name: vision
-description: "Resize, crop, convert, and optimize images. Read EXIF metadata and add watermarks via ImageMagick."
-version: "3.2.1"
+description: "Resize, crop, convert, and optimize images using ImageMagick. Use when processing photos, reading EXIF, or adding watermarks."
+version: "3.4.1"
 author: BytesAgain
 homepage: https://bytesagain.com
 source: https://github.com/bytesagain/ai-skills
