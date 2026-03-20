@@ -4,6 +4,11 @@
 文档转换全能王 API 转换脚本
 调用 https://www.wdangz.com API 进行文档格式转换
 支持自然语言描述自动识别转换类型
+
+安全说明：
+- 文件将上传到第三方服务进行转换
+- 请勿上传包含敏感信息的文件
+- 建议使用环境变量存储API密钥
 """
 import io
 import sys
@@ -18,6 +23,25 @@ import time
 import re
 import requests
 from pathlib import Path
+
+# ============== 安全配置 ==============
+MAX_FILE_SIZE_MB = 50  # 最大文件大小限制(MB)
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024
+
+# 敏感文件关键词（用于警告）
+SENSITIVE_KEYWORDS = [
+    'password', 'passwd', '密码', 'secret', '机密', 'confidential',
+    'private', '私密', '身份证', 'idcard', '银行卡', 'bankcard',
+    '合同', 'contract', '财务', 'finance', '薪资', 'salary',
+    '社保', 'insurance', '征信', 'credit'
+]
+
+# 敏感文件扩展名（可能包含敏感信息）
+SENSITIVE_EXTENSIONS = [
+    '.pfx', '.p12', '.key', '.pem',  # 证书文件
+    '.env', '.credentials',  # 凭证文件
+]
+# =====================================
 
 # API配置 - 生产环境 (新API地址)
 API_BASE_URL = "https://www.wdangz.com/api/v1/convert"
@@ -102,6 +126,69 @@ EXTENSION_MAPPING = {
     '.webp': 'imageTOpng',
 }
 
+# 支持的文件扩展名
+SUPPORTED_EXTENSIONS = set(EXTENSION_MAPPING.keys())
+
+
+def check_file_security(file_path):
+    """
+    检查文件安全性
+    
+    返回: (is_safe, warnings)
+    """
+    warnings = []
+    
+    # 检查文件是否存在
+    if not os.path.exists(file_path):
+        return False, ["文件不存在"]
+    
+    # 检查文件大小
+    file_size = os.path.getsize(file_path)
+    if file_size > MAX_FILE_SIZE_BYTES:
+        size_mb = file_size / (1024 * 1024)
+        warnings.append(f"⚠️ 文件过大: {size_mb:.1f}MB (限制: {MAX_FILE_SIZE_MB}MB)")
+        return False, warnings
+    
+    # 检查文件扩展名
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext in SENSITIVE_EXTENSIONS:
+        warnings.append(f"⚠️ 警告: '{ext}' 文件可能包含敏感凭证信息")
+        return False, warnings
+    
+    # 检查文件名是否包含敏感关键词
+    file_name_lower = os.path.basename(file_path).lower()
+    for keyword in SENSITIVE_KEYWORDS:
+        if keyword in file_name_lower:
+            warnings.append(f"⚠️ 警告: 文件名包含敏感关键词 '{keyword}'")
+            break
+    
+    # 检查是否支持该格式
+    if ext not in SUPPORTED_EXTENSIONS:
+        warnings.append(f"⚠️ 警告: 不支持的文件格式 '{ext}'")
+        return False, warnings
+    
+    return True, warnings
+
+
+def print_security_warning():
+    """打印安全警告"""
+    warning_text = """
+╔══════════════════════════════════════════════════════════════════╗
+║                        ⚠️  安全提醒                              ║
+╠══════════════════════════════════════════════════════════════════╣
+║  文件将上传到 https://www.wdangz.com 进行转换                    ║
+║                                                                  ║
+║  请确保文件不包含以下内容：                                       ║
+║  • 个人身份信息（身份证、护照等）                                 ║
+║  • 财务敏感信息（银行卡、财务报表等）                             ║
+║  • 商业机密或内部保密文档                                         ║
+║  • 密码、密钥或凭证信息                                           ║
+║                                                                  ║
+║  如有疑虑，请使用本地转换工具处理敏感文档。                       ║
+╚══════════════════════════════════════════════════════════════════╝
+"""
+    print(warning_text)
+
 
 def detect_conversion_type(description, source_file=None):
     """
@@ -114,7 +201,7 @@ def detect_conversion_type(description, source_file=None):
     返回:
         转换类型字符串，如 'wordTOpdf'
     """
-    description = description.lower()
+    description = description.lower() if description else ""
     
     # 首先尝试正则匹配
     for pattern, conversion_type in CONVERSION_MAPPING.items():
@@ -176,18 +263,28 @@ def detect_conversion_type(description, source_file=None):
 
 
 def get_api_key():
-    """获取API Key"""
+    """获取API Key（优先从环境变量获取）"""
+    # 优先使用环境变量（更安全）
     api_key = os.environ.get('WDANGZ_API_KEY')
-    if not api_key:
-        # 尝试从配置文件读取
-        config_path = os.path.join(os.path.dirname(__file__), '..', 'config.txt')
-        if os.path.exists(config_path):
-            with open(config_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    if line.strip().startswith('WDANGZ_API_KEY='):
-                        api_key = line.strip().split('=', 1)[1].strip()
-                        break
-    return api_key
+    if api_key:
+        return api_key
+    
+    # 其次从配置文件读取
+    config_path = os.path.join(os.path.dirname(__file__), '..', 'config.txt')
+    if os.path.exists(config_path):
+        with open(config_path, 'r', encoding='utf-8') as f:
+            for line in f:
+                line = line.strip()
+                # 跳过注释和空行
+                if not line or line.startswith('#'):
+                    continue
+                if line.startswith('WDANGZ_API_KEY='):
+                    api_key = line.split('=', 1)[1].strip()
+                    if api_key and not api_key.startswith('#'):
+                        print("💡 提示: 已从配置文件读取API Key（建议使用环境变量更安全）")
+                        return api_key
+    
+    return None
 
 
 # 全局session
@@ -223,8 +320,8 @@ def upload_and_convert(file_path, conversion_type, api_key):
             'docFileName': file_name
         }
         
-        print(f"正在上传文件: {file_name}")
-        print(f"转换类型: {conversion_type}")
+        print(f"📤 正在上传文件: {file_name}")
+        print(f"🔄 转换类型: {conversion_type}")
         
         response = session.post(
             API_BASE_URL,
@@ -233,8 +330,7 @@ def upload_and_convert(file_path, conversion_type, api_key):
             timeout=120
         )
     
-    print(f"响应状态码: {response.status_code}")
-    print(f"响应内容: {response.text[:200]}")
+    print(f"📡 响应状态码: {response.status_code}")
     
     result = response.json()
     
@@ -312,7 +408,6 @@ def download_file(doc_id, output_dir, api_key, original_file_name=None, conversi
     
     download_url = f"{DOWNLOAD_URL}/{doc_id}"
     print(f"\n📥 正在下载文件...")
-    print(f"下载链接: {download_url}")
     
     response = session.get(download_url, timeout=120)
     
@@ -363,7 +458,7 @@ def download_file(doc_id, output_dir, api_key, original_file_name=None, conversi
     return output_path
 
 
-def convert_document(file_path, description=None, conversion_type=None, output_dir=None, api_key=None):
+def convert_document(file_path, description=None, conversion_type=None, output_dir=None, api_key=None, skip_security_check=False):
     """
     执行文档转换
     
@@ -373,16 +468,35 @@ def convert_document(file_path, description=None, conversion_type=None, output_d
         conversion_type: 转换类型（可选，如果提供则优先使用）
         output_dir: 输出目录（默认与源文件同一目录）
         api_key: API密钥
+        skip_security_check: 跳过安全检查（不推荐）
     
     返回:
         转换后的文件路径
     """
+    # 打印安全警告
+    print_security_warning()
+    
+    # 安全检查
+    if not skip_security_check:
+        is_safe, warnings = check_file_security(file_path)
+        if warnings:
+            for warning in warnings:
+                print(warning)
+        if not is_safe:
+            raise Exception("文件安全检查未通过，请检查上述警告信息")
+    
     # 获取API Key
     if not api_key:
         api_key = get_api_key()
     
     if not api_key:
-        raise ValueError("未配置 API Key！请访问 文档转换全能王（官网：https://www.wdangz.com）注册并获取API Key，然后设置环境变量 WDANGZ_API_KEY 或创建配置文件")
+        raise ValueError(
+            "❌ 未配置 API Key！\n\n"
+            "请选择以下方式之一配置：\n"
+            "1. 设置环境变量: WDANGZ_API_KEY=你的密钥（推荐）\n"
+            "2. 编辑 config.txt 文件配置密钥\n\n"
+            "获取API Key: https://www.wdangz.com → API服务"
+        )
     
     # 确定输出目录
     if not output_dir:
@@ -439,6 +553,7 @@ def main():
         ]
         for t in types:
             print(f"  - {t}")
+        print(f"\n文件大小限制: {MAX_FILE_SIZE_MB}MB")
         sys.exit(1)
     
     file_path = sys.argv[1]
