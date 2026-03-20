@@ -3,11 +3,16 @@
   "slug": "student",
   "displayName": "Student",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1773748892412,
-    "commit": "https://github.com/openclaw/skills/commit/abe3e157eb56e52b071f52b1d1fc3520b1922e4e"
+    "version": "3.4.1",
+    "publishedAt": 1773774791047,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1773748892412,
+      "commit": "https://github.com/openclaw/skills/commit/abe3e157eb56e52b071f52b1d1fc3520b1922e4e"
+    },
     {
       "version": "3.2.0",
       "publishedAt": 1773716929151,
