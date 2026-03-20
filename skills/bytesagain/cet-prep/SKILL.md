@@ -4,6 +4,8 @@ name: CET Prep
 description: "╔══════════════════════════════════════════╗. Use when you need cet prep capabilities. Triggers on: cet prep."
   四六级备考助手。词汇记忆、阅读技巧、写作模板、听力训练、模拟测试、备考计划。CET-4/6 exam preparation. 四六级、英语考试。
 author: BytesAgain
+homepage: https://bytesagain.com
+source: https://github.com/bytesagain/ai-skills
 ---
 # CET Prep
 

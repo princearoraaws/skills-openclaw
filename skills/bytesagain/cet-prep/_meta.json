@@ -3,11 +3,16 @@
   "slug": "cet-prep",
   "displayName": "Cet Prep",
   "latest": {
-    "version": "2.3.5",
-    "publishedAt": 1773665027049,
-    "commit": "https://github.com/openclaw/skills/commit/6871a2a2fb6052135433eda69b3348cf29a4858e"
+    "version": "2.3.6",
+    "publishedAt": 1773773057671,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.3.5",
+      "publishedAt": 1773665027049,
+      "commit": "https://github.com/openclaw/skills/commit/6871a2a2fb6052135433eda69b3348cf29a4858e"
+    },
     {
       "version": "2.3.4",
       "publishedAt": 1773662085434,
