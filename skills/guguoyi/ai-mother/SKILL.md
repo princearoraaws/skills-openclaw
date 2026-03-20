@@ -1,6 +1,6 @@
 ---
 name: ai-mother
-description: AI Mother - Monitor and manage other AI agents (Claude Code, Codex, Gemini, etc.). Use when asked to check AI execution status, supervise AI agents, help stuck AIs, coordinate multiple AI tasks, or act as an AI manager. Triggers on phrases like "check AI status", "what are the AIs doing", "help the stuck AI", "manage AI agents", "AI mother", "supervise AIs", "patrol", "dashboard". When triggered, automatically run patrol.sh and show dashboard if user wants visual monitoring.
+description: AI Mother - Monitor and manage other AI agents (Claude Code, Codex, OpenCode, Aider, etc.). Use when asked to check AI execution status, supervise AI agents, help stuck AIs, coordinate multiple AI tasks, or act as an AI manager. Triggers on: "check AI status", "what are the AIs doing", "help the stuck AI", "manage AI agents", "AI mother", "supervise AIs", "patrol", "dashboard", "cleanup duplicates". Also triggers when owner replies to AI permission confirmations using "AI Mother: <response> <PID>" format (response can be any text: yes, no, 1, 2, allow once, etc.). When triggered, automatically run patrol.sh and show dashboard if user wants visual monitoring.
 metadata:
   openclaw:
     emoji: 👩‍👧‍👦
@@ -26,6 +26,25 @@ fi
 2. If user asks for "dashboard" or "visual" → show dashboard output (run the Python snippet below)
 3. If issues found → analyze and report
 4. If user asks about specific PID → run `get-ai-context.sh <PID>`
+
+**Handling permission responses:**
+
+Owner should use `AI Mother: yes <PID>` or `AI Mother: no <PID>` to reply to permission confirmations.
+
+When you receive such a message:
+- Extract PID from message
+- Run: `scripts/handle-owner-response.sh <PID> <yes|no|cancel>`
+- Confirm result to user
+
+```
+User: "AI Mother: yes 756882"
+→ handle-owner-response.sh 756882 yes
+→ Reply: "✅ Sent Yes to AI (PID 756882)"
+
+User: "AI Mother: reset 756882"
+→ rm ~/.openclaw/skills/ai-mother/conversations/756882.state
+→ Reply: "✅ Reset conversation state for PID 756882"
+```
 
 **Quick dashboard (non-interactive):**
 ```python
@@ -69,11 +88,14 @@ console.print(table)
 |--------|---------|
 | `scripts/setup.sh` | First-time setup wizard (get open_id guide + test notification) |
 | `scripts/patrol.sh` | Full scan of all AI agents, outputs structured report |
-| `scripts/health-check.sh` | **NEW** Quick health check + auto-heal for all agents |
-| `scripts/auto-heal.sh <PID>` | **NEW** Automatically fix common issues (stopped, waiting, idle) |
-| `scripts/analytics.py [PID]` | **NEW** Performance analytics and pattern detection |
+| `scripts/health-check.sh` | Quick health check + auto-heal for all agents |
+| `scripts/auto-heal.sh <PID>` | Automatically fix common issues (stopped, waiting, idle) |
+| `scripts/cleanup-duplicates.sh [--auto]` | **NEW** Detect and clean up duplicate AIs on same directory |
+| `scripts/manage-patrol-frequency.sh` | **NEW** Dynamic patrol frequency (5min for active, 30min baseline) |
+| `scripts/analytics.py [PID]` | Performance analytics and pattern detection |
 | `scripts/get-ai-context.sh <PID>` | Deep context for one agent (last output, files, git) |
 | `scripts/send-to-ai.sh <PID> <msg>` | Send message to AI stdin (works in ANY terminal/IDE) |
+| `scripts/handle-owner-response.sh <PID> <response>` | **NEW** Flexible permission response (accepts any format) |
 | `scripts/track-conversation.sh <PID> <dir> <msg>` | Track rounds, detect escalation triggers |
 | `scripts/cleanup-conversations.sh` | Remove conversation logs for dead processes (>24h) |
 | `scripts/smart-diagnose.sh <PID>` | Detect abnormal patterns (thrashing, loops, memory leaks) |
@@ -147,7 +169,7 @@ Reveals: last output, errors, recent file changes, git status, open files.
 ```
 
 **How it works:**
-- **Claude Code**: uses `claude --resume <session_id>` to inject message into existing session (full context preserved)
+- **Claude Code**: writes to `/proc/<PID>/fd/0` (stdin) - preserves running session context
 - **OpenCode/Codex**: writes to `/proc/<PID>/fd/0` (stdin)
 - No IDE dependency, works everywhere
 
@@ -186,8 +208,8 @@ openclaw message send \
 **Safety rule:** target must start with `ou_` (open_id = DM). Never use `oc_` (group chat_id).
 
 **When to notify:**
-- AI task completed → "✅ Baby [PID] 完成任务：<project>"
-- AI blocked (rate limit, permission, error) → "⚠️ Baby [PID] 遇到问题需要你处理"
+- AI task completed → "✅ Agent [PID] completed task: <project>"
+- AI blocked (rate limit, permission, error) → "⚠️ Agent [PID] needs attention"
 - 10 rounds of communication exhausted → escalate with full summary
 - Same error repeated 3+ times → escalate with full summary
 - Anything requiring owner decision
@@ -285,7 +307,7 @@ This script:
 **Example output:**
 ```
 📊 PID 82213 (claude)
-   Project: ~/workspace/my-project
+   Project: ~/workspace/example-project
    Task: Code refactoring
    Status: active
    Runtime: 19.95h
@@ -384,4 +406,42 @@ python3 ~/.openclaw/skills/ai-mother/scripts/db.py
 - Auto-confirm read-only operations
 
 **When in doubt:** Auto-heal skips and escalates to owner.
+
+
+---
+
+## 🆕 Latest Features
+
+### 1. Dynamic Patrol Frequency
+- **Normal mode**: 30-minute patrol (baseline)
+- **High-frequency mode**: 5-minute patrol for active conversations
+- **Auto-detection**: ≥3 messages in 30min OR ≥2 in 10min triggers high-freq
+- **Auto-downgrade**: Returns to normal when conversations go quiet
+- **Smart notifications**: Only notifies for active PIDs, silently checks others
+
+### 2. Duplicate Detection & Cleanup
+- Detects multiple AI agents working on the same directory
+- `cleanup-duplicates.sh --auto` for automatic cleanup
+- Warns during patrol with actionable suggestions
+
+### 3. Task Completion Notifications
+- Detects when AI finishes tasks ("completed", "all done", etc.)
+- Sends one-time notification to owner
+- Tracks notified completions to avoid spam
+
+### 4. Flexible Permission Handling
+- Accepts any input format: `1`, `y`, `allow once`, etc.
+- No format guessing — owner provides exact input
+- Works with OpenCode, Claude Code, Codex, and any future AI tools
+- Shows actual prompt in notification for clarity
+
+### 5. Race Condition Protection
+- File locking prevents concurrent patrol runs
+- Temp file cleanup on errors
+- Atomic state file updates
+
+### 6. Internationalization
+- All scripts and documentation in English
+- No hardcoded Chinese text
+- Ready for global use
 

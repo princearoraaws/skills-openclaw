@@ -27,6 +27,87 @@ RUNTIME=$(ps -o etimes= -p "$PID" 2>/dev/null | xargs)
 
 HEALED=false
 
+# Check tmux pane content for permission prompts
+TMUX_CHECK=$("$SKILL_DIR/scripts/check-tmux-waiting.sh" "$PID" 2>/dev/null)
+TMUX_STATUS=$(echo "$TMUX_CHECK" | head -1)
+TMUX_CONTENT=$(echo "$TMUX_CHECK" | tail -n +3)
+
+# Healing Rule 0: Permission confirmation in tmux → escalate to owner
+if [ "$TMUX_STATUS" = "WAITING_INPUT" ]; then
+    if echo "$TMUX_CONTENT" | grep -qi "permission required\|allow once\|allow always\|do you want\|proceed\|yes/no\|y/n"; then
+        echo "🔧 Issue: AI waiting for permission confirmation"
+        echo ""
+        echo "--- Confirmation Prompt ---"
+        echo "$TMUX_CONTENT" | tail -8
+        echo "---"
+        echo ""
+        echo "   Action: ESCALATE TO OWNER"
+
+        if [ "$DRY_RUN" != "--dry-run" ]; then
+            WORKDIR=$(pwdx "$PID" 2>/dev/null | cut -d: -f2 | xargs)
+            AI_TYPE=$(ps -o cmd= -p "$PID" | awk '{print $1}' | xargs basename)
+            NOTIFY_SCRIPT="$SKILL_DIR/scripts/notify-owner.sh"
+            
+            # Show the actual prompt (last 10 lines of tmux content)
+            PROMPT_TEXT=$(echo "$TMUX_CONTENT" | tail -10)
+            
+            # Extract options - try multiple patterns
+            OPTIONS_LINE=""
+            
+            # Pattern 1: OpenCode style "Allow once   Allow always   Reject"
+            if [ -z "$OPTIONS_LINE" ]; then
+                OPTIONS_LINE=$(echo "$PROMPT_TEXT" | grep -i "allow.*reject\|allow.*deny" | head -1 | sed 's/^[[:space:]┃│┆┊]*//' | sed 's/[[:space:]]*$//')
+            fi
+            
+            # Pattern 2: Inline (y/n) or (Y/n)
+            if [ -z "$OPTIONS_LINE" ]; then
+                OPTIONS_LINE=$(echo "$PROMPT_TEXT" | grep -oE '\([yYnN]/[yYnN]\)' | head -1)
+            fi
+            
+            # Pattern 3: Numbered options "1. Allow" "2. Deny"
+            if [ -z "$OPTIONS_LINE" ]; then
+                NUMBERED=$(echo "$PROMPT_TEXT" | grep -E '[0-9]+\.' | sed 's/^[[:space:]┃│┆┊❯]*//')
+                if [ -n "$NUMBERED" ]; then
+                    OPTIONS_LINE=$(echo "$NUMBERED" | tr '\n' ' ' | sed 's/[[:space:]]*$//')
+                fi
+            fi
+
+            # Build notification message
+            OPTIONS_BLOCK=""
+            if [ -n "$OPTIONS_LINE" ]; then
+                OPTIONS_BLOCK="Options: $OPTIONS_LINE
+
+"
+            fi
+
+            "$NOTIFY_SCRIPT" "💬 AI Agent Needs Permission
+
+AI: $AI_TYPE (PID $PID)
+Project: ${WORKDIR/$HOME/~}
+
+${OPTIONS_BLOCK}Prompt:
+$PROMPT_TEXT
+
+📱 Reply with exact input to send:
+AI Mother: <your-input> $PID
+
+Examples:
+- AI Mother: 1 $PID (if numbered options)
+- AI Mother: y $PID (if y/n prompt)
+- AI Mother: allow once $PID (if text options)
+
+🖥️ Or attach manually:
+tmux attach -t 0"
+
+            echo "✅ Owner notified"
+        else
+            echo "   Would notify owner with prompt details"
+        fi
+        echo ""
+        exit 0
+    fi
+fi
+
 # Healing Rule 1: Resume stopped process (T state) - ALWAYS ASK OWNER
 if [ "$STATE" = "T" ]; then
     echo "🔧 Issue: Process is stopped (Ctrl+Z)"

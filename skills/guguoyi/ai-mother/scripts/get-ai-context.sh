@@ -49,10 +49,12 @@ if [ "$AI_TYPE" = "claude" ]; then
     LATEST=""
     [ -d "$SESSION_DIR" ] && LATEST=$(ls -t "$SESSION_DIR"/*.jsonl 2>/dev/null | head -1)
 
-    # Fallback: search all projects for workdir reference
+    # Fallback: search all projects for workdir reference, sort by modification time
     if [ -z "$LATEST" ]; then
-        LATEST=$(find "$HOME/.claude/projects" -name "*.jsonl" 2>/dev/null \
-            | xargs grep -l "\"$WORKDIR\"" 2>/dev/null | head -1)
+        LATEST=$(find "$HOME/.claude/projects" -name "*.jsonl" -type f 2>/dev/null \
+            | xargs grep -l "$WORKDIR" 2>/dev/null \
+            | xargs ls -t 2>/dev/null \
+            | head -1)
     fi
 
     if [ -n "$LATEST" ]; then
@@ -62,8 +64,16 @@ import sys, json
 for line in sys.stdin:
     try:
         d = json.loads(line.strip())
+        # Handle progress type (tool execution in flight)
+        if d.get('type') == 'progress':
+            msg = d.get('data', {}).get('message', {})
+            for b in msg.get('content', []):
+                if isinstance(b, dict) and b.get('type') == 'tool_use':
+                    inp = b.get('input', {})
+                    cmd = inp.get('command', inp.get('description', str(inp)[:100]))
+                    print(f'[progress]: {b.get(\"name\")} - {cmd[:200]}')
+            continue
         role = d.get('role','?')
-        # Handle both message wrapper and direct content
         content = d.get('message', d).get('content', '')
         if isinstance(content, list):
             for b in content:
@@ -74,7 +84,6 @@ for line in sys.stdin:
                         print(f'[{role}/tool]: {b.get(\"name\")} {str(b.get(\"input\",{}))[:200]}')
         elif isinstance(content, str) and content:
             print(f'[{role}]: {content[:600]}')
-        # Surface API errors
         err = d.get('error') or d.get('message', {}).get('error')
         if err:
             print(f'[ERROR]: {err}')

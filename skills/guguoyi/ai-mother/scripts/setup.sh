@@ -85,7 +85,7 @@ echo ""
 
 # Test notification
 echo "🧪 Testing Feishu notification..."
-TEST_MSG="👩‍👧‍👦 AI Mother 配置成功！我会在 AI baby 需要帮助时通知你。"
+TEST_MSG="👩‍👧‍👦 AI Mother setup complete! I'll notify you when AI agents need attention."
 
 if openclaw message send --channel feishu --target "user:$OPEN_ID" --message "$TEST_MSG" 2>/dev/null; then
     echo "✅ Test message sent! Check your Feishu."
@@ -98,6 +98,62 @@ fi
 
 echo ""
 echo "🎉 Setup complete!"
+echo ""
+
+# Configure cron job for patrol
+echo "⏰ Configuring scheduled patrol..."
+CRON_MSG="AI Mother patrol: run ~/.openclaw/skills/ai-mother/scripts/patrol.sh and check all AI agent statuses. If NEEDS_ATTENTION=true, analyze the issue and notify the owner. If everything is fine, no notification needed."
+
+# Check if cron job already exists
+EXISTING_CRON=$(openclaw cron list --json 2>/dev/null | grep -c '"name":\s*"ai-mother-patrol"' || echo "0")
+
+if [ "$EXISTING_CRON" -ge "1" ]; then
+    echo "✅ Scheduled patrol already configured"
+else
+    # Create cron job (every 30 minutes)
+    if openclaw cron add \
+        --name "ai-mother-patrol" \
+        --every "30m" \
+        --message "$CRON_MSG" \
+        --channel "feishu" \
+        --to "user:$OPEN_ID" \
+        --session "isolated" \
+        --timeout-seconds 120 \
+        --announce \
+        2>/dev/null; then
+        echo "✅ Scheduled patrol configured (every 30 minutes)"
+    else
+        echo "⚠️  Failed to configure cron automatically."
+        echo "   Please configure manually or ask Happy to help."
+    fi
+fi
+
+echo ""
+
+# Optional: Add to HEARTBEAT.md for heartbeat-based patrol
+HEARTBEAT_FILE="$HOME/.openclaw/workspace/HEARTBEAT.md"
+if [ -f "$HEARTBEAT_FILE" ]; then
+    if ! grep -q "ai-mother" "$HEARTBEAT_FILE" 2>/dev/null; then
+        echo "📝 Would you like to add AI Mother patrol to HEARTBEAT.md?"
+        echo "   This enables heartbeat-based monitoring (alternative to cron)."
+        read -p "   Add to HEARTBEAT.md? (y/n): " ADD_HEARTBEAT
+        
+        if [ "$ADD_HEARTBEAT" = "y" ] || [ "$ADD_HEARTBEAT" = "Y" ]; then
+            cat >> "$HEARTBEAT_FILE" << 'EOF'
+
+# AI Mother patrol
+# On each heartbeat:
+# 1. Run patrol.sh --quiet
+# 2. If NEEDS_ATTENTION=true: run auto-heal for each affected PID, then notify owner
+# 3. If nothing: stay silent (HEARTBEAT_OK)
+EOF
+            echo "✅ Added AI Mother patrol to HEARTBEAT.md"
+        fi
+    else
+        echo "✅ AI Mother already configured in HEARTBEAT.md"
+    fi
+fi
+
 echo ""
 echo "Next steps:"
 echo "  - AI Mother will patrol every 30 minutes automatically"

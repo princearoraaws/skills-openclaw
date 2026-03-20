@@ -53,7 +53,7 @@ SHOULD_ESCALATE=false
 ESCALATION_REASON=""
 
 # Trigger 1: Max rounds exceeded
-if [ "$ROUND_COUNT" -gt "$MAX_ROUNDS" ]; then
+if [ "$ROUND_COUNT" -ge "$MAX_ROUNDS" ]; then
     SHOULD_ESCALATE=true
     ESCALATION_REASON="Max rounds ($MAX_ROUNDS) exceeded"
 fi
