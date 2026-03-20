@@ -3,11 +3,16 @@
   "slug": "news-fetcher",
   "displayName": ".Publish Temp",
   "latest": {
-    "version": "0.1.5",
-    "publishedAt": 1773653153972,
-    "commit": "https://github.com/openclaw/skills/commit/fa081793b5a554397aabc5f543fe73b65e69652d"
+    "version": "0.1.6",
+    "publishedAt": 1773670294978,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.1.5",
+      "publishedAt": 1773653153972,
+      "commit": "https://github.com/openclaw/skills/commit/fa081793b5a554397aabc5f543fe73b65e69652d"
+    },
     {
       "version": "0.1.4",
       "publishedAt": 1773318670078,
