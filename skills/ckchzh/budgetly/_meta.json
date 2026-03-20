@@ -3,11 +3,16 @@
   "slug": "budgetly",
   "displayName": "Budgetly",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1773673529482,
-    "commit": "https://github.com/openclaw/skills/commit/b053fc38de6a9dfe92b60f6e86158a00a0dee895"
+    "version": "2.0.1",
+    "publishedAt": 1773830187471,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1773673529482,
+      "commit": "https://github.com/openclaw/skills/commit/b053fc38de6a9dfe92b60f6e86158a00a0dee895"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1773610612587,
