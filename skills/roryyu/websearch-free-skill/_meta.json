@@ -3,9 +3,15 @@
   "slug": "websearch-free-skill",
   "displayName": "Websearch",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1773280924614,
-    "commit": "https://github.com/openclaw/skills/commit/0b937c6bd1865f511dc09d4ab262fa6231d86a3e"
+    "version": "0.1.1",
+    "publishedAt": 1773806700086,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1773280924614,
+      "commit": "https://github.com/openclaw/skills/commit/0b937c6bd1865f511dc09d4ab262fa6231d86a3e"
+    }
+  ]
 }
