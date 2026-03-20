@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-WORK = ROOT.parent.parent / "tmp" / "python-image-lab-selftest"
+WORK = ROOT.parent.parent / "tmp" / "image-processing-toolkit-lab-selftest"
 
 
 def run(cmd: list[str]) -> int:
@@ -53,7 +53,7 @@ def main() -> int:
         WORK / "a_converted.webp",
         WORK / "b_compressed.jpg",
         WORK / "a_resized.png",
-        WORK.parent / "python-image-lab-selftest_images.pdf",
+        WORK.parent / "image-processing-toolkit-lab-selftest_images.pdf",
     ]
 
     missing = [p for p in expected if not p.exists()]

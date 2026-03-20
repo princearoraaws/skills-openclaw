@@ -8,7 +8,7 @@ try:
     from PIL import Image, ImageOps
 except ModuleNotFoundError as e:
     raise SystemExit(
-        "[python-image-lab] 缺少依赖 Pillow。\n"
+        "[image-processing-toolkit-lab] 缺少依赖 Pillow。\n"
         "请先进入技能目录并安装依赖：\n"
         "  python -m venv .venv && .venv/bin/python -m pip install -r requirements.txt\n"
         "(Windows: .venv\\Scripts\\python -m pip install -r requirements.txt)"
