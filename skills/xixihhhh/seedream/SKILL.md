@@ -43,6 +43,44 @@ The API key is tied to your Atlas Cloud account and its pay-as-you-go balance. A
 
 ---
 
+## Script Usage
+
+This skill includes a Python script for image generation. Zero external dependencies required.
+
+### List available image models
+
+```bash
+python scripts/generate_image.py list-models
+```
+
+### Generate an image
+
+```bash
+python scripts/generate_image.py generate \
+  --model "MODEL_ID" \
+  --prompt "Your prompt here" \
+  --output ./output
+```
+
+### Upload a local image (for editing)
+
+```bash
+python scripts/generate_image.py upload ./local-image.jpg
+```
+
+### Edit an image
+
+```bash
+python scripts/generate_image.py generate \
+  --model "MODEL_ID" \
+  --prompt "Edit instruction" \
+  --image "https://...uploaded-url..."
+```
+
+Run `python scripts/generate_image.py generate --help` for all options. Extra model params can be passed as key=value (e.g. `aspect_ratio=16:9 resolution=2k`).
+
+---
+
 ## Pricing
 
 All prices are per image generated. Atlas Cloud offers up to 10% off compared to standard API pricing.
