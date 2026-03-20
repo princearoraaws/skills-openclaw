@@ -41,7 +41,7 @@ VALID_FACE_INPUT_TYPES = {
 # 风险等级说明
 RISK_LEVEL_MAP = {
     "Low": "低风险 - 正常人脸",
-    "Normal": "中风险 - 存在一定攻击嫌疑",
+    "Mid": "中风险 - 存在一定攻击嫌疑",
     "High": "高风险 - 极有可能为攻击行为",
 }
 
