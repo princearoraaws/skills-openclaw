@@ -15,7 +15,7 @@
         "description": "阿里云百炼 API Key，用于调用大语言模型",
         "type": "secret"
       }
-    ],
+    ]
   },
   "dependencies": [
     "agentscope>=0.0.5",
