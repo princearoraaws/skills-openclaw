@@ -3,11 +3,16 @@
   "slug": "dashboard-builder",
   "displayName": "Dashboard Builder",
   "latest": {
-    "version": "1.0.5",
-    "publishedAt": 1773665631987,
-    "commit": "https://github.com/openclaw/skills/commit/9611c36890792330fdc4f235d356c50432ab9687"
+    "version": "3.3.0",
+    "publishedAt": 1773879788690,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.5",
+      "publishedAt": 1773665631987,
+      "commit": "https://github.com/openclaw/skills/commit/9611c36890792330fdc4f235d356c50432ab9687"
+    },
     {
       "version": "2.3.0",
       "publishedAt": 1773446845094,
