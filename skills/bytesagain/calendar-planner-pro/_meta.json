@@ -3,9 +3,15 @@
   "slug": "calendar-planner-pro",
   "displayName": "Calendar Planner Pro",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1773664971872,
-    "commit": "https://github.com/openclaw/skills/commit/970e15045a56b1e3cd0dc3624a932c8e8738062b"
+    "version": "2.0.1",
+    "publishedAt": 1773830212469,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1773664971872,
+      "commit": "https://github.com/openclaw/skills/commit/970e15045a56b1e3cd0dc3624a932c8e8738062b"
+    }
+  ]
 }
