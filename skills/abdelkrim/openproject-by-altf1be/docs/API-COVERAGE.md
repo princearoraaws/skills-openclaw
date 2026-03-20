@@ -2,7 +2,7 @@
 
 This document lists all 55 API v3 resources, what this skill covers, and what's excluded with reasons.
 
-## ✅ Covered (13 resources)
+## ✅ Covered (46 resources)
 
 | Resource | Commands | Notes |
 |----------|----------|-------|
@@ -11,6 +11,38 @@ This document lists all 55 API v3 resources, what this skill covers, and what's 
 | `activities` | comment-list, comment-add | Comments on work packages |
 | `attachments` | attachment-list, attachment-add, attachment-delete | Upload/delete on work packages |
 | `time_entries` | time-list, time-create, time-update, time-delete | Full CRUD |
+| `users` | user-list, user-read, user-me | List/search users, view details, current user |
+| `notifications` | notification-list, notification-read, notification-mark-read, notification-mark-unread | List/read/mark with reason/project/WP filters |
+| `documents` | document-list, document-read, document-update | List, read, update documents |
+| `revisions` | revision-read, revision-list-by-wp | Read revisions, list by WP |
+| `capabilities` | capability-list, capability-global | Permission introspection |
+| `actions` | action-list, action-read | Available actions |
+| `my_preferences` | my-preferences-read, my-preferences-update | Personal preferences |
+| `render` | render-markdown, render-plain | Markdown/plain text rendering |
+| `posts` | post-read, post-attachment-list | Forum posts and attachments |
+| `reminders` | reminder-list, reminder-create, reminder-update, reminder-delete | WP reminders CRUD |
+| `project_statuses` | project-status-read | Project health statuses |
+| `project_phases` | project-phase-read | Read project phases (Enterprise) |
+| `project_phase_definitions` | project-phase-definition-list, project-phase-definition-read | List and read phase definitions (Enterprise) |
+| `portfolios` | portfolio-list, portfolio-read, portfolio-update, portfolio-delete | List, read, update, delete (Enterprise) |
+| `programs` | program-list, program-read, program-update, program-delete | List, read, update, delete (Enterprise) |
+| `placeholder_users` | placeholder-user-list, placeholder-user-read, placeholder-user-create, placeholder-user-update, placeholder-user-delete | Full CRUD (Enterprise) |
+| `budgets` | budget-list, budget-read | List and read project budgets (Enterprise) |
+| `meetings` | meeting-read, meeting-attachment-list, meeting-attachment-add | Read meetings, attachments (Enterprise) |
+| `days` | day-read, days-list, non-working-days-list, non-working-day-read, week-days-list, week-day-read | Working/non-working days and week schedule |
+| `configuration` | config-read, project-config-read | Instance and project configuration |
+| `oauth_applications` | oauth-app-read | Read OAuth application details |
+| `oauth_client_credentials` | oauth-credentials-read | Read OAuth client credentials |
+| `help_texts` | help-text-list, help-text-read | List and read attribute help texts |
+| `custom_fields` | custom-field-items | List hierarchical custom field items |
+| `custom_field_items` | custom-field-item-read, custom-field-item-branch | Read items and browse branches |
+| `custom_options` | custom-option-read | Read custom option values |
+| `custom_actions` | custom-action-read, custom-action-execute | Read and execute workflow actions on WPs |
+| `groups` | group-list, group-read, group-create, group-update, group-delete | Full CRUD with member management |
+| `news` | news-list, news-read, news-create, news-update, news-delete | Full CRUD for project announcements |
+| `watchers` | watcher-list, watcher-add, watcher-remove, watcher-available | List, add, remove watchers on WPs |
+| `relations` | relation-list, relation-read, relation-create, relation-update, relation-delete | Full CRUD with type/WP filters |
+| `wiki_pages` | wiki-read, wiki-attachment-list, wiki-attachment-add | Read page, list & upload attachments |
 | `statuses` | status-list | List all statuses; transitions via wp-update --status |
 | `types` | type-list | List work package types |
 | `priorities` | priority-list | List priorities |
@@ -22,44 +54,14 @@ This document lists all 55 API v3 resources, what this skill covers, and what's 
 
 ## ❌ Not Covered — With Reasons
 
-### Meetings (`/api/v3/meetings`)
-- **Reason:** Enterprise-only feature. Requires OpenProject Enterprise edition. Not available on Community edition instances.
-
-### Notifications (`/api/v3/notifications`)
-- **Reason:** Read-only, user-specific in-app notifications. Low value for CLI automation — better consumed via OpenProject UI or email.
-
-### Relations (`/api/v3/relations`)
-- **Reason:** Work package dependency links (blocks, follows, relates to, etc.). **Candidate for future version** — useful but complex bidirectional relationships.
-
 ### Queries (`/api/v3/queries`)
-- **Reason:** Saved work package filters/views. Internal to OpenProject UI. CLI users can use `wp-list` filters directly instead.
-
-### Wiki Pages (`/api/v3/wiki_pages`)
-- **Reason:** Limited API — read-only in current API v3. No create/update via REST. Would only support listing/reading.
-
-### News (`/api/v3/news`)
-- **Reason:** Read-only in API v3. No create/update/delete endpoints. Project news announcements.
-
-### Budgets (`/api/v3/budgets`)
-- **Reason:** Enterprise-only feature. Financial/cost tracking tied to Enterprise edition.
-
-### Documents (`/api/v3/documents`)
-- **Reason:** Minimal API exposure. Document management is better handled via OpenProject UI or Nextcloud/SharePoint integrations.
-
-### Revisions (`/api/v3/revisions`)
-- **Reason:** Read-only. SCM/repository changesets linked to work packages. Requires server-side SCM integration (Git/SVN).
-
-### Groups (`/api/v3/groups`)
-- **Reason:** User group management. Admin-only operation. Low value for project management CLI.
-
-### Users (`/api/v3/users`)
-- **Reason:** Admin-only CRUD. Member-list covers project-level user visibility. Full user management is an admin task.
+- **Reason:** 24 endpoints for saved work package filters/views. Internal to OpenProject UI. CLI users can use `wp-list` filters directly. Complex schema-based system with limited CLI value.
 
 ### File Links (`/api/v3/file_links`)
-- **Reason:** External storage integration (Nextcloud, OneDrive, SharePoint). Requires storage integration to be configured server-side.
+- **Reason:** External storage integration (Nextcloud, OneDrive, SharePoint). Requires storage integration configured server-side.
 
 ### Storages & Project Storages (`/api/v3/storages`, `/api/v3/project_storages`)
-- **Reason:** External file storage configuration. Admin-level setup. Not a day-to-day project management action.
+- **Reason:** External file storage configuration. Admin-level setup. 13 endpoints for storage provider management.
 
 ### Grids (`/api/v3/grids`)
 - **Reason:** Dashboard/widget layout configuration. Internal to OpenProject UI rendering. No CLI use case.
@@ -67,53 +69,8 @@ This document lists all 55 API v3 resources, what this skill covers, and what's 
 ### Views (`/api/v3/views`)
 - **Reason:** Saved work package views (Gantt, board, etc.). Internal to OpenProject UI. No CLI equivalent.
 
-### Custom Actions (`/api/v3/custom_actions`)
-- **Reason:** Server-side workflow automation triggers. Read-only via API. Configured in admin settings.
-
-### Custom Fields & Options (`/api/v3/custom_fields`, `/api/v3/custom_field_items`, `/api/v3/custom_options`)
-- **Reason:** Schema configuration for custom fields. Admin-only setup. Custom field *values* are handled via wp-create/wp-update.
-
-### Help Texts (`/api/v3/help_texts`)
-- **Reason:** Attribute help text configuration. Admin-only. No project management use case.
-
-### Placeholder Users (`/api/v3/placeholder_users`)
-- **Reason:** Enterprise-only. Virtual users for resource planning before real users are assigned.
-
-### Capabilities & Actions (`/api/v3/capabilities`, `/api/v3/actions`)
-- **Reason:** Permission introspection. Internal framework resource. Used by OpenProject UI for dynamic permission checks.
-
-### Configuration (`/api/v3/configuration`)
-- **Reason:** Instance-level settings. Read-only. Admin information.
-
-### OAuth (`/api/v3/oauth_applications`, `/api/v3/oauth_client_credentials`)
-- **Reason:** OAuth app management. Admin setup task, not project management.
-
-### My Preferences (`/api/v3/my_preferences`)
-- **Reason:** Personal UI preferences. Not relevant for project management automation.
-
-### Render (`/api/v3/render`)
-- **Reason:** Textile/Markdown rendering utility endpoint. Used internally by OpenProject editor.
-
-### Days (`/api/v3/days`)
-- **Reason:** Working days/non-working days configuration. Calendar configuration, admin-level.
-
-### Posts (`/api/v3/posts`)
-- **Reason:** Forum posts. Limited API, legacy feature in OpenProject.
-
-### Reminders (`/api/v3/reminders`)
-- **Reason:** User-specific notification reminders. Personal notification settings.
-
-### Portfolios & Programs (`/api/v3/portfolios`, `/api/v3/programs`)
-- **Reason:** Enterprise-only. Portfolio/program management for multi-project oversight.
-
-### Project Phases & Definitions (`/api/v3/project_phases`, `/api/v3/project_phase_definitions`)
-- **Reason:** Enterprise-only. Project lifecycle phase tracking.
-
-### Project Statuses (`/api/v3/project_statuses`)
-- **Reason:** Project-level health statuses (on track, at risk, off track). Read-only reference data, low CLI value.
-
 ### Workspace & Workspaces (`/api/v3/workspace`, `/api/v3/workspaces`)
-- **Reason:** Instance/workspace info. Read-only metadata.
+- **Reason:** Newer workspace endpoints that mirror project functionality. Read-only metadata.
 
 ### Values (`/api/v3/values`)
 - **Reason:** Internal value resolution endpoint. Framework utility, not a user-facing resource.
@@ -121,26 +78,17 @@ This document lists all 55 API v3 resources, what this skill covers, and what's 
 ### Example & Examples (`/api/v3/example`, `/api/v3/examples`)
 - **Reason:** API documentation examples. Not real resources.
 
-## 🔮 Candidates for Future Versions
+## Enterprise-Only Features (All Now Covered ✅)
 
-| Resource | Priority | Why |
-|----------|----------|-----|
-| Relations | High | Dependency tracking (blocks, follows, etc.) is very useful for project management |
-| Wiki Pages | Medium | If API adds write support in the future |
-| Users | Medium | If user lookup/search is needed beyond member-list |
-| Notifications | Low | Could be useful for monitoring, but mostly a UI concern |
-| News | Low | If write API becomes available |
-
-## Enterprise-Only Features (Not Available on Community Edition)
-
-These require an OpenProject Enterprise license:
-- Meetings
-- Budgets
-- Placeholder Users
-- Portfolios & Programs
-- Project Phases
+These require an OpenProject Enterprise license but are implemented in the skill:
+- Meetings — read, attachments
+- Budgets — list, read
+- Placeholder Users — full CRUD
+- Portfolios — list, read, update, delete
+- Programs — list, read, update, delete
+- Project Phases — list definitions, read phases
 
 ---
 
 *Based on OpenProject API v3 specification (55 resources, 193 endpoints)*
-*Last updated: 2026-03-09*
+*Last updated: 2026-03-18 (v2.0.0)*

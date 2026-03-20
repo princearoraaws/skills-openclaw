@@ -3,11 +3,16 @@
   "slug": "openproject-by-altf1be",
   "displayName": "OpenProject by altf1be",
   "latest": {
-    "version": "1.1.3",
-    "publishedAt": 1773651167170,
-    "commit": "https://github.com/openclaw/skills/commit/faaf2c9fe64f69fe8af626f2a14abeed7c921dae"
+    "version": "2.0.0",
+    "publishedAt": 1773860460124,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.1.3",
+      "publishedAt": 1773651167170,
+      "commit": "https://github.com/openclaw/skills/commit/faaf2c9fe64f69fe8af626f2a14abeed7c921dae"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1773103768770,
