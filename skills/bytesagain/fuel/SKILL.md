@@ -1,8 +1,10 @@
 ---
 name: "Fuel"
-description: "Terminal-first Fuel manager. Keep your home management data organized with simple commands."
+description: "Track fuel purchases, calculate consumption, and manage refueling records. Use when logging fill-ups, computing fuel economy, or comparing usage trends."
 version: "2.0.0"
 author: "BytesAgain"
+homepage: https://bytesagain.com
+source: https://github.com/bytesagain/ai-skills
 tags: ["organize", "maintenance", "smart-home", "fuel", "home"]
 ---
 

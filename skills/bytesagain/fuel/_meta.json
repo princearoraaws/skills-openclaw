@@ -3,11 +3,16 @@
   "slug": "fuel",
   "displayName": "Fuel",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1773666051964,
-    "commit": "https://github.com/openclaw/skills/commit/cc60fad43f380b67d3d23dd9ee83667bc929162b"
+    "version": "2.0.1",
+    "publishedAt": 1773798404462,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1773666051964,
+      "commit": "https://github.com/openclaw/skills/commit/cc60fad43f380b67d3d23dd9ee83667bc929162b"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1773662496265,
