@@ -3,9 +3,15 @@
   "slug": "seed-drop",
   "displayName": "SeedDrop",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1773733206334,
-    "commit": "https://github.com/openclaw/skills/commit/62d0b677de16973c06009237b554b61d8f33ddff"
+    "version": "1.0.2",
+    "publishedAt": 1773908952350,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1773733206334,
+      "commit": "https://github.com/openclaw/skills/commit/62d0b677de16973c06009237b554b61d8f33ddff"
+    }
+  ]
 }
