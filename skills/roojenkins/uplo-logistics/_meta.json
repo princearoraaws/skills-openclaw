@@ -1,0 +1,11 @@
+{
+  "owner": "roojenkins",
+  "slug": "uplo-logistics",
+  "displayName": "Uplo Logistics",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774014544159,
+    "commit": null
+  },
+  "history": []
+}
