@@ -1,6 +1,6 @@
 ---
 name: bill-manager
-description: Manage daily bills, expenses, and recurring payments with tracking, reminders, and analysis. Use when the user asks about 账单管理、记账、费用管理、支出记录、账单提醒、定期缴费、账单分析、收支统计, or wants to organize personal or household bills, track expenses, set payment reminders, or analyze spending patterns. This skill provides personal finance management assistance.
+description: Manage daily bills, expenses, and recurring payments with tracking, reminders, and analysis. Use when the user asks about bill management, expense tracking, payment reminders, recurring payments, spending analysis, or wants to organize personal or household bills. This skill provides personal finance management assistance.
 ---
 
 # Daily Bill Manager
@@ -29,7 +29,7 @@ This skill helps users manage daily bills, track expenses, and organize recurrin
 
 ## Bill Categories
 
-### 1. Fixed Monthly Bills (固定支出)
+### 1. Fixed Monthly Bills
 
 | Category | Examples | Typical Due Date |
 |----------|----------|------------------|
@@ -39,7 +39,7 @@ This skill helps users manage daily bills, track expenses, and organize recurrin
 | Insurance | Health, life, property | Monthly/quarterly/annual |
 | Subscriptions | Streaming, software, memberships | Monthly/annual |
 
-### 2. Variable Expenses (变动支出)
+### 2. Variable Expenses
 
 | Category | Examples | Tracking Method |
 |----------|----------|-----------------|
@@ -50,7 +50,7 @@ This skill helps users manage daily bills, track expenses, and organize recurrin
 | Healthcare | Medical visits, pharmacy | Per visit |
 | Education | Tuition, courses, books | Per term |
 
-### 3. Periodic/Annual Bills (周期性支出)
+### 3. Periodic/Annual Bills
 
 | Category | Examples | Frequency |
 |----------|----------|-----------|
@@ -73,43 +73,43 @@ This skill helps users manage daily bills, track expenses, and organize recurrin
 ### Basic Bill Record
 
 ```
-账单记录
+Bill Record
 
-账单名称：[名称]
-类别：[固定/变动/周期性]
-金额：¥[金额]
-周期：[月/季/年/一次性]
-到期日：[每月X日/具体日期]
-付款方式：[自动扣款/手动支付/现金]
-收款方：[收款单位]
+Bill Name: [Name]
+Category: [Fixed/Variable/Periodic]
+Amount: $[Amount]
+Frequency: [Monthly/Quarterly/Annual/One-time]
+Due Date: [Day X of month/Specific date]
+Payment Method: [Auto-debit/Manual/Cash]
+Payee: [Recipient]
 
-备注：[其他信息]
+Notes: [Additional info]
 ```
 
 ### Monthly Bill Summary
 
 ```
-月度账单汇总 - [年月]
+Monthly Bill Summary - [Month Year]
 
-【固定支出】
-1. [项目1]：¥[金额]  状态：[已付/待付]
-2. [项目2]：¥[金额]  状态：[已付/待付]
+[Fixed Expenses]
+1. [Item 1]: $[Amount] Status: [Paid/Pending]
+2. [Item 2]: $[Amount] Status: [Paid/Pending]
 ...
-固定支出合计：¥[金额]
+Fixed Expenses Total: $[Amount]
 
-【变动支出】
-1. [类别1]：¥[金额]
-2. [类别2]：¥[金额]
+[Variable Expenses]
+1. [Category 1]: $[Amount]
+2. [Category 2]: $[Amount]
 ...
-变动支出合计：¥[金额]
+Variable Expenses Total: $[Amount]
 
-【本月总支出】
-¥[金额]
+[Total Monthly Expenses]
+$[Amount]
 
-【预算对比】
-预算：¥[金额]
-实际：¥[金额]
-差额：¥[金额] [超支/结余]
+[Budget Comparison]
+Budget: $[Amount]
+Actual: $[Amount]
+Difference: $[Amount] [Over/Under]
 ```
 
 ## Reminder Setup
@@ -134,83 +134,83 @@ This skill helps users manage daily bills, track expenses, and organize recurrin
 ### Monthly Analysis Framework
 
 ```
-月度支出分析 - [年月]
+Monthly Expense Analysis - [Month Year]
 
-一、支出结构
-固定支出占比：[X]%
-变动支出占比：[Y]%
-储蓄率：[Z]%
+I. Expense Structure
+Fixed expenses ratio: [X]%
+Variable expenses ratio: [Y]%
+Savings rate: [Z]%
 
-二、类别分析
-1. 住房：[金额] ([占比]%)
-2. 食品：[金额] ([占比]%)
-3. 交通：[金额] ([占比]%)
-4. 通讯：[金额] ([占比]%)
-5. 其他：[金额] ([占比]%)
+II. Category Analysis
+1. Housing: $[Amount] ([X]%)
+2. Food: $[Amount] ([X]%)
+3. Transportation: $[Amount] ([X]%)
+4. Communications: $[Amount] ([X]%)
+5. Others: $[Amount] ([X]%)
 
-三、趋势对比
-比上月：[增加/减少] [金额]/[百分比]
-比去年同期：[增加/减少] [金额]/[百分比]
+III. Trend Comparison
+vs. last month: [Increase/Decrease] $[Amount]/[X]%
+vs. same month last year: [Increase/Decrease] $[Amount]/[X]%
 
-四、异常支出
-[列出超出预算或异常的项目]
+IV. Abnormal Expenses
+[List items that exceeded budget or were unusual]
 
-五、下月预算建议
-[基于分析结果的建议]
+V. Next Month Budget Recommendations
+[Recommendations based on analysis]
 ```
 
 ### Annual Review Framework
 
 ```
-年度账单回顾 - [年份]
+Annual Bill Review - [Year]
 
-一、年度总支出：¥[金额]
-二、月均支出：¥[金额]
+I. Annual Total Expenses: $[Amount]
+II. Monthly Average: $[Amount]
 
-三、支出类别年度汇总
-[各类别年度总额及占比]
+III. Annual Category Summary
+[Annual totals and ratios by category]
 
-四、大额支出记录
-[超过X元的支出项目]
+IV. Large Expense Records
+[Items exceeding $X]
 
-五、订阅服务审计
-[列出所有订阅及年度费用]
+V. Subscription Service Audit
+[List all subscriptions and annual costs]
 
-六、年度财务目标达成情况
-[储蓄目标、债务偿还等]
+VI. Annual Financial Goal Achievement
+[Savings goals, debt repayment, etc.]
 
-七、下年度预算规划
-[基于本年数据的下年预算]
+VII. Next Year Budget Planning
+[Next year's budget based on current year data]
 ```
 
 ## Usage
 
 ### Basic Recording
 ```
-"记一笔支出"
-"记录今天的账单"
-"帮我记账"
+"Record an expense"
+"Log today's bill"
+"Help me track my spending"
 ```
 
 ### Bill Management
 ```
-"管理月度账单"
-"设置账单提醒"
-"查看待付账单"
+"Manage monthly bills"
+"Set up bill reminders"
+"View pending bills"
 ```
 
 ### Analysis
 ```
-"分析本月支出"
-"查看消费统计"
-"账单分析报告"
+"Analyze this month's expenses"
+"View spending statistics"
+"Bill analysis report"
 ```
 
 ### Budget Planning
 ```
-"制定下月预算"
-"预算规划建议"
-"如何节省开支"
+"Create next month's budget"
+"Budget planning advice"
+"How to save money"
 ```
 
 ## Output Format

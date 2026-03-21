@@ -1,390 +1,422 @@
-# 账单管理模板
+# Bill Management Templates
 
-## 一、日常记账模板
+## I. Daily Expense Recording Templates
 
-### 模板1：简单支出记录
-
-```
-支出记录
-
-日期：[年月日]
-时间：[时分]
-
-支出项目：[名称]
-类别：[餐饮/交通/购物/娱乐/医疗/教育/其他]
-金额：¥[金额]
-支付方式：[现金/信用卡/借记卡/移动支付/其他]
-
-商家/地点：[名称]
-备注：[说明]
-
-记录人：[姓名]
-```
-
-### 模板2：详细账单记录
+### Template 1: Simple Expense Record
 
 ```
-账单详情记录
+Expense Record
 
-━━━━━━━━━━━━━━━━━━━━━━
-基本信息
-━━━━━━━━━━━━━━━━━━━━━━
-账单编号：[编号]
-记录日期：[年月日]
+Date: [YYYY-MM-DD]
+Time: [HH:MM]
 
-━━━━━━━━━━━━━━━━━━━━━━
-支出信息
-━━━━━━━━━━━━━━━━━━━━━━
-支出名称：[名称]
-支出类别：[主类别-子类别]
-支出金额：¥[金额]
-币种：[人民币/美元/其他]
+Expense Item: [Name]
+Category: [Food/Transport/Shopping/Entertainment/Healthcare/Education/Other]
+Amount: $[Amount]
+Payment Method: [Cash/Credit Card/Debit Card/Mobile Payment/Other]
 
-━━━━━━━━━━━━━━━━━━━━━━
-交易信息
-━━━━━━━━━━━━━━━━━━━━━━
-交易日期：[年月日]
-交易时间：[时分]
-交易地点：[地点]
-商家名称：[商家]
+Merchant/Location: [Name]
+Notes: [Description]
 
-━━━━━━━━━━━━━━━━━━━━━━
-支付信息
-━━━━━━━━━━━━━━━━━━━━━━
-支付方式：[方式]
-支付账户：[账户后四位]
-交易单号：[单号]
-发票状态：[已开/未开/不需要]
-
-━━━━━━━━━━━━━━━━━━━━━━
-备注
-━━━━━━━━━━━━━━━━━━━━━━
-[详细说明、用途、关联项目等]
-
-━━━━━━━━━━━━━━━━━━━━━━
-标签
-━━━━━━━━━━━━━━━━━━━━━━
-[标签1] [标签2] [标签3]
+Recorded by: [Name]
 ```
 
-### 模板3：收入记录
+### Template 2: Detailed Bill Record
 
 ```
-收入记录
+Bill Details Record
 
-日期：[年月日]
+━━━━━━━━━━━━━━━━━━━━━━
+Basic Information
+━━━━━━━━━━━━━━━━━━━━━━
+Bill Number: [Number]
+Record Date: [YYYY-MM-DD]
 
-收入类型：[工资/奖金/投资收益/兼职/其他]
-收入金额：¥[金额]
-来源：[来源说明]
+━━━━━━━━━━━━━━━━━━━━━━
+Expense Information
+━━━━━━━━━━━━━━━━━━━━━━
+Expense Name: [Name]
+Expense Category: [Main Category - Subcategory]
+Expense Amount: $[Amount]
+Currency: [USD/EUR/Other]
 
-发放周期：[月薪/季度/年度/一次性]
-税前金额：¥[金额]
-税后金额：¥[金额]
+━━━━━━━━━━━━━━━━━━━━━━
+Transaction Information
+━━━━━━━━━━━━━━━━━━━━━━
+Transaction Date: [YYYY-MM-DD]
+Transaction Time: [HH:MM]
+Transaction Location: [Location]
+Merchant Name: [Merchant]
 
-到账账户：[账户]
-到账日期：[日期]
+━━━━━━━━━━━━━━━━━━━━━━
+Payment Information
+━━━━━━━━━━━━━━━━━━━━━━
+Payment Method: [Method]
+Payment Account: [Last 4 digits]
+Transaction ID: [ID]
+Invoice Status: [Issued/Not Issued/Not Required]
 
-备注：[说明]
+━━━━━━━━━━━━━━━━━━━━━━
+Notes
+━━━━━━━━━━━━━━━━━━━━━━
+[Detailed description, purpose, related projects, etc.]
+
+━━━━━━━━━━━━━━━━━━━━━━
+Tags
+━━━━━━━━━━━━━━━━━━━━━━
+[Tag 1] [Tag 2] [Tag 3]
 ```
 
-## 二、月度账单汇总模板
+### Template 3: Income Record
 
-### 模板4：月度账单总览
+```
+Income Record
+
+Date: [YYYY-MM-DD]
+
+Income Type: [Salary/Bonus/Investment Income/Side Income/Other]
+Income Amount: $[Amount]
+Source: [Source description]
+
+Payment Frequency: [Monthly/Quarterly/Annual/One-time]
+Pre-tax Amount: $[Amount]
+Post-tax Amount: $[Amount]
+
+Receiving Account: [Account]
+Deposit Date: [Date]
+
+Notes: [Description]
+```
+
+## II. Monthly Bill Summary Templates
+
+### Template 4: Monthly Bill Overview
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-月度账单汇总
+Monthly Bill Summary
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-月份：[年月]
+Month: [Month Year]
 
 ┌─────────────────────────────────┐
-│ 收支概览                        │
+│ Income & Expense Overview       │
 ├─────────────────────────────────┤
-│ 本月收入：        ¥[金额]       │
-│ 本月支出：        ¥[金额]       │
-│ 本月结余：        ¥[金额]       │
-│ 储蓄率：          [X]%          │
+│ Monthly Income:        $[Amount]│
+│ Monthly Expenses:      $[Amount]│
+│ Monthly Balance:       $[Amount]│
+│ Savings Rate:          [X]%     │
 └─────────────────────────────────┘
 
 ┌─────────────────────────────────┐
-│ 固定支出                        │
+│ Fixed Expenses                  │
 ├─────────────────────────────────┤
-│ 住房（房租/房贷）：    ¥[金额]  │
-│ 水电煤气：             ¥[金额]  │
-│ 通讯费：               ¥[金额]  │
-│ 保险费：               ¥[金额]  │
-│ 订阅服务：             ¥[金额]  │
-│ 其他固定支出：         ¥[金额]  │
+│ Housing (Rent/Mortgage): $[Amt] │
+│ Utilities:               $[Amt] │
+│ Communications:          $[Amt] │
+│ Insurance:               $[Amt] │
+│ Subscriptions:           $[Amt] │
+│ Other Fixed:             $[Amt] │
 ├─────────────────────────────────┤
-│ 固定支出合计：         ¥[金额]  │
-│ 占总支出比例：         [X]%     │
+│ Fixed Expenses Total:    $[Amt] │
+│ % of Total Expenses:     [X]%   │
 └─────────────────────────────────┘
 
 ┌─────────────────────────────────┐
-│ 变动支出                        │
+│ Variable Expenses               │
 ├─────────────────────────────────┤
-│ 餐饮：                 ¥[金额]  │
-│ 交通：                 ¥[金额]  │
-│ 购物：                 ¥[金额]  │
-│ 娱乐：                 ¥[金额]  │
-│ 医疗：                 ¥[金额]  │
-│ 教育：                 ¥[金额]  │
-│ 其他：                 ¥[金额]  │
+│ Food:                    $[Amt] │
+│ Transportation:          $[Amt] │
+│ Shopping:                $[Amt] │
+│ Entertainment:           $[Amt] │
+│ Healthcare:              $[Amt] │
+│ Education:               $[Amt] │
+│ Other:                   $[Amt] │
 ├─────────────────────────────────┤
-│ 变动支出合计：         ¥[金额]  │
-│ 占总支出比例：         [X]%     │
+│ Variable Expenses Total: $[Amt] │
+│ % of Total Expenses:     [X]%   │
 └─────────────────────────────────┘
 
 ┌─────────────────────────────────┐
-│ 支出类别占比                    │
+│ Expense Category Distribution   │
 ├─────────────────────────────────┤
-│ 住房：[████░░░░░░] [X]%         │
-│ 餐饮：[████░░░░░░] [X]%         │
-│ 交通：[██░░░░░░░░] [X]%         │
-│ 购物：[██░░░░░░░░] [X]%         │
-│ 其他：[████░░░░░░] [X]%         │
+│ Housing: [████░░░░░░] [X]%      │
+│ Food:    [████░░░░░░] [X]%      │
+│ Transport:[██░░░░░░░░] [X]%     │
+│ Shopping:[██░░░░░░░░] [X]%      │
+│ Other:   [████░░░░░░] [X]%      │
 └─────────────────────────────────┘
 
 ┌─────────────────────────────────┐
-│ 预算执行情况                    │
+│ Budget Performance              │
 ├─────────────────────────────────┤
-│ 预算金额：            ¥[金额]   │
-│ 实际支出：            ¥[金额]   │
-│ 差额：                ¥[金额]   │
-│ 执行率：              [X]%      │
-│ 状态：[超支/结余/持平]         │
+│ Budget Amount:         $[Amount]│
+│ Actual Spending:       $[Amount]│
+│ Difference:            $[Amount]│
+│ Execution Rate:        [X]%     │
+│ Status: [Over/Under/On Track]   │
 └─────────────────────────────────┘
 
-记录日期：[日期]
+Record Date: [Date]
 ```
 
-### 模板5：月度账单明细表
+### Template 5: Monthly Bill Detail Table
 
 ```
-月度账单明细表 - [年月]
+Monthly Bill Detail Table - [Month Year]
 
-日期        类别      项目名称        金额      支付方式    状态
+Date        Category   Item Name       Amount    Payment    Status
 ─────────────────────────────────────────────────────────────
-[日期]    [类别]    [名称]        [金额]    [方式]      [已付]
-[日期]    [类别]    [名称]        [金额]    [方式]      [待付]
-...       ...       ...           ...       ...         ...
+[Date]    [Cat]     [Name]        [Amt]     [Method]   [Paid]
+[Date]    [Cat]     [Name]        [Amt]     [Method]   [Pending]
+...       ...       ...           ...       ...        ...
 ─────────────────────────────────────────────────────────────
-合计                          ¥[金额]
+Total                          $[Amount]
 
-按类别汇总：
+Category Summary:
 ─────────────────────────────────────────────────────────────
-类别            金额        占比        笔数
+Category        Amount      Ratio       Count
 ─────────────────────────────────────────────────────────────
-[类别1]       ¥[金额]     [X]%        [N]笔
-[类别2]       ¥[金额]     [X]%        [N]笔
+[Cat 1]       $[Amt]      [X]%        [N] items
+[Cat 2]       $[Amt]      [X]%        [N] items
 ...           ...         ...         ...
 ─────────────────────────────────────────────────────────────
-总计          ¥[金额]     100%        [N]笔
+Total         $[Amount]   100%        [N] items
 ```
 
-## 三、定期账单管理模板
+## III. Recurring Bill Management Templates
 
-### 模板6：定期账单跟踪表
+### Template 6: Recurring Bill Tracking Table
 
 ```
-定期账单跟踪表
+Recurring Bill Tracking Table
 
-账单名称：[名称]
-账单类别：[固定/周期性]
-支付周期：[月/季/年]
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-账单信息
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-收款方：[单位名称]
-账户信息：[账号/户号]
-应付金额：¥[金额]
-付款截止日：每月[X]日/每季度[X]月[X]日/每年[X]月[X]日
+Bill Name: [Name]
+Bill Category: [Fixed/Periodic]
+Payment Frequency: [Monthly/Quarterly/Annual]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-支付方式
+Bill Information
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-[ ] 自动扣款    扣款账户：[账户]
-[ ] 手动支付    支付方式：[方式]
-[ ] 现金支付
+Payee: [Company Name]
+Account Info: [Account Number]
+Amount Due: $[Amount]
+Payment Due Date: [Day X of month/Quarterly date/Annual date]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-历史记录
+Payment Method
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[ ] Auto-debit    Debit Account: [Account]
+[ ] Manual        Payment Method: [Method]
+[ ] Cash
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+History
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-周期        应付金额    实付金额    支付日期    状态      备注
+Period      Amount Due    Amount Paid   Payment Date  Status    Notes
 ─────────────────────────────────────────────────────────
-[年月]    ¥[金额]    ¥[金额]    [日期]     [已付]    [说明]
-[年月]    ¥[金额]    ¥[金额]    [日期]     [已付]    [说明]
-[年月]    ¥[金额]    ¥[金额]    [日期]     [逾期]    [说明]
-...       ...        ...        ...        ...       ...
+[Month]     $[Amt]        $[Amt]        [Date]        [Paid]    [Note]
+[Month]     $[Amt]        $[Amt]        [Date]        [Paid]    [Note]
+[Month]     $[Amt]        $[Amt]        [Date]        [Overdue] [Note]
+...         ...           ...           ...           ...       ...
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-提醒设置
+Reminder Settings
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-提前提醒：[X]天
-提醒方式：[短信/邮件/日历/APP]
+Advance Reminder: [X] days
+Reminder Method: [SMS/Email/Calendar/App]
 
-下次付款：
-应付日期：[日期]
-提醒日期：[日期]
+Next Payment:
+Due Date: [Date]
+Reminder Date: [Date]
 ```
 
-### 模板7：订阅服务清单
+### Template 7: Subscription Service List
 
 ```
-订阅服务管理清单
+Subscription Service Management List
 
-更新日期：[日期]
+Last Updated: [Date]
 
-┌────┬──────────┬────────┬────────┬────────┬────────┐
-│ 序号│ 服务名称  │ 周期   │ 金额   │ 下次扣款│ 备注   │
-├────┼──────────┼────────┼────────┼────────┼────────┤
-│ 1  │ [名称]   │ 月/年  │ ¥[金额]│ [日期] │ [说明] │
-│ 2  │ [名称]   │ 月/年  │ ¥[金额]│ [日期] │ [说明] │
-│ 3  │ [名称]   │ 月/年  │ ¥[金额]│ [日期] │ [说明] │
-│ ...│ ...      │ ...    │ ...    │ ...    │ ...    │
-├────┼──────────┼────────┼────────┼────────┼────────┤
-│    │ 月度合计  │        │ ¥[金额]│        │        │
-│    │ 年度合计  │        │ ¥[金额]│        │        │
-└────┴──────────┴────────┴────────┴────────┴────────┘
+┌────┬──────────┬────────┬────────┬───────────┬────────┐
+│ No.│ Service  │ Cycle  │ Amount │ Next Debit│ Notes  │
+├────┼──────────┼────────┼────────┼───────────┼────────┤
+│ 1  │ [Name]   │ M/Y    │ $[Amt] │ [Date]    │ [Note] │
+│ 2  │ [Name]   │ M/Y    │ $[Amt] │ [Date]    │ [Note] │
+│ 3  │ [Name]   │ M/Y    │ $[Amt] │ [Date]    │ [Note] │
+│ ...│ ...      │ ...    │ ...    │ ...       │ ...    │
+├────┼──────────┼────────┼────────┼───────────┼────────┤
+│    │ Monthly  │        │ $[Amt] │           │        │
+│    │ Annual   │        │ $[Amt] │           │        │
+└────┴──────────┴────────┴────────┴───────────┴────────┘
 
-使用频率评估：
-[服务1]：经常使用 / 偶尔使用 / 很少使用 → [建议保留/考虑取消]
-[服务2]：经常使用 / 偶尔使用 / 很少使用 → [建议保留/考虑取消]
+Usage Frequency Assessment:
+[Service 1]: Frequently / Occasionally / Rarely → [Keep/Consider Canceling]
+[Service 2]: Frequently / Occasionally / Rarely → [Keep/Consider Canceling]
 ...
 
-年度订阅优化建议：
-[建议内容]
+Annual Subscription Optimization Suggestions:
+[Suggestions]
 ```
 
-## 四、年度账单模板
+## IV. Annual Bill Templates
 
-### 模板8：年度账单汇总
+### Template 8: Annual Bill Summary
 
 ```
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-年度账单汇总报告
+Annual Bill Summary Report
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-年份：[年份]
+Year: [Year]
 
 ════════════════════════════════════════
-一、年度收支总览
+I. Annual Income & Expense Overview
 ════════════════════════════════════════
 
-年度总收入：              ¥[金额]
-年度总支出：              ¥[金额]
-年度净储蓄：              ¥[金额]
-平均月支出：              ¥[金额]
-储蓄率：                  [X]%
+Annual Total Income:           $[Amount]
+Annual Total Expenses:         $[Amount]
+Annual Net Savings:            $[Amount]
+Average Monthly Expenses:      $[Amount]
+Savings Rate:                  [X]%
 
 ════════════════════════════════════════
-二、月度支出趋势
+II. Monthly Expense Trends
 ════════════════════════════════════════
 
-月份      支出金额    收入金额    结余
+Month     Expenses    Income      Balance
 ────────────────────────────────────────
-1月       ¥[金额]    ¥[金额]    ¥[金额]
-2月       ¥[金额]    ¥[金额]    ¥[金额]
-...       ...        ...        ...
-12月      ¥[金额]    ¥[金额]    ¥[金额]
+Jan       $[Amt]      $[Amt]      $[Amt]
+Feb       $[Amt]      $[Amt]      $[Amt]
+...       ...         ...         ...
+Dec       $[Amt]      $[Amt]      $[Amt]
 ────────────────────────────────────────
-平均      ¥[金额]    ¥[金额]    ¥[金额]
+Average   $[Amt]      $[Amt]      $[Amt]
 
-支出最高月份：[月份] ¥[金额]
-支出最低月份：[月份] ¥[金额]
+Highest Expense Month: [Month] $[Amount]
+Lowest Expense Month:  [Month] $[Amount]
 
 ════════════════════════════════════════
-三、支出类别年度分析
+III. Annual Category Analysis
 ════════════════════════════════════════
 
-类别            年度金额    占比    月均    趋势
+Category        Annual Amt    Ratio   Monthly Avg   Trend
 ────────────────────────────────────────
-住房            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
-餐饮            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
-交通            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
-购物            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
-通讯            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
-娱乐            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
-医疗            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
-教育            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
-保险            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
-其他            ¥[金额]    [X]%   ¥[金额]  [↑/↓/→]
+Housing         $[Amt]        [X]%    $[Amt]        [↑/↓/→]
+Food            $[Amt]        [X]%    $[Amt]        [↑/↓/→]
+Transportation  $[Amt]        [X]%    $[Amt]        [↑/↓/→]
+Shopping        $[Amt]        [X]%    $[Amt]        [↑/↓/→]
+Communications  $[Amt]        [X]%    $[Amt]        [↑/↓/→]
+Entertainment   $[Amt]        [X]%    $[Amt]        [↑/↓/→]
+Healthcare      $[Amt]        [X]%    $[Amt]        [↑/↓/→]
+Education       $[Amt]        [X]%    $[Amt]        [↑/↓/→]
+Insurance       $[Amt]        [X]%    $[Amt]        [↑/↓/→]
+Other           $[Amt]        [X]%    $[Amt]        [↑/↓/→]
 ────────────────────────────────────────
-总计            ¥[金额]    100%   ¥[金额]
+Total           $[Amount]     100%    $[Amount]
 
 ════════════════════════════════════════
-四、大额支出记录
+IV. Large Expense Records
 ════════════════════════════════════════
 
-日期        项目            金额        类别
+Date        Item            Amount      Category
 ────────────────────────────────────────
-[日期]    [项目名称]    ¥[金额]    [类别]
-[日期]    [项目名称]    ¥[金额]    [类别]
+[Date]    [Item Name]     $[Amount]   [Category]
+[Date]    [Item Name]     $[Amount]   [Category]
 ...
 
-大额支出总计：¥[金额]
-占总支出比例：[X]%
+Large Expenses Total: $[Amount]
+% of Total Expenses:  [X]%
 
 ════════════════════════════════════════
-五、订阅服务年度审计
+V. Annual Subscription Audit
 ════════════════════════════════════════
 
-服务总数：[N]个
-年度订阅费用：¥[金额]
-月均订阅费用：¥[金额]
+Total Services: [N]
+Annual Subscription Cost: $[Amount]
+Monthly Average: $[Amount]
 
-订阅清单：
-[服务1]：¥[金额]/[周期]
-[服务2]：¥[金额]/[周期]
+Subscription List:
+[Service 1]: $[Amount]/[Cycle]
+[Service 2]: $[Amount]/[Cycle]
 ...
 
-优化建议：
-[建议内容]
+Optimization Suggestions:
+[Suggestions]
 
 ════════════════════════════════════════
-六、年度财务目标回顾
+VI. Annual Financial Goal Review
 ════════════════════════════════════════
 
-目标1：[描述]
-目标金额：¥[金额]
-实际完成：¥[金额]
-完成率：[X]% [✓达成/✗未达成]
+Goal 1: [Description]
+Target Amount: $[Amount]
+Actual Achieved: $[Amount]
+Achievement Rate: [X]% [✓Achieved/✗Not Achieved]
 
-目标2：[描述]
-...
-
-════════════════════════════════════════
-七、下年度预算规划
-════════════════════════════════════════
-
-建议年度预算：¥[金额]
-建议月均预算：¥[金额]
-
-各类别预算分配：
-住房：[X]% ¥[金额]
-餐饮：[X]% ¥[金额]
+Goal 2: [Description]
 ...
 
 ════════════════════════════════════════
-报告生成日期：[日期]
+VII. Next Year Budget Planning
+════════════════════════════════════════
+
+Suggested Annual Budget: $[Amount]
+Suggested Monthly Budget: $[Amount]
+
+Category Budget Allocation:
+Housing: [X]% $[Amount]
+Food:    [X]% $[Amount]
+...
+
+════════════════════════════════════════
+Report Generated: [Date]
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ```
 
-## 五、预算规划模板
+## V. Budget Planning Templates
 
-### 模板9：月度预算规划
+### Template 9: Monthly Budget Planning
 
 ```
-月度预算规划表 - [年月]
+Monthly Budget Planning Table - [Month Year]
 
-收入预算：
+Income Budget:
 ─────────────────────────────────
-收入来源        预算金额    备注
+Income Source   Budget Amt    Notes
 ─────────────────────────────────
-工资收入        ¥[金额]    [说明]
-其他收入        ¥[金额]    [说明]
-────────────────────────────────
+Salary          $[Amount]     [Note]
+Other Income    $[Amount]     [Note]
+─────────────────────────────────
+Total Income    $[Amount]
+
+Expense Budget:
+─────────────────────────────────────────────────────────
+Category            Budget Amt    Historical Avg    Adjustment
+─────────────────────────────────────────────────────────
+[Fixed Expenses]
+Housing             $[Amount]     $[Amount]         [Note]
+Communications      $[Amount]     $[Amount]         [Note]
+Insurance           $[Amount]     $[Amount]         [Note]
+Subscriptions       $[Amount]     $[Amount]         [Note]
+Subtotal            $[Amount]     $[Amount]
+
+[Variable Expenses]
+Food                $[Amount]     $[Amount]         [Note]
+Transportation      $[Amount]     $[Amount]         [Note]
+Shopping            $[Amount]     $[Amount]         [Note]
+Entertainment       $[Amount]     $[Amount]         [Note]
+Healthcare          $[Amount]     $[Amount]         [Reserve]
+Other               $[Amount]     $[Amount]         [Note]
+Subtotal            $[Amount]     $[Amount]
+
+[Savings & Investment]
+Emergency Fund      $[Amount]                       [Goal]
+Long-term Investment$[Amount]                       [Goal]
+Short-term Savings  $[Amount]                       [Goal]
+Subtotal            $[Amount]
+
+─────────────────────────────────────────────────────────
+Total Expenses      $[Amount]
+Budget Balance      $[Amount]   [Should be ~0 or positive]
+```

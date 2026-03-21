@@ -1,341 +1,341 @@
-# 预算规划指南
+# Budget Planning Guide
 
-## 一、预算规划基础
+## I. Budget Planning Fundamentals
 
-### 什么是预算
+### What is a Budget
 
-预算是根据收入和支出情况，对未来一段时间内的资金分配进行计划和管理的过程。
+A budget is the process of planning and managing the allocation of funds for a future period based on income and expense situations.
 
-### 预算的作用
+### Purpose of Budgeting
 
-1. **控制支出**：避免过度消费
-2. **实现目标**：为储蓄和投资规划
-3. **减少压力**：提前规划减少财务焦虑
-4. **优化配置**：合理分配有限资源
-5. **发现问题**：及时发现异常支出
+1. **Control Spending**: Avoid overspending
+2. **Achieve Goals**: Plan for savings and investments
+3. **Reduce Stress**: Advance planning reduces financial anxiety
+4. **Optimize Allocation**: Reasonably allocate limited resources
+5. **Identify Problems**: Detect abnormal expenses early
 
-## 二、预算制定方法
+## II. Budgeting Methods
 
-### 方法1：50/30/20法则
+### Method 1: 50/30/20 Rule
 
-**收入分配**：
-- **50% - 必需支出**：住房、食物、交通、保险等
-- **30% - 个人消费**：娱乐、购物、外出就餐等
-- **20% - 储蓄和债务**：储蓄、投资、还债
+**Income Allocation**:
+- **50% - Essential Expenses**: Housing, food, transportation, insurance, etc.
+- **30% - Personal Spending**: Entertainment, shopping, dining out, etc.
+- **20% - Savings & Debt**: Savings, investments, debt repayment
 
-**适用人群**：收入稳定、希望简单规划的人
+**Suitable for**: People with stable income who want simple planning
 
-### 方法2： envelope system（信封法）
+### Method 2: Envelope System
 
-**操作方式**：
-1. 将现金分装入不同信封（不同类别）
-2. 每个类别用完即止
-3. 月末剩余可转入储蓄
+**How it works**:
+1. Divide cash into different envelopes (different categories)
+2. Stop spending when each category is exhausted
+3. Transfer remaining funds to savings at month end
 
-**适用人群**：现金支付为主、需要严格控制的人
+**Suitable for**: People who mainly use cash and need strict control
 
-### 方法3：零基预算
+### Method 3: Zero-Based Budget
 
-**原则**：
-- 收入 - 支出 = 0（每分钱都有去处）
-- 包括储蓄作为"支出"项
+**Principle**:
+- Income - Expenses = 0 (Every dollar has a destination)
+- Include savings as an "expense" item
 
-**步骤**：
-1. 列出所有支出类别
-2. 分配具体金额
-3. 确保总和等于收入
+**Steps**:
+1. List all expense categories
+2. Allocate specific amounts
+3. Ensure total equals income
 
-**适用人群**：希望精细管理、有明确目标的人
+**Suitable for**: People who want detailed management with clear goals
 
-### 方法4：60%解决方案
+### Method 4: 60% Solution
 
-**收入分配**：
-- **60% - 承诺支出**：所有固定和必要支出
-- **10% - 退休储蓄**
-- **10% - 长期储蓄**
-- **10% - 短期储蓄**
-- **10% - 娱乐消费**
+**Income Allocation**:
+- **60% - Committed Expenses**: All fixed and necessary expenses
+- **10% - Retirement Savings**
+- **10% - Long-term Savings**
+- **10% - Short-term Savings**
+- **10% - Entertainment Spending**
 
-**适用人群**：希望平衡当下与未来的人
+**Suitable for**: People who want to balance present and future
 
-## 三、预算制定步骤
+## III. Budgeting Steps
 
-### 步骤1：分析历史数据
+### Step 1: Analyze Historical Data
 
-**收集信息**：
-- 过去3-6个月的支出记录
-- 收入来源和金额
-- 固定支出清单
-- 变动支出规律
+**Collect Information**:
+- Past 3-6 months of expense records
+- Income sources and amounts
+- Fixed expense list
+- Variable expense patterns
 
-**分析方法**：
+**Analysis Method**:
 ```
-1. 计算月均支出总额
-2. 分析各类别占比
-3. 识别异常支出
-4. 找出可优化项目
-5. 确定基础消费水平
+1. Calculate average monthly total expenses
+2. Analyze category proportions
+3. Identify abnormal expenses
+4. Find optimizable items
+5. Determine basic consumption level
 ```
 
-### 步骤2：设定财务目标
+### Step 2: Set Financial Goals
 
-#### 短期目标（1年内）
-- 建立应急基金（3-6个月支出）
-- 偿还高息债务
-- 特定储蓄目标（如旅行、购物）
+#### Short-term Goals (Within 1 year)
+- Build emergency fund (3-6 months expenses)
+- Repay high-interest debt
+- Specific savings goals (e.g., travel, shopping)
 
-#### 中期目标（1-5年）
-- 大额消费（车、房首付）
-- 教育基金
-- 创业资金
+#### Medium-term Goals (1-5 years)
+- Large purchases (car, house down payment)
+- Education fund
+- Startup capital
 
-#### 长期目标（5年以上）
-- 退休规划
-- 子女教育
-- 财务自由
+#### Long-term Goals (5+ years)
+- Retirement planning
+- Children's education
+n- Financial independence
 
-### 步骤3：制定预算方案
+### Step 3: Create Budget Plan
 
-#### 收入预算
+#### Income Budget
 
 ```
-月收入预算表
+Monthly Income Budget Table
 
-收入来源          金额      稳定性    备注
+Income Source     Amount    Stability    Notes
 ─────────────────────────────────────────
-工资收入        ¥[金额]   固定      税后
-兼职收入        ¥[金额]   浮动      预估
-投资收益        ¥[金额]   浮动      保守估计
-其他收入        ¥[金额]   不定      
+Salary Income     $[Amt]    Fixed        After-tax
+Side Income       $[Amt]    Variable     Estimated
+Investment Income $[Amt]    Variable     Conservative
+Other Income      $[Amt]    Irregular    
 ─────────────────────────────────────────
-总收入          ¥[金额]
+Total Income      $[Amt]
 ```
 
-#### 支出预算
+#### Expense Budget
 
 ```
-月支出预算表
+Monthly Expense Budget Table
 
-类别              预算金额    历史平均    调整说明
+Category              Budget Amt    Historical Avg    Adjustment
 ─────────────────────────────────────────
-【固定支出】
-住房            ¥[金额]    ¥[金额]    [说明]
-通讯            ¥[金额]    ¥[金额]    [说明]
-保险            ¥[金额]    ¥[金额]    [说明]
-订阅服务        ¥[金额]    ¥[金额]    [说明]
-小计            ¥[金额]    ¥[金额]
+[Fixed Expenses]
+Housing               $[Amt]        $[Amt]            [Note]
+Communications        $[Amt]        $[Amt]            [Note]
+Insurance             $[Amt]        $[Amt]            [Note]
+Subscriptions         $[Amt]        $[Amt]            [Note]
+Subtotal              $[Amt]        $[Amt]
 
-【变动支出】
-餐饮            ¥[金额]    ¥[金额]    [说明]
-交通            ¥[金额]    ¥[金额]    [说明]
-购物            ¥[金额]    ¥[金额]    [说明]
-娱乐            ¥[金额]    ¥[金额]    [说明]
-医疗            ¥[金额]    ¥[金额]    [预留]
-其他            ¥[金额]    ¥[金额]    [说明]
-小计            ¥[金额]    ¥[金额]
+[Variable Expenses]
+Food                  $[Amt]        $[Amt]            [Note]
+Transportation        $[Amt]        $[Amt]            [Note]
+Shopping              $[Amt]        $[Amt]            [Note]
+Entertainment         $[Amt]        $[Amt]            [Note]
+Healthcare            $[Amt]        $[Amt]            [Reserve]
+Other                 $[Amt]        $[Amt]            [Note]
+Subtotal              $[Amt]        $[Amt]
 
-【储蓄投资】
-应急基金        ¥[金额]            [目标导向]
-长期投资        ¥[金额]            [目标导向]
-短期储蓄        ¥[金额]            [目标导向]
-小计            ¥[金额]
+[Savings & Investment]
+Emergency Fund        $[Amt]                          [Goal]
+Long-term Investment  $[Amt]                          [Goal]
+Short-term Savings    $[Amt]                          [Goal]
+Subtotal              $[Amt]
 
 ─────────────────────────────────────────
-总支出          ¥[金额]
-预算余额        ¥[金额]   [应接近0或为正]
+Total Expenses        $[Amt]
+Budget Balance        $[Amt]   [Should be ~0 or positive]
 ```
 
-### 步骤4：设定预算规则
+### Step 4: Set Budget Rules
 
-#### 硬性规则
-- 固定支出必须优先保障
-- 储蓄目标必须完成
-- 某类别超支需从其他类别调剂
+#### Hard Rules
+- Fixed expenses must be prioritized
+- Savings goals must be completed
+- Category overruns must be balanced from other categories
 
-#### 弹性规则
-- 变动支出可上下浮动10-20%
-- 娱乐消费可调剂
-- 月度间可适度借用
+#### Flexible Rules
+- Variable expenses can fluctuate 10-20%
+- Entertainment spending can be adjusted
+- Moderate borrowing between months is acceptable
 
-### 步骤5：执行与监控
+### Step 5: Execute & Monitor
 
-#### 执行要点
-1. 按预算分配资金
-2. 记录每笔支出
-3. 定期对比实际vs预算
-4. 及时调整
+#### Execution Points
+1. Allocate funds according to budget
+2. Record every expense
+3. Regularly compare actual vs. budget
+4. Adjust in a timely manner
 
-#### 监控频率
-- **每日**：记录支出
-- **每周**：快速回顾
-- **每月**：详细分析
-- **每季**：策略调整
-- **每年**：全面复盘
+#### Monitoring Frequency
+- **Daily**: Record expenses
+- **Weekly**: Quick review
+- **Monthly**: Detailed analysis
+- **Quarterly**: Strategy adjustment
+- **Annually**: Comprehensive review
 
-## 四、预算调整策略
+## IV. Budget Adjustment Strategies
 
-### 超支处理
+### Handling Overruns
 
-#### 轻度超支（<10%）
-- 下月相应类别减少
-- 从储蓄中适度调剂
-- 分析原因避免重复
+#### Mild Overrun (<10%)
+- Reduce corresponding category next month
+- Moderately adjust from savings
+- Analyze causes to avoid repetition
 
-#### 中度超支（10-20%）
-- 全面审视预算合理性
-- 削减非必需支出
-- 调整后续月份预算
+#### Moderate Overrun (10-20%)
+- Comprehensively review budget rationality
+- Cut non-essential expenses
+- Adjust subsequent months' budgets
 
-#### 严重超支（>20%）
-- 紧急审查所有支出
-- 暂停非必要消费
-- 重新制定预算方案
+#### Severe Overrun (>20%)
+- Urgently review all expenses
+- Pause non-essential consumption
+- Recreate budget plan
 
-### 节余处理
+### Handling Surplus
 
-#### 当月节余
-- 转入储蓄账户
-- 用于提前还债
-- 累计到下月预算
+#### Monthly Surplus
+- Transfer to savings account
+- Use for early debt repayment
+- Carry over to next month's budget
 
-#### 持续节余
-- 提高储蓄比例
-- 增加投资金额
-- 适度提升生活质量
+#### Continuous Surplus
+- Increase savings ratio
+- Increase investment amount
+- Moderately improve quality of life
 
-## 五、特殊场景预算
+## V. Special Scenario Budgets
 
-### 场景1：收入不稳定
+### Scenario 1: Unstable Income
 
-**策略**：
-1. 以最低月收入为基准
-2. 建立更充足的应急基金（6-12个月）
-3. 收入高时加大储蓄
-4. 保守估计变动收入
+**Strategy**:
+1. Use minimum monthly income as baseline
+2. Build more adequate emergency fund (6-12 months)
+3. Increase savings when income is high
+4. Conservatively estimate variable income
 
-**预算公式**：
+**Budget Formula**:
 ```
-基础预算 = 最低月收入 × 80%
-旺季额外收入 → 50%储蓄 + 30%目标 + 20%享受
-```
-
-### 场景2：有大额债务
-
-**策略**：
-1. 采用"债务雪崩法"或"债务雪球法"
-2. 最小化非必需支出
-3. 优先还高息债务
-4. 债务还清前减少储蓄
-
-**债务雪崩法**：
-- 优先偿还利率最高的债务
-- 数学上最优
-
-**债务雪球法**：
-- 优先偿还金额最小的债务
-- 心理上更有成就感
-
-### 场景3：准备购房
-
-**策略**：
-1. 压缩非必需支出至最低
-2. 首付目标明确储蓄计划
-3. 模拟房贷压力测试
-4. 预留装修和搬家费用
-
-**压力测试**：
-```
-月供 + 物业费 + 维修基金 ≤ 月收入 × 35%
+Base Budget = Minimum Monthly Income × 80%
+Peak Season Extra Income → 50% Savings + 30% Goals + 20% Enjoyment
 ```
 
-### 场景4：家庭育儿
+### Scenario 2: Large Debt
 
-**策略**：
-1. 单独设立育儿预算
-2. 区分必要和可选支出
-3. 提前规划教育基金
-4. 考虑保险配置
+**Strategy**:
+1. Use "Debt Avalanche" or "Debt Snowball" method
+2. Minimize non-essential expenses
+3. Prioritize high-interest debt
+4. Reduce savings until debt is cleared
 
-**育儿支出参考**：
-- 0-3岁：月均2000-5000元
-- 3-6岁：月均3000-8000元
-- 学龄期：月均2000-6000元（不含学费）
+**Debt Avalanche Method**:
+- Prioritize paying off highest interest debt first
+- Mathematically optimal
 
-## 六、预算工具推荐
+**Debt Snowball Method**:
+- Prioritize paying off smallest debt first
+- More psychologically rewarding
 
-### 记账工具
+### Scenario 3: Preparing to Buy a House
 
-| 工具类型 | 推荐 | 特点 |
-|---------|------|------|
-| APP记账 | 随手记、挖财、MoneyWiz | 自动同步、图表分析 |
-| 表格记账 | Excel/Google Sheets | 灵活定制、免费 |
-| 专业软件 | YNAB、Quicken | 功能全面、付费 |
+**Strategy**:
+1. Compress non-essential expenses to minimum
+2. Clear down payment savings goal
+3. Simulate mortgage stress test
+4. Reserve funds for renovation and moving
 
-### 预算模板
+**Stress Test**:
+```
+Monthly Payment + Property Fees + Maintenance Fund ≤ Monthly Income × 35%
+```
 
-1. **月度预算表**：收入和支出明细
-2. **年度预算表**：全年规划和回顾
-3. **专项预算表**：特定目标（如旅行、装修）
-4. **债务还款表**：债务清偿计划
+### Scenario 4: Family with Children
 
-## 七、预算常见问题
+**Strategy**:
+1. Set up separate child-rearing budget
+2. Distinguish between necessary and optional expenses
+3. Plan education fund in advance
+4. Consider insurance configuration
 
-### Q1：预算总是做不准怎么办？
+**Child-rearing Expense Reference**:
+- Ages 0-3: $300-800/month
+- Ages 3-6: $500-1,200/month
+- School age: $300-900/month (excluding tuition)
 
-**解决**：
-1. 从记录开始，不急于制定严格预算
-2. 前3个月只记录不限制
-3. 基于实际数据制定预算
-4. 每月调整，逐步优化
+## VI. Budget Tool Recommendations
 
-### Q2：如何坚持执行预算？
+### Expense Tracking Tools
 
-**建议**：
-1. 设定具体可实现的目标
-2. 使用工具自动化记录
-3. 每周回顾，及时调整
-4. 给自己适度奖励
-5. 找到 accountability partner（ accountability伙伴）
+| Tool Type | Recommendation | Features |
+|-----------|----------------|----------|
+| Mobile Apps | Mint, YNAB, PocketGuard | Auto-sync, chart analysis |
+| Spreadsheets | Excel/Google Sheets | Flexible customization, free |
+| Professional Software | Quicken, Moneydance | Comprehensive features, paid |
 
-### Q3：意外支出如何纳入预算？
+### Budget Templates
 
-**方法**：
-1. 设立"意外支出"类别（建议占收入5-10%）
-2. 建立应急基金
-3. 购买适当保险转移风险
-4. 大额意外考虑分期或借款
+1. **Monthly Budget Table**: Income and expense details
+2. **Annual Budget Table**: Year-round planning and review
+3. **Special Project Budget Table**: Specific goals (e.g., travel, renovation)
+4. **Debt Repayment Table**: Debt clearance plan
 
-### Q4：预算和享受生活如何平衡？
+## VII. Common Budget Questions
 
-**原则**：
-1. 预算不是苦行僧，要可持续
-2. 保留适度的娱乐预算
-3. 为重要体验预留资金
-4. 区分"想要"和"需要"
-5. 长期目标与当下享受并重
+### Q1: What if my budget is always inaccurate?
 
-## 八、预算检查清单
+**Solution**:
+1. Start with recording, don't rush to create strict budgets
+2. First 3 months: record only, no restrictions
+3. Create budget based on actual data
+4. Adjust monthly, gradually optimize
 
-### 制定预算时
-- [ ] 分析了至少3个月的历史数据
-- [ ] 设定了明确的财务目标
-- [ ] 区分了固定和变动支出
-- [ ] 包含了储蓄作为必要支出
-- [ ] 预留了意外支出空间
-- [ ] 预算总额不超过收入
+### Q2: How to stick to my budget?
 
-### 执行预算时
-- [ ] 每日记录支出
-- [ ] 每周回顾执行情况
-- [ ] 超支时及时调整
-- [ ] 节余时合理分配
-- [ ] 每月进行详细分析
-- [ ] 根据实际情况调整预算
+**Suggestions**:
+1. Set specific, achievable goals
+2. Use tools for automated recording
+3. Weekly review, timely adjustment
+4. Give yourself moderate rewards
+5. Find an accountability partner
 
-### 年度复盘时
-- [ ] 回顾全年预算执行情况
-- [ ] 分析主要偏差原因
-- [ ] 评估目标达成度
-- [ ] 调整下年预算策略
-- [ ] 更新财务目标
-- [ ] 优化预算工具和流程
+### Q3: How to incorporate unexpected expenses into budget?
+
+**Method**:
+1. Set up "Unexpected Expenses" category (suggest 5-10% of income)
+2. Build emergency fund
+3. Purchase appropriate insurance to transfer risk
+4. Consider installment or borrowing for large unexpected expenses
+
+### Q4: How to balance budget and enjoying life?
+
+**Principles**:
+1. Budgeting isn't asceticism; it should be sustainable
+2. Reserve moderate entertainment budget
+3. Allocate funds for important experiences
+4. Distinguish between "wants" and "needs"
+5. Balance long-term goals with present enjoyment
+
+## VIII. Budget Checklist
+
+### When Creating Budget
+- [ ] Analyzed at least 3 months of historical data
+- [ ] Set clear financial goals
+- [ ] Distinguished between fixed and variable expenses
+- [ ] Included savings as necessary expense
+- [ ] Reserved space for unexpected expenses
+- [ ] Total budget does not exceed income
+
+### When Executing Budget
+- [ ] Record expenses daily
+- [ ] Weekly review of execution
+- [ ] Timely adjustment when over budget
+- [ ] Reasonable allocation of surplus
+- [ ] Monthly detailed analysis
+- [ ] Budget adjustment based on actual situation
+
+### When Annual Review
+- [ ] Review annual budget execution
+- [ ] Analyze main deviation causes
+- [ ] Evaluate goal achievement
+- [ ] Adjust next year's budget strategy
+- [ ] Update financial goals
+- [ ] Optimize budget tools and processes

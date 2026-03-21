@@ -1,251 +1,251 @@
-# 支出分类指南
+# Expense Categorization Guide
 
-## 一、支出分类体系
+## I. Expense Classification System
 
-### 一级分类
+### Primary Categories
 
-1. **固定支出** - 必需且金额相对固定的支出
-2. **变动支出** - 随使用情况变化的支出
-3. **周期性支出** - 非每月发生但定期出现的支出
-4. **意外支出** - 非计划内的突发支出
+1. **Fixed Expenses** - Essential expenses with relatively stable amounts
+2. **Variable Expenses** - Expenses that vary with usage
+3. **Periodic Expenses** - Expenses that don't occur monthly but appear regularly
+4. **Unexpected Expenses** - Unplanned emergency expenses
 
-## 二、详细分类说明
+## II. Detailed Category Descriptions
 
-### （一）固定支出
+### (A) Fixed Expenses
 
-#### 1. 住房相关
+#### 1. Housing Related
 
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 房租 | 租赁住房费用 | 月租、季度租 |
-| 房贷 | 购房贷款还款 | 本金+利息 |
-| 物业费 | 物业管理费 | 小区物业费 |
-| 房屋维修基金 | 专项维修资金 | 按年或按次 |
-| 供暖费 | 冬季供暖费用 | 按面积计算 |
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Rent | Rental housing costs | Monthly rent, quarterly rent |
+| Mortgage | Home loan payments | Principal + interest |
+| Property Fees | Property management fees | Community management fees |
+| Home Maintenance Fund | Special repair funds | Annual or per-occurrence |
+| Heating | Winter heating costs | Calculated by area |
 
-#### 2. 通讯费用
+#### 2. Communication Fees
 
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 手机话费 | 移动通信费 | 套餐费、流量费 |
-| 宽带费 | 网络接入费 | 家庭宽带 |
-| 有线电视 | 电视信号费 | 有线电视、IPTV |
-| 固话费 | 固定电话费 | 如有 |
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Mobile Phone | Mobile communication fees | Plan fees, data charges |
+| Internet | Network access fees | Home broadband |
+| Cable TV | TV signal fees | Cable TV, IPTV |
+| Landline | Fixed phone fees | If applicable |
 
-#### 3. 保险费用
+#### 3. Insurance Fees
 
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 健康保险 | 医疗保险 | 商业医疗险 |
-| 人寿保险 | 寿险保费 | 定期寿险、终身寿险 |
-| 意外保险 | 意外险 | 综合意外险 |
-| 财产保险 | 财产险 | 家财险、车险 |
-| 养老保险 | 补充养老 | 商业养老保险 |
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Health Insurance | Medical insurance | Commercial medical insurance |
+| Life Insurance | Life insurance premiums | Term life, whole life |
+| Accident Insurance | Accident insurance | Comprehensive accident insurance |
+| Property Insurance | Property insurance | Home insurance, auto insurance |
+| Retirement Insurance | Supplementary pension | Commercial retirement insurance |
 
-#### 4. 订阅服务
+#### 4. Subscription Services
 
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 视频会员 | 流媒体订阅 | 爱奇艺、腾讯视频、Netflix |
-| 音乐会员 | 音乐服务 | QQ音乐、网易云、Spotify |
-| 软件订阅 | 工具软件 | Office 365、Adobe、云盘 |
-| 会员服务 | 其他会员 | 健身房、读书会、购物会员 |
-| 新闻资讯 | 付费内容 | 财新、知乎等 |
-
----
-
-### （二）变动支出
-
-#### 1. 餐饮支出
-
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 日常餐饮 | 日常三餐 | 食堂、快餐、外卖 |
-| 食材采购 | 自己做饭 | 超市买菜、生鲜 |
-| 外出就餐 | 餐厅用餐 | 聚餐、宴请、约会 |
-| 零食饮料 | 休闲食品 | 零食、咖啡、奶茶 |
-| 烟酒 | 嗜好品 | 香烟、酒类 |
-
-#### 2. 交通出行
-
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 公共交通 | 公交地铁 | 地铁、公交、打车 |
-| 私家车 | 用车成本 | 油费、停车费、过路费 |
-| 车辆维护 | 保养维修 | 保养、维修、洗车 |
-| 共享出行 | 共享单车/汽车 | 摩拜、滴滴 |
-| 长途交通 | 跨城出行 | 火车、飞机、长途汽车 |
-
-#### 3. 购物消费
-
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 服装鞋帽 | 穿着类 | 衣服、鞋子、配饰 |
-| 日用百货 | 生活用品 | 洗护、清洁、纸品 |
-| 数码电子 | 电子产品 | 手机、电脑、配件 |
-| 家居用品 | 家居装饰 | 家具、家纺、装饰 |
-| 美妆护肤 | 化妆品 | 护肤品、彩妆 |
-
-#### 4. 娱乐休闲
-
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 电影演出 | 文化娱乐 | 电影票、演出票 |
-| 旅游度假 | 旅行支出 | 门票、住宿、交通 |
-| 运动健身 | 体育活动 | 私教、运动装备 |
-| 游戏娱乐 | 游戏相关 | 游戏充值、设备 |
-| 爱好收藏 | 个人爱好 | 书籍、手办、收藏 |
-
-#### 5. 医疗健康
-
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 门诊就医 | 看病费用 | 挂号、检查、药品 |
-| 药品采购 | 日常用药 | 常备药、保健品 |
-| 体检费用 | 健康检查 | 年度体检、专项检查 |
-| 医疗器械 | 医疗用品 | 血压计、血糖仪等 |
-| 心理咨询 | 心理健康 | 心理咨询服务 |
-
-#### 6. 教育学习
-
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 学费 | 正规教育 | 学校学费 |
-| 培训课程 | 职业培训 | 考证、技能培训 |
-| 书籍资料 | 学习材料 | 教材、参考书 |
-| 在线课程 | 网课学习 | 得到、网易云课堂 |
-| 教育工具 | 学习用品 | 文具、电子设备 |
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Video Membership | Streaming subscriptions | Netflix, Hulu, Disney+ |
+| Music Membership | Music services | Spotify, Apple Music |
+| Software Subscriptions | Tool software | Office 365, Adobe, Cloud storage |
+| Membership Services | Other memberships | Gym, book clubs, shopping memberships |
+| News & Information | Paid content | Financial news, premium content |
 
 ---
 
-### （三）周期性支出
+### (B) Variable Expenses
 
-#### 1. 年度固定
+#### 1. Food Expenses
 
-| 类别 | 说明 | 示例 |
-|-----|------|------|
-| 车险 | 车辆保险 | 交强险、商业险 |
-| 年检费用 | 车辆年检 | 检测费 |
-| 房产税 | 房产相关税费 | 如适用 |
-| 物业费年费 | 年度物业费 | 如按年缴纳 |
-| 取暖费 | 年度供暖 | 如按年缴纳 |
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Daily Meals | Regular meals | Cafeteria, fast food, takeout |
+| Grocery Shopping | Cooking at home | Supermarket groceries, fresh food |
+| Dining Out | Restaurant meals | Gatherings, entertaining, dates |
+| Snacks & Beverages | Casual food | Snacks, coffee, bubble tea |
+| Alcohol & Tobacco | Habits | Cigarettes, alcoholic beverages |
 
-#### 2. 季度支出
+#### 2. Transportation
 
-| 类别 | 说明 | 示例 |
-|-----|------|------|
-| 季度保险 | 按季缴费保险 | 如适用 |
-| 季度物业费 | 按季缴纳 | 如适用 |
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Public Transit | Bus & subway | Metro, bus, taxi |
+| Personal Vehicle | Car usage costs | Fuel, parking, tolls |
+| Vehicle Maintenance | Maintenance & repairs | Maintenance, repairs, car washes |
+| Shared Mobility | Bike/car sharing | Bike shares, ride-sharing |
+| Long-distance Travel | Inter-city travel | Train, plane, long-distance bus |
 
-#### 3. 节日支出
+#### 3. Shopping Consumption
 
-| 类别 | 说明 | 示例 |
-|-----|------|------|
-| 春节支出 | 过年费用 | 年货、红包、礼品 |
-| 中秋支出 | 节日费用 | 礼品、聚餐 |
-| 生日支出 | 生日礼物 | 礼品、聚餐 |
-| 纪念日 | 纪念活动 | 礼物、庆祝 |
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Clothing & Accessories | Apparel | Clothes, shoes, accessories |
+| Daily Necessities | Household items | Personal care, cleaning, paper products |
+| Digital Electronics | Electronic products | Phones, computers, accessories |
+| Home Goods | Home furnishings | Furniture, textiles, decorations |
+| Beauty & Skincare | Cosmetics | Skincare products, makeup |
+
+#### 4. Entertainment & Leisure
+
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Movies & Shows | Cultural entertainment | Movie tickets, show tickets |
+| Travel & Vacation | Travel expenses | Tickets, accommodation, transportation |
+| Sports & Fitness | Physical activities | Personal training, sports equipment |
+| Gaming | Gaming related | Game purchases, equipment |
+| Hobbies & Collections | Personal interests | Books, collectibles, hobbies |
+
+#### 5. Healthcare & Medical
+
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Outpatient Visits | Medical visits | Registration, examinations, medication |
+| Medication | Daily medicines | Regular medications, health supplements |
+| Health Checkups | Health examinations | Annual physicals, special screenings |
+| Medical Equipment | Medical supplies | Blood pressure monitors, glucose meters |
+| Mental Health | Psychological health | Counseling services |
+
+#### 6. Education & Learning
+
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Tuition | Formal education | School tuition |
+| Training Courses | Professional training | Certifications, skill training |
+| Books & Materials | Learning materials | Textbooks, reference books |
+| Online Courses | Online learning | E-learning platforms |
+| Educational Tools | Learning supplies | Stationery, electronic devices |
 
 ---
 
-### （四）人际关系
+### (C) Periodic Expenses
 
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 人情往来 | 礼金红包 | 婚礼、满月、乔迁 |
-| 礼品赠送 | 送礼 | 节日礼物、拜访礼 |
-| 请客吃饭 | 招待费用 | 请朋友、同事 |
-| 孝敬父母 | 家庭支出 | 给父母的钱、礼物 |
-| 子女支出 | 育儿费用 | 学费、玩具、衣物 |
+#### 1. Annual Fixed
+
+| Category | Description | Examples |
+|----------|-------------|----------|
+| Auto Insurance | Vehicle insurance | Liability, comprehensive coverage |
+| Annual Inspection | Vehicle inspection | Inspection fees |
+| Property Tax | Property-related taxes | If applicable |
+| Annual Property Fees | Annual property management | If paid annually |
+| Heating Fees | Annual heating | If paid annually |
+
+#### 2. Quarterly Expenses
+
+| Category | Description | Examples |
+|----------|-------------|----------|
+| Quarterly Insurance | Quarterly payment insurance | If applicable |
+| Quarterly Property Fees | Quarterly payments | If applicable |
+
+#### 3. Holiday Expenses
+
+| Category | Description | Examples |
+|----------|-------------|----------|
+| Spring Festival | New Year expenses | Holiday goods, red envelopes, gifts |
+| Mid-Autumn Festival | Holiday expenses | Gifts, gatherings |
+| Birthday Expenses | Birthday gifts | Gifts, celebrations |
+| Anniversaries | Celebration activities | Gifts, celebrations |
 
 ---
 
-### （五）金融相关
+### (D) Social Relationships
 
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 贷款还款 | 债务偿还 | 信用卡、消费贷 |
-| 利息支出 | 借款利息 | 贷款利息 |
-| 手续费 | 金融手续费 | 转账费、年费 |
-| 投资损失 | 投资亏损 | 股票、基金亏损 |
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Social Obligations | Gift money & red envelopes | Weddings, baby showers, housewarmings |
+| Gift Giving | Presents | Holiday gifts, visiting gifts |
+| Hosting | Entertainment expenses | Treating friends, colleagues |
+| Supporting Parents | Family expenses | Money/gifts for parents |
+| Children's Expenses | Child-rearing costs | Tuition, toys, clothing |
 
 ---
 
-### （六）其他支出
+### (E) Financial Related
 
-| 子类别 | 说明 | 示例 |
-|-------|------|------|
-| 宠物支出 | 养宠费用 | 粮食、医疗、用品 |
-| 慈善捐赠 | 公益捐赠 | 捐款、捐物 |
-| 罚款赔偿 | 意外支出 | 交通罚款、赔偿 |
-| 其他杂项 | 难以归类 | 其他支出 |
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Loan Repayments | Debt repayment | Credit cards, consumer loans |
+| Interest Expenses | Loan interest | Loan interest charges |
+| Service Fees | Financial fees | Transfer fees, annual fees |
+| Investment Losses | Investment losses | Stocks, fund losses |
 
-## 三、分类使用建议
+---
 
-### 分类原则
+### (F) Other Expenses
 
-1. **互斥性**：每笔支出只归一个类别
-2. **完备性**：所有支出都能归类
-3. **一致性**：保持分类标准稳定
-4. **实用性**：便于分析和决策
+| Subcategory | Description | Examples |
+|-------------|-------------|----------|
+| Pet Expenses | Pet care costs | Food, medical, supplies |
+| Charitable Donations | Philanthropy | Donations, contributions |
+| Fines & Compensation | Unexpected expenses | Traffic fines, compensation |
+| Miscellaneous | Hard to categorize | Other expenses |
 
-### 分类细化程度
+## III. Category Usage Guidelines
 
-**建议根据个人情况选择**：
+### Classification Principles
 
-- **简单版**：只使用一级分类（固定/变动/周期）
-- **标准版**：使用二级分类（如餐饮、交通）
-- **详细版**：使用三级分类（如餐饮-外出就餐）
+1. **Mutually Exclusive**: Each expense belongs to only one category
+2. **Comprehensive**: All expenses can be categorized
+3. **Consistent**: Maintain stable classification standards
+4. **Practical**: Facilitate analysis and decision-making
 
-### 常见分类问题
+### Classification Granularity
 
-#### Q1：外卖算餐饮还是其他？
-A：归入"餐饮-日常餐饮"或"餐饮-外出就餐"，根据用餐目的决定
+**Choose based on personal needs**:
 
-#### Q2：工作相关培训算教育还是工作？
-A：归入"教育-培训课程"，可在备注中注明"工作相关"
+- **Simple Version**: Use only primary categories (Fixed/Variable/Periodic)
+- **Standard Version**: Use secondary categories (e.g., Food, Transportation)
+- **Detailed Version**: Use tertiary categories (e.g., Food - Dining Out)
 
-#### Q3：给父母的钱怎么分类？
-A：归入"人际关系-孝敬父母"
+### Common Categorization Questions
 
-#### Q4：投资理财怎么记录？
-A：投资本金不计入支出，投资亏损计入"金融相关-投资损失"
+#### Q1: Is takeout food or other?
+A: Categorize under "Food - Daily Meals" or "Food - Dining Out" based on purpose
 
-## 四、分类占比参考
+#### Q2: Is work-related training education or work?
+A: Categorize under "Education - Training Courses", note "work-related" in remarks
 
-### 健康财务结构参考
+#### Q3: How to categorize money given to parents?
+A: Categorize under "Social Relationships - Supporting Parents"
 
-| 类别 | 建议占比 | 说明 |
-|-----|---------|------|
-| 住房 | 25-35% | 房租/房贷 |
-| 餐饮 | 10-15% | 日常饮食 |
-| 交通 | 10-15% | 出行费用 |
-| 保险储蓄 | 10-20% | 保障+储蓄 |
-| 其他生活 | 20-30% | 购物、娱乐等 |
+#### Q4: How to record investment and financial management?
+A: Investment principal is not an expense; investment losses go under "Financial Related - Investment Losses"
 
-### 警戒线
+## IV. Category Ratio References
 
-- 住房支出 > 40%：过高，可能影响生活质量
-- 餐饮支出 > 20%：可能过于奢侈
-- 无保险储蓄：风险较高，建议配置
+### Healthy Financial Structure Reference
 
-## 五、自定义分类
+| Category | Suggested Ratio | Notes |
+|----------|-----------------|-------|
+| Housing | 25-35% | Rent/mortgage |
+| Food | 10-15% | Daily meals |
+| Transportation | 10-15% | Travel expenses |
+| Insurance & Savings | 10-20% | Protection + savings |
+| Other Living | 20-30% | Shopping, entertainment, etc. |
 
-### 何时需要自定义
+### Warning Thresholds
 
-1. 标准分类不能满足需求
-2. 有特殊支出需要单独追踪
-3. 职业/生活方式特殊
+- Housing expenses > 40%: Too high, may affect quality of life
+- Food expenses > 20%: Possibly too extravagant
+- No insurance/savings: Higher risk, recommended to configure
 
-### 自定义建议
+## V. Custom Categories
 
-1. 保持与标准分类的兼容性
-2. 避免分类过细（建议不超过20个）
-3. 定期审视分类合理性
-4. 记录分类定义便于回顾
+### When Custom Categories Are Needed
 
-### 示例自定义分类
+1. Standard categories don't meet needs
+2. Special expenses need separate tracking
+3. Special occupation/lifestyle requirements
 
-- **自由职业者**：增加"业务支出"大类
-- **有娃家庭**：细化"子女支出"子类
-- **养宠人士**：独立"宠物支出"大类
+### Customization Suggestions
+
+1. Maintain compatibility with standard categories
+2. Avoid over-detailing (suggest no more than 20 categories)
+3. Regularly review category rationality
+4. Record category definitions for future reference
+
+### Custom Category Examples
+
+- **Freelancers**: Add "Business Expenses" category
+- **Families with Children**: Expand "Children's Expenses" subcategories
+- **Pet Owners**: Independent "Pet Expenses" category
