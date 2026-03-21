@@ -1,11 +1,17 @@
 {
   "owner": "drbillwang",
   "slug": "vibe-reading-cn",
-  "displayName": "Vibe Reading 中文版",
+  "displayName": "Openclaw",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1773722921200,
-    "commit": "https://github.com/openclaw/skills/commit/85b9c74da338c9c0af8d6446b39b49aa40453e2f"
+    "version": "2.0.0",
+    "publishedAt": 1773802079852,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1773722921200,
+      "commit": "https://github.com/openclaw/skills/commit/85b9c74da338c9c0af8d6446b39b49aa40453e2f"
+    }
+  ]
 }
