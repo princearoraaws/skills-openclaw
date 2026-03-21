@@ -3,9 +3,15 @@
   "slug": "expense-categorization",
   "displayName": "Expense Categorization",
   "latest": {
-    "version": "98.0.1",
-    "publishedAt": 1773724954487,
-    "commit": "https://github.com/openclaw/skills/commit/72cae1962d20ecef7919a664e69bcae4ffba138f"
+    "version": "1.0.1",
+    "publishedAt": 1773796598507,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "98.0.1",
+      "publishedAt": 1773724954487,
+      "commit": "https://github.com/openclaw/skills/commit/72cae1962d20ecef7919a664e69bcae4ffba138f"
+    }
+  ]
 }
