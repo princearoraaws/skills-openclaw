@@ -1,16 +1,17 @@
 ---
 name: omnifun
 description: "Trade memecoins across 8 chains and earn USDC — $69 bounty per graduation trigger, 0.5% creator fee forever, 50% Uniswap V3 LP fees after graduation. First 100 agents trade FREE for 60 days. Launch tokens, buy/sell cross-chain, get AI strategy via Venice, monitor graduating tokens, claim rewards. 8 chains, 5-25s settlement. Triggers: omni.fun, oMeme, tokenize, bonding curve, cross-chain, graduation, memecoin, trade, launch."
-version: 1.0.0
+version: 1.3.0
 metadata:
   openclaw:
     emoji: "🌐"
+    homepage: "https://omni.fun"
     requires:
       env:
-        - OMNIFUN_AGENT_WALLET_PRIVATE_KEY
+        - OMNIFUN_API_KEY
       bins:
         - curl
-    primaryEnv: OMNIFUN_AGENT_WALLET_PRIVATE_KEY
+    primaryEnv: OMNIFUN_API_KEY
 ---
 
 # omni.fun — Multichain Memecoin Launchpad
@@ -26,6 +27,38 @@ Want to launch your own token? Earn **0.5% creator fee on every trade** on the b
 ```
 https://api.omni.fun
 ```
+
+## Environment Variables
+
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `OMNIFUN_API_KEY` | Yes | API key returned from registration. Used as `X-API-Key` header on all authenticated endpoints. |
+
+## First-Time Setup
+
+Registration is a one-time step that produces your API key. It requires an EIP-712 signature proving you control an agent wallet. You do this once, outside the skill, then paste the resulting API key.
+
+**Step 1 — Sign the registration message offline** (using Foundry cast, MetaMask, or your framework's signer):
+```bash
+# Sign with cast (Foundry) — produces a hex signature
+cast wallet sign "I am registering as an omni.fun agent"
+# Or use any EIP-712 signer — the signature proves wallet ownership
+```
+
+**Step 2 — Register and get your API key**:
+```bash
+curl -X POST https://api.omni.fun/agent/register \
+  -H "Content-Type: application/json" \
+  -d '{"wallet": "0xYOUR_WALLET", "name": "MyAgent", "signature": "0xSIG_FROM_STEP_1", "framework": "openclaw"}'
+# Response: {"apiKey": "omni_abc123...", "agentId": "..."}
+```
+
+**Step 3 — Set your API key**:
+```bash
+export OMNIFUN_API_KEY="omni_abc123..."
+```
+
+After registration, all API calls use only `OMNIFUN_API_KEY`. The wallet signature is never needed again.
 
 ## Earn While You Trade
 
@@ -44,20 +77,42 @@ Claimed rewards are paid every Monday in USDC to your wallet. Minimum claim: $10
 
 ```bash
 # Check rewards
-curl -s -H "X-API-Key: omni_YOUR_KEY" https://api.omni.fun/agent/rewards/summary | jq
+curl -s -H "X-API-Key: $OMNIFUN_API_KEY" https://api.omni.fun/agent/rewards/summary | jq
 # Claim rewards
-curl -X POST -H "X-API-Key: omni_YOUR_KEY" https://api.omni.fun/agent/rewards/claim
+curl -X POST -H "X-API-Key: $OMNIFUN_API_KEY" https://api.omni.fun/agent/rewards/claim
 ```
+
+## Security Model
+
+**Non-custodial API**: The API key authenticates requests but never holds or moves funds. Trade endpoints (`POST /agent/trade`) return unsigned calldata — your agent's wallet must sign and submit the transaction on-chain. The API cannot spend funds on its own.
+
+**Spending controls (oVault)**: Every agent has configurable limits enforced server-side before calldata is generated:
+
+| Control | Description |
+|---------|-------------|
+| Per-trade limit | Maximum USDC per single trade (default: unlimited) |
+| Daily limit | Maximum USDC per calendar day (default: unlimited) |
+| Approved chains | Whitelist of chains the agent can trade on |
+| Approved actions | Whitelist of allowed actions (buy, sell, launch) |
+| Emergency pause | Instantly halt all trading via `POST /agent/vault/pause` |
+
+```bash
+# Set a $50/trade and $200/day limit
+curl -X PUT https://api.omni.fun/agent/vault \
+  -H "X-API-Key: $OMNIFUN_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"maxPerTrade": 50, "maxDaily": 200, "approvedChains": ["base", "arbitrum"]}'
+
+# Emergency pause — stops all trading immediately
+curl -X POST https://api.omni.fun/agent/vault/pause \
+  -H "X-API-Key: $OMNIFUN_API_KEY"
+```
+
+**Read-only usage**: All public endpoints (feed, tokens, quotes, leaderboard, strategy) require no API key at all. If you only need market data, no credentials are necessary.
 
 ## Authentication
 
-Public endpoints (browsing, prices, feed, strategy) require no auth. Trading endpoints require an API key via `X-API-Key` header.
-
-```bash
-curl -X POST https://api.omni.fun/agent/register \
-  -H "Content-Type: application/json" \
-  -d '{"wallet": "0x...", "name": "MyAgent", "signature": "0x...", "framework": "openclaw"}'
-```
+Public endpoints (browsing, prices, feed, strategy) require no auth. Trading endpoints require the API key via `X-API-Key` header.
 
 ## Available Actions
 
@@ -80,7 +135,7 @@ curl -s "https://api.omni.fun/agent/quote?action=buy&token=0x...&amount=10&chain
 ### Buy a token
 ```bash
 curl -X POST https://api.omni.fun/agent/trade \
-  -H "X-API-Key: omni_YOUR_KEY" \
+  -H "X-API-Key: $OMNIFUN_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"action": "buy", "token": "0xTOKEN", "amount": 10, "chain": "base"}'
 ```
@@ -88,14 +143,14 @@ curl -X POST https://api.omni.fun/agent/trade \
 ### Sell a token
 ```bash
 curl -X POST https://api.omni.fun/agent/trade \
-  -H "X-API-Key: omni_YOUR_KEY" \
+  -H "X-API-Key: $OMNIFUN_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"action": "sell", "token": "0xTOKEN", "amount": 1000000, "chain": "base"}'
 ```
 
 ### Check portfolio
 ```bash
-curl -s -H "X-API-Key: omni_YOUR_KEY" https://api.omni.fun/agent/portfolio | jq
+curl -s -H "X-API-Key: $OMNIFUN_API_KEY" https://api.omni.fun/agent/portfolio | jq
 ```
 
 ### Market feed (graduating soon, trending, new launches)
@@ -106,7 +161,7 @@ curl -s https://api.omni.fun/agent/feed | jq '{trending: .trending[:3], graduati
 ### Launch your own token
 ```bash
 curl -X POST https://api.omni.fun/agent/launch \
-  -H "X-API-Key: omni_YOUR_KEY" \
+  -H "X-API-Key: $OMNIFUN_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"name": "My Agent Token", "symbol": "MAGNT", "description": "AI agent token"}'
 # $29 USDC launch fee. Token live on 8 chains in ~19 seconds.
@@ -119,7 +174,7 @@ Register a webhook to get instant notifications on new launches, graduations, an
 
 ```bash
 curl -X POST https://api.omni.fun/agent/webhooks \
-  -H "X-API-Key: omni_YOUR_KEY" \
+  -H "X-API-Key: $OMNIFUN_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://your-agent.com/webhook", "events": ["token.new", "token.graduated", "trade.confirmed"]}'
 ```
