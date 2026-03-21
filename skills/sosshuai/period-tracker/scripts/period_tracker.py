@@ -9,11 +9,47 @@ import json
 import csv
 import os
 import sys
+import subprocess
 from datetime import date, datetime, timedelta
 from pathlib import Path
 from typing import Optional
 
 DATA_PATH = Path.home() / ".openclaw" / "workspace" / "period_tracker" / "data.json"
+SKILL_DIR = Path(__file__).parent.parent
+CURRENT_VERSION = "1.1.0"
+
+
+def check_for_updates():
+    """检查是否有新版本"""
+    try:
+        # 使用 clawhub 检查最新版本
+        result = subprocess.run(
+            ["clawhub", "list"],
+            capture_output=True, text=True, timeout=10
+        )
+        if result.returncode == 0:
+            for line in result.stdout.splitlines():
+                if "period-tracker" in line:
+                    # 解析版本号
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        latest_version = parts[1]
+                        if latest_version != CURRENT_VERSION:
+                            return latest_version
+        return None
+    except:
+        return None
+
+
+def show_update_prompt():
+    """显示更新提示"""
+    latest = check_for_updates()
+    if latest:
+        print(f"\n🆕 发现新版本：{latest}（当前：{CURRENT_VERSION}）")
+        print(f"   更新命令：clawhub update period-tracker")
+        print(f"   或告诉AI助手：\"更新经期管理skill\"")
+        return True
+    return False
 
 
 def load_data() -> dict:
@@ -324,11 +360,18 @@ def cmd_today(args):
     periods = data["periods"]
     today = date.today()
 
-    print(f"\n📍 今日状态 ({today}) — Period Management / 经期管理")
-    print(f"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
+    print(f"\n{'='*50}")
+    print(f"📍 今日健康报告 ({today.strftime('%Y年%m月%d日')})")
+    print(f"{'='*50}")
 
     if not periods:
-        print("暂无记录，请先添加经期数据。")
+        print("\n👋 欢迎使用经期管理！")
+        print("\n💡 快速开始：告诉AI助手\"月经来了\"即可记录")
+        print("\n📋 你可以对AI助手说：")
+        print("   • \"月经来了\" → 记录经期")
+        print("   • \"痛经2级\" 或 \"心情烦躁\" → 记录症状")
+        print("   • \"下次月经什么时候\" → 查看预测")
+        print("   • \"帮我设置经期提醒\" → 设置定时提醒")
         return
 
     avg_cycle = compute_avg_cycle(periods) or data["settings"].get("avg_cycle", 28)
@@ -340,40 +383,91 @@ def cmd_today(args):
     fertile_start = ov["fertile_start"]
     fertile_end = ov["fertile_end"]
 
+    # 统计信息（简化）
+    print(f"\n📊 周期：{avg_cycle:.0f}天 | 经期：{avg_duration:.0f}天 | 记录：{len(periods)}次")
+
     in_period = False
+    current_period = None
     for p in periods:
         s = parse_date(p["start_date"])
         dur = int(avg_duration)
         e = parse_date(p["end_date"]) if p.get("end_date") else s + timedelta(days=dur - 1)
         if s <= today <= e:
             day_num = (today - s).days + 1
-            print(f"🩸 经期第 {day_num} 天（{date_str(s)} 开始）")
+            current_period = p
             in_period = True
             break
 
-    if not in_period:
+    print(f"\n{'─'*50}")
+    if in_period and current_period:
+        day_num = (today - parse_date(current_period["start_date"])).days + 1
+        remaining = int(avg_duration) - day_num + 1
+        print(f"🩸 经期第{day_num}天，还有{remaining}天结束")
+        
+        # 简化症状显示
+        symptoms = current_period.get('symptoms', {})
+        if symptoms:
+            symptom_list = []
+            if symptoms.get('pain_level'):
+                symptom_list.append(f"痛经{symptoms['pain_level']}级")
+            if symptoms.get('mood'):
+                symptom_list.append(symptoms['mood'])
+            if symptom_list:
+                print(f"   今日：{' | '.join(symptom_list)}")
+            if symptoms.get('tags'):
+                print(f"   其他症状：{', '.join(symptoms['tags'])}")
+    else:
         next_start = ov["next_start"]
         days_until = (next_start - today).days
-
+        
+        # 简化状态显示
         if today == ovulation_day:
-            print(f"🔴 排卵日！受孕概率最高（25-30%）")
+            print(f"\n🔴 排卵日！受孕指数★★★★★ (25-30%)")
         elif fertile_start <= today <= fertile_end:
             prob = get_conception_probability(today, ovulation_day, fertile_start, fertile_end)
             days_to_ov = (ovulation_day - today).days
-            if days_to_ov >= 0:
-                print(f"🌸 易孕期中（距排卵日还有 {days_to_ov} 天）")
-            else:
-                print(f"🌸 易孕期中（排卵日已过 {-days_to_ov} 天）")
-            print(f"   受孕概率：{prob['emoji']} {prob['level']}（{prob['percent']}）")
+            status = f"距排卵{days_to_ov}天" if days_to_ov > 0 else f"排卵已过{-days_to_ov}天"
+            print(f"\n🌸 易孕期（{status}）受孕指数{prob['percent']}")
         else:
-            print(f"🟢 安全期（受孕概率极低）")
+            print(f"\n🟢 安全期（受孕概率<3%）")
 
+        # 简化预测
         if days_until > 0:
-            print(f"📅 下次预测经期：{date_str(next_start)}（还有 {days_until} 天）")
+            print(f"📅 下次经期：{date_str(next_start)}（{days_until}天后）")
         elif days_until == 0:
-            print(f"📅 预测今天经期开始！")
+            print(f"📅 预测今天来经期！")
         else:
-            print(f"📅 经期可能已迟到 {-days_until} 天，注意观察")
+            print(f"📅 经期已迟到{-days_until}天")
+
+    # 简化排卵期信息
+    print(f"\n🥚 排卵日：{date_str(ovulation_day)} | 易孕期：{date_str(fertile_start)}~{date_str(fertile_end)}")
+    
+    # 简化7天预测
+    print(f"\n📆 未来7天受孕概率：")
+    for i in range(7):
+        d = today + timedelta(days=i)
+        prob = get_conception_probability(d, ovulation_day, fertile_start, fertile_end)
+        marker = "•" if i == 0 else " "
+        print(f"{marker}{date_str(d)[5:]} {prob['emoji']} {prob['percent']}", end="  ")
+        if (i + 1) % 4 == 0:
+            print()
+    print()
+    
+    print(f"\n💡 你可以对AI助手说：")
+    print(f"   • \"痛经2级\" 或 \"心情烦躁\" → 记录症状")
+    
+    # 检查是否已设置提醒
+    try:
+        result = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
+        has_reminder = "# period-tracker-reminder" in result.stdout
+    except:
+        has_reminder = False
+    
+    if not has_reminder:
+        print(f"   • \"帮我设置经期提醒\" 或 \"每天早上9点发报告\" → 设置提醒")
+    
+    # 检查更新
+    show_update_prompt()
 
 
 def cmd_stats(args):
@@ -553,6 +647,126 @@ def cmd_delete(args):
         print(f"❌ 未找到该记录")
 
 
+def parse_reminder_text(text: str) -> dict:
+    """解析自然语言设置提醒"""
+    text = text.lower().strip()
+    result = {"type": None, "days": 3, "hour": 9, "minute": 0}
+    
+    # 判断提醒类型
+    if "每天" in text or "每日" in text or "日报" in text:
+        result["type"] = "daily"
+    elif "经期" in text or "月经" in text or "大姨妈" in text:
+        result["type"] = "period"
+    elif "排卵" in text:
+        result["type"] = "ovulation"
+    else:
+        result["type"] = "period"
+    
+    # 解析提前天数
+    import re
+    days_match = re.search(r'(\d+)\s*天', text)
+    if days_match:
+        result["days"] = int(days_match.group(1))
+    
+    # 解析时间
+    time_match = re.search(r'(\d{1,2})\s*[:点]\s*(\d{0,2})', text)
+    if time_match:
+        result["hour"] = int(time_match.group(1))
+        minute_str = time_match.group(2)
+        result["minute"] = int(minute_str) if minute_str else 0
+    
+    # 处理上午/下午
+    if "下午" in text or "晚上" in text or "傍晚" in text:
+        if result["hour"] < 12:
+            result["hour"] += 12
+    elif "上午" in text or "早上" in text or "早晨" in text:
+        if result["hour"] > 12:
+            result["hour"] -= 12
+    
+    return result
+
+
+def cmd_reminder(args):
+    """设置提醒 - 支持自然语言"""
+    if not args.text:
+        print("💡 使用方式：")
+        print("   python period_tracker.py reminder \"帮我设置经期提醒\"")
+        print("   python period_tracker.py reminder \"每天早上8点发报告\"")
+        print("   python period_tracker.py reminder \"经期前5天下午3点提醒\"")
+        return
+    
+    text = " ".join(args.text)
+    config = parse_reminder_text(text)
+    
+    print(f"📝 解析设置：{text}")
+    print(f"   提醒类型：{config['type']}")
+    print(f"   提醒时间：{config['hour']:02d}:{config['minute']:02d}")
+    
+    # 调用 setup_reminder 的功能
+    import subprocess
+    import sys
+    
+    setup_script = Path(__file__).parent / "setup_reminder.py"
+    
+    if config["type"] == "daily":
+        cmd = [sys.executable, str(setup_script), "daily", "--hour", str(config["hour"]), "--minute", str(config["minute"])]
+    else:
+        cmd = [sys.executable, str(setup_script), "add", "--days", str(config["days"]), "--hour", str(config["hour"]), "--minute", str(config["minute"])]
+        print(f"   提前天数：{config['days']}天")
+    
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode == 0:
+        print(f"\n✅ 设置完成！")
+        print(f"💡 如需取消，运行：python period_tracker.py reminder --cancel")
+    else:
+        print(f"❌ 设置失败：{result.stderr}")
+
+
+def cmd_reminder_cancel(args):
+    """取消所有提醒"""
+    import subprocess
+    import sys
+    setup_script = Path(__file__).parent / "setup_reminder.py"
+    result = subprocess.run([sys.executable, str(setup_script), "remove"], capture_output=True, text=True)
+    if result.returncode == 0:
+        print("✅ 已取消所有经期提醒")
+    else:
+        print(f"❌ 取消失败：{result.stderr}")
+
+
+def cmd_update(args):
+    """检查并更新 skill"""
+    print(f"📦 当前版本：{CURRENT_VERSION}")
+    print("🔍 检查更新...")
+    
+    latest = check_for_updates()
+    if not latest:
+        print("✅ 当前已是最新版本！")
+        return
+    
+    print(f"🆕 发现新版本：{latest}")
+    
+    if not args.force:
+        response = input("是否立即更新？(y/n): ")
+        if response.lower() not in ['y', 'yes', '是']:
+            print("已取消更新")
+            print(f"💡 稍后可以通过：clawhub update period-tracker 手动更新")
+            return
+    
+    print("⬇️  正在更新...")
+    result = subprocess.run(
+        ["clawhub", "update", "period-tracker", "--force"],
+        capture_output=True, text=True
+    )
+    
+    if result.returncode == 0:
+        print("✅ 更新成功！")
+        print("🔄 请重启 OpenClaw 或重新加载 skill 以使用新版本")
+    else:
+        print(f"❌ 更新失败：{result.stderr}")
+        print(f"💡 可以手动运行：clawhub update period-tracker")
+
+
 def main():
     parser = argparse.ArgumentParser(description="Period Management / 经期管理工具")
     sub = parser.add_subparsers(dest="command")
@@ -593,6 +807,13 @@ def main():
     p_del = sub.add_parser("delete", help="删除记录")
     p_del.add_argument("start")
 
+    p_reminder = sub.add_parser("reminder", help="设置提醒（支持自然语言）")
+    p_reminder.add_argument("text", nargs="*", help="自然语言描述，如：帮我设置经期提醒、每天早上8点发报告")
+    p_reminder.add_argument("--cancel", action="store_true", help="取消所有提醒")
+
+    p_update = sub.add_parser("update", help="检查并更新 skill")
+    p_update.add_argument("--force", action="store_true", help="强制更新，不询问")
+
     args = parser.parse_args()
     if not args.command:
         parser.print_help()
@@ -602,9 +823,18 @@ def main():
         "add": cmd_add, "list": cmd_list, "predict": cmd_predict,
         "ovulation": cmd_ovulation, "today": cmd_today,
         "stats": cmd_stats, "calendar": cmd_calendar,
-        "export": cmd_export, "edit": cmd_edit, "delete": cmd_delete
+        "export": cmd_export, "edit": cmd_edit, "delete": cmd_delete,
+        "reminder": cmd_reminder, "update": cmd_update
     }
-    cmds[args.command](args)
+    
+    if args.command == "reminder" and args.cancel:
+        cmd_reminder_cancel(args)
+    elif args.command == "update":
+        cmd_update(args)
+    elif args.command in cmds:
+        cmds[args.command](args)
+    else:
+        parser.print_help()
 
 
 if __name__ == "__main__":
