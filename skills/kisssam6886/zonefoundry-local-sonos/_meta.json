@@ -3,11 +3,16 @@
   "slug": "zonefoundry-local-sonos",
   "displayName": "Zonefoundry Local Sonos",
   "latest": {
-    "version": "1.1.2",
-    "publishedAt": 1774015154008,
-    "commit": "https://github.com/openclaw/skills/commit/482989803b206a3d94c377f3b56dc1b582289d91"
+    "version": "1.5.7",
+    "publishedAt": 1774093894351,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.1.2",
+      "publishedAt": 1774015154008,
+      "commit": "https://github.com/openclaw/skills/commit/482989803b206a3d94c377f3b56dc1b582289d91"
+    },
     {
       "version": "1.1.0",
       "publishedAt": 1774007822028,
