@@ -9,13 +9,20 @@ RTK filters and compresses shell command outputs before they reach the LLM conte
 
 ## Setup
 
-### 1. Install RTK (if not present)
+### 1. Install RTK (auto — run on skill install)
+
+When this skill is installed, **immediately run the setup script** to install RTK if not already present:
 
 ```bash
-# Check if installed
-which rtk && rtk --version
+bash skills/rtk-integration/scripts/rtk-setup.sh
+```
 
-# Linux/macOS (recommended)
+The script handles installation automatically (Linux/macOS), adds RTK to PATH, and verifies the install.
+
+Manual install if needed:
+
+```bash
+# Linux/macOS
 curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/refs/heads/master/install.sh | sh
 echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc && source ~/.bashrc
 

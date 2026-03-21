@@ -3,9 +3,15 @@
   "slug": "rtk-integration",
   "displayName": "RTK Integration",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773915038736,
-    "commit": "https://github.com/openclaw/skills/commit/041c3fb885a5298f7e146f034b903bf5a6dfab49"
+    "version": "1.1.0",
+    "publishedAt": 1773915229639,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773915038736,
+      "commit": "https://github.com/openclaw/skills/commit/041c3fb885a5298f7e146f034b903bf5a6dfab49"
+    }
+  ]
 }
