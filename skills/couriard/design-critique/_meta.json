@@ -1,11 +1,17 @@
 {
   "owner": "couriard",
   "slug": "design-critique",
-  "displayName": "Designer's Eye",
+  "displayName": "Designers Eye",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773591715546,
-    "commit": "https://github.com/openclaw/skills/commit/ad8797aa49a0a07ae7be803e13871838652cab45"
+    "version": "2.0.4",
+    "publishedAt": 1773822564121,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773591715546,
+      "commit": "https://github.com/openclaw/skills/commit/ad8797aa49a0a07ae7be803e13871838652cab45"
+    }
+  ]
 }
