@@ -12,7 +12,7 @@ Usage:
     python3 audio_broadcast.py [app_key] [app_secret] [device_serial] --text "要播报的文本内容" [channel_no]
 
 Environment Variables (alternative to command line args):
-    EZVIZ_APP_KEY, EZVIZ_APP_SECRET, EZVIZ_DEVICE_SERIAL, EZVIZ_AUDIO_FILE, EZVIZ_TEXT, EZVIZ_CHANNEL_NO
+    EZVIZ_APP_KEY, EZVIZ_APP_SECRET, EZVIZ_DEVICE_SERIAL, EZVIZ_AUDIO_FILE, EZVIZ_TEXT_CONTENT, EZVIZ_CHANNEL_NO
 """
 
 import os
@@ -24,41 +24,146 @@ import subprocess
 import tempfile
 from datetime import datetime, timedelta
 
+# Add lib directory to path for token_manager import
+script_dir = os.path.dirname(os.path.abspath(__file__))
+base_dir = os.path.dirname(script_dir)
+lib_dir = os.path.join(base_dir, "lib")
+if lib_dir not in sys.path:
+    sys.path.insert(0, lib_dir)
+
+from token_manager import get_cached_token
+
 # Default values
 DEFAULT_CHANNEL_NO = "1"
 DEFAULT_TEXT = "欢迎使用萤石语音广播服务"
 
+
+def load_ezviz_config_from_channels():
+    """
+    Load EZVIZ appId and appSecret from channels config.
+    
+    SECURITY NOTE: This function reads credentials from OpenClaw config files.
+    Only use dedicated Ezviz credentials with minimal permissions.
+    Do NOT use main account credentials.
+    
+    Search order:
+    1. ~/.openclaw/config.json
+    2. ~/.openclaw/gateway/config.json
+    3. ~/.openclaw/channels.json
+    
+    Returns:
+        dict: {appId: str, appSecret: str} or None if not found
+    """
+    config_paths = [
+        os.path.expanduser("~/.openclaw/config.json"),
+        os.path.expanduser("~/.openclaw/gateway/config.json"),
+        os.path.expanduser("~/.openclaw/channels.json"),
+    ]
+    
+    for config_path in config_paths:
+        if not os.path.exists(config_path):
+            continue
+        
+        try:
+            with open(config_path, 'r') as f:
+                config = json.load(f)
+            
+            # Try to get ezviz channel config
+            channels = config.get("channels", {})
+            ezviz_config = channels.get("ezviz", {})
+            
+            if isinstance(ezviz_config, dict):
+                app_id = ezviz_config.get("appId") or ezviz_config.get("app_id")
+                app_secret = ezviz_config.get("appSecret") or ezviz_config.get("app_secret")
+                
+                if app_id and app_secret:
+                    print(f"[INFO] Loaded EZVIZ config from channels: {config_path}")
+                    print(f"[INFO] AppKey prefix: {app_id[:8]}...")
+                    return {
+                        "appId": app_id,
+                        "appSecret": app_secret
+                    }
+        
+        except (json.JSONDecodeError, IOError) as e:
+            print(f"[WARNING] Failed to read config from {config_path}: {e}")
+            continue
+    
+    return None
+
 # API Endpoints
-TOKEN_URL = "https://open.ys7.com/api/lapp/token/get"
-UPLOAD_URL = "https://open.ys7.com/api/lapp/voice/upload"
-BROADCAST_URL = "https://open.ys7.com/api/lapp/voice/send"
+UPLOAD_URL = "https://openai.ys7.com/api/lapp/voice/upload"
+BROADCAST_URL = "https://openai.ys7.com/api/lapp/voice/send"
 
 def get_env_or_arg(env_var, arg_value, default=None):
     """Get value from environment variable or command line argument"""
     return os.getenv(env_var) or arg_value or default
+
+
+def validate_text_input(text):
+    """
+    Validate text input for TTS to prevent potential injection attacks.
+    
+    SECURITY: While subprocess uses list args (safe), we still validate
+    to prevent unexpected behavior or extremely long inputs.
+    
+    Args:
+        text: Text content to validate
+        
+    Returns:
+        tuple: (is_valid: bool, error_message: str or None)
+    """
+    if not text:
+        return False, "Text content is empty"
+    
+    if len(text) > 500:
+        return False, f"Text too long ({len(text)} chars). Maximum 500 characters allowed."
+    
+    # Check for potentially dangerous patterns (defense in depth)
+    dangerous_patterns = ['`', '$(', '${', ';', '||', '&&', '|', '>', '<']
+    for pattern in dangerous_patterns:
+        if pattern in text:
+            return False, f"Invalid character sequence detected: '{pattern}'"
+    
+    return True, None
+
+
+def validate_device_serial(serial):
+    """
+    Validate device serial number format.
+    
+    Args:
+        serial: Device serial number or comma-separated list
+        
+    Returns:
+        tuple: (is_valid: bool, error_message: str or None)
+    """
+    if not serial:
+        return False, "Device serial is empty"
+    
+    # Basic format check: alphanumeric, colon, comma, underscore only
+    import re
+    if not re.match(r'^[A-Za-z0-9_:,]+$', serial):
+        return False, "Invalid device serial format. Only alphanumeric, colon, comma, underscore allowed."
+    
+    return True, None
+
 
 def text_to_speech(text, output_path):
     """Convert text to speech using system TTS (requires OpenClaw TTS capability)"""
     print(f"[INFO] Converting text to speech: '{text[:50]}{'...' if len(text) > 50 else ''}'")
     
     try:
-        # Use OpenClaw's TTS functionality via curl to local endpoint
-        # This assumes OpenClaw TTS service is available
-        tts_url = "http://localhost:3000/api/tts"  # Adjust based on actual setup
-        
-        payload = {
-            'text': text,
-            'format': 'mp3'
-        }
-        
         # Try to use system TTS first
         try:
-            # On macOS, use say command with afconvert
+            # On macOS, use say command with afconvert to generate WAV
             if sys.platform == "darwin":
-                temp_aiff = output_path.replace('.mp3', '.aiff')
-                subprocess.run(['say', '-o', temp_aiff, text], check=True, capture_output=True)
-                # Convert AIFF to MP3 using afconvert
-                subprocess.run(['afconvert', '-f', 'M4A ', '-d', 'aac', temp_aiff, output_path], 
+                temp_aiff = output_path.replace('.wav', '.aiff').replace('.mp3', '.aiff')
+                # Add pauses to make audio longer (Ezviz requires minimum audio length)
+                # Say the text with natural pauses
+                text_with_pauses = f"注意，{text}，请注意"
+                subprocess.run(['say', '-o', temp_aiff, text_with_pauses], check=True, capture_output=True)
+                # Convert AIFF to WAV using correct format specifier
+                subprocess.run(['afconvert', '-f', 'WAVE', '-d', 'LEI16@44100', temp_aiff, output_path], 
                              check=True, capture_output=True)
                 os.remove(temp_aiff)
             elif sys.platform.startswith('linux'):
@@ -90,31 +195,31 @@ def text_to_speech(text, output_path):
         print(f"[ERROR] Failed to convert text to speech: {str(e)}")
         return False
 
-def get_access_token(app_key, app_secret):
-    """Get access token from Ezviz API"""
+def get_access_token(app_key, app_secret, use_cache=True):
+    """Get access token from Ezviz API using global token manager"""
     print("=" * 70)
     print("[Step 1] Getting access token...")
     
-    payload = {
-        'appKey': app_key,
-        'appSecret': app_secret
-    }
+    # Check EZVIZ_TOKEN_CACHE environment variable (0=disable cache, 1=enable cache)
+    env_cache = os.getenv('EZVIZ_TOKEN_CACHE', '1')
+    if env_cache == '0':
+        use_cache = False
     
-    try:
-        response = requests.post(TOKEN_URL, data=payload, timeout=10)
-        result = response.json()
+    # Use global token manager
+    token_result = get_cached_token(app_key, app_secret, use_cache=use_cache)
+    
+    if token_result.get('success'):
+        token = token_result['access_token']
+        expire_time = datetime.fromtimestamp(token_result['expire_time'] / 1000)
+        from_cache = token_result.get('from_cache', False)
         
-        if result.get('code') == '200':
-            token = result['data']['accessToken']
-            expire_time = datetime.now() + timedelta(days=7)
-            print(f"[SUCCESS] Token obtained, expires: {expire_time.strftime('%Y-%m-%d %H:%M:%S')}")
-            return token
+        if from_cache:
+            print(f"[SUCCESS] Using cached token, expires: {expire_time.strftime('%Y-%m-%d %H:%M:%S')}")
         else:
-            print(f"[ERROR] Failed to get token: {result.get('msg', 'Unknown error')}")
-            return None
-            
-    except Exception as e:
-        print(f"[ERROR] Exception when getting token: {str(e)}")
+            print(f"[SUCCESS] Token obtained, expires: {expire_time.strftime('%Y-%m-%d %H:%M:%S')}")
+        return token
+    else:
+        print(f"[ERROR] Failed to get token: {token_result.get('error', 'Unknown error')}")
         return None
 
 def upload_audio_file(access_token, audio_file_path, voice_name=None, force=False):
@@ -140,23 +245,33 @@ def upload_audio_file(access_token, audio_file_path, voice_name=None, force=Fals
             data = {
                 'accessToken': access_token,
                 'voiceName': voice_name,
-                'force': str(force).lower()
+                'force': 'true'  # Always force upload
             }
             
             response = requests.post(UPLOAD_URL, data=data, files=files, timeout=60)
             result = response.json()
             
             if result.get('code') == '200':
-                # According to API doc, data is an array
+                # Handle both array and dict response formats
+                file_url = None
+                audio_name = voice_name
+                
                 if isinstance(result['data'], list) and len(result['data']) > 0:
                     audio_info = result['data'][0]
-                    file_url = audio_info['url']
+                    file_url = audio_info.get('url')
+                    audio_name = audio_info.get('name', voice_name)
+                elif isinstance(result['data'], dict):
+                    # Direct dict format
+                    file_url = result['data'].get('url')
+                    audio_name = result['data'].get('name', voice_name)
+                
+                if file_url:
                     print(f"[SUCCESS] Audio uploaded successfully!")
-                    print(f"[INFO] Voice Name: {audio_info['name']}")
+                    print(f"[INFO] Voice Name: {audio_name}")
                     print(f"[INFO] File URL: {file_url[:50]}...")
                     return file_url
                 else:
-                    print(f"[ERROR] Unexpected response format: {result}")
+                    print(f"[ERROR] No URL in response: {result}")
                     return None
             else:
                 print(f"[ERROR] Failed to upload audio: {result.get('msg', 'Unknown error')}")
@@ -254,9 +369,28 @@ def main():
     if not audio_file_path:
         audio_file_path = get_env_or_arg('EZVIZ_AUDIO_FILE', None)
     if not text_content:
-        text_content = get_env_or_arg('EZVIZ_TEXT', None)
+        text_content = get_env_or_arg('EZVIZ_TEXT_CONTENT', None)
     if channel_no == DEFAULT_CHANNEL_NO:
         channel_no = get_env_or_arg('EZVIZ_CHANNEL_NO', DEFAULT_CHANNEL_NO)
+    
+    # SECURITY: Warn if credentials not from environment variables
+    config_source = "environment"
+    if not app_key or not app_secret:
+        print("[WARNING] Credentials not found in environment variables")
+        print("[WARNING] Attempting to load from OpenClaw config files...")
+        print("[WARNING] Ensure config files contain dedicated Ezviz credentials (not main account)")
+        
+        # Try to load from channels config if still not provided (lower priority than env vars)
+        channels_config = load_ezviz_config_from_channels()
+        if channels_config:
+            if not app_key:
+                app_key = channels_config["appId"]
+            if not app_secret:
+                app_secret = channels_config["appSecret"]
+            config_source = "config file"
+            print(f"[INFO] Loaded credentials from config file (AppKey prefix: {app_key[:8]}...)")
+        else:
+            print("[ERROR] No credentials found in environment or config files")
     
     # Validate required parameters
     if not all([app_key, app_secret, device_serial]):
@@ -274,9 +408,37 @@ def main():
         print("  export EZVIZ_APP_SECRET=your_secret")
         print("  export EZVIZ_DEVICE_SERIAL=dev1,dev2")
         print("  export EZVIZ_AUDIO_FILE=/path/to/audio.mp3  # OR")
-        print("  export EZVIZ_TEXT=\"要播报的内容\"")
+        print("  export EZVIZ_TEXT_CONTENT=\"要播报的内容\"")
         print("  python3 audio_broadcast.py")
         sys.exit(1)
+    
+    # SECURITY: Validate inputs before processing
+    print("=" * 70)
+    print("SECURITY VALIDATION")
+    print("=" * 70)
+    
+    # Validate device serial
+    is_valid, error = validate_device_serial(device_serial)
+    if not is_valid:
+        print(f"[ERROR] Device serial validation failed: {error}")
+        sys.exit(1)
+    print(f"[OK] Device serial format validated")
+    
+    # Validate text input if using TTS
+    if text_content:
+        is_valid, error = validate_text_input(text_content)
+        if not is_valid:
+            print(f"[ERROR] Text input validation failed: {error}")
+            sys.exit(1)
+        print(f"[OK] Text input validated ({len(text_content)} chars)")
+    
+    # Validate credentials source
+    if config_source == "config file":
+        print(f"[WARNING] Using credentials from config file - ensure they are dedicated Ezviz credentials")
+    else:
+        print(f"[OK] Using credentials from environment variables")
+    
+    print()
     
     # Handle text-to-speech if needed
     temp_audio_file = None
@@ -286,26 +448,13 @@ def main():
         print("=" * 70)
         print(f"[INFO] Text content: {text_content}")
         
-        # Create temporary file for generated audio
+        # Create temporary file for generated audio (use .wav for compatibility)
         temp_dir = tempfile.gettempdir()
-        temp_audio_file = os.path.join(temp_dir, f"ezviz_tts_{int(time.time())}.mp3")
+        temp_audio_file = os.path.join(temp_dir, f"ezviz_tts_{int(time.time())}.wav")
         
-        # Since we're in OpenClaw environment, we can use the built-in TTS
-        # But for now, let's inform the user that they need to provide audio files
-        # In a real implementation, this would integrate with OpenClaw's TTS
-        print("[INFO] Note: Text-to-speech requires proper TTS integration.")
-        print("[INFO] For testing, please provide a valid audio file.")
-        print("[INFO] Using placeholder - you should replace this with actual TTS.")
-        
-        # Create a minimal valid MP3 file (this is just a placeholder)
-        # In practice, you'd call the actual TTS service here
-        try:
-            # Since we're in OpenClaw, we can use the tts tool directly
-            # But for the script, we'll assume the user provides files
-            print("[WARNING] Text-to-speech not fully implemented in standalone script.")
-            print("[WARNING] Please use --audio-file with a valid MP3/WAV/AAC file.")
-            sys.exit(1)
-        except:
+        # Use macOS say command for TTS
+        print("[INFO] Generating audio using macOS TTS...")
+        if not text_to_speech(text_content, temp_audio_file):
             print("[ERROR] Could not generate audio from text.")
             sys.exit(1)
             
