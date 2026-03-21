@@ -1,0 +1,11 @@
+{
+  "owner": "roojenkins",
+  "slug": "uplo-environmental",
+  "displayName": "Uplo Environmental",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774007019449,
+    "commit": null
+  },
+  "history": []
+}
