@@ -3,9 +3,15 @@
   "slug": "harbor",
   "displayName": "Harbor — Curated and shared Memory for AI Agents",
   "latest": {
-    "version": "0.4.0",
-    "publishedAt": 1773747179015,
-    "commit": "https://github.com/openclaw/skills/commit/12ca7458340b38781ff456b2ee059967242d7593"
+    "version": "0.4.11",
+    "publishedAt": 1773909842321,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.4.0",
+      "publishedAt": 1773747179015,
+      "commit": "https://github.com/openclaw/skills/commit/12ca7458340b38781ff456b2ee059967242d7593"
+    }
+  ]
 }
