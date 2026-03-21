@@ -1,0 +1,11 @@
+{
+  "owner": "linktune",
+  "slug": "tieba-claw",
+  "displayName": "baidu_tieba",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774000942046,
+    "commit": null
+  },
+  "history": []
+}
