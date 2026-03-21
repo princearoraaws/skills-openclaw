@@ -3,9 +3,15 @@
   "slug": "local-context-bridge",
   "displayName": "Local Context Bridge",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1773678589834,
-    "commit": "https://github.com/openclaw/skills/commit/88bf78f8606f80ef35a0c88410f02c55d828ea66"
+    "version": "1.0.7",
+    "publishedAt": 1773934169913,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1773678589834,
+      "commit": "https://github.com/openclaw/skills/commit/88bf78f8606f80ef35a0c88410f02c55d828ea66"
+    }
+  ]
 }
