@@ -1,11 +1,17 @@
 {
   "owner": "ljqdh",
   "slug": "qianyi-wms-test",
-  "displayName": "千易WMS测试",
+  "displayName": "Qianyi Wms Test",
   "latest": {
-    "version": "0.1.1",
-    "publishedAt": 1773658732341,
-    "commit": "https://github.com/openclaw/skills/commit/a97874e7de76153a3d6e17f5789ea68f31483744"
+    "version": "0.1.3",
+    "publishedAt": 1774026783144,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.1",
+      "publishedAt": 1773658732341,
+      "commit": "https://github.com/openclaw/skills/commit/a97874e7de76153a3d6e17f5789ea68f31483744"
+    }
+  ]
 }
