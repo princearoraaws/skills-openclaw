@@ -3,9 +3,15 @@
   "slug": "polymarket-celebrity-social-trader",
   "displayName": "Celebrity & Social Media Trader",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773652374024,
-    "commit": "https://github.com/openclaw/skills/commit/4a333441d698071f95dd71dc99ceec5569946c4e"
+    "version": "1.0.1",
+    "publishedAt": 1773856254719,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773652374024,
+      "commit": "https://github.com/openclaw/skills/commit/4a333441d698071f95dd71dc99ceec5569946c4e"
+    }
+  ]
 }
