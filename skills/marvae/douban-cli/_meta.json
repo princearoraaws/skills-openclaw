@@ -3,9 +3,15 @@
   "slug": "douban-cli",
   "displayName": "Douban CLI",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1773753679975,
-    "commit": "https://github.com/openclaw/skills/commit/ad23ec3ca8849a97bd67a7f7350555df71ab2589"
+    "version": "0.2.5",
+    "publishedAt": 1773827372411,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1773753679975,
+      "commit": "https://github.com/openclaw/skills/commit/ad23ec3ca8849a97bd67a7f7350555df71ab2589"
+    }
+  ]
 }
