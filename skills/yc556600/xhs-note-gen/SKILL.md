@@ -1,6 +1,6 @@
 ---
 name: xhs-note-gen
-description: Generate XiaoHongShu (小红书) notes by calling the content-marketing-dashboard service to create notes via one-shot API. Use when the user asks to “生成小红书笔记/小红书文案/笔记” and they want the result produced via the dashboard API instead of writing it manually.
+description: 小红书笔记生成服务，当用户要求"生成小红书笔记/小红书文案/笔记"并希望通过 小念AI来 生成结果而不是手动编写时使用。
 ---
 
 # xhs-note-gen
