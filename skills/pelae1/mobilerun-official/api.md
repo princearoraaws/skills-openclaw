@@ -249,17 +249,11 @@ GET /tasks/{task_id}/ui_states/{index}    -- get UI state at index
 
 ### Available LLM Models
 
-When creating tasks, these models can be specified:
-- `openai/gpt-5.1`
-- `openai/gpt-5.2`
-- `google/gemini-2.5-flash`
-- `google/gemini-2.5-pro`
-- `google/gemini-3-flash`
-- `google/gemini-3-pro-preview`
-- `anthropic/claude-sonnet-4.5`
-- `minimax/minimax-m2`
-- `moonshotai/kimi-k2-thinking`
-- `qwen/qwen3-8b`
+To get the current list of available models, call:
+```
+GET /models
+```
+This returns all models supported for task execution. Model availability may change — always query the endpoint for the latest list rather than hardcoding model names.
 
 ---
 

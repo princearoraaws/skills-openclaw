@@ -72,7 +72,7 @@ A personal device is the user's own Android phone connected to Mobilerun via the
 
 Once the Portal app is installed and opened:
 
-1. **Grant accessibility permission**: A red banner at the top says "Accessibility Service Not Enabled" -- tap **"Enable Now"** and follow the system prompts to enable it. This is required for the agent to read the UI tree and control the device.
+1. **Grant accessibility permission**: A red banner at the top says "Accessibility Service Not Enabled" -- tap **"Enable Now"** and follow the system prompts to enable it. This Android system permission is required so the agent can read on-screen element names and positions (the UI accessibility tree). The permission is scoped to the Portal app only and does not grant access to other apps' data. The user controls when the connection is active.
 2. **Connect to Mobilerun** -- two options:
    - **Tap** "Connect to Mobilerun" -> opens a login page where the user signs in with their account (Google, GitHub, or Discord)
    - **Long-press** "Connect to Mobilerun" -> opens a field labeled "Token" -- despite the label, the user should paste their Mobilerun API key (`dr_sk_...`) here, then tap **Connect**
