@@ -3,9 +3,15 @@
   "slug": "skywork-music-maker",
   "displayName": "Skywork Music Maker",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773660282129,
-    "commit": "https://github.com/openclaw/skills/commit/a151e52043d97690574d2603a52d1406422b23a4"
+    "version": "1.0.2",
+    "publishedAt": 1773829975087,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773660282129,
+      "commit": "https://github.com/openclaw/skills/commit/a151e52043d97690574d2603a52d1406422b23a4"
+    }
+  ]
 }
