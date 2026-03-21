@@ -1,42 +1,100 @@
 ---
 name: gin-ssr-template
-description: 根据 Figma 设计稿生成 Gin SSR 服务端渲染模板（HTML + CSS）。当用户发送 "gin前端模板" 或提供 Figma 页面截图时激活，生成符合 项目规范的模板文件。
+description: 根据 Figma 设计稿截图生成可直接运行的 Gin SSR 页面模板（HTML + CSS）。当用户发送“gin前端模板”或提供 Figma 页面截图时触发：生成的页面必须优先保证可运行、可预览、结构完整；禁止输出任何 {{.data}}、{{.Path}}、{{.Config}} 这类动态取值；head 中 SEO/meta/application/ld+json 必须完整写死；main 区域必须严格按截图还原；写入两个文件并返回文件路径与附件。
 ---
 
-# Gin SSR 前端模板生成（Open Claw）
+# Gin SSR 前端模板生成（OpenClaw）
 
-> ⚠️ 本 skill 专供 Open Claw 使用，不适用于 Cursor。
+## 0. 最高优先级
 
-根据 Figma 截图生成符合 项目架构的 HTML + CSS 文件。
+1. 必须生成两个真实文件
 
-## 激活方式
+- HTML：`app/templates/page/{页面名}.html`
+- CSS：`app/static/css/{页面名}.css`
 
-当用户发送 "gin前端模板" 或提供 Figma 页面截图时，自动执行此 skill。
+2. 必须保证页面可运行
 
-## 截图处理规则
+- 输出的 HTML 必须是完整可渲染结构
+- 不要依赖 `{{.data.Config.*}}`、`{{.data.Path}}`、`{{.Title}}` 这类动态模板变量
+- 除 `{{define "页面名"}}` 和 `{{end}}` 外，默认不要输出其他 Go 模板变量
+- 优先生成“直接打开就有完整结构”的静态页面骨架
 
-> 优先处理 PC 设计稿，其次处理 H5 设计稿。
+3. 必须最终回复
 
-1. **单张截图**：直接根据截图生成模板
-2. **两张截图（PC + H5）**：
-   - 以 PC 截图为主模板，生成基础 HTML + CSS
-   - 以 H5 截图作为响应式适配参考，补充 `@media (max-width: 824px)` 样式
-3. **只有 H5 截图**：正常生成，在 CSS 中使用 `@media (min-width: 825px)` 定义 PC 样式
+- 回复中必须包含：页面名、HTML 路径、CSS 路径
+- Telegram 会话必须追加两个 `MEDIA:` 行
+- 禁止静默结束
 
-## 输出规范
+4. main 必须按截图严格还原
 
-- **文件名**：HTML 文件名按 Figma 页面命名（如 `xxx.html`），CSS 文件名对应（如 `xxx.css`）
-- **文件路径**：
-  - HTML: `app/templates/page/{页面名}.html`
-  - CSS: `app/static/css/{页面名}.css`
-- **输出语言**：代码注释使用中文
+- 不允许只写占位注释
+- 不允许 main 为空
+- 必须把截图里的核心模块、文案、按钮、输入框、卡片、列表都写出来
 
-## HTML 模板结构
+## 1. 页面名规则
 
-### 1. SEO 元信息（`<head>` 部分）
+### 1.1 标题识别
+
+- 优先识别截图顶部标题或页面主标题
+- 如果标题太泛（如“详情”“设置”“中心”），必须结合 main 首屏核心内容决定页面名
+- 如果识别不到标题，在 HTML 顶部加注释：`<!-- 页面标题识别失败，需确认 -->`
+
+### 1.2 页面名生成
+
+页面名必须和“标题 + main 语义”一致，禁止随便命名。
+
+优先级：
+
+1. 优先用准确英文语义命名：
+
+- `个人信息` + 资料编辑表单 → `user_profile`
+- `收货地址` + 地址列表 → `address_list`
+- `订单详情` + 订单信息卡片 → `order_detail`
+- `修改密码` + 表单 → `password_edit`
+
+2. 无法稳定翻译时，使用拼音小写下划线：
+
+- `漫画分类` → `manhua_fenlei`
+
+最终：
+
+- HTML define：`{{define "{页面名}"}}`
+- HTML 文件：`app/templates/page/{页面名}.html`
+- CSS 文件：`app/static/css/{页面名}.css`
+
+## 2. 输出原则
+
+### 2.1 禁止动态取值
+
+生成内容时，禁止出现以下写法：
+
+- `{{.data...}}`
+- `{{.Config...}}`
+- `{{.Path}}`
+- `{{.Title}}`
+- `{{range ...}}`
+- `{{if ...}}`
+
+也就是说，页面内容、SEO、链接、标题、描述、JSON-LD 都必须使用硬编码静态值。
+
+### 2.2 允许保留的模板语法
+
+只允许保留：
 
 ```html
-{{define "页面名"}}
+{{define "{页面名}"}} ... {{end}}
+```
+
+````
+
+这是为了兼容 Gin 模板文件结构。
+
+## 3. head 模板要求
+
+head 必须完整，字段不得缺失。所有值全部硬编码，保证页面开箱可运行。
+
+```html
+{{define "{页面名}"}}
 <!doctype html>
 <html lang="zh-CN">
   <head>
@@ -45,28 +103,36 @@ description: 根据 Figma 设计稿生成 Gin SSR 服务端渲染模板（HTML +
     <meta http-equiv="X-UA-Compatible" content="IE=edge, chrome=1" />
     <meta name="renderer" content="webkit" />
     <meta name="HandheldFriendly" content="true" />
+    <meta http-equiv="x-dns-prefetch-control" content="on" />
     <meta name="referrer" content="same-origin" />
+    <meta name="yandex-verification" content="YANDEX_VERIFICATION_REPLACE_ME" />
+    <meta name="msvalidate.01" content="MS_VALIDATE_REPLACE_ME" />
 
-    <title>{{.data.Config.WebTitle}}</title>
-    <meta name="description" content="{{.data.Config.WebDescription}}" />
-    <meta name="keywords" content="{{INJoinKeyworld .data.Config.WebKeyworld}}" />
-    <link rel="canonical" href="{{.data.Config.ForeverUrlAddr}}{{.data.Path}}" />
-    <meta name="robots" content="{{InGetRobotsTag .data.PageNum}}" />
-    <meta name="rating" content="adult" />
-    <meta name="template" content="Mirages" />
+    <title>页面标题</title>
 
-    <meta property="og:title" content="{{.data.Config.WebTitle}}" />
-    <meta property="og:site_name" content="{{.data.Config.WebSiteName}}" />
+    <meta property="og:title" content="页面标题" />
+    <meta property="og:site_name" content="站点名称" />
     <meta property="og:type" content="website" />
-    <meta property="og:url" content="{{.data.Config.ForeverUrlAddr}}{{.data.Path}}" />
-    <meta property="og:image" content="{{.data.Config.ForeverUrlAddr}}/favicon.ico" />
-    <meta property="og:description" content="{{.data.Config.WebDescription}}" />
+    <meta property="og:url" content="https://example.invalid/current-page" />
+    <meta property="og:image" content="https://example.invalid/favicon.ico" />
+    <meta property="og:description" content="页面描述" />
 
+    <meta name="twitter:title" content="页面标题" />
+    <meta name="twitter:description" content="页面描述" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:image" content="https://example.invalid/favicon.ico" />
+
+    <link rel="shortcut icon" href="https://example.invalid/favicon.ico" />
+    <meta name="description" content="页面描述" />
+    <meta name="keywords" content="关键词1,关键词2,关键词3" />
+    <link rel="canonical" href="https://example.invalid/current-page" />
+    <meta name="robots" content="index, follow" />
+    <meta name="rating" content="adult" />
     <meta name="theme-color" content="#ffffff" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="#ffffff" />
-    <link rel="shortcut icon" href="{{.data.Config.ForeverUrlAddr}}/favicon.ico" />
-    <link rel="icon" type="image/x-icon" href="{{.data.Config.ForeverUrlAddr}}/favicon.ico" />
+    <meta name="template" content="Mirages" />
+    <link rel="icon" type="image/x-icon" href="https://example.invalid/favicon.ico" />
 
     <script type="application/ld+json">
       {
@@ -74,25 +140,41 @@ description: 根据 Figma 设计稿生成 Gin SSR 服务端渲染模板（HTML +
         "@graph": [
           {
             "@type": "Organization",
-            "@id": "{{.data.Config.ForeverUrlAddr}}/#org",
-            "name": "{{.data.Config.WebSiteName}}",
-            "url": "{{.data.Config.ForeverUrlAddr}}",
+            "@id": "https://example.invalid/#org",
+            "name": "站点名称",
+            "url": "https://example.invalid",
             "logo": {
               "@type": "ImageObject",
-              "url": "{{.data.Config.ForeverUrlAddr}}/static/images/logo.png"
+              "url": "https://example.invalid/static/images/logo.png"
             }
           },
           {
             "@type": "WebSite",
-            "@id": "{{.data.Config.ForeverUrlAddr}}/#website",
-            "url": "{{.data.Config.ForeverUrlAddr}}",
-            "name": "{{.data.Config.WebSiteName}}",
+            "@id": "https://example.invalid/#website",
+            "url": "https://example.invalid",
+            "name": "站点名称",
             "inLanguage": "zh-CN",
-            "publisher": { "@id": "{{.data.Config.ForeverUrlAddr}}/#org" },
+            "publisher": {
+              "@id": "https://example.invalid/#org"
+            },
             "potentialAction": {
               "@type": "SearchAction",
-              "target": "{{.data.Config.ForeverUrlAddr}}/{search_term_string}",
+              "target": "https://example.invalid/{search_term_string}",
               "query-input": "required name=search_term_string"
+            }
+          },
+          {
+            "@type": "CollectionPage",
+            "@id": "https://example.invalid/#webpage",
+            "url": "https://example.invalid/current-page",
+            "name": "页面标题",
+            "description": "页面描述",
+            "inLanguage": "zh-CN",
+            "isPartOf": {
+              "@id": "https://example.invalid/#website"
+            },
+            "about": {
+              "@id": "https://example.invalid/#org"
             }
           }
         ]
@@ -102,244 +184,125 @@ description: 根据 Figma 设计稿生成 Gin SSR 服务端渲染模板（HTML +
     <script src="/static/js/imgDecypt.js"></script>
     <script src="/static/js/index.js"></script>
     <script src="/static/js/bootstrap.bundle.min.js"></script>
+
     <link rel="stylesheet" href="/static/css/bootstrap.min.css" />
     <link rel="stylesheet" href="/static/css/style.css" />
     <link rel="stylesheet" href="/static/css/{页面名}.css" />
   </head>
-</html>
-```
+  <body>
+    <header class="page-header">
+      <div class="page-header__inner">
+        <a class="page-header__logo" href="/">LOGO</a>
+        <nav class="page-header__nav">
+          <a href="/">首页</a>
+          <a href="/list">列表</a>
+          <a href="/about">关于</a>
+        </nav>
+      </div>
+    </header>
 
-### 2. 页面内容（`<body>` 部分）
+    <main class="{页面名}-page">
+      <!-- 必须在这里用原生 HTML 严格还原截图 -->
+    </main>
 
-```html
-<body>
-  <header>{{template "pcNav" .data}}</header>
-
-  <main>
-    <!-- 页面具体内容 -->
-  </main>
-
-  <footer>{{template "bottomNav" .}}</footer>
-</body>
-```
-
-### 3. 底部脚本（`</html>` 前）
-
-```html
-  <script src="/static/js/gtm.js"></script>
+    <footer class="page-footer">
+      <div class="page-footer__inner">
+        <p>© 2026 Site Name. All Rights Reserved.</p>
+      </div>
+    </footer>
+  </body>
 </html>
 {{end}}
 ```
 
-### JSON-LD 结构说明
+## 4. main 区域还原规则
 
-JSON-LD 根据页面类型在 `@graph` 数组中添加不同节点：
+### 4.1 结构必须完整
 
-| 页面类型    | `@type`          | 额外字段                                       |
-| ----------- | ---------------- | ---------------------------------------------- |
-| 首页/列表页 | `CollectionPage` | `description`, `isPartOf`, `about`             |
-| 详情页      | `Article`        | `headline`, `image`, `datePublished`, `author` |
+main 中必须包含截图里能看到的真实结构，例如：
 
-**列表页示例（追加到 @graph）**：
+- 页面标题区
+- 面包屑/说明文案
+- 卡片区
+- 表单区
+- 列表区
+- 操作按钮区
+- 头像/封面/图标区
+- 标签/状态区
 
-```json
-{
-  "@type": "CollectionPage",
-  "@id": "{{.data.Config.ForeverUrlAddr}}/#webpage",
-  "url": "{{.data.Config.ForeverUrlAddr}}{{.data.Path}}",
-  "name": "{{.data.Config.WebTitle}}",
-  "description": "{{.data.Config.WebDescription}}",
-  "inLanguage": "zh-CN",
-  "isPartOf": { "@id": "{{.data.Config.ForeverUrlAddr}}/#website" },
-  "about": { "@id": "{{.data.Config.ForeverUrlAddr}}/#org" }
-}
+### 4.2 文案必须补齐
+
+- 能识别出的文案必须直接写入 HTML
+- 看不清时写中文注释：
+
+```html
+<!-- 文案待确认 -->
 ```
 
-**详情页示例（追加到 @graph）**：
+- 不能因为文案看不清就把整个模块省略掉
 
-```json
-{
-  "@type": "Article",
-  "@id": "{{.data.Config.ForeverUrlAddr}}{{.data.Path}}/#article",
-  "headline": "{{.data.Config.WebTitle}}",
-  "description": "{{.data.Config.WebDescription}}",
-  "image": "{{.data.Config.ForeverUrlAddr}}/favicon.ico",
-  "datePublished": "{{InFormatDateStringDash .data.PublishTime}}",
-  "author": { "@id": "{{.data.Config.ForeverUrlAddr}}/#org" },
-  "publisher": { "@id": "{{.data.Config.ForeverUrlAddr}}/#org" },
-  "inLanguage": "zh-CN",
-  "isPartOf": { "@id": "{{.data.Config.ForeverUrlAddr}}/#website" }
-}
-```
+### 4.3 CSS 必须可用
 
-## CSS 规范
+CSS 必须包含：
 
-### 文件命名
+- 页面根容器
+- 每个区块容器
+- 字号、行高、颜色
+- 边框、圆角、背景、阴影
+- Flex / Grid 布局
+- 间距（margin/padding/gap）
+- 按钮、输入框、列表项样式
+- 必要的移动端适配
 
-- 文件名与 HTML 页面名一致
-- 放在 `app/static/css/` 目录下
+## 5. 响应式规则
 
-### 布局规范
-
-> CSS 的主要目标是精确还原截图中的视觉样式，无需限制宽度或内边距。
-
-| 规范     | 值                     |
-| -------- | ---------------------- |
-| 容器宽度 | 由截图决定，不强制限制 |
-| 内边距   | 由截图决定，不强制添加 |
-| PC 端    | `min-width: 824px`     |
-| H5 端    | `max-width: 824px`     |
-
-### 样式还原原则
-
-- **尺寸/间距**：严格按截图中的像素值还原，包括 `width`、`height`、`margin`、`padding`
-- **字体**：还原 `font-size`、`font-weight`、`color`、`line-height`
-- **颜色**：精确还原所有 `color`、`background-color`、`border-color` 等颜色值
-- **布局**：优先使用 Flexbox 或 Grid 实现与截图一致的布局效果
-- **图片/图标**：保持截图中的宽高比和比例
-- **不自动添加**：`max-width`、`margin: auto` 等约束性样式，除非截图中有明确体现
-
-### 双端样式差异
+- PC 稿：默认桌面样式
+- 有 H5 稿：补充
 
 ```css
-/* PC 端样式（> 824px） */
-.element {
-  /* PC 端样式 */
-}
-
-/* H5 端样式（≤ 824px） */
 @media screen and (max-width: 824px) {
-  .element {
-    /* H5 端样式 */
-  }
+  /* H5样式 */
 }
 ```
 
-## 可用模板函数
+- 只有 H5 稿：补充
 
-| 函数                     | 用途                                  | 示例                                        |
-| ------------------------ | ------------------------------------- | ------------------------------------------- |
-| `InToJSON .data`         | 调试输出 JSON                         | `{{InToJSON .data}}`                        |
-| `InDict k1 v1 k2 v2`     | 构建 map 传递给模板                   | `{{InDict "Name" "标题" "Media" .list}}`    |
-| `InRichText`             | 富文本转 HTML                         | `{{InRichText .content}}`                   |
-| `InFormatDate`           | 格式化为 `2006.01.02 15:04`           | `{{InFormatDate .time}}`                    |
-| `InFormatYm`             | 格式化为 `2006年01月`                 | `{{InFormatYm .time}}`                      |
-| `InFormatTime`           | 自定义格式时间                        | `{{InFormatTime .time "2006-01-02"}}`       |
-| `InFormatDuration`       | 格式化视频时长 `00:00`                | `{{InFormatDuration .duration}}`            |
-| `InFormatDateString`     | `2006年01月02日`                      | `{{InFormatDateString .date}}`              |
-| `InFormatDateStringSep`  | `2006/01/02`                          | `{{InFormatDateStringSep .date}}`           |
-| `InFormatDateStringDash` | `YYYY-MM-DD`                          | `{{InFormatDateStringDash .date}}`          |
-| `ImgDecrypt`             | 图片 XOR 解密（**网络图片必须使用**） | `{{ImgDecrypt .imgUrl}}`                    |
-| `InPage`                 | 计算分页总数                          | `{{InPage .data.TotalSize .data.PageSize}}` |
-| `ChangeNum`              | 数字换算（万/亿）                     | `{{ChangeNum .viewCount "万"}}`             |
-| `INJoinKeyworld`         | 合并关键词                            | `{{INJoinKeyworld .keywords}}`              |
-| `InPageTitleSuffix`      | 页面标题后缀                          | `{{InPageTitleSuffix .pageNum}}`            |
-| `InGetRobotsTag`         | robots meta 标签                      | `{{InGetRobotsTag .pageNum}}`               |
-| `InformatCount`          | 数字展示（1000→1k, 10000→1w）         | `{{InformatCount .views}}`                  |
-| `Seq n`                  | 生成 0~n-1 序列                       | `{{range Seq 10}}`                          |
-| `InSub/InAdd`            | 数值加减                              | `{{InSub .a .b}}`                           |
-| `InMod i j`              | 取模运算                              | `{{InMod .index 2}}`                        |
-| `InNumberToChinese`      | 数字转中文（1→一）                    | `{{InNumberToChinese .index}}`              |
-| `InNumberToChineseFull`  | 数字转完整中文                        | `{{InNumberToChineseFull .num}}`            |
-| `template "name" .data`  | 嵌套模板                              | `{{template "pcNav" .data}}`                |
-
-## 常见内容模块模板
-
-### 网络图片（必须使用）
-
-```html
-<!-- 网络图片必须使用 ImgDecrypt 解密，并添加 lazy 属性 -->
-<img loading="" lazy src="{{ImgDecrypt .imgUrl}}" alt="{{.alt}}" />
+```css
+@media screen and (min-width: 825px) {
+  /* PC样式 */
+}
 ```
 
-### 本地/内链图片
+## 6. 生成步骤
 
-```html
-<!-- 非加密图片直接使用 -->
-<img src="{{.imgUrl}}" alt="{{.alt}}" />
+1. 先识别截图 title
+2. 再识别 main 里的所有模块和文案
+3. 生成页面名 `{页面名}`
+4. 先输出完整 HTML 骨架
+5. 再把 main 按截图补全
+6. 生成对应 CSS
+7. 写入两个文件
+8. 回复文件路径和附件
+
+## 7. 最终回复格式
+
+最终回复必须是：
+
+```text
+✅ 生成完成
+页面名: {页面名}
+HTML: app/templates/page/{页面名}.html
+CSS: app/static/css/{页面名}.css
 ```
 
-### 列表项（图片+标题+标签）
+Telegram 会话必须追加：
 
-```html
-{{range .data.List}}
-<div class="section-content__item">
-  <div class="item-cover">
-    <a href="{{.Href}}">
-      <img loading="" lazy src="{{ImgDecrypt .Cover}}" alt="{{.Title}}" />
-    </a>
-  </div>
-  <div class="item-texts">
-    <h3 class="text-ellipsis-1">{{.Title}}</h3>
-    {{if .Tags}}
-    <div class="text-social">
-      {{range .Tags}}
-      <span>{{.}}</span>
-      {{end}}
-    </div>
-    {{end}}
-  </div>
-</div>
-{{end}}
+```text
+MEDIA:app/templates/page/{页面名}.html
+MEDIA:app/static/css/{页面名}.css
 ```
 
-### 分页组件
-
-```html
-<!-- 直接调用已有的分页模板 -->
-{{template "pagination" .data}}
 ```
 
-## ⚠️ 重要：数据字段取值规则
-
-> `.data` 是后端返回的结构体，**必须严格按照后端提供的结构体字段取值**。
-
-### 正确流程
-
-1. **用户提供 Figma 截图 + 后端结构体（如 `app/api/proto/*.go`）时**
-   - 页面所有字段取值必须参考后端结构体定义
-   - 不能凭猜测使用字段名
-   - 如字段命名不明确，在生成前询问用户
-
-2. **只有 Figma 截图，没有结构体时**
-   - 使用通用字段名（如 `.Title`、`.Cover`、`.Href`）
-   - 在注释中标注 `[字段名待确认]`
-   - 提醒用户提供后端结构体
-
-### 取值示例
-
-```html
-<!-- 根据结构体 ComicsInfoData 取值 -->
-<img loading="" lazy src="{{ImgDecrypt .CoverImg}}" alt="{{.Title}}" />
-<span>{{.Author}}</span>
-<span>{{.ChapterCount}}话</span>
-
-<!-- 根据结构体 ComicsCategoryHtmlData 取值 -->
-{{range .ComicsInfos}}
-<div class="item">
-  <a href="/comics/{{.Jmid}}/">
-    <img loading="" lazy src="{{ImgDecrypt .CoverImg}}" alt="{{.Title}}" />
-  </a>
-</div>
-{{end}}
 ```
-
-## 生成流程
-
-1. 分析用户提供的 Figma 截图或页面需求
-2. **如果有后端结构体文件**：读取并严格按字段名生成模板
-3. 确定页面名称（用于文件名和 `{{define}}`）
-4. 提取 SEO 信息（标题、描述、关键词）
-5. 识别页面结构（header、main、footer、section 数量）
-6. 确定 CSS 类名规范（参考现有 CSS）
-7. 根据页面类型选择 JSON-LD 结构（CollectionPage / Article）
-8. 生成 HTML 文件（SEO + 内容 + 脚本）
-9. 生成 CSS 文件（PC 样式 + H5 适配）
-10. 确认文件路径
-
-## 注意事项
-
-- 所有 CSS 类名需参考 `homeSection.css` 的命名规范
-- 图片解密使用 `ImgDecrypt` 函数
-- JSON-LD 结构化数据根据页面类型调整 `@type`
-- 所有 `<a>` 链接需使用项目内路由格式
+````
