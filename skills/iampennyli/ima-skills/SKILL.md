@@ -157,20 +157,73 @@ ima_api "search_note_book" '{"search_type": 1, "query_info": {"content": "项目
 - 展示笔记列表时只展示标题、摘要和修改时间，不要主动展示正文
 - 时间字段是 Unix 毫秒时间戳，展示时转为可读格式
 - 返回数据为嵌套结构：搜索结果取 `docs[].doc.basic_info.docid`，笔记本取 `note_book_folders[].folder.basic_info.folder_id`，笔记列表取 `note_book_list[].basic_info.basic_info.docid`，注意按层级解析
+- **UTF-8 编码**：内容写入前必须确保为 UTF-8 编码。当内容来自临时文件、WebFetch 或外部来源时，按运行环境选择合适的方式转码：
+
+  **Python（推荐，几乎所有环境都有）：**
+  ```bash
+  # 读取文件，自动检测编码并转为 UTF-8
+  content=$(python3 -c "
+  import sys
+  data = open('tmpfile', 'rb').read()
+  for enc in ['utf-8', 'gbk', 'gb2312', 'big5', 'latin-1']:
+      try:
+          sys.stdout.write(data.decode(enc))
+          break
+      except (UnicodeDecodeError, LookupError):
+          continue
+  " 2>/dev/null)
+
+  # 如果内容已在变量中，清洗非法 UTF-8 字节
+  content=$(printf '%s' "$content" | python3 -c "import sys; sys.stdout.write(sys.stdin.buffer.read().decode('utf-8','ignore'))")
+  ```
+
+  **Node.js：**
+  ```bash
+  content=$(node -e "const fs=require('fs');const buf=fs.readFileSync('tmpfile');process.stdout.write(buf.toString('utf8'))")
+  # 已知编码（如 GBK）：
+  content=$(node -e "const fs=require('fs');process.stdout.write(new TextDecoder('gbk').decode(fs.readFileSync('tmpfile')))")
+  ```
+
+  **Unix (macOS/Linux)：**
+  ```bash
+  content=$(iconv -f "$(file -b --mime-encoding tmpfile)" -t UTF-8 tmpfile 2>/dev/null || cat tmpfile)
+  ```
+
+  **Windows PowerShell：**
+  ```powershell
+  # 读取非 UTF-8 文件并转码
+  $content = [System.IO.File]::ReadAllText('tmpfile', [System.Text.Encoding]::Default)
+  [System.IO.File]::WriteAllText('tmpfile.utf8', $content, [System.Text.Encoding]::UTF8)
+  ```
+
+  > **PowerShell 5.1 发送请求注意事项：**
+  > `Invoke-RestMethod` 传入字符串 Body 时，默认使用系统 ANSI 编码（中文 Windows 为 GBK），而非 UTF-8，即使设置了 `Content-Type: charset=utf-8` 也无效。必须**显式转为 UTF-8 字节数组**再传入 `-Body`，同时使用 `ConvertTo-Json` 构建 JSON 以避免手动拼接的转义风险：
+  >
+  > ```powershell
+  > $body = @{ title = "标题"; content = $content; content_format = 1 } | ConvertTo-Json -Depth 10
+  > $utf8Bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+  > Invoke-RestMethod -Uri $url -Method Post -Body $utf8Bytes -ContentType "application/json; charset=utf-8" -Headers $headers
+  > ```
+  >
+  > PowerShell 7+ 默认使用 UTF-8，无需额外处理。
+
+  标题同理，确保传入 API 的所有字符串字段均为合法 UTF-8。
+
 
 ## 错误处理
 
-| 错误码 | 含义 | 建议处理 |
-|--------|------|---------|
-| 0 | 成功 | — |
-| 100001 | 参数错误 | 检查请求参数格式和必填字段 |
-| 100002 | 无效 ID | 检查凭证配置 |
-| 100003 | 服务器内部错误 | 等待后重试 |
-| 100004 | size 不合法 / 空间不够 | 检查参数范围 |
-| 100005 | 无权限 | 确认操作的是用户自己的笔记 |
-| 100006 | 笔记已删除 | 告知用户该笔记不存在 |
-| 100008 | 版本冲突 | 重新获取内容后再操作 |
-| 100009 | 超过大小限制 | 拆分为多次 `append_doc` 写入 |
-| 310001 | 笔记本不存在 | 检查 `folder_id` 是否正确 |
-| 20002 | apiKey超过最大限频              |
-| 20004 | apikey 鉴权失败 | 检查凭证配置是否正确 |
+| 错误码 | 含义              | 建议处理                  |
+|--------|-----------------|-----------------------|
+| 0 | 成功              | —                     |
+| 100001 | 参数错误            | 检查请求参数格式和必填字段         |
+| 100002 | 无效 ID           | 检查凭证配置                |
+| 100003 | 服务器内部错误         | 等待后重试                 |
+| 100004 | size 不合法 / 空间不够 | 检查参数范围                |
+| 100005 | 无权限             | 确认操作的是用户自己的笔记         |
+| 100006 | 笔记已删除           | 告知用户该笔记不存在            |
+| 100008 | 版本冲突            | 重新获取内容后再操作            |
+| 100009 | 超过大小限制          | 拆分为多次 `append_doc` 写入 |
+| 310001 | 笔记本不存在          | 检查 `folder_id` 是否正确   |
+| 20002 | apiKey超过最大限频    |
+| 20004 | apikey 鉴权失败     | 检查凭证配置是否正确            |
+| 110037 | apikey 过期       | 请获取最新apikey：https://ima.qq.com/agent-interface          |

@@ -154,12 +154,12 @@ POST /openapi/note/v1/search_note_book
 #### 请求参数
 
 | 字段 | 类型 | 必填 | 说明 |
-|------|------|----|------|
+|------|------|----|----|
 | `search_type` | SearchType | 否  | 检索方式，默认为标题，`0`=标题，`1`=正文 |
 | `sort_type` | SortType | 否  | 排序方式，默认为更新时间，`0`=更新时间，`1`=创建时间，`2`=标题，`3`=大小 |
 | `query_info` | QueryInfo | 否  | 用户 query，见 [QueryInfo](#queryinfo) |
-| `start` | int64 | 是  | 翻页字段 |
-| `end` | int64 | 是  | 翻页字段 |
+| `start` | int64 | 是  | 翻页字段，起始编号 |
+| `end` | int64 | 是  | 翻页字段，终止编号，与start相差不超过20 |
 | `query_id` | string | 否  | queryid |
 
 #### 返回字段
@@ -182,7 +182,7 @@ POST /openapi/note/v1/list_note_folder_by_cursor
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|------|------|
 | `cursor` | string | **是** | 游标，第一页传 `"0"`，后续传后台返回的值 |
-| `limit` | uint64 | **是** | 获取笔记数量限制 |
+| `limit` | uint64 | **是** | 获取笔记数量限制，不要超过20 |
 
 #### 返回字段
 
@@ -203,11 +203,11 @@ POST /openapi/note/v1/list_note_by_folder_id
 
 #### 请求参数       
 
-| 字段 | 类型 | 必填 | 说明                |
-|------|------|---|-------------------|
-| `folder_id` | string | 否 | 笔记本 ID，根目录为空      |
+| 字段 | 类型 | 必填 | 说明              |
+|------|------|---|-----------------|
+| `folder_id` | string | 否 | 笔记本 ID，根目录为空    |
 | `cursor` | string | **是** | 当前游标，首次传空字符串 `""` |
-| `limit` | uint64 | **是** | 获取笔记数量限制          |
+| `limit` | uint64 | **是** | 获取笔记数量限制，不要超过20 |
 
 #### 返回字段
 
@@ -229,7 +229,7 @@ POST /openapi/note/v1/import_doc
 | 字段 | 类型 | 必填 | 说明 |
 |------|------|---|----|
 | `content_format` | int | **是** | 文本类型：`1`=Markdown（默认）目前仅支持 `MARKDOWN`（值为 `1`） |
-| `content` | string | **是** | 笔记正文内容, 只支持markdown格式 |
+| `content` | string | **是** | 笔记正文内容, 只支持markdown格式, 不要传空值 |
 | `folder_id` | string | 否 | 关联的笔记本id |
 
 #### 返回字段
@@ -341,3 +341,4 @@ POST /openapi/note/v1/get_doc_content
 | 310001 | 笔记本不存在                    |
 | 20002 | apiKey超过最大限频              |
 | 20004 | apikey鉴权失败                |
+| 110037 | apikey 过期       |
