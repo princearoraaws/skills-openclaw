@@ -1,0 +1,11 @@
+{
+  "owner": "browseract-ai",
+  "slug": "zhihu-search-api-skill",
+  "displayName": "zhihu-search-api-skill",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774007476786,
+    "commit": null
+  },
+  "history": []
+}
