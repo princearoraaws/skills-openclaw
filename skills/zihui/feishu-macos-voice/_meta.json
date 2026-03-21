@@ -1,0 +1,11 @@
+{
+  "owner": "zihui",
+  "slug": "feishu-macos-voice",
+  "displayName": "Feishu Voice (macOS TTS)",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773995492477,
+    "commit": null
+  },
+  "history": []
+}
