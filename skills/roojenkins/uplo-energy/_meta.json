@@ -1,0 +1,11 @@
+{
+  "owner": "roojenkins",
+  "slug": "uplo-energy",
+  "displayName": "Uplo Energy",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774006983811,
+    "commit": null
+  },
+  "history": []
+}
