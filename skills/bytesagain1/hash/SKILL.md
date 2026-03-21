@@ -1,89 +1,96 @@
 ---
 name: hash
-version: "2.0.0"
+version: "3.0.1"
 author: BytesAgain
+homepage: https://bytesagain.com
+source: https://github.com/bytesagain/ai-skills
 license: MIT-0
 tags: [hash, tool, utility]
-description: "Hash - command-line tool for everyday use"
+description: "Generate MD5 and SHA checksums, verify integrity, and compare hash values. Use when computing checksums, verifying downloads, or comparing hash outputs."
 ---
 
-# Hash
+# hash
 
-Hash toolkit — generate MD5, SHA256, checksums, verify integrity, and compare hashes.
+Hash & Checksum Tool.
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `hash help` | Show usage info |
-| `hash run` | Run main task |
-| `hash status` | Check state |
-| `hash list` | List items |
-| `hash add <item>` | Add item |
-| `hash export <fmt>` | Export data |
+### `md5`
 
-## Usage
+Compute MD5 hash
 
 ```bash
-hash help
-hash run
-hash status
+scripts/script.sh md5 <file_or_text>
 ```
 
-## Examples
+### `sha1`
+
+Compute SHA-1 hash
 
 ```bash
-hash help
-hash run
-hash export json
+scripts/script.sh sha1 <file_or_text>
 ```
 
-## Output
+### `sha256`
 
-Results go to stdout. Save with `hash run > output.txt`.
+Compute SHA-256 hash
 
-## Configuration
+```bash
+scripts/script.sh sha256 <file_or_text>
+```
 
-Set `HASH_DIR` to change data directory. Default: `~/.local/share/hash/`
+### `sha512`
+
+Compute SHA-512 hash
+
+```bash
+scripts/script.sh sha512 <file_or_text>
+```
+
+### `verify`
+
+Verify a file against a known hash
+
+```bash
+scripts/script.sh verify <file> <expected_hash>
+```
+
+### `compare`
+
+Compare hashes of two files
+
+```bash
+scripts/script.sh compare <file1> <file2>
+```
+
+### `batch`
+
+Hash every file in a directory (default: sha256)
+
+```bash
+scripts/script.sh batch <directory> [algo]
+```
+
+### `check`
+
+Verify hashes listed in a checksum file
+
+```bash
+scripts/script.sh check <hashfile>
+```
+
+### `history`
+
+Show recent hash operations
+
+```bash
+scripts/script.sh history
+```
+
+## Requirements
+
+- bash 4.0+
 
 ---
-*Powered by BytesAgain | bytesagain.com*
-*Feedback & Feature Requests: https://bytesagain.com/feedback*
 
-
-## Features
-
-- Simple command-line interface for quick access
-- Local data storage with JSON/CSV export
-- History tracking and activity logs
-- Search across all entries
-- Status monitoring and health checks
-- No external dependencies required
-
-## Quick Start
-
-```bash
-# Check status
-hash status
-
-# View help and available commands
-hash help
-
-# View statistics
-hash stats
-
-# Export your data
-hash export json
-```
-
-## How It Works
-
-Hash stores all data locally in `~/.local/share/hash/`. Each command logs activity with timestamps for full traceability. Use `stats` to see a summary, or `export` to back up your data in JSON, CSV, or plain text format.
-
-## Support
-
-- Feedback: https://bytesagain.com/feedback/
-- Website: https://bytesagain.com
-- Email: hello@bytesagain.com
-
-Powered by BytesAgain | bytesagain.com
+*Powered by BytesAgain | bytesagain.com | hello@bytesagain.com*
