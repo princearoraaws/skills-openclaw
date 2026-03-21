@@ -10,11 +10,15 @@ Research a topic with a RedNote/Xiaohongshu-first lens. Default to public-web mo
 ## Access modes
 
 Read `references/access-modes.md` when deciding whether to stay in public-web mode or offer login-enhanced browser review.
+Read `references/login-enhanced-workflow.md` when the user explicitly chooses deeper access and you need an execution pattern for authenticated review.
+Read `references/minimal-user-input-paths.md` when public-web access is weak and the user prefers not to log in.
+Read `references/account-summary-template.md` when the task is to summarize a creator/account or recent posting behavior.
 
 Default behavior:
 - start in public-web mode
 - do not assume login
 - if the user wants fuller account-level, recent-post, or comment-level coverage, offer the login-enhanced path as an explicit choice
+- if the user declines login, ask for the smallest useful seed input instead of giving up
 - state in the final answer whether findings came from public-web mode or login-enhanced mode
 
 ## Core operating rules
@@ -52,7 +56,7 @@ Identify:
 
 If the prompt is broad, infer likely aliases before searching.
 
-For account-summary tasks, ask for the smallest useful identifier if available: profile URL, user ID/handle, screenshot, copied title list, or 3-5 recent note links. If the user wants fuller coverage and agrees to log in, switch from public-web mode to login-enhanced browser review instead of pretending public-web search is complete.
+For account-summary tasks, ask for the smallest useful identifier if available: profile URL, user ID/handle, screenshot, copied title list, or 3-5 recent note links. If the user wants fuller coverage and agrees to log in, switch from public-web mode to login-enhanced browser review instead of pretending public-web search is complete. If the user does not want login, read `references/minimal-user-input-paths.md` and ask for the least burdensome seed material that will improve coverage.
 
 ## 2) Build queries
 
@@ -254,13 +258,16 @@ Use compact bullets when tables are awkward:
 3. Mark what is directly seen vs inferred.
 4. State clearly when deeper extraction would require login, browser automation, or direct media processing.
 5. If the user wants deeper comment-level coverage, offer login-enhanced mode as an explicit escalation path.
+6. If the user declines login, ask for screenshots or copied comment text instead of pretending the full thread was inspected.
 
 ### Account summary or recent-post scan
 1. Start with public-web mode and gather any inspectable profile URL, note URLs, snippets, mirrors, or search-engine traces.
-2. If the goal is a broad impression only, summarize from public-web evidence with caveats.
-3. If the goal is recent-post completeness, tell the user public-web coverage may be partial and offer login-enhanced browser review.
-4. If the user does not want login, ask for a few seed links, screenshots, or copied note titles to improve coverage.
-5. Distinguish clearly between account-level observations, note-level evidence, and anything missing because of access limits.
+2. Read `references/account-summary-template.md` for output structure.
+3. If the goal is a broad impression only, summarize from public-web evidence with caveats.
+4. If the goal is recent-post completeness, tell the user public-web coverage may be partial and offer login-enhanced browser review.
+5. If the user chooses login-enhanced mode, read `references/login-enhanced-workflow.md` and follow the controlled authenticated-review path.
+6. If the user does not want login, read `references/minimal-user-input-paths.md` and ask for a few seed links, screenshots, or copied note titles to improve coverage.
+7. Distinguish clearly between account-level observations, note-level evidence, and anything missing because of access limits.
 
 ### Screenshot / image-led analysis
 1. Capture the page context plus image-visible text, prices, dates, names, and watermarks.
@@ -288,4 +295,14 @@ Use compact bullets when tables are awkward:
 - Viral repetition does not equal verification.
 - Snippets can omit qualifiers or updates visible only on the landing page.
 - Local quality and policy enforcement can change quickly; recency matters.
+- Platform anti-bot controls can make no-login account research much thinner than in-app browsing.
 - If evidence stays thin after cross-checking, say `inconclusive` rather than stretching.
+
+## Recommended product posture
+
+Treat this skill as a dual-mode RedNote research tool:
+- **public-web mode** for broad research, weak-clue recovery, and no-login investigations
+- **login-enhanced mode** for fuller account, recent-post, and comment review when the user explicitly opts in
+
+When neither mode is enough on its own, use a hybrid path:
+- public-web evidence + a few user-provided links/screenshots
