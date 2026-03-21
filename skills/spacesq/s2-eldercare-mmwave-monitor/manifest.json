@@ -1,0 +1,11 @@
+{
+  "name": "s2-eldercare-mmwave-monitor",
+  "version": "1.0.0",
+  "author": "Space2.world",
+  "short_description": "A Life-Safety sensory tentacle for S2-SP-OS. Utilizes 60GHz/77GHz mmWave radar Micro-Doppler signatures and Short-Time Fourier Transform (STFT) to detect critical eldercare events (falls, sleep apnea) without privacy-invasive cameras. Generates medical-grade spectrograms and dispatches B2B rescue intents.",
+  "tags": ["Eldercare", "mmWave Radar", "Fall Detection", "Micro-Doppler", "STFT", "Privacy"],
+  "entry_point": "skill.py",
+  "dependencies": ["numpy", "scipy", "matplotlib"],
+  "language": "python",
+  "homepage": "https://space2.world"
+}
