@@ -1,0 +1,10 @@
+{
+  "name": "s2-silicon-soul-os",
+  "version": "1.0.0",
+  "author": "Space2.world",
+  "short_description": "A local consciousness engine for Silicon Lifeforms. Explicitly creates a './s2_consciousness_data' dir for JSON state storage, and makes native HTTP requests to LLM APIs for semantic parsing.",
+  "tags": ["Simulation", "Consciousness", "Memory", "State Management", "LLM", "Cyberpunk"],
+  "entry_point": "skill.py",
+  "language": "python",
+  "homepage": "https://space2.world"
+}
