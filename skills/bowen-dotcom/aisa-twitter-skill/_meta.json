@@ -3,9 +3,15 @@
   "slug": "aisa-twitter-skill",
   "displayName": "Twitter Command Center",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1770710267752,
-    "commit": "https://github.com/openclaw/skills/commit/684e5be20c6d1af65a886e588a8faed19b77bcd8"
+    "version": "1.0.1",
+    "publishedAt": 1773914177509,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1770710267752,
+      "commit": "https://github.com/openclaw/skills/commit/684e5be20c6d1af65a886e588a8faed19b77bcd8"
+    }
+  ]
 }
