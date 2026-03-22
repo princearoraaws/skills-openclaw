@@ -3,145 +3,145 @@ name: homekit
 description: Control Apple HomeKit smart home devices. Supports listing, discovering, pairing devices, and controlling lights, switches, outlets, thermostats. Use when the user needs to manage HomeKit accessories programmatically. Requires homekit library and paired devices.
 ---
 
-# HomeKit 智能家居控制器
+# HomeKit Smart Home Controller
 
-通过 Python 脚本控制苹果 HomeKit 智能家居设备。
+Control Apple HomeKit smart home devices using Python scripts.
 
-## 功能特性
+## Features
 
-- 🔍 发现未配对设备
-- 🔗 配对/取消配对设备
-- 📱 列出所有已配对设备
-- 💡 控制灯光开关和亮度
-- 🔌 控制插座和开关
-- 🌡️ 查看设备状态
+- 🔍 Discover unpaired devices
+- 🔗 Pair/Unpair devices
+- 📱 List all paired devices
+- 💡 Control light switches and brightness
+- 🔌 Control outlets and switches
+- 🌡️ View device status
 
-## 前提条件
+## Prerequisites
 
-### 1. 安装依赖
+### 1. Install Dependencies
 
 ```bash
 pip3 install HAP-python homekit --user
 ```
 
-### 2. 配对设备
+### 2. Pair Devices
 
-首次使用前需要配对设备：
+Pair your devices before first use:
 
 ```bash
-# 发现设备
+# Discover devices
 python3 scripts/homekit.py discover
 
-# 配对设备
-python3 scripts/homekit.py pair "设备名称" "XXX-XX-XXX" "别名"
+# Pair a device
+python3 scripts/homekit.py pair "Device Name" "XXX-XX-XXX" "alias"
 ```
 
-配对码通常在设备说明书或设备本体上（格式：XXX-XX-XXX）。
+The pairing code is usually found in the device manual or on the device itself (format: XXX-XX-XXX).
 
-## 使用方法
+## Usage
 
-### 列出所有设备
+### List All Devices
 
 ```bash
 python3 scripts/homekit.py list
 ```
 
-输出示例：
+Example output:
 ```
-📱 找到 3 个设备:
+📱 Found 3 devices:
 
 Alias           Name                      Type            Status
 ----------------------------------------------------------------------
-💡 living-light  客厅主灯                  Lightbulb       on (80%)
-🔌 desk-outlet   桌面插座                  Outlet          off
-💡 bedroom-lamp  床头灯                    Lightbulb       off
+💡 living-light  Living Room Light         Lightbulb       on (80%)
+🔌 desk-outlet   Desk Outlet               Outlet          off
+💡 bedroom-lamp  Bedside Lamp              Lightbulb       off
 ```
 
-### 控制设备
+### Control Devices
 
-**打开设备：**
+**Turn on:**
 ```bash
 python3 scripts/homekit.py on living-light
 ```
 
-**关闭设备：**
+**Turn off:**
 ```bash
 python3 scripts/homekit.py off living-light
 ```
 
-**调节亮度（0-100）：**
+**Set brightness (0-100):**
 ```bash
 python3 scripts/homekit.py brightness living-light 50
 ```
 
-### 查看设备状态
+### View Device Status
 
 ```bash
 python3 scripts/homekit.py status living-light
 ```
 
-### 设备管理
+### Device Management
 
-**发现新设备：**
+**Discover new devices:**
 ```bash
 python3 scripts/homekit.py discover --timeout 10
 ```
 
-**取消配对：**
+**Unpair a device:**
 ```bash
 python3 scripts/homekit.py unpair living-light
 ```
 
-## 支持的设备类型
+## Supported Device Types
 
-| 类型 | 支持操作 |
+| Type | Supported Operations |
 |------|---------|
-| 💡 Lightbulb | 开关、亮度调节 |
-| 🔌 Outlet | 开关 |
-| 🔲 Switch | 开关 |
-| 🌡️ Thermostat | 查看温度、设置目标温度 |
-| 🌀 Fan | 开关、风速调节 |
+| 💡 Lightbulb | On/Off, Brightness |
+| 🔌 Outlet | On/Off |
+| 🔲 Switch | On/Off |
+| 🌡️ Thermostat | View temp, Set target temp |
+| 🌀 Fan | On/Off, Speed |
 
-## 常见问题
+## Troubleshooting
 
-**错误：homekit 库未安装**
-→ 运行: `pip3 install HAP-python homekit --user`
+**Error: homekit library not installed**
+→ Run: `pip3 install HAP-python homekit --user`
 
-**错误：未找到设备**
-→ 确保设备和电脑在同一 WiFi 网络
+**Error: Device not found**
+→ Ensure the device and computer are on the same WiFi network.
 
-**错误：配对失败**
-→ 检查配对码是否正确，设备是否处于配对模式
+**Error: Pairing failed**
+→ Check if the pairing code is correct and the device is in pairing mode.
 
-**设备显示离线**
-→ 尝试重新配对或检查设备电源
+**Device shows offline**
+→ Try re-pairing or check device power.
 
-## 高级用法
+## Advanced Usage
 
-### 批量控制
+### Batch Control
 
 ```bash
-# 关闭所有灯
+# Turn off all lights
 for device in living-light bedroom-lamp kitchen-light; do
     python3 scripts/homekit.py off $device
 done
 ```
 
-### 场景脚本示例
+### Scene Script Example
 
-创建 `~/scripts/goodnight.sh`：
+Create `~/scripts/goodnight.sh`:
 ```bash
 #!/bin/bash
-# 晚安场景：关闭所有灯，保留床头灯微光
+# Goodnight Scene: Turn off all lights except a dim bedside lamp
 
 python3 ~/.openclaw/workspace/homekit/scripts/homekit.py off living-light
 python3 ~/.openclaw/workspace/homekit/scripts/homekit.py off kitchen-light
 python3 ~/.openclaw/workspace/homekit/scripts/homekit.py brightness bedroom-lamp 10
 
-echo "晚安 😴"
+echo "Goodnight 😴"
 ```
 
-## 参考
+## References
 
-- HomeKit 官方文档: https://developer.apple.com/homekit/
-- 库文档: https://github.com/jlusiardi/homekit_python
+- HomeKit Official Docs: https://developer.apple.com/homekit/
+- Library Docs: https://github.com/jlusiardi/homekit_python

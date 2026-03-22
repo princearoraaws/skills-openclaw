@@ -1,8 +1,8 @@
-# HomeKit API 参考
+# HomeKit API Reference
 
-## 设备发现
+## Device Discovery
 
-HomeKit 使用 Bonjour/mDNS 协议在局域网内发现设备。
+HomeKit uses the Bonjour/mDNS protocol to discover devices on the local network.
 
 ```python
 from homekit.zeroconf_impl import ZeroconfController
@@ -11,11 +11,11 @@ controller = ZeroconfController()
 devices = controller.discover(timeout=5)
 ```
 
-## 设备配对
+## Device Pairing
 
-配对需要：
-1. 设备处于配对模式
-2. 正确的配对码（8位数字，格式：XXX-XX-XXX）
+Pairing requires:
+1. The device must be in pairing mode.
+2. A valid pairing code (8-digit PIN, format: XXX-XX-XXX).
 
 ```python
 from homekit import Controller
@@ -30,9 +30,9 @@ pairing = controller.perform_pairing(
 )
 ```
 
-## 设备控制
+## Device Control
 
-### 获取设备列表
+### Getting Device List
 
 ```python
 pairings = controller.get_pairings()
@@ -41,17 +41,17 @@ for alias in pairings:
     accessories = pairing.list_accessories_and_characteristics()
 ```
 
-### 控制开关
+### Controlling Switches
 
 ```python
-# 打开
+# Turn on
 pairing.put_characteristics([{
     'aid': 1,  # Accessory ID
     'iid': 9,  # Characteristic ID (On)
     'value': True
 }])
 
-# 关闭
+# Turn off
 pairing.put_characteristics([{
     'aid': 1,
     'iid': 9,
@@ -59,7 +59,7 @@ pairing.put_characteristics([{
 }])
 ```
 
-### 设置亮度
+### Setting Brightness
 
 ```python
 pairing.put_characteristics([{
@@ -69,32 +69,32 @@ pairing.put_characteristics([{
 }])
 ```
 
-## 特性类型 (Characteristics)
+## Characteristic Types
 
-| 类型 | UUID | 描述 |
+| Type | UUID | Description |
 |------|------|------|
-| On | 00000025-0000-1000-8000-0026BB765291 | 开关状态 |
-| Brightness | 00000008-0000-1000-8000-0026BB765291 | 亮度 (0-100) |
-| Hue | 00000013-0000-1000-8000-0026BB765291 | 色相 (0-360) |
-| Saturation | 0000002F-0000-1000-8000-0026BB765291 | 饱和度 (0-100) |
-| CurrentTemperature | 00000011-0000-1000-8000-0026BB765291 | 当前温度 |
-| TargetTemperature | 00000035-0000-1000-8000-0026BB765291 | 目标温度 |
+| On | 00000025-0000-1000-8000-0026BB765291 | Power state |
+| Brightness | 00000008-0000-1000-8000-0026BB765291 | Brightness (0-100) |
+| Hue | 00000013-0000-1000-8000-0026BB765291 | Hue (0-360) |
+| Saturation | 0000002F-0000-1000-8000-0026BB765291 | Saturation (0-100) |
+| CurrentTemperature | 00000011-0000-1000-8000-0026BB765291 | Current Temp |
+| TargetTemperature | 00000035-0000-1000-8000-0026BB765291 | Target Temp |
 
-## 服务类型 (Services)
+## Service Types
 
-| 类型 | 描述 |
+| Type | Description |
 |------|------|
-| Lightbulb | 灯泡 |
-| Switch | 开关 |
-| Outlet | 插座 |
-| Thermostat | 温控器 |
-| Fan | 风扇 |
-| GarageDoorOpener | 车库门开启器 |
-| LockManagement | 锁管理 |
+| Lightbulb | Lightbulb |
+| Switch | Switch |
+| Outlet | Outlet |
+| Thermostat | Thermostat |
+| Fan | Fan |
+| GarageDoorOpener | Garage Door Opener |
+| LockManagement | Lock Management |
 
-## 错误处理
+## Error Handling
 
-常见异常：
-- `AccessoryNotFoundError`: 设备未找到
-- `IncorrectPairingIdError`: 配对 ID 错误
-- `UnavailableError`: 设备离线
+Common exceptions:
+- `AccessoryNotFoundError`: Device not found.
+- `IncorrectPairingIdError`: Invalid pairing ID.
+- `UnavailableError`: Device is offline.
