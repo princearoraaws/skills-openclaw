@@ -236,85 +236,195 @@ class RAGEngine:
     def match_jobs(self, jobs: list, min_score: float = 0.75) -> list:
         """
         Score and rank jobs against the resume using RAG.
-
-        Args:
-            jobs: list of dicts with keys: id, title, company, description, url, platform
-            min_score: minimum cosine similarity to include
-
-        Returns:
-            Sorted list of jobs with match_score and match_reasons
+        Includes JD text cleaning, keyword boosting, and industry relevance.
         """
         if self.resume_collection.count() == 0:
             return {"error": "No resume imported. Run --import-resume first."}
 
-        # Get all resume chunks for context
         resume_data = self.resume_collection.get(include=["documents", "embeddings"])
         resume_texts = resume_data["documents"]
 
         results = []
         for job in jobs:
-            jd_text = f"{job.get('title', '')} at {job.get('company', '')}\n{job.get('description', '')}"
+            # Step 1: Clean JD text (remove LinkedIn/Indeed boilerplate)
+            clean_desc = self._clean_jd_text(job.get('description', ''))
+            title = job.get('title', '')
+            company = job.get('company', '')
+
+            # Step 2: Build weighted query text (title counts more than description)
+            # Title is repeated to give it higher weight in embedding
+            jd_text = f"{title}. {title}. {company}.\n{clean_desc}"
             jd_embedding = self.model.encode([jd_text])[0]
 
-            # Query resume chunks most relevant to this JD
+            # Step 3: RAG similarity query
             query_result = self.resume_collection.query(
                 query_embeddings=[jd_embedding.tolist()],
                 n_results=min(5, len(resume_texts)),
                 include=["documents", "distances"]
             )
 
-            # Calculate match score (ChromaDB returns distances, convert to similarity)
             distances = query_result["distances"][0]
-            similarities = [1 - d for d in distances]  # cosine distance to similarity
+            similarities = [1 - d for d in distances]
             avg_score = sum(similarities) / len(similarities) if similarities else 0
             top_score = max(similarities) if similarities else 0
 
-            # Weighted score: 60% top match + 40% average
-            match_score = round(0.6 * top_score + 0.4 * avg_score, 3)
+            # Base RAG score: 60% top match + 40% average
+            rag_score = 0.6 * top_score + 0.4 * avg_score
+
+            # Step 4: Keyword boost (adds up to +0.15 for relevant tech keywords)
+            keyword_boost = self._calculate_keyword_boost(title, clean_desc)
+
+            # Step 5: Industry penalty (reduces score for clearly irrelevant industries)
+            industry_penalty = self._calculate_industry_penalty(title, clean_desc, company)
+
+            # Step 6: Combine scores
+            match_score = rag_score + keyword_boost - industry_penalty
 
             # Apply feedback adjustment
             feedback_adj = self._get_feedback_adjustment(jd_embedding)
             match_score = min(1.0, max(0.0, match_score + feedback_adj))
+            match_score = round(match_score, 3)
 
             if match_score >= min_score:
-                # Extract matching reasons from top resume chunks
                 top_chunks = query_result["documents"][0][:3]
-                match_reasons = self._extract_match_reasons(jd_text, top_chunks)
+                match_reasons = self._extract_match_reasons(title, clean_desc, top_chunks)
 
                 results.append({
                     **job,
-                    "match_score": round(match_score, 3),
+                    "match_score": match_score,
                     "match_reasons": match_reasons,
+                    "score_breakdown": {
+                        "rag_similarity": round(rag_score, 3),
+                        "keyword_boost": round(keyword_boost, 3),
+                        "industry_penalty": round(industry_penalty, 3),
+                        "feedback_adj": round(feedback_adj, 3),
+                    },
                     "top_matching_sections": [c[:100] + "..." for c in top_chunks[:2]]
                 })
 
         results.sort(key=lambda x: x["match_score"], reverse=True)
         return results
 
-    def _extract_match_reasons(self, jd_text: str, resume_chunks: list) -> list:
-        """Extract why this job matches (keyword overlap analysis)."""
-        # Simple keyword extraction for match reasoning
-        jd_words = set(jd_text.lower().split())
+    def _clean_jd_text(self, text: str) -> str:
+        """Remove LinkedIn/Indeed boilerplate noise from JD text."""
+        if not text:
+            return ""
+
+        import re
+
+        # Lines to remove (LinkedIn boilerplate)
+        noise_patterns = [
+            r"Seniority level.*",
+            r"Employment type.*",
+            r"Job function.*",
+            r"Industries.*",
+            r"Referrals increase your chances.*",
+            r"See who you know.*",
+            r"Show more.*",
+            r"Show less.*",
+            r"provided pay range.*",
+            r"Your actual pay will be based.*",
+            r"Base pay range.*",
+            r"talk with your recruiter.*",
+            r"Set alert for similar jobs.*",
+            r"Report this job.*",
+            r"Apply now.*",
+            r"Save this job.*",
+            r"以担保或任何理由索要财物.*",
+            r"该职位来源于.*",
+            r"职位来源于.*",
+            r"CN¥[\d,\.]+.*",
+            r"Not Applicable",
+        ]
+
+        lines = text.split("\n")
+        cleaned = []
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            skip = False
+            for pattern in noise_patterns:
+                if re.match(pattern, line, re.IGNORECASE):
+                    skip = True
+                    break
+            if not skip and len(line) > 2:
+                cleaned.append(line)
+
+        return "\n".join(cleaned)
+
+    def _calculate_keyword_boost(self, title: str, description: str) -> float:
+        """Boost score for jobs containing high-value keywords matching your profile."""
+        text = f"{title} {description}".lower()
+        boost = 0.0
+
+        # High-value keywords (directly relevant to AI PM transition)
+        high_value = ["ai", "人工智能", "大模型", "llm", "rag", "agent",
+                      "prompt", "机器学习", "machine learning", "nlp",
+                      "深度学习", "deep learning", "gpt", "claude"]
+        for kw in high_value:
+            if kw in text:
+                boost += 0.03
+
+        # Medium-value keywords (PM + tech skills you have)
+        medium_value = ["product manager", "产品经理", "agile", "敏捷",
+                        "sql", "python", "数据分析", "data analysis",
+                        "data driven", "数据驱动", "app", "移动端",
+                        "prd", "用户研究", "a/b test"]
+        for kw in medium_value:
+            if kw in text:
+                boost += 0.015
+
+        return min(0.15, boost)  # Cap at 0.15
+
+    def _calculate_industry_penalty(self, title: str, description: str, company: str) -> float:
+        """Penalize clearly irrelevant industries/roles."""
+        text = f"{title} {description} {company}".lower()
+        penalty = 0.0
+
+        # Irrelevant industries
+        irrelevant_industries = [
+            "furniture", "家具", "制药", "pharmaceutical", "化工", "chemical",
+            "房地产", "real estate", "保险", "insurance", "会计", "accounting",
+            "矿业", "mining", "农业", "agriculture", "养殖",
+        ]
+        for kw in irrelevant_industries:
+            if kw in text:
+                penalty += 0.08
+
+        # Irrelevant role types
+        irrelevant_roles = ["intern", "实习", "trainee", "校招",
+                            "销售", "sales rep", "会计", "财务分析"]
+        title_lower = title.lower()
+        for kw in irrelevant_roles:
+            if kw in title_lower:
+                penalty += 0.1
+
+        return min(0.2, penalty)  # Cap at 0.2
+
+    def _extract_match_reasons(self, title: str, description: str, resume_chunks: list) -> list:
+        """Extract detailed match reasons with bilingual keyword detection."""
+        full_text = f"{title} {description}".lower()
         reasons = []
 
-        skill_keywords = {
-            "python", "javascript", "sql", "react", "node", "aws", "docker",
-            "kubernetes", "agile", "scrum", "product", "manager", "data",
-            "ai", "machine learning", "llm", "rag", "agent", "api",
-            "mobile", "ios", "android", "figma", "design", "ux",
+        # Categorized keyword matching
+        categories = {
+            "AI/ML skills": ["ai", "人工智能", "llm", "大模型", "rag", "agent", "prompt",
+                            "machine learning", "机器学习", "nlp", "deep learning"],
+            "Product skills": ["product manager", "产品经理", "prd", "agile", "敏捷",
+                              "scrum", "roadmap", "用户研究", "user research"],
+            "Technical skills": ["python", "sql", "javascript", "api", "data",
+                                "数据分析", "数据驱动", "data driven"],
+            "Domain match": ["app", "移动端", "小程序", "digital", "数字化",
+                           "供应链", "supply chain", "乐园", "旅游", "entertainment"],
         }
 
-        matched_skills = []
-        for chunk in resume_chunks:
-            chunk_words = set(chunk.lower().split())
-            overlap = jd_words & chunk_words & skill_keywords
-            matched_skills.extend(overlap)
+        for category, keywords in categories.items():
+            matched = [kw for kw in keywords if kw in full_text]
+            if matched:
+                reasons.append(f"{category}: {', '.join(matched[:4])}")
 
-        matched_skills = list(set(matched_skills))[:5]
-        if matched_skills:
-            reasons.append(f"Matching skills: {', '.join(matched_skills)}")
-
-        return reasons if reasons else ["General experience alignment"]
+        return reasons if reasons else ["General alignment"]
 
     # -----------------------------------------------------------------------
     # Feedback Loop
