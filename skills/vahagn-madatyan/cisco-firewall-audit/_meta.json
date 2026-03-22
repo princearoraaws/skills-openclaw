@@ -1,0 +1,11 @@
+{
+  "owner": "vahagn-madatyan",
+  "slug": "cisco-firewall-audit",
+  "displayName": "Cisco Firewall Audit",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774139359309,
+    "commit": null
+  },
+  "history": []
+}
