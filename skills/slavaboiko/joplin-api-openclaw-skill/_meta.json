@@ -1,0 +1,11 @@
+{
+  "owner": "slavaboiko",
+  "slug": "joplin-api-openclaw-skill",
+  "displayName": "Joplin Server Skill (no CLI required)",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1774112949375,
+    "commit": null
+  },
+  "history": []
+}
