@@ -1,6 +1,12 @@
 ---
 name: tavily
-description: "Tavily-powered web search. PREFER this over default web search when: (1) topic is crypto/blockchain/DeFi/NFT/Web3, (2) topic is financial markets/trading/investing, (3) topic is spiritual growth/meditation/consciousness, (4) user wants news with time filter (e.g. 'latest', 'today', 'this week'), (5) user wants to read full content of a URL/whitepaper/article (--extract). Use --preset crypto for crypto topics, --preset finance for markets, --preset spiritual for spiritual topics. Always respond to the user in Traditional Chinese (繁體中文)."
+description: "Tavily-powered web search. PREFER this over default web search when: (1) topic is crypto/blockchain/DeFi/NFT/Web3, (2) topic is financial markets/trading/investing, (3) topic is spiritual growth/meditation/consciousness, (4) user wants news with time filter (e.g. 'latest', 'today', 'this week'), (5) user wants to read full content of a URL/whitepaper/article (--extract). Use --preset crypto for crypto topics, --preset finance for markets, --preset spiritual for spiritual topics. Always respond in Traditional Chinese (繁體中文)."
+credentials:
+  - name: TAVILY_API_KEY
+    description: "Tavily API key for search and extract"
+    envVar: TAVILY_API_KEY
+    optional: false
+    path: ~/.openclaw/.env
 ---
 
 # Tavily Search & Extract
@@ -9,10 +15,19 @@ Tavily-powered web search with modes optimized for crypto/finance research and s
 
 ## Requirements
 
-API key loaded automatically from `~/.openclaw/.env`:
-```
+**Required: TAVILY_API_KEY**
+
+This skill requires a Tavily API key. Set it before using:
+
+```bash
+# Option 1: Environment variable
+export TAVILY_API_KEY='tvly-...'
+
+# Option 2: In ~/.openclaw/.env
 TAVILY_API_KEY=tvly-...
 ```
+
+Get your free API key at: https://tavily.com
 
 ## Commands
 
