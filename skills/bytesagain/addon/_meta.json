@@ -1,0 +1,11 @@
+{
+  "owner": "bytesagain",
+  "slug": "addon",
+  "displayName": "Addon",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774106341339,
+    "commit": null
+  },
+  "history": []
+}
