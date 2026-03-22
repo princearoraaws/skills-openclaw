@@ -1,0 +1,11 @@
+{
+  "owner": "bk-cm",
+  "slug": "securityvitals",
+  "displayName": "SecurityVitals",
+  "latest": {
+    "version": "1.3.2",
+    "publishedAt": 1774141802887,
+    "commit": null
+  },
+  "history": []
+}
