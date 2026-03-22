@@ -1,0 +1,11 @@
+{
+  "owner": "vahagn-madatyan",
+  "slug": "incident-response-network",
+  "displayName": "Incident Response Network",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774167565012,
+    "commit": null
+  },
+  "history": []
+}
