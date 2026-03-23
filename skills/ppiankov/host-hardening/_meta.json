@@ -3,11 +3,16 @@
   "slug": "host-hardening",
   "displayName": "Host Hardening",
   "latest": {
-    "version": "1.0.4",
-    "publishedAt": 1772622420048,
-    "commit": "https://github.com/openclaw/skills/commit/a3b40f2f1936b7c459c6039443196edf196f00be"
+    "version": "1.0.5",
+    "publishedAt": 1774013246266,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.4",
+      "publishedAt": 1772622420048,
+      "commit": "https://github.com/openclaw/skills/commit/a3b40f2f1936b7c459c6039443196edf196f00be"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1772106429730,
