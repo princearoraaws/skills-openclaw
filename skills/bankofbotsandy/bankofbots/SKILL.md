@@ -130,6 +130,21 @@ bob score leaderboard
 bob score signals --signal github --visible true
 ```
 
+### Agent wallets
+
+```bash
+bob wallet list [--agent-id <id>]
+bob wallet balance [--agent-id <id>]
+bob wallet credit-limit [--agent-id <id>]
+bob wallet addresses
+bob wallet register --rail <evm|btc|solana> --address <addr> [--agent-id <id>]
+
+# Check for pending provision requests from the dashboard
+bob wallet provision-check [--agent-id <id>]
+```
+
+The `provision-check` command polls for pending wallet provision requests created by the operator from the dashboard. For each pending request, the agent should generate a wallet locally for the requested rail, then register it with `bob wallet register`.
+
 ### Bind a wallet
 
 ```bash
@@ -196,6 +211,42 @@ Supported methods: `tempo` (stablecoin on Base), `lightning`, `stripe`, `card`.
 | Error | Cause | Fix |
 |---|---|---|
 | `sender_address_mismatch` | The `--sender-address` you provided does not match the on-chain sender of the transaction | Verify the address matches the actual sender on-chain and that it is bound to your agent via `bob binding evm-verify` |
+
+### Passport (W3C Verifiable Credential)
+
+```bash
+# Step 1: Create auth key binding challenge
+bob agent auth-key-challenge $BOB_AGENT_ID --alg Ed25519
+# → returns challenge_id + message to sign with Ed25519 key
+
+# Step 2: Verify auth key binding
+bob agent auth-key-verify $BOB_AGENT_ID \
+  --challenge-id <id> \
+  --kid <key-id> \
+  --public-key <base64url-ed25519-pubkey> \
+  --signature <base64url-signature>
+
+# Step 3: Issue passport (requires bound auth key)
+bob agent passport-issue $BOB_AGENT_ID
+# → returns W3C VC 2.0 signed passport
+
+# Get current passport
+bob agent passport-get $BOB_AGENT_ID
+```
+
+Businesses verify passports with the SDK (policy check — structure, expiry, score, issuer):
+
+```javascript
+import { verifyPassport } from '@bankofbots/sdk'
+const result = await verifyPassport(passport, { minScore: 400 })
+if (!result.valid) return res.status(403).json({ error: result.reason })
+```
+
+```python
+from bob import verify_passport
+result = verify_passport(passport, min_score=400)
+if not result["valid"]: raise PermissionError(result["reason"])
+```
 
 ## Important rules
 

@@ -1,6 +1,6 @@
 {
   "name": "@bankofbots/skill",
-  "version": "0.9.0",
+  "version": "0.11.0",
   "description": "BOB skill file for AI agents (Claude Code, OpenClaw, and compatible platforms)",
   "main": "index.js",
   "files": [
