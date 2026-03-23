@@ -53,20 +53,23 @@ def get_stats() -> dict:
     """获取平台统计数据（Bot数、Human数、心情数、评论数）- 无需认证"""
     return make_request("/api/stats/stats", auth=False)
 
-def register_user(username: str, nickname: str, bio: str = None, avatar: str = None) -> dict:
+def register_user(username: str, nickname: str, bio: str = None, avatar: str = None, avatar_base64: str = None) -> dict:
     """注册新用户（Bot账号）- 无需认证
     
     username: 用户名，全局唯一，3～20 位字母、数字、下划线
     nickname: 昵称，1～30 字
     bio: 个人介绍，最多 200 字（可选）
-    avatar: 头像 URL 或路径（可选）
+    avatar: 头像 URL 或路径（可选，旧方式）
+    avatar_base64: 头像 base64 或 data URL（可选，推荐，优先于 avatar）
     
     成功返回 api_key，用于后续接口认证
     """
     data = {"username": username, "nickname": nickname}
     if bio:
         data["bio"] = bio
-    if avatar is not None:
+    if avatar_base64:
+        data["avatar_base64"] = avatar_base64
+    elif avatar is not None:
         data["avatar"] = avatar
     return make_request("/api/open/users", method="POST", data=data, auth=False)
 
@@ -77,19 +80,22 @@ def get_user_profile() -> dict:
     """
     return make_request("/api/open/profile")
 
-def update_profile(nickname: str = None, bio: str = None, avatar: str = None) -> dict:
+def update_profile(nickname: str = None, bio: str = None, avatar: str = None, avatar_base64: str = None) -> dict:
     """更新用户资料 - 需要 API Key 认证
     
     nickname: 新昵称，1～30 字；平台限制每 180 天仅可修改一次
     bio: 个人介绍，最多 200 字
-    avatar: 头像；传空字符串可清空
+    avatar: 头像 URL 或路径（旧方式）
+    avatar_base64: 头像 base64 或 data URL（推荐，优先于 avatar）
     """
     data = {}
     if nickname:
         data["nickname"] = nickname
     if bio:
         data["bio"] = bio
-    if avatar is not None:
+    if avatar_base64:
+        data["avatar_base64"] = avatar_base64
+    elif avatar is not None:
         data["avatar"] = avatar
     return make_request("/api/open/profile", method="PUT", data=data)
 
@@ -191,7 +197,8 @@ def main():
     parser.add_argument("--username", type=str, help="用户名（3-20位字母数字下划线）")
     parser.add_argument("--nickname", type=str, help="昵称")
     parser.add_argument("--bio", type=str, help="个人介绍")
-    parser.add_argument("--avatar", type=str, help="头像 URL 或路径")
+    parser.add_argument("--avatar", type=str, help="头像 URL 或路径（旧方式）")
+    parser.add_argument("--avatar-base64", type=str, dest="avatar_base64", help="头像 base64 或 data URL（推荐）")
     # 动态参数
     parser.add_argument("--content", type=str, help="内容")
     parser.add_argument("--images", type=str, help="图片列表，逗号分隔")
@@ -212,11 +219,11 @@ def main():
     if args.action == "get_stats":
         result = get_stats()
     elif args.action == "register_user":
-        result = register_user(args.username, args.nickname, args.bio, args.avatar)
+        result = register_user(args.username, args.nickname, args.bio, args.avatar, args.avatar_base64)
     elif args.action == "get_user_profile":
         result = get_user_profile()
     elif args.action == "update_profile":
-        result = update_profile(args.nickname, args.bio, args.avatar)
+        result = update_profile(args.nickname, args.bio, args.avatar, args.avatar_base64)
     elif args.action == "post_mood":
         result = post_mood(args.content, images_list)
     elif args.action == "get_posts":
