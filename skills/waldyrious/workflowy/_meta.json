@@ -3,11 +3,16 @@
   "slug": "workflowy",
   "displayName": "Workflowy",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1774184270728,
-    "commit": "https://github.com/openclaw/skills/commit/cad97e0fd627c90ac238df276f61d64ef5f21734"
+    "version": "1.0.3",
+    "publishedAt": 1774305145915,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1774184270728,
+      "commit": "https://github.com/openclaw/skills/commit/cad97e0fd627c90ac238df276f61d64ef5f21734"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1770159631643,

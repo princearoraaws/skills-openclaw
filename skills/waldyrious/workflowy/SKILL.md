@@ -24,18 +24,21 @@ metadata:
 
 # workflowy
 
-Use the unofficial `workflowy` CLI [mholzen/workflowy](https://github.com/mholzen/workflowy) for managing a Workflowy outline. Requires API key setup.
+Use the unofficial `workflowy` CLI [mholzen/workflowy](https://github.com/mholzen/workflowy) to interact with the [Workflowy API](https://workflowy.com/api-reference/) for managing a Workflowy outline. Requires API key setup.
 
 ## Setup (once)
 
-Get your API key at https://workflowy.com/api-key/, and save it to `~/.workflowy/api.key`:
+Get your API key at https://workflowy.com/api-key/, save it to `~/.workflowy/api.key`, and ensure only your user can access it:
 
 ```bash
 mkdir -p ~/.workflowy
 echo "your-api-key-here" > ~/.workflowy/api.key
+chmod 600 ~/.workflowy/api.key
 ```
 
 ## Common commands
+
+Note: See the full [command reference](https://github.com/mholzen/workflowy/blob/main/docs/CLI.md) for more details.
 
 ### Reading
 
