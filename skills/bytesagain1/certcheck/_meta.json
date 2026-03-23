@@ -3,11 +3,16 @@
   "slug": "certcheck",
   "displayName": "Certcheck",
   "latest": {
-    "version": "3.0.0",
-    "publishedAt": 1773922117848,
-    "commit": "https://github.com/openclaw/skills/commit/32a599e3d28596ac8ae843dfa7371621e1c9b275"
+    "version": "4.0.0",
+    "publishedAt": 1774227971183,
+    "commit": null
   },
   "history": [
+    {
+      "version": "3.0.0",
+      "publishedAt": 1773922117848,
+      "commit": "https://github.com/openclaw/skills/commit/32a599e3d28596ac8ae843dfa7371621e1c9b275"
+    },
     {
       "version": "1.0.6",
       "publishedAt": 1773674670772,
