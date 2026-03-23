@@ -73,6 +73,9 @@ bash "$DAEMON" 2>/dev/null
 
 # ─── Test 4: Orphan detection (default: log only, no delete) ───
 echo "Test 4: Orphan detection (allow_cleanup=false)"
+# Force allow_cleanup=false for this test (real config may have it enabled)
+jq '.watchdog.allow_cleanup = false' "$TEST_ASSETS/mindstate-config.json" > "$TEST_ASSETS/mindstate-config.json.tmp" \
+    && mv "$TEST_ASSETS/mindstate-config.json.tmp" "$TEST_ASSETS/mindstate-config.json"
 touch -d "2026-01-01" "$TEST_ASSETS/somefile.tmp.99999"
 touch -d "2026-01-01" "$TEST_WORKSPACE/otherfile.tmp.88888"
 rm -f "$TEST_ASSETS/watchdog.log"

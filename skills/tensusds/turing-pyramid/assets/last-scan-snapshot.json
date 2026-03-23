@@ -1,16 +1,16 @@
 {
-  "taken_at": "2026-03-19T18:29:40Z",
+  "taken_at": "2026-03-20T16:23:29Z",
   "file_counts": {
-    "research/": 0,
-    "memory/": 93
+    "research/": 62,
+    "memory/": 95
   },
   "file_mtimes": {
-    "INTENTIONS.md": "1970-01-01T00:00:00Z"
+    "INTENTIONS.md": "2026-03-18T14:14:53Z"
   },
   "keyword_counts": {},
   "trigger_cooldowns": {
-    "intentions-changed": "2026-03-19T16:55:55Z",
-    "new-research-files": "2026-03-18T22:39:59Z",
-    "new-memory-entries": "2026-03-19T11:11:37Z"
+    "new-research-files": "2026-03-20T16:23:02Z",
+    "intentions-changed": "2026-03-20T04:23:37Z",
+    "new-memory-entries": "2026-03-20T04:23:37Z"
   }
 }

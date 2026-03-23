@@ -161,7 +161,8 @@ cleanup
 # ─── Test 10: run-cycle.sh blocks on pending gate ───
 echo "Test 10: run-cycle.sh refuses when gate blocked"
 bash "$SCRIPTS/gate-propose.sh" --need expression --action "blocked action" --impact 1.0 >/dev/null 2>&1
-output=$(WORKSPACE="$WORKSPACE" SKIP_SCANS=true bash "$SCRIPTS/run-cycle.sh" 2>&1)
+# Explicitly unset SKIP_GATE so gate-check runs (it may be set in suite env)
+output=$(WORKSPACE="$WORKSPACE" SKIP_GATE="" SKIP_SCANS=true bash "$SCRIPTS/run-cycle.sh" 2>&1)
 if echo "$output" | grep -q "BLOCKED"; then
     echo "  run-cycle.sh detected gate block — OK"
 else

@@ -9,8 +9,10 @@ fi
 # Source this at the top of each scan script
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-STATE_FILE="$SKILL_DIR/assets/needs-state.json"
-CONFIG_FILE="$SKILL_DIR/assets/needs-config.json"
+# Allow env override for testing (MINDSTATE_ASSETS_DIR or SCAN_ASSETS_DIR)
+_ASSETS_DIR="${SCAN_ASSETS_DIR:-${MINDSTATE_ASSETS_DIR:-$SKILL_DIR/assets}}"
+STATE_FILE="$_ASSETS_DIR/needs-state.json"
+CONFIG_FILE="$_ASSETS_DIR/needs-config.json"
 
 # Get hours since last satisfied for a need
 # Usage: hours_since_satisfied "need_name"

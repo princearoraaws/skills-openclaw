@@ -1,13 +1,13 @@
 {
   "_meta": {
-    "name": "Turing Pyramid — Agent Needs Configuration",
-    "version": "1.29.0",
-    "author": "turing-pyramid contributors",
-    "created": "2026-02-22",
-    "updated": "2026-02-27",
-    "note": "v1.10.11: Fix jq queries in apply-deprivation.sh and show-status.sh (state file structure)",
-    "active_preset": "default",
-    "preset_version": "1.0.0"
+    "preset": "default",
+    "name": "Default (General-Purpose Agent)",
+    "version": "1.0.0",
+    "description": "10 homeostatic needs for autonomous agents with full agency support. Balanced across security, integrity, coherence, closure, autonomy, connection, competence, understanding, recognition, and expression.",
+    "needs_count": 10,
+    "actions_count": 102,
+    "created": "2026-03-20",
+    "compatibility": "turing-pyramid >=1.29.0"
   },
   "needs": {
     "security": {
@@ -755,109 +755,5 @@
         "threshold": 6
       }
     }
-  },
-  "settings": {
-    "max_actions_per_cycle": 3,
-    "max_retries_per_need": 2,
-    "satisfaction_levels": {
-      "3": "full — no pressure",
-      "2": "ok — slight awareness",
-      "1": "low — noticeable pull",
-      "0": "empty — critical"
-    },
-    "starvation_guard": {
-      "enabled": false,
-      "threshold_hours": 1,
-      "sat_threshold": 0.5,
-      "max_forced_per_cycle": 1
-    },
-    "action_staleness": {
-      "enabled": true,
-      "window_hours": 24,
-      "penalty": 0.2,
-      "min_weight": 5
-    },
-    "spontaneity": {
-      "enabled": true,
-      "baseline": 1.5,
-      "gate_min_satisfaction": 1.0,
-      "default_threshold": 6,
-      "default_cap": 48,
-      "max_spend_ratio": 0.8,
-      "spend_on_miss_ratio": 0.3,
-      "noise": {
-        "enabled": true,
-        "base_noise": 0.03,
-        "norm_hours": 24,
-        "max_multiplier": 3,
-        "noise_cap": 0.12,
-        "high_impact_threshold": 2.0
-      },
-      "echo": {
-        "enabled": true,
-        "echo_base": 0.08,
-        "echo_duration_hours": 24
-      }
-    },
-    "version": "1.27.4",
-    "tension_formula": {
-      "mode": "turing_exp",
-      "crisis_threshold": 1.0,
-      "_comment": "Below threshold: all needs equal (dep² only). Above: importance amplifies crisis. threshold=1.0 means sat<2.0 activates hierarchy."
-    }
-  },
-  "impact_matrix_default": {
-    "sat_0.5": {
-      "low": 0,
-      "mid": 0,
-      "high": 100
-    },
-    "sat_1.0": {
-      "low": 10,
-      "mid": 20,
-      "high": 70
-    },
-    "sat_1.5": {
-      "low": 20,
-      "mid": 35,
-      "high": 45
-    },
-    "sat_2.0": {
-      "low": 30,
-      "mid": 45,
-      "high": 25
-    },
-    "sat_2.5": {
-      "low": 45,
-      "mid": 40,
-      "high": 15
-    },
-    "sat_3.0": {
-      "low": 0,
-      "mid": 0,
-      "high": 0
-    }
-  },
-  "impact_ranges": {
-    "low": [
-      0.0,
-      1.0
-    ],
-    "mid": [
-      1.0,
-      2.0
-    ],
-    "high": [
-      2.0,
-      3.0
-    ]
-  },
-  "action_probability": {
-    "sat_0.5": 100,
-    "sat_1.0": 90,
-    "sat_1.5": 75,
-    "sat_2.0": 50,
-    "sat_2.5": 25,
-    "sat_3.0": 0
   }
 }

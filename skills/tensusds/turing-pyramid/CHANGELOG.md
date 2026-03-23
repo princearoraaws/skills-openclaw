@@ -1,5 +1,29 @@
 # Changelog
 
+## v1.29.0 (2026-03-20) — Preset Architecture
+
+### New: Role-based presets
+- **Preset system**: agents can now switch between role-specific need configurations
+- **apply-preset.sh**: validate → backup → merge → reset → track active preset
+- **list-presets.sh**: show available presets with need/action counts and active indicator
+- Presets are data-only (swap files in `assets/`); no script modifications needed
+- Concurrent access safety via flock; atomic writes; automatic backups
+
+### Included presets
+- **default**: 10 homeostatic needs, 102 actions (extracted from v1.28.7 config)
+- **personal-assistant**: 5 needs (task_completion, accuracy, context_awareness, organization, proactivity), 44 actions, reactive-first philosophy
+
+### Bug fixes
+- **State format**: apply-preset now generates flat state structure matching run-cycle expectations
+- **Scanner isolation**: `_scan_helper.sh` supports `SCAN_ASSETS_DIR` env override for test isolation
+- **Watchdog test**: Test 4 now explicitly forces `allow_cleanup=false` (no longer depends on config default)
+- **Gate test**: Test 10 unsets `SKIP_GATE` to properly test gate blocking
+- **Research threads test**: uses isolated test fixtures via `SCAN_ASSETS_DIR`
+
+### Test suite
+- **28 passed, 0 failed, 1 skipped** (up from 25/3/1 in v1.28.7)
+- New: 12 preset-specific tests (apply, switch, validate, idempotent, invalid rejection)
+
 ## v1.28.7 (2026-03-19) — Safe defaults: kill/cleanup opt-in
 - **BREAKING (safe direction)**: Watchdog `allow_kill` and `allow_cleanup` now default to `false`
   - Default behavior: detect hung processes and orphan files → **log only, no action**

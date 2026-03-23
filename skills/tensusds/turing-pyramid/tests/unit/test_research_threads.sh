@@ -80,10 +80,13 @@ echo "## Test entry" > "$WORKSPACE/research/threads/test_topic/test-thread.md"
 touch -t "$(date +%Y%m%d%H%M)" "$WORKSPACE/research/threads/test_topic/test-thread.md"
 
 # Create minimal needs-state and config for scanner
-mkdir -p "$WORKSPACE/skills/turing-pyramid/assets"
-cp "$SKILL_DIR/assets/needs-config.json" "$WORKSPACE/skills/turing-pyramid/assets/"
-echo '{"needs":{"understanding":{"satisfaction":1.0,"last_satisfied":"2026-01-01T00:00:00Z","deprivation":3,"last_decay_check":"2026-01-01T00:00:00Z"}}}' > "$WORKSPACE/skills/turing-pyramid/assets/needs-state.json"
-cp "$SKILL_DIR/assets/decay-config.json" "$WORKSPACE/skills/turing-pyramid/assets/" 2>/dev/null || echo '{}' > "$WORKSPACE/skills/turing-pyramid/assets/decay-config.json"
+# Use SCAN_ASSETS_DIR to point scanner at test fixtures (not real assets)
+export SCAN_ASSETS_DIR="$WORKSPACE/test-assets"
+mkdir -p "$SCAN_ASSETS_DIR"
+cp "$SKILL_DIR/assets/needs-config.json" "$SCAN_ASSETS_DIR/"
+NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+echo "{\"understanding\":{\"satisfaction\":2.0,\"last_satisfied\":\"$NOW_ISO\",\"deprivation\":0,\"last_decay_check\":\"$NOW_ISO\"}}" > "$SCAN_ASSETS_DIR/needs-state.json"
+cp "$SKILL_DIR/assets/decay-config.json" "$SCAN_ASSETS_DIR/" 2>/dev/null || echo '{}' > "$SCAN_ASSETS_DIR/decay-config.json"
 
 # Create empty memory files to avoid errors
 echo "" > "$WORKSPACE/memory/$(date +%Y-%m-%d).md"
@@ -98,10 +101,12 @@ fi
 # Test 12: scanner works without threads dir
 export WORKSPACE=$(mktemp -d)
 mkdir -p "$WORKSPACE/memory"
-mkdir -p "$WORKSPACE/skills/turing-pyramid/assets"
-cp "$SKILL_DIR/assets/needs-config.json" "$WORKSPACE/skills/turing-pyramid/assets/"
-echo '{"needs":{"understanding":{"satisfaction":1.0,"last_satisfied":"2026-01-01T00:00:00Z","deprivation":3,"last_decay_check":"2026-01-01T00:00:00Z"}}}' > "$WORKSPACE/skills/turing-pyramid/assets/needs-state.json"
-cp "$SKILL_DIR/assets/decay-config.json" "$WORKSPACE/skills/turing-pyramid/assets/" 2>/dev/null || echo '{}' > "$WORKSPACE/skills/turing-pyramid/assets/decay-config.json"
+export SCAN_ASSETS_DIR="$WORKSPACE/test-assets"
+mkdir -p "$SCAN_ASSETS_DIR"
+cp "$SKILL_DIR/assets/needs-config.json" "$SCAN_ASSETS_DIR/"
+NOW_ISO=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+echo "{\"understanding\":{\"satisfaction\":2.0,\"last_satisfied\":\"$NOW_ISO\",\"deprivation\":0,\"last_decay_check\":\"$NOW_ISO\"}}" > "$SCAN_ASSETS_DIR/needs-state.json"
+cp "$SKILL_DIR/assets/decay-config.json" "$SCAN_ASSETS_DIR/" 2>/dev/null || echo '{}' > "$SCAN_ASSETS_DIR/decay-config.json"
 echo "" > "$WORKSPACE/memory/$(date +%Y-%m-%d).md"
 
 result=$(bash "$SKILL_DIR/scripts/scan_understanding.sh" 2>/dev/null || echo "error")
