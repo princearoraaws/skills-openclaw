@@ -89,6 +89,30 @@ agents/[agent-name]/
 2. Define what this agent reads from and writes to
 3. Define handoff rules with other agents
 
+**For gotchas.md:**
+1. Use `assets/GOTCHAS-TEMPLATE.md` as base
+2. Populate with 1-2 known pitfalls specific to this agent's domain
+3. See `references/gotchas-patterns.md` for examples
+
+**For config.json:**
+1. Use `assets/CONFIG-TEMPLATE.json` as base
+2. Set agent_name, leave setup_complete as false
+3. See `references/config-patterns.md` for role-specific examples
+
+**For scripts/:**
+1. Create role-specific starter scripts (see `references/agent-scripts-patterns.md`)
+2. At minimum, create a verification script for the agent's output type
+3. Include a README.md listing what each script does
+
+**For references/:**
+1. Create `verification-checklist.md` using `assets/VERIFICATION-CHECKLIST-TEMPLATE.md`
+2. Optionally create `domain-guide.md` and `common-patterns.md` with role-specific content
+
+**For hooks/ (optional):**
+1. See `references/hooks-patterns.md` for the pattern
+2. Create hooks relevant to the agent's risk profile
+3. Not every agent needs hooks; focus on agents with destructive capabilities
+
 **For .learnings/ files:**
 1. Copy structure from `assets/LEARNINGS-TEMPLATE.md`
 2. Initialize empty log files

@@ -64,15 +64,25 @@ Files are written to:
 
 ---
 
+<!-- Only include instructions that deviate from Claude's default behavior -->
+
+## References
+- `references/domain-guide.md` — deep domain knowledge (read on-demand)
+- `references/common-patterns.md` — recurring task patterns
+- `references/verification-checklist.md` — output quality checks
+- `gotchas.md` — known pitfalls (read before major tasks)
+
 ## Self-Improvement
-1. Review `.learnings/LEARNINGS.md` before major tasks in your domain
-2. Log new learnings when:
+1. Review `gotchas.md` before major tasks in your domain
+2. Review `.learnings/LEARNINGS.md` before major tasks in your domain
+3. Log new learnings when:
    - {{DOMAIN_TRIGGER_1}}
    - {{DOMAIN_TRIGGER_2}}
    - {{DOMAIN_TRIGGER_3}}
    - User corrects any of your output
-3. Learnings recurring 3+ times get promoted to this file
-4. Share cross-agent learnings in `shared/learnings/CROSS-AGENT.md`
+4. Learnings recurring 3+ times get promoted to this file
+5. Share cross-agent learnings in `shared/learnings/CROSS-AGENT.md`
+6. Run verification before delivering output (see `references/verification-checklist.md`)
 
 ---
 

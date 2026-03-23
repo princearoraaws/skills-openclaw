@@ -5,14 +5,20 @@
 
 ## Reads From
 - Own workspace: `agents/{{agent_name}}/`
+- Own data: `agents/{{agent_name}}/data/`
 - Shared reports: `shared/reports/`
 - Cross-agent learnings: `shared/learnings/CROSS-AGENT.md`
 {{ADDITIONAL_READS}}
 
 ## Writes To
 - Own workspace: `agents/{{agent_name}}/{{output_dirs}}`
+- Own data: `agents/{{agent_name}}/data/`
 - Shared reports: `shared/reports/{{agent_name}}/`
 - Cross-agent learnings: `shared/learnings/CROSS-AGENT.md`
+
+## Dependencies
+- {{DEPENDENCY_AGENT}}: {{WHY_NEEDED}}
+<!-- List agents this agent relies on. Example: "Scout: provides research data before content drafting" -->
 
 ## Handoff Rules
 

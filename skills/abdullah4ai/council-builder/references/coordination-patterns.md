@@ -71,8 +71,17 @@ workspace/
 │   ├── [agent-a]/
 │   │   ├── SOUL.md
 │   │   ├── AGENTS.md
+│   │   ├── gotchas.md              # Known pitfalls (read before major tasks)
+│   │   ├── config.json             # Persistent settings (first-run setup)
 │   │   ├── memory/
 │   │   ├── .learnings/
+│   │   ├── scripts/                # Executable helpers for recurring tasks
+│   │   ├── hooks/                  # On-demand safety guardrails
+│   │   ├── references/             # Deep domain knowledge (read on-demand)
+│   │   │   ├── domain-guide.md
+│   │   │   ├── common-patterns.md
+│   │   │   └── verification-checklist.md
+│   │   ├── data/                   # Persistent data (logs, JSON state, cache)
 │   │   └── [role-specific dirs]/
 │   └── [agent-b]/
 │       └── ...
@@ -85,6 +94,16 @@ workspace/
 ├── SOUL.md                     # Main assistant identity
 └── TOOLS.md                    # Shared tool knowledge
 ```
+
+## Data Persistence
+
+Each agent's `data/` directory stores persistent state:
+- JSON files for structured data (settings, cached results, state)
+- Log files for operation history
+- SQLite databases for complex data (if needed)
+- Anything that should survive across sessions but isn't a "learning"
+
+Rules: each agent owns its `data/` directory. Other agents read via `shared/reports/`, not directly from another agent's `data/`.
 
 ## Routing Table Format
 

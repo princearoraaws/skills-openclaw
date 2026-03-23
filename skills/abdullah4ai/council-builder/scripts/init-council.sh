@@ -96,6 +96,10 @@ for AGENT in "$@"; do
     
     mkdir -p "$AGENT_DIR/memory"
     mkdir -p "$AGENT_DIR/.learnings"
+    mkdir -p "$AGENT_DIR/scripts"
+    mkdir -p "$AGENT_DIR/hooks"
+    mkdir -p "$AGENT_DIR/references"
+    mkdir -p "$AGENT_DIR/data"
     
     # Initialize .learnings files if they don't exist
     if [ ! -f "$AGENT_DIR/.learnings/LEARNINGS.md" ]; then
@@ -137,6 +141,62 @@ Capabilities requested that don't currently exist.
 ---
 
 <!-- New entries go below this line -->
+EOF
+    fi
+
+    # Initialize gotchas.md
+    if [ ! -f "$AGENT_DIR/gotchas.md" ]; then
+        cat > "$AGENT_DIR/gotchas.md" << EOF
+# Gotchas — $AGENT
+
+Known pitfalls. Read this before major tasks.
+
+---
+
+<!-- Add gotchas as they surface. Format: ## Title / What goes wrong / The fix -->
+EOF
+    fi
+
+    # Initialize config.json
+    if [ ! -f "$AGENT_DIR/config.json" ]; then
+        cat > "$AGENT_DIR/config.json" << EOF
+{
+  "agent_name": "$AGENT",
+  "setup_complete": false,
+  "preferences": {},
+  "api_keys_ref": [],
+  "custom_settings": {}
+}
+EOF
+    fi
+
+    # Initialize scripts/README.md
+    if [ ! -f "$AGENT_DIR/scripts/README.md" ]; then
+        cat > "$AGENT_DIR/scripts/README.md" << EOF
+# Scripts — $AGENT
+
+Executable helpers for recurring tasks.
+
+<!-- List scripts and their purpose as they are created -->
+EOF
+    fi
+
+    # Initialize references/verification-checklist.md
+    if [ ! -f "$AGENT_DIR/references/verification-checklist.md" ]; then
+        cat > "$AGENT_DIR/references/verification-checklist.md" << EOF
+# Verification Checklist — $AGENT
+
+Run through this before delivering any output.
+
+## Objective Checks
+- [ ] Output matches requested format
+- [ ] No known gotchas triggered (check gotchas.md)
+
+## Subjective Checks
+- [ ] Quality meets the bar for this task type
+- [ ] No scope creep beyond what was asked
+
+<!-- Add role-specific checks as patterns emerge -->
 EOF
     fi
     

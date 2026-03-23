@@ -14,6 +14,15 @@ Concrete examples of councils for different use cases. Use these as inspiration,
 | Vault | Finance & Business | Numbers-forward, cautious, thorough. Pricing, revenue, opportunity analysis. |
 | Dial | Operations & Scheduling | Efficient, checklist-driven, reliable. Emails, reminders, calendar management. |
 
+**Routing with Trigger Conditions:**
+| Agent | Read | Trigger Conditions |
+|-------|------|--------------------|
+| **Scout** | `agents/scout/SOUL.md` | user asks for news, data, trends, competitor info, "what's happening with X", link analysis, source verification, market research |
+| **Pen** | `agents/pen/SOUL.md` | user wants a tweet, thread, caption, script, content draft, "write something about X", social media post, blog draft |
+| **Forge** | `agents/forge/SOUL.md` | user mentions code, bugs, features, PRs, architecture, "fix this", "build X", tech review, debugging |
+| **Vault** | `agents/vault/SOUL.md` | user asks about pricing, revenue, costs, ROI, business opportunity, "how much would X cost", financial analysis |
+| **Dial** | `agents/dial/SOUL.md` | user mentions schedule, email, reminder, meeting, "set up X", calendar, follow-up, to-do list |
+
 **Coordination:**
 ```
 Scout writes → shared/reports/scout/

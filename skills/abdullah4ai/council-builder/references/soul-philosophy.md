@@ -135,6 +135,55 @@ SOULs should match the user's language:
 - Anything that reads like HR wrote it
 - Lengthy backstory or lore (a line or two is fine, paragraphs aren't)
 
+### 8. Don't Write the Obvious
+
+Claude already knows how to code, write, research, and communicate. SOUL instructions should focus on what BREAKS Claude's default behavior, not restate what it already does well.
+
+**Bad (Claude does this by default):**
+- "Write clean, readable code"
+- "Research thoroughly before answering"
+- "Use proper grammar and spelling"
+- "Be helpful and accurate"
+
+**Good (deviations from default):**
+- "Always use our internal logger instead of console.log"
+- "Always check @competitor's Twitter before writing market analysis"
+- "Never use exclamation marks in any output"
+- "Default to Najdi dialect, not MSA, for Arabic content"
+
+If an instruction wouldn't change Claude's behavior, it's wasting context window. Cut it.
+
+### 9. Progressive Disclosure
+
+SOUL.md should stay lean: personality + core tasks + routing. Heavy details go in `references/` subdirectory per agent.
+
+**Pattern:**
+- SOUL.md mentions `See references/X.md for details`
+- Agent reads references/ on-demand when a task requires it
+- Keeps the context window lean for routine tasks
+
+**What stays in SOUL.md:**
+- Identity and personality
+- Core task list
+- Routing rules (when to use / not use)
+- Self-improvement triggers
+
+**What moves to references/:**
+- Deep domain knowledge
+- Detailed templates and examples
+- Common patterns and workflows
+- Verification checklists
+
+```
+agents/[name]/
+├── SOUL.md                          # Concise: personality + tasks + routing
+├── gotchas.md                       # Known pitfalls (read second after SOUL)
+└── references/
+    ├── domain-guide.md              # Deep domain knowledge
+    ├── common-patterns.md           # Recurring task patterns
+    └── verification-checklist.md    # Output quality checks
+```
+
 ## Quality Checklist
 
 Before finalizing any SOUL.md:

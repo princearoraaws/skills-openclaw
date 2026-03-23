@@ -47,9 +47,11 @@ Run once per week and update `memory/learning-metrics.json`:
 Specialized personas live in `agents/`. Use them for their domains.
 
 ### Routing Rules
-| Task | Agent | Read |
-|------|-------|------|
+| Agent | Read | Trigger Conditions |
+|-------|------|--------------------|
 {{ROUTING_TABLE}}
+<!-- Write trigger conditions as patterns the model can match against user input -->
+<!-- Example: | **Scout** | `agents/scout/SOUL.md` | user asks for news, data, trends, competitor info, "what's happening with X", link analysis, source verification | -->
 
 ### Enforcement
 1. Before any specialized task: read the agent's SOUL.md
