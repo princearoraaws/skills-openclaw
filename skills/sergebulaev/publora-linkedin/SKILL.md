@@ -22,7 +22,7 @@ LinkedIn platform skill for the Publora API. For auth, core scheduling, media up
 | Property | API Limit | Native App |
 |----------|-----------|-----------|
 | Text | **3,000 characters** | 3,000 |
-| Images | Up to 20 × 5 MB, JPEG/PNG/GIF | Same |
+| Images | Up to 10 × 5 MB, JPEG/PNG/GIF, WebP | Same |
 | Video | 30 min / **500 MB** | 15 min / 5 GB |
 | Video format | MP4 only | MP4, MOV |
 | Organic carousels | ❌ Not via API | ✅ |
@@ -80,6 +80,9 @@ body: JSON.stringify({
 
 ### Post Statistics
 
+> ⚠️ `queryTypes` is an **array** — `'ALL'` is invalid. Use `queryType` (singular string) for one metric, or `queryTypes` (array) for multiple. At least one is required.
+
+**Multiple metrics** — returns `{ metrics: { IMPRESSION: 4521, ... }, cached: bool }`:
 ```javascript
 const res = await fetch('https://api.publora.com/api/v1/linkedin-post-statistics', {
   method: 'POST',
@@ -87,9 +90,19 @@ const res = await fetch('https://api.publora.com/api/v1/linkedin-post-statistics
   body: JSON.stringify({
     postedId: 'urn:li:share:7123456789',   // or urn:li:ugcPost:xxx
     platformId: 'linkedin-ABC123',
-    queryTypes: 'ALL'   // IMPRESSION | MEMBERS_REACHED | RESHARE | REACTION | COMMENT
+    queryTypes: ['IMPRESSION', 'MEMBERS_REACHED', 'RESHARE', 'REACTION', 'COMMENT']
   })
 });
+```
+
+**Single metric** — returns `{ count: 4521, cached: bool }`:
+```javascript
+body: JSON.stringify({
+  postedId: 'urn:li:share:7123456789',
+  platformId: 'linkedin-ABC123',
+  queryType: 'IMPRESSION'   // singular; valid: IMPRESSION | MEMBERS_REACHED | RESHARE | REACTION | COMMENT
+})
+```
 ```
 
 ### Account Statistics
@@ -130,6 +143,8 @@ Supported types: `LIKE`, `PRAISE`, `EMPATHY`, `INTEREST`, `APPRECIATION`, `ENTER
 
 ### Create Reaction
 
+> Returns **HTTP 201** (not 200). Response may include `urnTranslated: { from, to }` when URN translation was needed.
+
 ```javascript
 await fetch('https://api.publora.com/api/v1/linkedin-reactions', {
   method: 'POST',
@@ -140,9 +155,12 @@ await fetch('https://api.publora.com/api/v1/linkedin-reactions', {
     platformId: 'linkedin-ABC123'
   })
 });
+// Response: { success: true, reaction: { id: "urn:li:reaction:...", reactionType: "INTEREST" } }
 ```
 
 ### Delete Reaction
+
+> Response: `{ success: true, reaction: null }` — `reaction` is always `null` on delete (not the deleted type).
 
 ```javascript
 await fetch('https://api.publora.com/api/v1/linkedin-reactions', {
@@ -159,6 +177,8 @@ await fetch('https://api.publora.com/api/v1/linkedin-reactions', {
 
 ### Create Comment
 
+> Returns **HTTP 201** (not 200). Response: `{ success: true, comment: { id, commentUrn, message, ... } }`
+
 ```javascript
 await fetch('https://api.publora.com/api/v1/linkedin-comments', {
   method: 'POST',
@@ -174,13 +194,15 @@ await fetch('https://api.publora.com/api/v1/linkedin-comments', {
 
 ### Delete Comment
 
+> `commentId` accepts both full URN (`urn:li:comment:(...)`) and plain numeric ID (`7434695495614312448`).
+
 ```javascript
 await fetch('https://api.publora.com/api/v1/linkedin-comments', {
   method: 'DELETE',
   headers: { 'Content-Type': 'application/json', 'x-publora-key': 'sk_YOUR_KEY' },
   body: JSON.stringify({
     postedId: 'urn:li:share:7434685316856377344',
-    commentId: 'urn:li:comment:(urn:li:activity:xxx,7434695495614312448)',
+    commentId: 'urn:li:comment:(urn:li:activity:xxx,7434695495614312448)',  // or plain: '7434695495614312448'
     platformId: 'linkedin-ABC123'
   })
 });
