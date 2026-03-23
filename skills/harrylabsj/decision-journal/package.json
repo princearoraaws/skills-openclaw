@@ -4,10 +4,10 @@
   "description": "Record, track, and analyze personal or professional decisions with structured reflection",
   "main": "src/index.js",
   "bin": {
-    "decision": "src/cli.js"
+    "decision": "./scripts/cli.js"
   },
   "scripts": {
-    "test": "node src/test.js"
+    "test": "node scripts/cli.js --help"
   },
   "keywords": [
     "decision",
