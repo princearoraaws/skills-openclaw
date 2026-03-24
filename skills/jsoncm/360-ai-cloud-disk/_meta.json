@@ -3,11 +3,16 @@
   "slug": "360-ai-cloud-disk",
   "displayName": "360-ai-cloud-disk",
   "latest": {
-    "version": "1.0.4",
-    "publishedAt": 1773995601684,
-    "commit": "https://github.com/openclaw/skills/commit/aeda6bc6de22460e49dd29b9fec885caf9bf505b"
+    "version": "1.0.6",
+    "publishedAt": 1774348443809,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.4",
+      "publishedAt": 1773995601684,
+      "commit": "https://github.com/openclaw/skills/commit/aeda6bc6de22460e49dd29b9fec885caf9bf505b"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1773478997096,
