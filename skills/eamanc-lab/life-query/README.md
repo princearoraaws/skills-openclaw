@@ -1,26 +1,33 @@
 English | [中文](README.zh.md)
 
-# Life Query
+# Life Query — Everyday Info at Your Fingertips
 
-A daily life query assistant — let AI handle everyday information lookups for you.
+A Claude Code skill that handles daily life queries: parcel tracking, currency exchange, gas prices, and weather forecasts — all through natural language.
 
-## Current Capabilities
+## Capabilities
 
-- **Parcel Tracking**: Enter a tracking number to check where your package is. Supports major Chinese carriers (SF Express, YTO, JD, ZTO, etc.). You can also bring your own Kuaidi100 credentials.
-- **Exchange Rate**: Real-time and historical exchange rates for 30 currencies. Data from ECB (European Central Bank), no API key needed.
-- **Gas Price**: Latest gasoline & diesel prices for all 31 provinces in China. Data from Eastmoney / NDRC.
+- **Parcel Tracking** — Track packages across major Chinese carriers (SF Express, YTO, ZTO, JD, etc.). Supports free tier or bring-your-own Kuaidi100 credentials for direct connection
+- **Exchange Rate** — Real-time and historical rates for 30 currencies (CNY/USD/EUR/JPY/GBP/HKD/KRW...). Data from ECB, no API key needed
+- **Gas Price** — Latest 92/95/diesel prices for all 31 provinces in China. Data from Eastmoney / NDRC
+- **Weather Forecast** — Current conditions, multi-day forecasts, and hourly details for any city worldwide. Data from wttr.in
 
 ## Quick Start
 
 ```bash
-# Parcel tracking
+# Track a package
 bash scripts/run.sh call courier-track --trackingNumber SF1234567890
 
-# Exchange rate: 100 CNY to USD, EUR, JPY
+# Convert 100 CNY to USD, EUR, JPY
 bash scripts/run.sh call exchange-rate --from CNY --to USD,EUR,JPY --amount 100
 
-# Gas price: all provinces
+# Gas prices for all provinces (table format)
 bash scripts/run.sh call oil-price --format table
+
+# 3-day weather forecast for Shanghai
+bash scripts/run.sh call weather --city Shanghai --days 3 --format table
+
+# List all available APIs
+bash scripts/run.sh list
 ```
 
 ## Install
@@ -31,4 +38,8 @@ npx clawhub@latest install life-query
 
 ## Changelog
 
-- 2026-03-17: fix — 接口移除 API Key 验证，快递查询恢复正常
+- 2026-03-21: refactor — Merged `apis/` into `scripts/`, optimized SKILL.md structure
+- 2026-03-17: feat — Added weather forecast (wttr.in)
+- 2026-03-17: feat — Added exchange rate and gas price queries
+- 2026-03-17: fix — Removed API Key verification, parcel tracking restored
+- 2026-03-14: init — Initial release with parcel tracking

@@ -2,8 +2,8 @@
 # 统一执行引擎：调度 apis/*.sh 脚本
 set -euo pipefail
 
-SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
-API_DIR="$SKILL_DIR/apis"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+API_DIR="$SCRIPT_DIR"
 
 usage() {
   echo "用法:"
@@ -24,7 +24,7 @@ import os, sys, re
 api_dir = sys.argv[1]
 rows = []
 for f in sorted(os.listdir(api_dir)):
-    if not f.endswith('.sh'):
+    if not f.endswith('.sh') or f == 'run.sh':
         continue
     name = f[:-3]
     desc = ''
