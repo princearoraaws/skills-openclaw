@@ -3,9 +3,15 @@
   "slug": "gws-workflow",
   "displayName": "Gws Workflow",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1772831360184,
-    "commit": "https://github.com/openclaw/skills/commit/6b35e056f33875c2b5a69951f3b7efe5b9c34dd6"
+    "version": "1.0.1",
+    "publishedAt": 1774300513918,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1772831360184,
+      "commit": "https://github.com/openclaw/skills/commit/6b35e056f33875c2b5a69951f3b7efe5b9c34dd6"
+    }
+  ]
 }
