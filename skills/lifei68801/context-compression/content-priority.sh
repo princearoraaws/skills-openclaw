@@ -98,7 +98,7 @@ find_high_priority_lines() {
     local threshold=${2:-70}  # 默认阈值 70 分
     
     score_session_file "$file" | \
-        awk -F'\t -v threshold="$threshold" '$2 >= threshold {print $1}' | \
+        awk -F'\t' -v threshold="$threshold" '$2 >= threshold {print $1}' | \
         tr '\n' ' '
 }
 

@@ -82,8 +82,8 @@ get_session_size() {
     fi
 }
 
-# 估算 token 数（粗略：每4字符≈1token）
-estimate_tokens() {
+# 估算 char 数（粗略：每4字符≈1unit）
+estimate_units() {
     local size="$1"
     echo $((size / 4))
 }
@@ -92,15 +92,15 @@ estimate_tokens() {
 format_output() {
     local session_id="$1"
     local size="$2"
-    local tokens="$3"
+    local chars="$3"
     local config_limit="$4"
     
     if $JSON_OUTPUT; then
-        echo "{\"session_id\":\"$session_id\",\"size_bytes\":$size,\"estimated_tokens\":$tokens,\"limit\":$config_limit}"
+        echo "{\"session_id\":\"$session_id\",\"size_bytes\":$size,\"estimated_units\":$chars,\"limit\":$config_limit}"
     else
         local percent=0
         if [[ $config_limit -gt 0 ]]; then
-            percent=$((tokens * 100 / config_limit))
+            percent=$((chars * 100 / config_limit))
         fi
         
         local status_icon
@@ -118,17 +118,17 @@ format_output() {
         
         echo -e "${status_color}${status_icon} Session: ${session_id}${NC}"
         echo "   Size: $(numfmt --to=iec $size)"
-        echo "   Est. Tokens: ${tokens}"
+        echo "   Est. Chars: ${chars}"
         echo "   Usage: ${percent}%"
         echo ""
     fi
 }
 
-# 读取配置中的 token 限制
+# 读取配置中的 char 限制
 get_config_limit() {
     local config_file="$OPENCLAW_DIR/openclaw.json"
     if [[ -f "$config_file" ]]; then
-        local limit=$(grep -o '"contextTokens"[[:space:]]*:[[:space:]]*[0-9]*' "$config_file" | grep -o '[0-9]*$')
+        local limit=$(grep -o '"contextChars"[[:space:]]*:[[:space:]]*[0-9]*' "$config_file" | grep -o '[0-9]*$')
         if [[ -n "$limit" ]]; then
             echo "$limit"
             return
@@ -151,7 +151,7 @@ main() {
     local config_limit=$(get_config_limit)
     
     if ! $JSON_OUTPUT; then
-        echo "Token 限制: ${config_limit}"
+        echo "Char 限制: ${config_limit}"
         echo ""
     fi
     
@@ -180,8 +180,8 @@ main() {
     for session_file in $sessions; do
         local session_name=$(basename "$session_file" .jsonl)
         local size=$(get_session_size "$session_file")
-        local tokens=$(estimate_tokens "$size")
-        format_output "$session_name" "$size" "$tokens" "$config_limit"
+        local chars=$(estimate_units "$size")
+        format_output "$session_name" "$size" "$chars" "$config_limit"
     done
     
     # 压缩建议

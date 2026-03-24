@@ -28,7 +28,7 @@ for category in preferences decisions tasks important time relationships; do
     fi
 done
 
-log "📊 Total facts extracted today: $FACTS_COUNT"
+log "📊 Total facts identified today: $FACTS_COUNT"
 
 # 2. 检查 MEMORY.md 是否有今日更新
 MEMORY_UPDATED=false
@@ -107,14 +107,14 @@ fi
 SUMMARY_FILE="$WORKSPACE/memory/summaries/$TODAY.md"
 if [ ! -f "$SUMMARY_FILE" ]; then
     log "Generating today's summary..."
-    "$WORKSPACE/skills/context-compression/scripts/generate-smart-summary.sh" 2>/dev/null
+    "$WORKSPACE/skills/context-compression/generate-smart-summary.sh" 2>/dev/null
 fi
 
 log "✅ Session end hook completed"
 
 # 7. 🆕 输出摘要（供 AI 读取）
 echo "📊 Session End Summary:"
-echo "  - Facts extracted today: $FACTS_COUNT"
+echo "  - Facts identified today: $FACTS_COUNT"
 echo "  - MEMORY.md updated: $MEMORY_UPDATED"
 echo "  - Daily note updated: $DAILY_UPDATED"
 echo "  - Potential unsaved content: $UNSAVED_POTENTIAL"

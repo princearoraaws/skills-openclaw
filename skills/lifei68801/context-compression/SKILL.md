@@ -1,163 +1,184 @@
 ---
 name: context-compression
-version: 3.10.0
-description: "Prevent context overflow with automatic session truncation and memory preservation. Never lose important conversations again. Features: token-based trimming, AI fact extraction, preference lifecycle management. Use when: (1) context window exceeds limit (2) setting up memory hierarchy (3) managing user preferences with expiry."
+version: 3.13.3
+description: "Prevent context overflow with automatic session truncation and memory preservation."
 license: MIT-0
 author: lifei68801
 metadata:
   openclaw:
     requires:
-      bins: ["bash", "jq", "sed", "grep", "head", "tail", "wc", "mkdir", "date", "tr", "cut"]
+      bins: ["bash", "jq", "sed", "grep", "head", "tail", "wc", "date", "tr", "cut"]
+      configPaths:
+        - "~/.openclaw/workspace/.context-compression-config.json"
+        - "~/.openclaw/workspace/MEMORY.md"
+        - "~/.openclaw/agents/*/sessions/*.jsonl"
+        - "~/.openclaw/workspace/memory/"
     permissions:
       - "file:read:~/.openclaw/agents/main/sessions/*.jsonl"
       - "file:write:~/.openclaw/agents/main/sessions/*.jsonl"
       - "file:read:~/.openclaw/workspace/memory/*.md"
+      - "file:read:~/.openclaw/workspace/MEMORY.md"
       - "file:write:~/.openclaw/workspace/memory/*.md"
       - "file:write:~/.openclaw/workspace/MEMORY.md"
+      - "file:write:~/.openclaw/workspace/.context-compression-config.json"
+    installDir: "~/.openclaw/workspace/skills/context-compression"
+    fileLayout:
+      "SKILL.md": "This file"
+      "configure.sh": "Interactive setup wizard"
+      "truncate-sessions-safe.sh": "Core session trimming"
+      "identify-facts.sh": "Keyword-based fact detection"
+      "identify-facts-enhanced.sh": "AI-assisted fact detection (calls local openclaw CLI)"
+      "check-preferences-expiry.sh": "Remove expired preferences"
+      "session-start-hook.sh": "Session-start context loader"
+      "session-end-hook.sh": "Session-end context saver"
+      "check-context-health.sh": "Context status reporter"
+      "check-context.sh": "Lightweight context check"
+      "content-priority.sh": "Content priority scoring"
+      "generate-daily-summary.sh": "Daily summary from notes"
+      "generate-smart-summary.sh": "Smart summary generation"
+      "mid-session-check.sh": "Mid-session keyword scanner"
+      "pre-session-check.sh": "Pre-session context check"
+      "time-decay-truncate.sh": "Time-decay based truncation"
+      "auto-identify-on-session.sh": "Auto fact identification on session"
     behavior:
       modifiesLocalFiles: true
-      description: "Local file operations for session trimming and memory storage. Uses built-in system tools. No external network activity from scripts. Optional AI fact extraction uses local OpenClaw installation."
+      network: local
+      telemetry: none
+      credentials: none
+      settings: "~/.openclaw/workspace/.context-compression-config.json"
+      description: "Reads and trims local session files. Writes identified facts to MEMORY.md and daily notes. The optional AI-assisted fact identification invokes the local openclaw agent CLI (network depends on user's OpenClaw config). No scripts make external HTTP calls directly."
 ---
 
-# Memory Compression
+# Context Compression
 
-**Prevent context overflow. Never lose important conversations.**
+**Keep conversations within limits. Never lose important context.**
 
-## The Problem
+> ⚡ **After installing**, run the interactive setup wizard to generate your config file, then add the suggested cron entry with `crontab -e`. See Quick Start below for commands.
 
-OpenClaw sessions grow indefinitely. When context exceeds the model's limit:
-- New sessions fail to load
-- Important information is lost
-- Cron tasks inherit huge context and crash
+## Quick Start
 
-## The Solution
-
-Automatic session truncation + hierarchical memory preservation:
-1. **Trim sessions** before they exceed limits
-2. **Extract facts** (preferences, decisions, tasks) before trimming
-3. **Preserve memory** through layered storage (MEMORY.md, daily notes, summaries)
-
----
-
-## 🚀 Quick Start
-
-### Step 1: Check Configuration
+> **File location**: ClawHub installs this skill to `~/.openclaw/workspace/skills/context-compression/`. All scripts are placed here directly. This is the standard OpenClaw skill install path — no manual file placement needed.
 
 ```bash
-cat ~/.openclaw/workspace/.context-compression-config.json 2>/dev/null
-```
+# 1. Install and configure (interactive)
+bash ~/.openclaw/workspace/skills/context-compression/configure.sh
 
-### Step 2: Configure (Interactive)
+# 2. Verify config exists
+cat ~/.openclaw/workspace/.context-compression-config.json
 
-When this skill loads, it guides you through:
-
-| Question | Options | Recommended |
-|----------|---------|-------------|
-| Context preservation | 20k/40k/60k tokens | 40k |
-| Truncation frequency | 10min/30min/1h | 10min |
-| Skip active sessions | Yes/No | Yes |
-| Daily summaries | Yes/No | No |
-
-### Step 3: Verify
-
-```bash
-ls -la ~/.openclaw/workspace/.context-compression-config.json
-ls -la ~/.openclaw/workspace/skills/context-compression/scripts/truncate-sessions-safe.sh
+# 3. Set up crontab (example: every 10 minutes)
+*/10 * * * * ~/.openclaw/workspace/skills/context-compression/truncate-sessions-safe.sh
 ```
 
 ---
 
-## 🏗️ Architecture
+## How It Works
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    Context Budget: ~80k tokens              │
-├─────────────────────────────────────────────────────────────┤
-│                                                             │
-│  L4: MEMORY.md (~5k)      ← User preferences, key facts    │
-│  L3: Daily summaries (~10k) ← Compressed older sessions    │
-│  L2: Recent sessions (~25k) ← Last N session files         │
-│  L1: Current session (~40k) ← Active conversation          │
-│                                                             │
-└─────────────────────────────────────────────────────────────┘
-```
+### Session Truncation (`truncate-sessions-safe.sh`)
 
-**Key principle**: L4 > L3 > L2 in priority. Always preserve MEMORY.md.
+- **Scheduling**: System crontab (e.g., `*/10 * * * *`)
+- **Action**: Reads `.jsonl` session files under `~/.openclaw/agents/*/sessions/`, trims each file to the configured size
+- **Safety**: Skips files with a matching `.lock` file (active session)
+- **Integrity**: Keeps JSONL line boundaries intact — never splits a line
+- **Strategy**: `priority-first` scans for important keywords before trimming and preserves matching lines
 
----
+### Fact Identification
 
-## 🔧 How It Works
+- **Keyword-based**: `identify-facts.sh` — scans truncated content for keywords (重要, 决定, TODO, 偏好, deadline, must remember, etc.) and appends findings to `memory/YYYY-MM-DD.md`
+- **AI-assisted**: `identify-facts-enhanced.sh` — calls `openclaw agent --agent main --message` with the trimmed content to semantically identify important facts. Only used when `openclaw` CLI is available on PATH.
+- **Triggered by**: `truncate-sessions-safe.sh` calls one of these before each truncation cycle
 
-### Session Truncation
-- Runs in background (independent of agent)
-- Trims to last N tokens per session
-- Skips active sessions (.lock files)
-- Preserves JSONL line integrity
+### Preference Lifecycle (`check-preferences-expiry.sh`)
 
-### Fact Extraction
-- Detects keywords: 重要/决定/TODO/偏好, important/decision/must
-- Extracts to MEMORY.md before truncation
-- Categories: [偏好], [决策], [任务], [时间], [关系], [重要]
-
-### Preference Lifecycle
-- **Short-term** (1-7 days): Tag with `@YYYY-MM-DD`
-- **Mid-term** (1-4 weeks): Auto-expire via daily check
-- **Long-term**: Permanent in MEMORY.md
+- **Scheduling**: Once daily via crontab
+- **Mechanism**: Reads MEMORY.md preference entries tagged with `@YYYY-MM-DD`, removes expired ones
+- **Tiers**: Short-term (1-7 days), Mid-term (1-4 weeks), Long-term (permanent)
 
 ---
 
-## 📜 Scripts
+## Scripts
 
-| Script | Purpose |
-|--------|---------|
-| `truncate-sessions-safe.sh` | Trim session files safely |
-| `extract-facts-enhanced.sh` | AI-powered fact extraction |
-| `check-preferences-expiry.sh` | Remove expired preferences |
-| `check-context-health.sh` | Report context status |
+| Script | Purpose | Scheduling |
+|--------|---------|------------|
+| `truncate-sessions-safe.sh` | Trim session JSONL files | crontab, every 10 min |
+| `identify-facts.sh` | Keyword-based fact detection | Called by truncate script |
+| `identify-facts-enhanced.sh` | AI-assisted fact detection | Called by truncate script |
+| `check-preferences-expiry.sh` | Remove expired preferences | crontab, once daily |
+| `configure.sh` | Interactive setup wizard | Manual, one-time |
+| `session-start-hook.sh` | Load context at session start | Called by AGENTS.md |
+| `session-end-hook.sh` | Save context at session end | Called by AGENTS.md |
+| `check-context-health.sh` | Report current context status | Manual / on-demand |
 
 ---
 
-## ⚙️ Configuration File
+## Configuration
 
-`~/.openclaw/workspace/.context-compression-config.json`:
+File: `~/.openclaw/workspace/.context-compression-config.json`
 
 ```json
 {
   "version": "2.3",
-  "maxTokens": 40000,
+  "maxChars": 40000,
   "frequencyMinutes": 10,
   "skipActive": true,
-  "enableSummaries": false,
   "strategy": "priority-first",
+  "useAiIdentification": false,
   "priorityKeywords": [
     "重要", "决定", "记住", "TODO", "偏好",
-    "important", "remember", "must", "deadline", "decision"
+    "important", "remember", "must", "deadline"
   ]
 }
 ```
 
+| Field | Type | Default | Description |
+|-------|------|---------|-------------|
+| maxChars | number | 40000 | Max chars to keep per session file |
+| frequencyMinutes | number | 10 | How often crontab runs truncate |
+| skipActive | boolean | true | Skip sessions with .lock files |
+| strategy | string | priority-first | Truncation strategy |
+| useAiIdentification | boolean | false | Set true to use AI-assisted fact identification (may send content to remote LLMs) |
+| priorityKeywords | string[] | (see above) | Keywords to preserve during truncation |
+
 ---
 
-## ✅ Verification Checklist
-
-- [ ] Config file exists
-- [ ] Scripts are executable
-- [ ] MEMORY.md exists and is current
-- [ ] Truncation log shows recent runs: `tail ~/.openclaw/logs/truncation.log`
-
----
-
-## 🔍 Troubleshooting
+## Troubleshooting
 
 | Problem | Solution |
 |---------|----------|
-| Context still exceeded | Reduce maxTokens, check truncation log |
-| Memory not persisting | Verify real-time writing in AGENTS.md |
-| Summaries not generated | Check daily notes exist in memory/ |
+| Context still exceeded | Reduce maxChars in config |
+| Memory not persisting | Check that AGENTS.md includes session-start-hook |
+| Crontab not running | Verify PATH in crontab includes node/openclaw binary location |
 
 ---
 
-## 📚 Related
+## Safety
+
+### Data Protection
+- **No deletion**: Truncation writes the trimmed portion back to the same file. It does not delete files.
+- **Backup before trim**: `truncate-sessions-safe.sh` creates a `.pre-trim` backup of each file before modification. Backups are cleaned up after a successful write.
+- **Line integrity**: Truncation only cuts at JSONL line boundaries. Partial lines are never written.
+- **Active sessions protected**: Files with a matching `.lock` (currently in use) are always skipped, even if oversized.
+
+### Safe Defaults
+All configuration values have conservative defaults:
+- `skipActive: true` — never touches a running session
+- `maxChars: 40000` — keeps substantial history per session
+- `strategy: priority-first` — preserves lines matching priority keywords before trimming anything
+- No direct network access from scripts. The optional AI fact identification uses your local `openclaw` CLI — network activity depends on your OpenClaw configuration.
+
+### User Control
+- **Crontab**: The user creates and manages all scheduled tasks. No script auto-installs crontab entries.
+- **Configuration**: All settings live in a single JSON file. The `configure.sh` wizard runs interactively and requires user input.
+- **Opt-out**: Remove the crontab entry to stop all automated truncation. The skill has no background daemon of its own.
+- **Scope**: Only reads/writes files under `~/.openclaw/agents/main/` and `~/.openclaw/workspace/memory/`. Never touches system files, other agents' data, or other users' data.
+
+### Privacy Notice
+- **AI-assisted fact identification** (`identify-facts-enhanced.sh`) is **disabled by default**. It invokes the local `openclaw agent` CLI, which may send session content to remote LLM services depending on your OpenClaw configuration. Only enable it if you understand and accept this data flow. To enable, set `"useAiIdentification": true` in the config file.
+- **Keyword-based identification** (`identify-facts.sh`) is the default and runs entirely locally with no external data transmission.
+- **Unattended cron execution**: If you enable cron jobs, the scripts run without interactive consent. Review the scripts and test manually before enabling scheduled runs.
+
+---
+
+## Related
 
 - [OpenClaw Documentation](https://docs.openclaw.ai)
-- [Hierarchical Memory Architecture](references/memory-architecture.md)

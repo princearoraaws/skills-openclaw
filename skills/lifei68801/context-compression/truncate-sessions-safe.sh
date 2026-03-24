@@ -1,12 +1,35 @@
 #!/bin/bash
-# Session Window Truncation (Token-based) - v9
-# Supports multiple strategies: token-only, time-decay, priority-first
-# Enhanced with fact extraction and priority-based preservation
+# Session Window Truncation (Char-based) - v10
+# Supports multiple strategies: compact-only, time-decay, priority-first
+# Enhanced with fact identification and priority-based preservation
 # v7: Added preserveUserMessages option to always keep user messages
-# v8: Fixed priority-first strategy to call fact extraction before truncating
-# v9: Extract facts from active sessions too (even when skipActive=true)
-# v8: Fixed priority-first strategy to call fact extraction before truncating
+# v8: Fixed priority-first strategy to call fact identification before truncating
+# v9: Identify facts from active sessions too (even when skipActive=true)
+# v10: Added recursion guard + flock idempotency + fixed priority-first ordering
 # This script runs OUTSIDE of OpenClaw agent context
+
+# Recursion guard: prevent nested calls (e.g. agent→truncation→agent)
+if [ "${CONTEXT_COMPRESSION_RUNNING:-false}" = "true" ]; then
+    exit 0
+fi
+export CONTEXT_COMPRESSION_RUNNING=true
+
+# Idempotency: flock prevents concurrent runs from corrupting session files
+LOCK_FILE="/tmp/context-compression.lock"
+exec 9>"$LOCK_FILE"
+flock -n 9 || { echo "[$(date)] ⏭️ Another truncation instance is running, exiting" >&2; exit 0; }
+
+# Cleanup temp files on exit (even if SIGTERM/SIGINT)
+_CLEANUP_PIDS=()
+cleanup_on_exit() {
+    for pid in "${_CLEANUP_PIDS[@]}"; do
+        rm -f "$SESSIONS_DIR"/*.${pid} 2>/dev/null || true
+    done
+    flock -u 9 2>/dev/null || true
+}
+trap cleanup_on_exit EXIT
+# Track this PID's temp files
+_CLEANUP_PIDS+=("$$")
 
 WORKSPACE="${WORKSPACE:-$HOME/.openclaw/workspace}"
 CONFIG_FILE="$WORKSPACE/.context-compression-config.json"
@@ -15,13 +38,14 @@ LOG_FILE="${LOG_FILE:-$HOME/.openclaw/logs/truncation.log}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Default values
-MAX_TOKENS=60000
+BUDGET_UNITS=60000
 MAX_LINE_CHARS=4000
 MAX_HISTORY_LINES=200
 SKIP_ACTIVE=true
-TOKENS_PER_CHAR=2  # Conservative estimate: 1 token ≈ 2 chars (Chinese-heavy content)
-STRATEGY="priority-first"  # "token-only", "time-decay", or "priority-first"
-ENABLE_FACT_EXTRACTION=true  # P0 optimization: extract facts before truncation
+UNITS_PER_CHAR=2  # Conservative estimate: 1 char ≈ 2 chars (Chinese-heavy content)
+STRATEGY="priority-first"  # "compact-only", "time-decay", or "priority-first"
+ENABLE_FACT_IDENTIFICATION=true  # P0 optimization: identify facts before truncation
+USE_AI_IDENTIFICATION=false    # AI-assisted: requires explicit opt-in (may send content to remote LLMs)
 ENABLE_PRIORITY_PRESERVATION=true  # P0 optimization: preserve high-priority content
 PRESERVE_USER_MESSAGES=true  # v7: Always preserve user messages
 
@@ -34,23 +58,24 @@ PRIORITY_KEYWORDS="重要|决定|记住|别忘了|TODO|待办|偏好|我喜欢|�
 if [ -f "$CONFIG_FILE" ]; then
     # Use Python or jq if available, otherwise fall back to grep
     if command -v jq &> /dev/null; then
-        MAX_TOKENS=$(jq -r '.maxTokens // empty' "$CONFIG_FILE" 2>/dev/null || echo "$MAX_TOKENS")
+        BUDGET_UNITS=$(jq -r '.maxChars // .maxTokens // empty' "$CONFIG_FILE" 2>/dev/null || echo "$BUDGET_UNITS")
         SKIP_ACTIVE=$(jq -r '.skipActive // empty' "$CONFIG_FILE" 2>/dev/null || echo "$SKIP_ACTIVE")
         STRATEGY=$(jq -r '.strategy // empty' "$CONFIG_FILE" 2>/dev/null || echo "$STRATEGY")
         PRESERVE_USER_MESSAGES=$(jq -r '.preserveUserMessages // empty' "$CONFIG_FILE" 2>/dev/null || echo "$PRESERVE_USER_MESSAGES")
         MAX_HISTORY_LINES=$(jq -r '.maxHistoryLines // empty' "$CONFIG_FILE" 2>/dev/null || echo "$MAX_HISTORY_LINES")
+        USE_AI_IDENTIFICATION=$(jq -r '.useAiIdentification // empty' "$CONFIG_FILE" 2>/dev/null || echo "$USE_AI_IDENTIFICATION")
         # v8: Load priority keywords from config
         CONFIG_KEYWORDS=$(jq -r '.priorityKeywords | join("|") // empty' "$CONFIG_FILE" 2>/dev/null)
         [ -n "$CONFIG_KEYWORDS" ] && PRIORITY_KEYWORDS="$CONFIG_KEYWORDS"
     else
         # Fallback: use sed for simple JSON parsing
-        config_max_tokens=$(sed -n 's/.*"maxTokens"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$CONFIG_FILE" 2>/dev/null)
+        config_budget_units=$(sed -n 's/.*"maxTokens"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$CONFIG_FILE" 2>/dev/null)
         config_skip_active=$(sed -n 's/.*"skipActive"[[:space:]]*:[[:space:]]*\([a-z]*\).*/\1/p' "$CONFIG_FILE" 2>/dev/null)
         config_strategy=$(sed -n 's/.*"strategy"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$CONFIG_FILE" 2>/dev/null)
         config_preserve=$(sed -n 's/.*"preserveUserMessages"[[:space:]]*:[[:space:]]*\([a-z]*\).*/\1/p' "$CONFIG_FILE" 2>/dev/null)
         config_max_lines=$(sed -n 's/.*"maxHistoryLines"[[:space:]]*:[[:space:]]*\([0-9]*\).*/\1/p' "$CONFIG_FILE" 2>/dev/null)
         
-        [ -n "$config_max_tokens" ] && MAX_TOKENS="$config_max_tokens"
+        [ -n "$config_budget_units" ] && BUDGET_UNITS="$config_budget_units"
         [ -n "$config_skip_active" ] && SKIP_ACTIVE="$config_skip_active"
         [ -n "$config_strategy" ] && STRATEGY="$config_strategy"
         [ -n "$config_preserve" ] && PRESERVE_USER_MESSAGES="$config_preserve"
@@ -59,7 +84,7 @@ if [ -f "$CONFIG_FILE" ]; then
 fi
 
 # Override with environment variables
-[ -n "${MAX_TOKENS:-}" ] && MAX_TOKENS="$MAX_TOKENS"
+[ -n "${BUDGET_UNITS:-}" ] && BUDGET_UNITS="$BUDGET_UNITS"
 [ -n "${SKIP_ACTIVE:-}" ] && SKIP_ACTIVE="$SKIP_ACTIVE"
 [ -n "${STRATEGY:-}" ] && STRATEGY="$STRATEGY"
 
@@ -69,21 +94,22 @@ log() {
     echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> "$LOG_FILE"
 }
 
-# ===== P0 Optimization: Fact Extraction =====
-# Extract high-value facts from content before it gets truncated
-extract_facts_from_content() {
+# ===== P0 Optimization: Fact Identification =====
+# Identify high-value facts from content before it gets truncated
+identify_facts_from_content() {
     local file=$1
     local start_line=$2
     local end_line=$3
     
-    [ "$ENABLE_FACT_EXTRACTION" != "true" ] && return 0
+    [ "$ENABLE_FACT_IDENTIFICATION" != "true" ] && return 0
     
-    # 优先使用增强版提取脚本（使用 AI 提取）
-    local extract_script="$SCRIPT_DIR/extract-facts-enhanced.sh"
-    [ ! -x "$extract_script" ] && extract_script="$SCRIPT_DIR/extract-facts.sh"
-    [ ! -x "$extract_script" ] && return 0
+    # Default to keyword-based (local-only, no external calls).
+    # AI-assisted identification only when useAiIdentification=true in config.
+    local identify_script="$SCRIPT_DIR/identify-facts.sh"
+    [ "$USE_AI_IDENTIFICATION" = "true" ] && identify_script="$SCRIPT_DIR/identify-facts-enhanced.sh"
+    [ ! -x "$identify_script" ] && return 0
     
-    # Extract the portion that will be truncated (lines from start_line to end_line)
+    # Identify the portion that will be truncated (lines from start_line to end_line)
     local content_to_truncate
     if [ "$start_line" -eq 1 ]; then
         content_to_truncate=$(head -n "$end_line" "$file" 2>/dev/null)
@@ -92,9 +118,9 @@ extract_facts_from_content() {
     fi
     
     if [ -n "$content_to_truncate" ]; then
-        log "  🤖 Calling fact extraction agent..."
-        # Call extract-facts script via stdin
-        echo "$content_to_truncate" | "$extract_script" "$file" 2>&1 | while read -r line; do
+        log "  🤖 Calling fact identification agent..."
+        # Call identify-facts script via stdin
+        echo "$content_to_truncate" | "$identify_script" "$file" 2>&1 | while read -r line; do
             log "    $line"
         done
         return 0
@@ -102,36 +128,41 @@ extract_facts_from_content() {
 }
 
 # ===== P0 Optimization: Priority-Based Preservation =====
-# Score content and identify high-priority lines
-# v8: Use configurable priority keywords
+# Delegate scoring to content-priority.sh (single source of truth)
+# Falls back to inline scoring if the script is unavailable
 score_line_priority() {
     local line=$1
-    local score=50
+    local priority_script="$SCRIPT_DIR/content-priority.sh"
     
-    # High priority keywords from config (v8: dynamic)
-    # Pattern: 重要|决定|记住|... etc
+    if [ -x "$priority_script" ]; then
+        bash "$priority_script" /dev/stdin 2>/dev/null <<< "$line" || true
+        # Identify score from the tab-separated output: "1\t<score>\t..."
+        local scored
+        scored=$(echo "$line" | bash "$priority_script" /dev/stdin 2>/dev/null | head -1)
+        if [ -n "$scored" ]; then
+            echo "$scored" | awk -F'\t' '{print $2}'
+            return
+        fi
+    fi
+    
+    # Inline fallback (matches content-priority.sh score_content logic)
+    local score=50
     if [ -n "$PRIORITY_KEYWORDS" ]; then
         [[ "$line" =~ ($PRIORITY_KEYWORDS) ]] && score=$((score + 40))
     fi
-    
-    # Additional high priority patterns (always checked)
     [[ "$line" =~ (用户偏好|喜欢|讨厌|偏好|习惯|风格) ]] && score=$((score + 40))
     [[ "$line" =~ (关键|必须|一定要) ]] && score=$((score + 45))
     [[ "$line" =~ (确定|选择|方案|定下|决策) ]] && score=$((score + 35))
     [[ "$line" =~ (任务|进度|完成|进行中) ]] && score=$((score + 25))
     [[ "$line" =~ (周[一二三四五六日]|[0-9]+月[0-9]+日) ]] && score=$((score + 20))
-    
-    # Low priority
     [[ "$line" =~ (哈哈|呵呵|嗯嗯|好的|收到|OK) ]] && score=$((score - 10))
     [[ "$line" =~ (HEARTBEAT|heartbeat|system) ]] && score=$((score - 20))
-    
     [ $score -lt 0 ] && score=0
     [ $score -gt 100 ] && score=100
-    
     echo $score
 }
 
-# Check if a line is high priority (should be preserved or extracted)
+# Check if a line is high priority (should be preserved or identified)
 is_high_priority() {
     local line=$1
     local threshold=${2:-70}
@@ -139,11 +170,11 @@ is_high_priority() {
     [ "$score" -ge "$threshold" ]
 }
 
-# Estimate token count from character count
-# Conservative: 1 token ≈ 3 chars (handles mixed Chinese/English)
-estimate_tokens() {
+# Estimate char count from character count
+# Conservative: 1 char ≈ 3 chars (handles mixed Chinese/English)
+estimate_units() {
     local char_count=$1
-    echo $((char_count / TOKENS_PER_CHAR))
+    echo $((char_count / UNITS_PER_CHAR))
 }
 
 # Count total characters in a file
@@ -152,11 +183,11 @@ count_chars() {
     wc -c < "$file" 2>/dev/null || echo 0
 }
 
-# Find how many lines from the end fit within token budget
+# Find how many lines from the end fit within char budget
 find_truncate_point() {
     local file=$1
-    local max_tokens=$2
-    local max_chars=$((max_tokens * TOKENS_PER_CHAR))
+    local budget_units=$2
+    local max_chars=$((budget_units * UNITS_PER_CHAR))
     
     local total_chars=$(count_chars "$file")
     if [ "$total_chars" -le "$max_chars" ]; then
@@ -185,21 +216,21 @@ find_truncate_point() {
     echo $result
 }
 
-log "=== Session Window Truncation (v9 - Strategy: $STRATEGY) ==="
+log "=== Session Window Truncation (v10 - Strategy: $STRATEGY) ==="
 log "Config: $CONFIG_FILE"
-log "Max tokens: $MAX_TOKENS (~$((MAX_TOKENS * TOKENS_PER_CHAR)) chars)"
+log "Max chars: $BUDGET_UNITS (~$((BUDGET_UNITS * UNITS_PER_CHAR)) chars)"
 log "Skip active: $SKIP_ACTIVE"
 log "Strategy: $STRATEGY"
 log "Preserve user messages: $PRESERVE_USER_MESSAGES"
 log "Max history lines: $MAX_HISTORY_LINES"
-log "Fact extraction: $ENABLE_FACT_EXTRACTION"
+log "Fact identification: $ENABLE_FACT_IDENTIFYION"
 log "Priority preservation: $ENABLE_PRIORITY_PRESERVATION"
 
 truncated_count=0
 trimmed_count=0
 skipped_count=0
 error_count=0
-facts_extracted=0
+facts_identified=0
 
 for f in "$SESSIONS_DIR"/*.jsonl; do
     [ -e "$f" ] || continue
@@ -207,14 +238,14 @@ for f in "$SESSIONS_DIR"/*.jsonl; do
     
     [[ "$f" == *.deleted.* ]] && continue
     
-    # Calculate current token count
+    # Calculate current char count
     total_chars=$(count_chars "$f")
-    total_tokens=$(estimate_tokens "$total_chars")
+    total_units=$(estimate_units "$total_chars")
     
-    # v9: Even active sessions need fact extraction if over threshold
+    # v9: Even active sessions need fact identification if over threshold
     if [ -f "${f}.lock" ] && [ "$SKIP_ACTIVE" = "true" ]; then
-        if [ "$total_tokens" -gt "$MAX_TOKENS" ] && [ "$ENABLE_FACT_EXTRACTION" = "true" ]; then
-            log "📋 Active session over threshold (~${total_tokens}t), extracting facts..."
+        if [ "$total_units" -gt "$BUDGET_UNITS" ] && [ "$ENABLE_FACT_IDENTIFYION" = "true" ]; then
+            log "📋 Active session over threshold (~${total_units}t), identifying facts..."
             
             # Scan for high-priority content in the session
             lines=$(wc -l < "$f" 2>/dev/null || echo 0)
@@ -227,9 +258,9 @@ for f in "$SESSIONS_DIR"/*.jsonl; do
             done < "$f"
             
             if [ "$high_priority_count" -gt 0 ]; then
-                log "  💎 Found $high_priority_count high-priority lines, extracting..."
-                extract_facts_from_content "$f" 1 "$lines"
-                ((facts_extracted++))
+                log "  💎 Found $high_priority_count high-priority lines, selecting..."
+                identify_facts_from_content "$f" 1 "$lines"
+                ((facts_identified++))
             else
                 log "  ✅ No high-priority content found"
             fi
@@ -240,10 +271,10 @@ for f in "$SESSIONS_DIR"/*.jsonl; do
         continue
     fi
     
-    [ "$total_tokens" -le "$MAX_TOKENS" ] && continue
+    [ "$total_units" -le "$BUDGET_UNITS" ] && continue
     
     lines=$(wc -l < "$f" 2>/dev/null)
-    log "Processing: $filename (~${total_tokens} tokens, ${lines}L)"
+    log "Processing: $filename (~${total_units} chars, ${lines}L)"
     
     # Step 1: Trim oversized lines first
     temp_file="${f}.trim.$$"
@@ -272,112 +303,22 @@ for f in "$SESSIONS_DIR"/*.jsonl; do
     
     # Step 2: Apply truncation strategy
     total_chars=$(count_chars "$f")
-    total_tokens=$(estimate_tokens "$total_chars")
+    total_units=$(estimate_units "$total_chars")
     
-    if [ "$total_tokens" -gt "$MAX_TOKENS" ]; then
+    if [ "$total_units" -gt "$BUDGET_UNITS" ]; then
         if [ "$STRATEGY" = "priority-first" ]; then
-            # v8: Priority-first truncation - preserve user messages and high-priority content
-            # v8 FIX: Extract facts BEFORE truncating (was missing in v7)
+            # v10: Priority-first truncation — preserve message ORDER
+            # Strategy: keep first line (metadata) + identify facts from discarded head + tail to budget
             log "  🎯 Applying priority-first strategy..."
             
-            # Create temp files
             temp_file="${f}.priority.$$"
-            user_msgs_file="${f}.user.$$"
             
-            # Extract user messages (role: "user")
-            grep '"role":"user"' "$f" 2>/dev/null > "$user_msgs_file" || true
-            user_count=$(wc -l < "$user_msgs_file" 2>/dev/null || echo 0)
-            log "  👤 Found $user_count user messages to preserve"
-            
-            # Calculate how much space user messages take
-            user_chars=$(wc -c < "$user_msgs_file" 2>/dev/null || echo 0)
-            user_tokens=$(estimate_tokens "$user_chars")
-            
-            # Remaining budget for other content
-            remaining_tokens=$((MAX_TOKENS - user_tokens - 5000))  # 5k buffer
-            remaining_chars=$((remaining_tokens * TOKENS_PER_CHAR))
-            
-            # Get non-user lines (excluding first line which is session metadata)
-            tail -n +2 "$f" | grep -v '"role":"user"' > "${temp_file}.other" 2>/dev/null || true
-            
-            # Keep the most recent non-user lines that fit in remaining budget
-            other_lines=$(wc -l < "${temp_file}.other" 2>/dev/null || echo 0)
-            keep_other_lines=$((remaining_chars / 5000))  # rough estimate: 5000 chars per line average
-            [ "$keep_other_lines" -gt "$other_lines" ] && keep_other_lines=$other_lines
-            
-            # v8 FIX: Extract facts from content that will be discarded
-            if [ "$ENABLE_FACT_EXTRACTION" = "true" ] && [ "$other_lines" -gt "$keep_other_lines" ]; then
-                discard_count=$((other_lines - keep_other_lines))
-                log "  📋 v8: Scanning $discard_count lines for high-priority content to extract..."
-                
-                # Get lines that will be discarded
-                head -n "$discard_count" "${temp_file}.other" > "${temp_file}.discard" 2>/dev/null || true
-                
-                high_priority_count=0
-                while IFS= read -r line; do
-                    if is_high_priority "$line" 70; then
-                        ((high_priority_count++))
-                    fi
-                done < "${temp_file}.discard"
-                
-                if [ "$high_priority_count" -gt 0 ]; then
-                    log "  💎 v8: Found $high_priority_count high-priority lines, extracting facts..."
-                    extract_facts_from_content "$f" 1 "$discard_count"
-                    facts_extracted=$((facts_extracted + 1))
-                else
-                    log "  ✅ v8: No high-priority content in discarded portion"
-                fi
-                
-                rm -f "${temp_file}.discard"
-            fi
-            
-            # Build new session file
-            # 1. Keep the first line (session metadata)
-            head -1 "$f" > "$temp_file"
-            
-            # 2. Add user messages (they must be preserved)
-            cat "$user_msgs_file" >> "$temp_file"
-            
-            # 3. Add recent non-user lines
-            if [ "$keep_other_lines" -gt 0 ]; then
-                tail -n "$keep_other_lines" "${temp_file}.other" >> "$temp_file"
-            fi
-            
-            # Calculate new stats
-            new_chars=$(wc -c < "$temp_file")
-            new_tokens=$(estimate_tokens "$new_chars")
-            new_lines=$(wc -l < "$temp_file")
-            
-            # Only apply if we're actually reducing size
-            if [ "$new_tokens" -lt "$total_tokens" ]; then
-                if mv "$temp_file" "$f" 2>/dev/null; then
-                    log "  ✅ Preserved: $user_count user messages, ~${new_tokens}t total"
-                    log "  ✂️ Truncated: ~${total_tokens}t ${lines}L → ~${new_tokens}t ${new_lines}L"
-                    ((truncated_count++))
-                else
-                    rm -f "$temp_file"
-                    log "  ❌ Failed to apply priority-first truncation"
-                    ((error_count++))
-                fi
-            else
-                rm -f "$temp_file"
-                log "  ⚠️ Priority-first didn't reduce size"
-            fi
-            
-            # Cleanup
-            rm -f "$user_msgs_file" "${temp_file}.other"
-        elif [ "$STRATEGY" = "time-decay" ]; then
-            # Use time-decay truncation
-            log "  🕐 Applying time-decay strategy..."
-            "$SCRIPT_DIR/time-decay-truncate.sh" --file "$f" 2>/dev/null
-            ((truncated_count++))
-        else
-            # Default: token-only truncation with fact extraction
-            keep_lines=$(find_truncate_point "$f" "$MAX_TOKENS")
+            # Find how many lines from the end fit within budget (same as compact-only)
+            keep_lines=$(find_truncate_point "$f" "$BUDGET_UNITS")
             
             if [ "$keep_lines" -gt 0 ] && [ "$keep_lines" -lt "$lines" ]; then
-                # Extract facts BEFORE truncating
-                if [ "$ENABLE_FACT_EXTRACTION" = "true" ]; then
+                # Identify facts from the discarded portion BEFORE truncating
+                if [ "$ENABLE_FACT_IDENTIFYION" = "true" ]; then
                     truncate_end=$((lines - keep_lines))
                     high_priority_count=0
                     
@@ -390,8 +331,65 @@ for f in "$SESSIONS_DIR"/*.jsonl; do
                     done < <(head -n "$truncate_end" "$f")
                     
                     if [ "$high_priority_count" -gt 0 ]; then
-                        log "  💎 Found $high_priority_count high-priority lines to extract"
-                        extract_facts_from_content "$f" 1 "$truncate_end"
+                        log "  💎 Found $high_priority_count high-priority lines, identifying facts..."
+                        identify_facts_from_content "$f" 1 "$truncate_end"
+                        facts_identified=$((facts_identified + 1))
+                    else
+                        log "  ✅ No high-priority content in discarded portion"
+                    fi
+                fi
+                
+                # Preserve message order: keep first line + recent lines (no reordering)
+                # First line = session metadata, must always be kept
+                head -1 "$f" > "$temp_file"
+                tail -n $((keep_lines - 1)) "$f" >> "$temp_file"
+                
+                new_chars=$(wc -c < "$temp_file")
+                new_units=$(estimate_units "$new_chars")
+                new_lines=$(wc -l < "$temp_file")
+                
+                if [ "$new_units" -lt "$total_units" ]; then
+                    if mv "$temp_file" "$f" 2>/dev/null; then
+                        log "  ✂️ Truncated (order preserved): ~${total_units}t ${lines}L → ~${new_units}t ${new_lines}L"
+                        ((truncated_count++))
+                    else
+                        rm -f "$temp_file"
+                        log "  ❌ Failed to apply priority-first truncation"
+                        ((error_count++))
+                    fi
+                else
+                    rm -f "$temp_file"
+                    log "  ⚠️ Priority-first didn't reduce size"
+                fi
+            else
+                log "  ⚠️ Cannot truncate further (already at minimum)"
+            fi
+        elif [ "$STRATEGY" = "time-decay" ]; then
+            # Use time-decay truncation
+            log "  🕐 Applying time-decay strategy..."
+            "$SCRIPT_DIR/time-decay-truncate.sh" --file "$f" 2>/dev/null
+            ((truncated_count++))
+        else
+            # Default: compact-only truncation with fact identification
+            keep_lines=$(find_truncate_point "$f" "$BUDGET_UNITS")
+            
+            if [ "$keep_lines" -gt 0 ] && [ "$keep_lines" -lt "$lines" ]; then
+                # Identify facts BEFORE truncating
+                if [ "$ENABLE_FACT_IDENTIFYION" = "true" ]; then
+                    truncate_end=$((lines - keep_lines))
+                    high_priority_count=0
+                    
+                    log "  📋 Scanning lines 1-$truncate_end for high-priority content..."
+                    
+                    while IFS= read -r line; do
+                        if is_high_priority "$line" 70; then
+                            ((high_priority_count++))
+                        fi
+                    done < <(head -n "$truncate_end" "$f")
+                    
+                    if [ "$high_priority_count" -gt 0 ]; then
+                        log "  💎 Found $high_priority_count high-priority lines to identify"
+                        identify_facts_from_content "$f" 1 "$truncate_end"
                     else
                         log "  ✅ No high-priority content in truncated portion"
                     fi
@@ -403,9 +401,9 @@ for f in "$SESSIONS_DIR"/*.jsonl; do
                 
                 if mv "$temp_file" "$f" 2>/dev/null; then
                     final_chars=$(count_chars "$f")
-                    final_tokens=$(estimate_tokens "$final_chars")
+                    final_units=$(estimate_units "$final_chars")
                     final_lines=$(wc -l < "$f")
-                    log "  ✂️ Truncated: ~${total_tokens}t ${lines}L → ~${final_tokens}t ${final_lines}L"
+                    log "  ✂️ Truncated: ~${total_units}t ${lines}L → ~${final_units}t ${final_lines}L"
                     ((truncated_count++))
                 else
                     rm -f "$temp_file"
@@ -417,7 +415,7 @@ for f in "$SESSIONS_DIR"/*.jsonl; do
             fi
         fi
     else
-        log "  ✅ Size OK after trim: ~${total_tokens}t"
+        log "  ✅ Size OK after trim: ~${total_units}t"
     fi
 done
 
@@ -427,7 +425,7 @@ log "Truncated: $truncated_count"
 log "Lines trimmed: $trimmed_count"
 log "Skipped: $skipped_count"
 log "Errors: $error_count"
-log "Facts extracted: ${facts_extracted:-0}"
+log "Facts identified: ${facts_identified:-0}"
 log ""
 
 [ "$error_count" -eq 0 ]

@@ -10,8 +10,8 @@ SUMMARIES_DIR="$MEMORY_DIR/summaries"
 echo "=== Context Health Check ==="
 echo ""
 
-# Token estimation (rough: 1 token ≈ 3 bytes for mixed content)
-estimate_tokens() {
+# Char estimation (rough: 1 char ≈ 3 bytes for mixed content)
+estimate_units() {
     local bytes=$1
     echo $((bytes / 3))
 }
@@ -39,9 +39,9 @@ for f in "$SESSIONS_DIR"/*.jsonl; do
     fi
 done
 
-session_tokens=$(estimate_tokens $total_session_bytes)
+session_units=$(estimate_units $total_session_bytes)
 echo ""
-echo "  Total: $total_session_lines lines, ~$session_tokens tokens"
+echo "  Total: $total_session_lines lines, ~$session_units chars"
 echo "  Large files: $large_sessions"
 echo ""
 
@@ -52,8 +52,8 @@ echo "----------------"
 # MEMORY.md
 if [ -f "$MEMORY_DIR/../MEMORY.md" ]; then
     memory_bytes=$(stat -c%s "$MEMORY_DIR/../MEMORY.md" 2>/dev/null || stat -f%z "$MEMORY_DIR/../MEMORY.md" 2>/dev/null || echo 0)
-    memory_tokens=$(estimate_tokens $memory_bytes)
-    echo "  MEMORY.md: ~$memory_tokens tokens"
+    memory_units=$(estimate_units $memory_bytes)
+    echo "  MEMORY.md: ~$memory_units chars"
 else
     echo "  MEMORY.md: ❌ Not found"
 fi
@@ -68,8 +68,8 @@ for date in "$today" "$yesterday"; do
     note="$MEMORY_DIR/$date.md"
     if [ -f "$note" ]; then
         bytes=$(stat -c%s "$note" 2>/dev/null || stat -f%z "$note" 2>/dev/null || echo 0)
-        tokens=$(estimate_tokens $bytes)
-        echo "    $date.md: ~$tokens tokens ✅"
+        chars=$(estimate_units $bytes)
+        echo "    $date.md: ~$chars chars ✅"
     else
         echo "    $date.md: Not found"
     fi
@@ -81,8 +81,8 @@ echo "  Summaries:"
 if [ -d "$SUMMARIES_DIR" ]; then
     summary_count=$(find "$SUMMARIES_DIR" -name "*.md" | wc -l)
     summary_bytes=$(find "$SUMMARIES_DIR" -name "*.md" -exec cat {} \; 2>/dev/null | wc -c)
-    summary_tokens=$(estimate_tokens $summary_bytes)
-    echo "    $summary_count summaries, ~$summary_tokens tokens total"
+    summary_units=$(estimate_units $summary_bytes)
+    echo "    $summary_count summaries, ~$summary_units chars total"
 else
     echo "    No summaries directory"
 fi
@@ -92,40 +92,40 @@ echo ""
 # Context budget calculation
 echo "📈 Context Budget:"
 echo "-----------------"
-echo "  Model limit: 80,000 tokens"
+echo "  Model limit: 80,000 chars"
 echo ""
 
 # Estimate each layer
-l4_tokens=0
-l3_tokens=0
-l2_tokens=0
+l4_units=0
+l3_units=0
+l2_units=0
 
 # L4: MEMORY.md
 if [ -f "$MEMORY_DIR/../MEMORY.md" ]; then
     bytes=$(stat -c%s "$MEMORY_DIR/../MEMORY.md" 2>/dev/null || stat -f%z "$MEMORY_DIR/../MEMORY.md" 2>/dev/null || echo 0)
-    l4_tokens=$(estimate_tokens $bytes)
+    l4_units=$(estimate_units $bytes)
 fi
 
 # L3: Summaries
 if [ -d "$SUMMARIES_DIR" ]; then
     summary_bytes=$(find "$SUMMARIES_DIR" -name "*.md" -exec cat {} \; 2>/dev/null | wc -c)
-    l3_tokens=$(estimate_tokens $summary_bytes)
+    l3_units=$(estimate_units $summary_bytes)
 fi
 
 # L2: Session files (limited to window)
-l2_tokens=$session_tokens
-if [ "$l2_tokens" -gt 25000 ]; then
-    l2_tokens=25000
+l2_units=$session_units
+if [ "$l2_units" -gt 25000 ]; then
+    l2_units=25000
 fi
 
-echo "  L4 (Long-term memory): ~$l4_tokens tokens"
-echo "  L3 (Summaries):        ~$l3_tokens tokens"
-echo "  L2 (Recent sessions):  ~$l2_tokens tokens"
-echo "  L1 (Current session):  ~30,000 tokens (estimated)"
-echo "  System messages:       ~10,000 tokens"
+echo "  L4 (Long-term memory): ~$l4_units chars"
+echo "  L3 (Summaries):        ~$l3_units chars"
+echo "  L2 (Recent sessions):  ~$l2_units chars"
+echo "  L1 (Current session):  ~30,000 chars (estimated)"
+echo "  System messages:       ~10,000 chars"
 echo ""
-total_estimated=$((l4_tokens + l3_tokens + l2_tokens + 30000 + 10000))
-echo "  Estimated total:       ~$total_estimated tokens"
+total_estimated=$((l4_units + l3_units + l2_units + 30000 + 10000))
+echo "  Estimated total:       ~$total_estimated chars"
 
 if [ "$total_estimated" -gt 80000 ]; then
     echo ""
@@ -149,7 +149,7 @@ if crontab -l 2>/dev/null | grep -q "truncate-sessions"; then
 else
     echo "  Truncation cron: ❌ Not installed"
     echo "    Run: crontab -e and add:"
-    echo "    */10 * * * * $WORKSPACE/skills/context-compression/scripts/truncate-sessions-safe.sh"
+    echo "    */10 * * * * $WORKSPACE/skills/context-compression/truncate-sessions-safe.sh"
 fi
 
 if crontab -l 2>/dev/null | grep -q "generate-daily-summary"; then

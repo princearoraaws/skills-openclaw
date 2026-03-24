@@ -29,14 +29,17 @@ get_day_number() {
     date +%j  # 一年中的第几天
 }
 
-# 计算天数差
+# 计算天数差（v1.1: 使用 Unix timestamp 避免跨年 bug）
 days_diff() {
     local date1=$1
     local date2=$2
-    # 简化：假设都在同一年
-    local d1=$(date -d "$date1" +%j 2>/dev/null || echo "${date1:5:5}")
-    local d2=$(date -d "$date2" +%j 2>/dev/null || echo "${date2:5:5}")
-    echo $((d2 - d1))
+    local d1=$(date -d "$date1" +%s 2>/dev/null || echo "0")
+    local d2=$(date -d "$date2" +%s 2>/dev/null || echo "0")
+    if [ "$d1" -eq 0 ] || [ "$d2" -eq 0 ]; then
+        echo "0"
+        return
+    fi
+    echo $(( (d2 - d1) / 86400 ))
 }
 
 # 检查偏好表格中的条目
@@ -172,9 +175,12 @@ clean_short_term_preferences() {
         echo "$line" >> "$temp_file"
     done < "$MEMORY_FILE"
     
-    # 如果有改动，替换原文件
+    # 如果有改动，安全替换原文件（先写临时文件再 mv，防止中断损坏）
     if $changed; then
-        mv "$temp_file" "$MEMORY_FILE"
+        cp "$MEMORY_FILE" "${MEMORY_FILE}.orig"
+        mv "$temp_file" "${MEMORY_FILE}.tmp"
+        mv "${MEMORY_FILE}.tmp" "$MEMORY_FILE"
+        rm -f "${MEMORY_FILE}.orig"
         log "✅ Short-term preferences cleaned"
     else
         rm -f "$temp_file"

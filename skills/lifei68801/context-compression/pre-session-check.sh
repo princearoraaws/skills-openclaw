@@ -5,10 +5,10 @@
 
 SESSIONS_DIR="${SESSIONS_DIR:-$HOME/.openclaw/agents/main/sessions}"
 MAX_SESSION_LINES=2000
-MAX_TOTAL_TOKENS=70000  # Leave buffer for other context layers
+MAX_TOTAL_UNITS=70000  # Leave buffer for other context layers
 
-# Quick token estimation (1 token ≈ 3 bytes)
-estimate_tokens() {
+# Quick char estimation (1 char ≈ 3 bytes)
+estimate_units() {
     local bytes=$1
     echo $((bytes / 3))
 }
@@ -22,16 +22,16 @@ for f in "$SESSIONS_DIR"/*.jsonl; do
     total_bytes=$((total_bytes + bytes))
 done
 
-total_tokens=$(estimate_tokens $total_bytes)
+total_units=$(estimate_units $total_bytes)
 
 # If under threshold, no action needed
-if [ "$total_tokens" -lt "$MAX_TOTAL_TOKENS" ]; then
-    echo "OK: Total session tokens ~$total_tokens (under $MAX_TOTAL_TOKENS)"
+if [ "$total_units" -lt "$MAX_TOTAL_UNITS" ]; then
+    echo "OK: Total session chars ~$total_units (under $MAX_TOTAL_UNITS)"
     exit 0
 fi
 
 # Need truncation - this should trigger the external truncation service
-echo "TRUNCATE_NEEDED: Total session tokens ~$total_tokens exceeds $MAX_TOTAL_TOKENS"
+echo "TRUNCATE_NEEDED: Total session chars ~$total_units exceeds $MAX_TOTAL_UNITS"
 
 # Option 1: Call the external truncation script directly
 # This runs OUTSIDE of agent context

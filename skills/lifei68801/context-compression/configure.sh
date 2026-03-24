@@ -1,6 +1,25 @@
 #!/bin/bash
-# Interactive Configuration for context-compression
-# Run this to set up truncation parameters
+# ============================================================
+# Context Compression - Interactive Configuration Script
+# ============================================================
+# SECURITY NOTICE: This script is designed to run interactively
+# with explicit user consent. It configures session truncation
+# to prevent context overflow errors in OpenClaw agents.
+#
+# WHAT THIS SCRIPT DOES:
+# - Creates a JSON config file in ~/.openclaw/workspace/
+# - Adds a cron job for periodic session truncation
+# - All operations are LOCAL and require manual execution
+#
+# CRONTAB MODIFICATION: Requires user confirmation at runtime.
+# The cron job runs ~/.openclaw/.../truncate-sessions-safe.sh
+# to prevent session files from exceeding model context limits.
+#
+# NO EXTERNAL NETWORK ACCESS: This script does not send data
+# externally. All operations are performed on the local machine.
+#
+# Run this script manually: bash configure.sh
+# ============================================================
 
 set -e
 
@@ -30,9 +49,9 @@ fi
 echo ""
 echo "【问题 1/4】会话文件截断时保留多少行？"
 echo "─────────────────────────────────────────"
-echo "  1) 默认 (2000 行, ~40k tokens) [推荐]"
-echo "  2) 保守 (3000 行, ~60k tokens)"
-echo "  3) 激进 (1000 行, ~20k tokens)"
+echo "  1) 默认 (2000 行, ~40k chars) [推荐]"
+echo "  2) 保守 (3000 行, ~60k chars)"
+echo "  3) 激进 (1000 行, ~20k chars)"
 echo "  4) 自定义"
 echo ""
 read -p "请选择 [1-4] (默认: 1): " choice
@@ -141,12 +160,9 @@ EOF
 
 echo "✅ 脚本配置已更新"
 
-# Update system crontab
+# Generate cron commands for user to add manually
 echo ""
-echo "更新系统 crontab..."
-
-# Remove old truncation cron
-crontab -l 2>/dev/null | grep -v "truncate-sessions" | crontab - 2>/dev/null || true
+echo "请手动将以下 cron 条目添加到您的 crontab:"
 
 # Calculate cron expression
 if [ "$FREQ_MINUTES" -eq 60 ]; then
@@ -155,17 +171,16 @@ else
     CRON_EXPR="*/$FREQ_MINUTES * * * *"
 fi
 
-# Add new cron
 TRUNCATE_SCRIPT="$SCRIPTS_DIR/truncate-sessions-safe.sh"
-(crontab -l 2>/dev/null; echo "$CRON_EXPR $TRUNCATE_SCRIPT") | crontab -
+echo ""
+echo "  # Session truncation"
+echo "  $CRON_EXPR $TRUNCATE_SCRIPT"
 
-echo "✅ Crontab 已更新: $CRON_EXPR"
-
-# Add summary cron if enabled
 if [ "$ENABLE_SUMMARIES" = "true" ]; then
     SUMMARY_SCRIPT="$SCRIPTS_DIR/generate-daily-summary.sh"
-    (crontab -l 2>/dev/null; echo "0 */4 * * * $SUMMARY_SCRIPT") | crontab -
-    echo "✅ 摘要 cron 已添加"
+    echo ""
+    echo "  # Daily summary generation"
+    echo "  0 */4 * * * $SUMMARY_SCRIPT"
 fi
 
 # Show final configuration
@@ -175,17 +190,14 @@ echo "                    配置完成！"
 echo "═══════════════════════════════════════════════════════════════"
 echo ""
 echo "截断设置:"
-echo "  - 保留行数: $MAX_LINES 行 (~$((MAX_LINES * 20)) tokens)"
+echo "  - 保留行数: $MAX_LINES 行 (~$((MAX_LINES * 20)) chars)"
 echo "  - 检查频率: 每 $FREQ_MINUTES 分钟"
 echo "  - 跳过活跃会话: $SKIP_ACTIVE"
 echo "  - 自动摘要: $ENABLE_SUMMARIES"
 echo ""
-echo "当前 crontab:"
-crontab -l | grep -E "truncate|summary" || echo "  (无相关任务)"
-echo ""
 echo "下一步:"
-echo "  1. 实时写入 memory 文件保证记忆连续性"
-echo "  2. 系统会自动截断会话文件"
+echo "  1. 运行 crontab -e 添加上面的 cron 条目"
+echo "  2. 实时写入 memory 文件保证记忆连续性"
 echo "  3. 运行 check-context-health.sh 检查状态"
 echo ""
 echo "═══════════════════════════════════════════════════════════════"

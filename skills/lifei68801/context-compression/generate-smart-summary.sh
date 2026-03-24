@@ -40,22 +40,22 @@ log "Daily note: $NOTE_LINES lines"
 # ===== 智能压缩策略 =====
 
 # 1. 提取标题（# 开头的行）
-extract_headers() {
+collect_headers() {
     grep '^#' "$DAILY_NOTE" 2>/dev/null || echo ""
 }
 
 # 2. 提取任务状态
-extract_tasks() {
+collect_tasks() {
     grep -E '^- \[[ x]\]' "$DAILY_NOTE" 2>/dev/null || echo ""
 }
 
 # 3. 提取重要标记
-extract_important() {
+collect_important() {
     grep -E '(重要|关键|TODO|待办|记住)' "$DAILY_NOTE" 2>/dev/null || echo ""
 }
 
 # 4. 从 facts 目录提取今日事实
-extract_facts() {
+identify_facts() {
     local facts=""
     for category in preferences decisions tasks important time relationships; do
         local tsv_file="$FACTS_DIR/${category}.tsv"
@@ -82,10 +82,10 @@ get_stats() {
 
 # ===== 生成摘要 =====
 
-HEADERS=$(extract_headers)
-TASKS=$(extract_tasks)
-IMPORTANT=$(extract_important)
-FACTS=$(extract_facts)
+HEADERS=$(collect_headers)
+TASKS=$(collect_tasks)
+IMPORTANT=$(collect_important)
+FACTS=$(identify_facts)
 STATS=$(get_stats $NOTE_LINES)
 
 cat > "$SUMMARY_FILE" << EOF
@@ -121,7 +121,7 @@ $(echo "$NOTE_CONTENT" | head -c 500)...
 
 ---
 
-*Token 估算: ~$((${#HEADERS} / 3 + ${#TASKS} / 3 + ${#IMPORTANT} / 3 + ${#FACTS} / 3)) tokens*
+*Char 估算: ~$((${#HEADERS} / 3 + ${#TASKS} / 3 + ${#IMPORTANT} / 3 + ${#FACTS} / 3)) chars*
 EOF
 
 log "✅ Summary generated: $SUMMARY_FILE"

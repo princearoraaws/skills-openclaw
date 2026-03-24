@@ -1,13 +1,18 @@
 {
   "owner": "lifei68801",
   "slug": "context-compression",
-  "displayName": "Memory Compression",
+  "displayName": "Context Compression",
   "latest": {
-    "version": "3.10.0",
-    "publishedAt": 1773285593648,
-    "commit": "https://github.com/openclaw/skills/commit/d3f0e5fb36afa8967ec0db6223f2ab57c954405b"
+    "version": "3.13.3",
+    "publishedAt": 1774187922759,
+    "commit": null
   },
   "history": [
+    {
+      "version": "3.10.0",
+      "publishedAt": 1773285593648,
+      "commit": "https://github.com/openclaw/skills/commit/d3f0e5fb36afa8967ec0db6223f2ab57c954405b"
+    },
     {
       "version": "3.9.7",
       "publishedAt": 1773284467681,

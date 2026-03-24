@@ -1,6 +1,6 @@
 #!/bin/bash
-# Time-Decay Truncation with Token Limit - v1.0
-# 时间衰减 + Token 上限的双重约束策略
+# Time-Decay Truncation with Char Limit - v1.0
+# 时间衰减 + Char 上限的双重约束策略
 # 
 # 衰减规则：
 # - 最近 6h  → 优先级 × 1.5（高权重保留）
@@ -14,8 +14,8 @@ LOG_FILE="${LOG_FILE:-$HOME/.openclaw/logs/truncation.log}"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Default values
-MAX_TOKENS=40000
-TOKENS_PER_CHAR=2
+BUDGET_UNITS=40000
+UNITS_PER_CHAR=2
 DECAY_6H=1.5
 DECAY_24H=1.0
 DECAY_72H=0.5
@@ -23,8 +23,8 @@ DECAY_OLD=0.0
 
 # Load configuration
 if [ -f "$CONFIG_FILE" ]; then
-    config_max_tokens=$(grep -o '"maxTokens": [0-9]*' "$CONFIG_FILE" 2>/dev/null | grep -o '[0-9]*')
-    [ -n "$config_max_tokens" ] && MAX_TOKENS="$config_max_tokens"
+    config_budget_units=$(grep -o '"maxTokens": [0-9]*' "$CONFIG_FILE" 2>/dev/null | grep -o '[0-9]*')
+    [ -n "$config_budget_units" ] && BUDGET_UNITS="$config_budget_units"
 fi
 
 mkdir -p "$(dirname "$LOG_FILE")"
@@ -127,24 +127,24 @@ is_critical_content() {
     [[ "$line" =~ (记住|重要|关键|必须|用户偏好|决定) ]]
 }
 
-# Estimate tokens in a line
-estimate_line_tokens() {
+# Estimate chars in a line
+estimate_line_units() {
     local line=$1
     local chars=${#line}
-    echo $((chars / TOKENS_PER_CHAR))
+    echo $((chars / UNITS_PER_CHAR))
 }
 
 # Main truncation function with time-decay
 truncate_with_time_decay() {
     local file=$1
-    local max_tokens=$2
+    local budget_units=$2
     local temp_scores="/tmp/scores-$$.tmp"
     local temp_result="/tmp/result-$$.tmp"
     
     > "$temp_scores"
     > "$temp_result"
     
-    local total_tokens=0
+    local total_units=0
     local line_num=0
     local now=$(now_ts)
     
@@ -157,35 +157,35 @@ truncate_with_time_decay() {
         
         local msg_ts=$(parse_timestamp "$line")
         local final_priority=$(calculate_final_priority "$line" "$msg_ts")
-        local tokens=$(estimate_line_tokens "$line")
+        local chars=$(estimate_line_units "$line")
         
-        # Format: priority|line_num|tokens|line
-        echo "${final_priority}|${line_num}|${tokens}|${line}" >> "$temp_scores"
+        # Format: priority|line_num|chars|line
+        echo "${final_priority}|${line_num}|${chars}|${line}" >> "$temp_scores"
     done < "$file"
     
     # Phase 2: Sort by priority (descending) then by line_num (ascending, for recency)
     sort -t'|' -k1,1nr -k2,2n "$temp_scores" > "${temp_scores}.sorted"
     
-    # Phase 3: Select lines within token budget
+    # Phase 3: Select lines within char budget
     local kept_lines=""
-    local kept_tokens=0
+    local kept_units=0
     local critical_preserved=0
     
-    while IFS='|' read -r priority line_num tokens line; do
+    while IFS='|' read -r priority line_num chars line; do
         # Always preserve critical content (unless extremely old and low priority)
         if is_critical_content "$line"; then
-            if [ $((kept_tokens + tokens)) -le $max_tokens ] || [ $priority -ge 70 ]; then
+            if [ $((kept_units + chars)) -le $budget_units ] || [ $priority -ge 70 ]; then
                 kept_lines="${kept_lines}${line_num}|"
-                kept_tokens=$((kept_tokens + tokens))
+                kept_units=$((kept_units + chars))
                 ((critical_preserved++))
                 continue
             fi
         fi
         
         # Check budget
-        if [ $((kept_tokens + tokens)) -le $max_tokens ]; then
+        if [ $((kept_units + chars)) -le $budget_units ]; then
             kept_lines="${kept_lines}${line_num}|"
-            kept_tokens=$((kept_tokens + tokens))
+            kept_units=$((kept_units + chars))
         fi
     done < "${temp_scores}.sorted"
     
@@ -203,7 +203,7 @@ truncate_with_time_decay() {
     # Phase 5: Replace original file
     if [ $preserved_count -gt 0 ]; then
         mv "$temp_result" "$file"
-        log "  ✅ Preserved $preserved_count lines (~${kept_tokens}t), critical: $critical_preserved"
+        log "  ✅ Preserved $preserved_count lines (~${kept_units}t), critical: $critical_preserved"
     else
         log "  ⚠️ No lines preserved, keeping last 100 lines as fallback"
         tail -n 100 "$file" > "$temp_result"
@@ -223,16 +223,16 @@ process_session() {
     
     # Check if file is large enough to need truncation
     local total_chars=$(wc -c < "$file" 2>/dev/null || echo 0)
-    local total_tokens=$((total_chars / TOKENS_PER_CHAR))
+    local total_units=$((total_chars / UNITS_PER_CHAR))
     
-    if [ $total_tokens -le $MAX_TOKENS ]; then
+    if [ $total_units -le $BUDGET_UNITS ]; then
         return 0
     fi
     
-    log "Processing: $filename (~${total_tokens}t)"
+    log "Processing: $filename (~${total_units}t)"
     
     # Apply time-decay truncation
-    truncate_with_time_decay "$file" "$MAX_TOKENS"
+    truncate_with_time_decay "$file" "$BUDGET_UNITS"
 }
 
 # Main entry point
@@ -240,7 +240,7 @@ main() {
     local sessions_dir="${SESSIONS_DIR:-$HOME/.openclaw/agents/main/sessions}"
     
     log "=== Time-Decay Truncation (v1.0) ==="
-    log "Max tokens: $MAX_TOKENS"
+    log "Max chars: $BUDGET_UNITS"
     log "Decay factors: 6h=${DECAY_6H}, 24h=${DECAY_24H}, 72h=${DECAY_72H}, old=${DECAY_OLD}"
     
     local processed=0
