@@ -3,11 +3,16 @@
   "slug": "gws-meet",
   "displayName": "Gws Meet",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1773775543774,
-    "commit": "https://github.com/openclaw/skills/commit/597bc82ffced35a471a5edfa7b9d0c8b7d681fbc"
+    "version": "1.0.2",
+    "publishedAt": 1774300482772,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1773775543774,
+      "commit": "https://github.com/openclaw/skills/commit/597bc82ffced35a471a5edfa7b9d0c8b7d681fbc"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1772748556733,
