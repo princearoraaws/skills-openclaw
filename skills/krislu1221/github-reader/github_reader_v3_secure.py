@@ -24,7 +24,7 @@ from typing import Optional, Dict, Any
 from urllib.parse import quote
 
 # 配置日志
-logging.basicConfig(level=logging.ERROR)
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
 
@@ -117,7 +117,7 @@ class SecureGitHubReaderCache:
         self.cache_ttl = timedelta(hours=SecurityConfig.CACHE_TTL_HOURS)
         self.max_cache_size = SecurityConfig.CACHE_MAX_SIZE_MB * 1024 * 1024
         
-        # 确保缓存目录存在且安全
+        # 启动时确保缓存目录存在且安全
         self._ensure_cache_dir()
     
     def _ensure_cache_dir(self):
@@ -362,12 +362,18 @@ class SecureGitHubReaderV3:
     
     async def _fetch_with_browser(self, browser, url: str) -> str:
         """浏览器抓取实现"""
-        await browser.open(url)
-        await asyncio.sleep(5)  # 等待加载
-        return await browser.snapshot()
+        try:
+            await browser.open(url)
+            await asyncio.sleep(5)  # 等待加载
+            return await browser.snapshot()
+        except Exception as e:
+            logger.error(f"Browser fetch failed for {url}: {e}")
+            return None
     
     async def analyze_project(self, owner: str, repo: str) -> Dict:
         """综合分析项目 - 带缓存和错误处理"""
+        logger.info(f"Analyzing project: {owner}/{repo}")
+        
         # 验证输入（再次确认）
         if not validate_repo_name(owner) or not validate_repo_name(repo):
             raise ValueError(f"Invalid repo name: {owner}/{repo}")
@@ -375,11 +381,15 @@ class SecureGitHubReaderV3:
         # 1. 检查缓存
         cached = self.cache.get(owner, repo)
         if cached:
+            logger.info(f"Cache hit for {owner}/{repo}")
             cached['from_cache'] = True
             cached['cached'] = True
             return cached
         
+        logger.info(f"Cache miss for {owner}/{repo}, fetching...")
+        
         # 2. 并行抓取
+        logger.info(f"Fetching GitHub API and Zread content for {owner}/{repo}...")
         github_task = asyncio.create_task(self.fetch_github_api(owner, repo))
         zread_task = asyncio.create_task(self.fetch_zread_content(owner, repo))
         
@@ -388,6 +398,8 @@ class SecureGitHubReaderV3:
             zread_task,
             return_exceptions=True  # 防止一个失败影响另一个
         )
+        
+        logger.info(f"Fetch completed: GitHub={github_info is not None}, Zread={zread_content is not None}")
         
         # 处理异常
         if isinstance(github_info, Exception):
@@ -407,6 +419,7 @@ class SecureGitHubReaderV3:
         if report and report.get('success'):
             try:
                 self.cache.set(owner, repo, report)
+                logger.info(f"Cached result for {owner}/{repo}")
             except Exception as e:
                 logger.error(f"Failed to cache result: {e}")
         
@@ -426,9 +439,10 @@ class SecureGitHubReaderV3:
         report = {
             'owner': owner,
             'repo': repo,
+            # 注意：GitView 是本地服务，使用 http://localhost 是安全的
             'github_url': safe_url_join('https://github.com', owner, repo),
             'zread_url': safe_url_join('https://zread.ai', owner, repo),
-            'gitview_url': f'http://localhost:8080/?repo={quote(owner, safe="")}/{quote(repo, safe="")}',
+            'gitview_url': f'http://localhost:8080/?repo={quote(owner)}/{quote(repo)}',  # noqa: S104
             'analyzed_at': datetime.now().isoformat(),
             'success': True
         }

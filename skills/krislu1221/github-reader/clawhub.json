@@ -17,6 +17,9 @@
     "icon": "📦",
     "color": "#4A90D9"
   },
+  "dependencies": {
+    "tools": ["web_fetch", "browser"]
+  },
   "config": {
     "env": {
       "GITVIEW_CACHE_DIR": {
@@ -67,7 +70,8 @@
     "cache_validation": true,
     "rate_limiting": true,
     "timeout_control": true,
-    "error_handling": true
+    "error_handling": true,
+    "audit_report": "SECURITY_AUDIT.md"
   },
   "changelog": {
     "3.1.0": [

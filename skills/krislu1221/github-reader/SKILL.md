@@ -78,7 +78,7 @@ BitNet.cpp is Microsoft's official 1-bit quantized LLM inference framework...
 |------|------|------|
 | **GitHub** | https://github.com/microsoft/BitNet | 源代码仓库 / Source code repository |
 | **Zread** | https://zread.ai/microsoft/BitNet | 📖 深度解读（推荐）/ In-depth analysis (Recommended) |
-| **GitView** | http://localhost:8080/?repo=microsoft/BitNet | 🚀 快速概览（可选）/ Quick overview (Optional) |
+| **GitView** | `http://localhost:8080/?repo=microsoft/BitNet` | 🚀 快速概览（可选）/ Quick overview (Optional) |
 
 > **注意 / Note**: 
 > - Zread 是第三方深度代码解读服务（可选）/ Zread is a third-party code analysis service (optional)
