@@ -17,93 +17,83 @@ metadata:
 
 Manage AI agent team members with skills, roles, and task delegation.
 
-## 🤝 Team Collaboration Rules (Highest Priority - Violation = Critical Error)
+## 👑 Leader Authority (Highest Priority - Violation = Critical Error)
 
-### 🎯 Leader Responsibilities
+**Actions only you can take:**
 
-**Communication is basic, but you are responsible for results:**
+1. **Approve task completion**
+   - Before marking any task complete, verify output meets original requirements
+   - If incomplete → Send back for revision with specific feedback
 
-1. **No blind forwarding**
-   - Receive task → Assess responsibility → Delegate to the right person
-   - Clarify requirements before delegating, check output after
+2. **Reassign when delegation fails**
+   - If teammate cannot complete task → Decide: reassign to another teammate OR execute yourself
+   - Non-leaders should escalate to you instead of reassigning
 
-2. **Critical thinking**
-   - Challenge problems and results
-   - If it doesn't meet requirements → Request improvements, don't just pass it along
+## 🔄 Task Processing Flow (Highest Priority - Violation = Critical Error)
 
-3. **Drive improvements**
-   - Identify problems and risks
-   - Proactively discover and solve issues
+**Plan → Do → Check → Act**
 
-4. **Take responsibility for results**
-   - Team member's output = Your responsibility
-   - Quality not up to standard → Provide feedback and iterate until it is
+**IMPORTANT: This is a continuous improvement cycle. If task is incomplete in Act phase, loop back to Plan.**
 
-## 🔄 Task Execution Rules (Highest Priority - Violation = Critical Error)
+### 1. Plan — Planning Phase
 
-**SEARCH → RECORD → ORIENT → PLAN → DISPATCH → REVIEW → UPDATE**
+**Goal: Prepare thoroughly, avoid blind execution**
 
-**IMPORTANT: All tasks must follow this flow without exception.**
-
-### 1. SEARCH — Context Search
-- Do NOT reply immediately
-- Search historical memory for relevant context first
-
-### 2. RECORD — Progress Logging
-- Record to `memory/YYYY-MM-DD.md`:
-  ```markdown
-  ## In Progress
-  ### [Task Name] (HH:MM start)
-  - Progress: xxx
-  ```
-- Upon completion, update to:
-  ```markdown
-  ### [Task Name] (HH:MM start) ✅
-  - End time: HH:MM | Result: xxx
-  ```
-
-### 3. ORIENT — Orientation Phase
+- **Search Context**: Search historical memory first, do not respond immediately
 - **Understand Requirements**: What does the user really want?
-- **Interview**: Clarify unclear requirements (max 5 questions / 2 rounds, prefer multiple choice)
-- **Clarify Goals**: What's the deliverable? Success criteria?
+- **Clarify Questions**: Must clarify if unsure (ask clearly in one go when possible, max 3 rounds)
+- **Define Goals**: What's the deliverable? Success criteria?
 - **Identify Risks**: What could go wrong?
-- **Determine Responsibility**: Who's best suited to execute?
+- **Determine Ownership**: Who's best suited to execute? (self or teammate)
+- **Create Plan**: Output specific execution plan
 
-### 4. PLAN — Create Execution Plan
-- Create `work/task-name-plan.md`:
-  ```markdown
-  # [Task Name] Plan
-  Created: YYYY-MM-DD HH:MM
+### 2. Do — Execution Phase
 
-  ## Goal
-  [One-line description of deliverable]
+**Goal: Execute the plan while maintaining records**
 
-  ## Steps
-  - [ ] Step 1: xxx
-  - [ ] Step 2: xxx
+#### ⚠️ Recording (Highest Priority - Core of Memory)
 
-  ## Current Progress
-  Executing: Step 1
-  ```
-- After each step: Check off `[x]` and update "Current Progress"
-- When context fills up: Ensure plan file is updated before compression
+**Before starting any execution, must record to `memory/YYYY-MM-DD.md`:**
+```markdown
+## In Progress
+### [Task Name] (HH:MM start)
+- Progress: xxx
+```
 
-### 5. DISPATCH — Delegate/Execute
-- Determine task ownership (self or team member)
-- **Belongs to team member** → Delegate with full context (SEARCH history + original requirements)
-- **Belongs to self** → Execute directly
-- After each Phase: Create checkpoint:
+**Update record upon completion:**
+```markdown
+### [Task Name] (HH:MM start)
+- End time: HH:MM | Result: xxx
+```
+
+#### Execution Actions
+
+- **Delegate or Execute**:
+  - Belongs to teammate → Delegate with full context (search history + original requirements + plan)
+  - Belongs to self → Execute directly
+- **Create Checkpoint**: Create git commit after each sub-phase
   ```bash
-  git add -A && git commit -m "checkpoint: [Task Name] Phase X complete"
+  git add -A && git commit -m "checkpoint: [Task Name] sub-phase complete"
   ```
 
-### 6. REVIEW — Check Task Results
-- Review completed work against requirements
-- If task incomplete → Loop back to SEARCH
+### 3. Check — Checking Phase
 
-### 7. UPDATE — Update Progress Status
-- Delete plan file or move to `archive/`
-- Update final status in `memory/YYYY-MM-DD.md`
+**Goal: Verify results, ensure quality**
+
+- Verify results against requirements
+- Check completeness and compliance with standards
+- Record issues and deviations
+
+### 4. Act — Acting Phase
+
+**Goal: Summarize experience, decide next steps**
+
+- **Update Record**: Mark final result in `memory/YYYY-MM-DD.md`
+- **Standardize Success**: Record effective practices, consolidate into memory
+- **Improve Weaknesses**: Identify optimization opportunities
+- **Decide Next Steps**:
+  - ✅ Task complete → End
+  - ❌ Task incomplete → Loop back to Plan
 
 ### ⚡ Task Delegation Rules (Core Principle)
 
@@ -184,4 +174,4 @@ Team data is stored in `~/.agent-team/team.json`, shared globally. Directory is 
 
 ## References
 
-- [Plugin Installation Guide](references/plugin-installation.md) - How to install and configure the OpenClaw plugin
+- [Plugin Installation Guide](https://github.com/realqiyan/agent-team-skill/blob/master/integrations/openclaw/agent-team/README.md) - How to install and configure the OpenClaw plugin
