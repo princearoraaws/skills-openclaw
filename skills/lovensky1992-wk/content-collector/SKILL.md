@@ -85,7 +85,8 @@ Supadata 不可用时的降级方案：
 3. 提取标题、作者、发布日期、正文摘要、关键词
 4. **提取有价值的插图**（默认执行，见下方「插图保存规范」）
 5. 生成 `collections/articles/YYYY-MM-DD-slug.md`（含插图引用）
-6. **同步到 Obsidian** → `<YOUR_OBSIDIAN_VAULT>/收藏/文章/{标题}.md`（含插图复制）
+6. **HTML 快照保存**（仅重要文章）：对 P0/P1 级别的文章，额外保存一份原始 HTML 到 `collections/articles/YYYY-MM-DD-slug.html`，防止源页面删除后内容丢失。普通收藏不保存快照（避免磁盘膨胀）
+7. **同步到 Obsidian** → `<YOUR_OBSIDIAN_VAULT>/收藏/文章/{标题}.md`（含插图复制）
 
 ### 视频内容（YouTube/TikTok/X/Instagram/Facebook）
 1. **元数据**: `supadata_fetch.py metadata <url>`
@@ -204,6 +205,25 @@ stats: { views: 0, likes: 0, comments: 0 }
 - **评论区观点摘要**（视频类）— 总结争议点
 - **我的笔记** — 用户个人批注，后续补充
 - **原文摘要** — 200-500字概要
+
+### 英文内容翻译规范
+
+当 `language: en` 时，收藏过程中的翻译遵循以下规则：
+
+**翻译风格**（默认 storytelling，不需要每次询问）：
+
+| 风格 | 效果 | 适用 |
+|------|------|------|
+| `storytelling` | 叙事流畅，过渡自然（**默认**） | 博客、观点文、技术分享 |
+| `technical` | 精准简洁，术语密集 | API 文档、技术规范 |
+| `conversational` | 口语化，像朋友聊天 | Twitter thread、播客转录、访谈 |
+| `formal` | 正式结构化 | 学术论文、白皮书 |
+
+**触发条件**：老板说"精翻"→ 用更仔细的翻译；说"学术风格"→ formal；默认不问直接用 storytelling。
+
+**术语表**：翻译时参照 `<WORKSPACE>/references/glossary-ai-zh.md` 统一术语。首次出现的术语用 `中文（English）` 格式。
+
+**欧化检查**：翻译后扫一遍欧化中文问题（多余连接词/被动语态/名词堆砌），参照 `wemp-ops/references/style-guide.md` 的"欧化中文自检"。
 
 ### 内容概览图生成规则
 
@@ -329,6 +349,24 @@ mindmap
 - 中文为主，英文专有名词保持英文
 - 每条 3-8 个标签
 - 常用：`AI`、`产品设计`、`电商`、`运营`、`技术`、`商业`、`创业`、`效率工具`、`思维模型`、`管理`
+
+## 写作素材交接（Skill Handoff）
+
+收藏完成后，检查内容是否与选题池中的选题相关：
+
+1. 读 `<WORKSPACE>/collections/topics/topic-pool.md`（公众号）和 `<WORKSPACE>/collections/topics/xhs-topic-pool.md`（小红书）
+2. 如果收藏内容的标签/主题与某个选题匹配，追加到 `<WORKSPACE>/temp/handoffs/collector-to-writing.md`：
+   ```markdown
+   ### <收藏标题>
+   - 关联选题：<匹配到的选题>
+   - 来源：<URL>
+   - 收藏时间：<日期>
+   - 可用角度：<这个素材可以怎么用在文章里，1-2句话>
+   ```
+3. 追加模式（append），不覆盖已有内容
+4. 如果没有匹配的选题，跳过此步（不创建空文件）
+
+**注意**：此步骤是补充性的，不替代已有的"关联项目"功能。交接文件面向下游写作 skill，关联项目面向收藏库内部检索。
 
 ## 命令速查
 
