@@ -1,0 +1,11 @@
+{
+  "owner": "membranedev",
+  "slug": "ghost-integration",
+  "displayName": "Ghost",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774314172727,
+    "commit": null
+  },
+  "history": []
+}
