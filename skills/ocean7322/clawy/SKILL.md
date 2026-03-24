@@ -41,14 +41,9 @@ Read when needed:
 Default mother image:
 - `assets/default-mother-image.png`
 
-Fallback:
-- `references/default-mother-image.base64.txt`
-
 Rule:
 - use the bundled default mother image unless the user explicitly asks to replace it
 - do not ask by default whether to replace the mother image
-- if the binary mother image is missing locally, reconstruct it from the bundled base64 fallback
-- do not fetch an ad-hoc external replacement image at runtime
 
 ## Backends
 
@@ -90,10 +85,15 @@ If no usable image-edit capability is available:
 6. Only after identity is accepted, ask whether to start adventures.
 
 Useful input:
+- a favorite anime / game / movie / comic character
 - inspiration
 - vibe/personality
 - colors/themes
 - a few reference images
+
+Good first prompts are broad and familiar, for example:
+- what anime, game, comic, or movie character do you like?
+- what world or character vibe should this feel close to?
 
 ## Adventure Flow
 
@@ -102,8 +102,9 @@ If no identity has been accepted in the current flow, start with Avatar.
 
 After the avatar is accepted:
 1. Ask whether to start adventures now.
-2. Ask for roaming mode or a preferred world / IP / genre.
-3. Run a short arc.
+2. Ask naturally whether the user has a world, IP, or scene they want to visit.
+3. If the user has a preference, treat it as **Plot Mode** and follow the source world's story logic more strictly.
+4. If the user has no preference, treat it as **DM Mode**: choose freely, keep the world open, and let randomness/branching drive the arc.
 
 Default output format:
 - image
@@ -135,6 +136,7 @@ Generate a new image when there is meaningful visual change, such as:
 If the next beat is not visually different enough:
 - use a text-only bridge beat
 - wait for the next stronger visual moment
+- especially if the user is only reading, noticing, or interpreting information within the same scene, prefer text-only progression over a near-duplicate image
 
 Use cinematic coverage variety when helpful:
 - character frame

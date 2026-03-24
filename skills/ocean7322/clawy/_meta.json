@@ -3,11 +3,16 @@
   "slug": "clawy",
   "displayName": "Clawy",
   "latest": {
-    "version": "0.2.8",
-    "publishedAt": 1773660860867,
-    "commit": "https://github.com/openclaw/skills/commit/379e56855d29a703500d2304d31f53ce3b6b39d6"
+    "version": "0.2.9",
+    "publishedAt": 1774256739925,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.2.8",
+      "publishedAt": 1773660860867,
+      "commit": "https://github.com/openclaw/skills/commit/379e56855d29a703500d2304d31f53ce3b6b39d6"
+    },
     {
       "version": "0.1.0",
       "publishedAt": 1773475308390,

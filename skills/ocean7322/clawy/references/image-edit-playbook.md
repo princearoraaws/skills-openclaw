@@ -216,17 +216,46 @@ Arc-length rule:
 - 10 interactions is a soft ceiling; force convergence if the arc is drifting or repeating itself
 - only end earlier when the user clearly wants a short arc or when the narrative truly resolves immediately
 
+## DM Mode vs Plot Mode
+
+Clawy supports two different adventure styles.
+
+### DM Mode
+Use when the user does not specify a world/IP/scene.
+- the adopted avatar style is appearance only and does not constrain the adventure world
+- Clawy can choose worlds more freely
+- randomness, branching, surprise, and emergent scene logic are encouraged
+- outcomes do not need to follow any pre-existing canon
+
+### Plot Mode
+Use when the user explicitly chooses an IP, story world, or recognizable scene.
+- respect the source world's plot logic more strictly
+- make scene progression feel like the character truly entered that story
+- wrong choices may lead directly to bad endings
+- do not keep steering the user back toward safety if the chosen world would punish mistakes
+
 ### Image Cadence Rule
 Do not produce a new image on every single user reply by default.
-Generate a new image when the next beat has meaningful visual novelty, such as:
+
+Use a **text-only bridge** when the user is mainly:
+- reading a clue
+- noticing something
+- listening to information
+- interpreting a hint
+- making a light decision inside the same unchanged scene
+
+Generate a new image when the next beat creates meaningful visual novelty, such as:
 - a location change
 - a new object/prop reveal
 - a new character reveal
+- a confrontation or identity reveal
+- a door/portal/hidden space opening
 - a camera/framing change
 - a visible consequence of the user's choice
 - a branch resolution or ending frame
 
-If the choice mainly changes intent but not what the viewer would see, it is acceptable to use a text-only bridge and wait for the next stronger visual beat.
+If the choice mainly changes intent but not what the viewer would see, use a text-only bridge and wait for the next stronger visual beat.
+If the user is only reading, noticing, or interpreting a clue inside the same scene, prefer text-only progression instead of generating a near-duplicate image.
 
 ### Cinematic Coverage Rule
 Do not keep using the same medium character shot forever.
@@ -317,210 +346,3 @@ If engagement seems high:
 
 Clawy should also estimate whether the user's advice is helping.
 This does not need to be exposed numerically during normal play, but it should influence outcomes.
-
-Low helpfulness can lead to:
-- comic trouble
-- missed opportunities
-- messy or chaotic outcomes
-- minor bad endings
-
-High helpfulness can lead to:
-- safer escapes
-- clever scene resolutions
-- hidden branches
-- stronger endings
-- special story payoffs
-
-Because Clawy is a virtual mascot, failure can stay playful rather than heavy.
-
-### Branch Logic Rule
-Choices should create clearer branches with more legible consequences.
-
-Example structure:
-- cautious choice -> small good ending
-- greedy / reckless exploration -> higher-risk branch
-- higher-risk branch can collapse into a bad ending unless the user later solves a specific problem cleverly
-- smart sustained help can unlock a larger good ending or hidden ending
-
-This means the story should not feel like a chain of equivalent choices.
-The user's decisions should meaningfully change what kind of ending becomes possible.
-
-Important refinement:
-- do not keep steering the user back toward the obviously safer path
-- let the user commit to reckless or chaotic choices if they want
-- let consequences play out more honestly
-- favor novelty and branch identity over overly protective guidance
-
-## Cinematic Atmosphere Upgrades
-
-For event images, strengthen atmosphere with more explicit film-language constraints:
-- specify the main light source and secondary light source
-- prefer layered lighting rather than flat even lighting
-- use volumetric light, reflections, haze, glow, smoke, rain, dust, or water reflections when appropriate
-- use depth of field and foreground/background separation carefully
-- allow foreground occlusion such as pillars, door frames, windows, railings, branches, or props
-- let Clawy physically interact with the environment or hide behind / lean against objects when suitable
-- prefer story-frame composition over poster composition
-- treat the final image as a frame from an animated film, not a decorative themed avatar
-
-### Per-Arc Style Lock
-Each story arc may choose one explicit visual language and keep it stable across that arc.
-Examples:
-- Ghibli-like animated fantasy atmosphere
-- black-and-white manga cinematic panels
-- Japanese anime adventure film look
-- Disney/Pixar-style stylized feature film look
-
-This gives each arc a stronger identity and freshness.
-Once an arc starts, keep the chosen style stable unless the story itself justifies a major visual shift.
-
-## Adventure Cadence and Mode
-After the avatar is accepted as the user's Clawy identity, the adventure workflow should explicitly ask:
-1. whether to start adventures immediately
-2. what cadence to use (for example every 4 hours or once per day)
-3. whether the user wants roaming mode or a preferred world/genre/IP direction
-
-Important scope note:
-- this cadence is a conversational or orchestration preference
-- it does not mean the skill itself silently installs a scheduler or recurring background job
-
-### Roaming mode
-If the user chooses roaming mode:
-- Clawy should autonomously pick recognizable worlds, scenes, and tones
-- prefer scene variety and narrative freshness
-- use the event-image prompt system as the default engine
-
-### Preferred mode
-If the user provides a preference:
-- anchor the next arc in that preferred world, style, theme, or story direction
-- preserve the same Clawy identity while adapting the scene content
-
----
-
-## Provider Notes
-
-### WaveSpeed
-Best when the user wants one provider that exposes multiple edit models.
-
-Suggested settings when available:
-- model mode: nano / openai / fast
-- use image-edit endpoint, not plain text-to-image
-- keep sync/base64 options simple unless needed
-
-### OpenAI direct
-Best for a balanced direct edit workflow.
-
-Suggested pattern:
-- use image edit endpoint
-- send the mother image as the source image
-- prefer square output
-- prefer high quality where supported
-
-### Nano direct (Google)
-Best when the user wants direct access to Google's native image generation/editing stack.
-
-Suggested pattern:
-- use image generation/editing API with both text and image input
-- supply the mother image inline
-- request image output modality
-- keep the prompt strongly reference-preserving
-
-### Ark direct
-Best when the user wants ByteDance / Ark image generation directly.
-
-Suggested pattern:
-- prefer Seedream or Seededit image-to-image / edit-capable flows
-- pass the mother image as image input / reference image input when supported
-- for Seedream-style reference generation, prefer the official `prompt + image[]` mental model first
-- if a specific model or SDK example uses `reference_images`, adapt to that model-specific API
-- avoid silently downgrading to text-only generation for avatar consistency tasks
-- do not treat Seedance as the default Clawy avatar backend
-
----
-
-## Warning Copy for Text-to-Image Fallback
-
-Recommended warning wording:
-
-```text
-Current backend appears to support only text-to-image generation, not image-edit / image-to-image.
-Clawy can still attempt a fallback generation, but character consistency may degrade significantly.
-The result may drift in silhouette, equipment structure, body proportions, or overall identity.
-For best results, enable a true image-edit backend.
-```
-
----
-
-## Minimum Backend Examples
-
-These are workflow examples, not strict API specs.
-Adjust field names to the provider's official API.
-
-### WaveSpeed edit
-
-```json
-{
-  "images": ["<uploaded-mother-image-url>"],
-  "prompt": "<clawy-edit-prompt>",
-  "output_format": "png"
-}
-```
-
-### OpenAI direct edit
-
-```text
-POST /images/edits
-- model: gpt-image-1
-- image: @mother_image.png
-- prompt: <clawy-edit-prompt>
-- size: 1024x1024
-- quality: high
-```
-
-### Nano direct edit
-
-```json
-{
-  "contents": [{
-    "parts": [
-      {"text": "<clawy-edit-prompt>"},
-      {"inline_data": {"mime_type": "image/png", "data": "<base64-mother-image>"}}
-    ]
-  }],
-  "generationConfig": {
-    "responseModalities": ["IMAGE", "TEXT"]
-  }
-}
-```
-
-### Ark direct edit
-
-```json
-{
-  "model": "doubao-seedream-5-0-260128",
-  "prompt": "<clawy-edit-prompt>",
-  "image": ["https://example.com/mother-image.png"],
-  "response_format": "url",
-  "size": "2K"
-}
-```
-
-Recommended default Ark entry for Clawy black-box testing:
-- base URL: `https://ark.cn-beijing.volces.com/api/v3`
-- model: `doubao-seedream-5-0-260128`
-
-If a specific Ark model or SDK example expects `reference_images` instead of `image`, follow the official model-specific API. But for Seedream 4.0-5.0 style black-box usage, treat `prompt + image[]` as the first pattern to try.
-
----
-
-## Product Boundary Reminder
-
-Clawy Avatar is not just “make a nice image.”
-
-It is:
-- identity-preserving
-- reference-driven
-- mascot-consistent
-- future-scene-compatible
-
-If a backend cannot reliably preserve the mother image, that limitation should be surfaced clearly instead of hidden.
