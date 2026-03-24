@@ -3,11 +3,16 @@
   "slug": "knowledge-habit-skill",
   "displayName": "Knowledge Habit Skill",
   "latest": {
-    "version": "1.0.6",
-    "publishedAt": 1773914468540,
-    "commit": "https://github.com/openclaw/skills/commit/acd95f19d0735fd9ef2e32105ef12db3f1383fcb"
+    "version": "1.0.9",
+    "publishedAt": 1774346440244,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.6",
+      "publishedAt": 1773914468540,
+      "commit": "https://github.com/openclaw/skills/commit/acd95f19d0735fd9ef2e32105ef12db3f1383fcb"
+    },
     {
       "version": "1.0.4",
       "publishedAt": 1773741657180,
