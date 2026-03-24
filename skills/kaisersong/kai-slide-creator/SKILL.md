@@ -1,7 +1,7 @@
 ---
 name: kai-slide-creator
 description: Use when someone wants to CREATE or BUILD a slide deck, presentation, or 幻灯片/PPT/演示文稿 — from scratch, from notes, from a Word/PPTX file, or from an approved outline. Handles Chinese and English equally. Covers pitch decks, product launches, team standups, conference talks, capstone presentations, style previews, and converting existing files to web slides. Use for --plan (outline) and --generate (HTML from plan) flags. Does NOT apply to exporting finished HTML to PPTX/PNG (use kai-html-export), writing speeches, or non-slide documents.
-version: 2.5.3
+version: 2.6.1
 metadata: {"openclaw":{"emoji":"🎞","os":["darwin","linux","windows"],"homepage":"https://github.com/kaisersong/slide-creator","requires":{"bins":["python3"]},"install":[]}}
 ---
 
@@ -39,8 +39,8 @@ Parse the invocation first, then load only what that command needs:
 | Command | What to load | What to do |
 |---------|-------------|------------|
 | `--plan [prompt]` | `references/planning-template.md` | Create PLANNING.md. Stop — no HTML. |
-| `--generate` | `references/html-template.md` + chosen style file + `references/base-css.md` | Read PLANNING.md, generate HTML. |
-| No flag (interactive) | `references/workflow.md` + **`references/html-template.md` before Phase 3** | Follow Phase 0–5. |
+| `--generate` | `references/html-template.md` + chosen style file + `references/base-css.md` + `references/design-quality.md` | Read PLANNING.md, generate HTML. |
+| No flag (interactive) | `references/workflow.md` + **`references/html-template.md` before Phase 3** + `references/design-quality.md` before writing | Follow Phase 0–5. |
 | Content + style given directly | `references/html-template.md` + style file + `references/base-css.md` | Generate immediately — no Phase 1/2 needed. |
 
 **Progressive disclosure rule:** each command loads only its required files. `--plan` never touches CSS. This keeps context focused and fast.
@@ -94,6 +94,8 @@ Read only the file for the chosen style. Never load all styles into context.
 **For style picker / mood mapping / effect guide** → read `references/style-index.md`.
 
 **For viewport CSS, density limits, CSS gotchas** → read `references/base-css.md`.
+
+**For design quality rules (density balance, column balance, anti-slop, pre-output self-check)** → read `references/design-quality.md` alongside the style file during `--generate` and Phase 3.
 
 ---
 

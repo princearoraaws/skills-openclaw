@@ -4,7 +4,7 @@
 
 A skill for [Claude Code](https://claude.ai/claude-code) and [OpenClaw](https://openclaw.ai) that generates stunning, zero-dependency HTML presentations.
 
-**v2.3.3** — Bug fix: macOS trackpad no longer advances multiple pages per swipe. Replaced deltaY-threshold approach with gap-based momentum detection — macOS sends momentum at ~16ms intervals; a new swipe always arrives after a >80ms gap. All 21 styles updated. **v2.3.2** — Bug fix: mouse wheel scroll now advances slides reliably. **v2.3.1** — Bug fix: arrow keys now render slides correctly. `goTo()` manually toggles `.visible` class to fix IntersectionObserver timing issue during keyboard navigation. PPTX/PNG export decoupled to [kai-html-export](https://github.com/kaisersong/kai-html-export). Progressive disclosure architecture: SKILL.md is a thin command router, full workflow loaded on demand.
+**v2.6.0** — Design Quality Baseline: new `references/design-quality.md` encodes anti-slop rules for generated slides — minimum 65% fill rule with decision tree for sparse content (2 items → big-card layout, not half-empty bullets), multi-column balance enforcement (no column < 60% of tallest), 90/8/2 color law, no 3 consecutive full-bullet slides, content-tone color calibration, and a pre-output self-check gate. Fixes aurora-mesh Inter font contradiction (replaced with Space Grotesk + DM Sans). Planning template now suggests tone-matched accent colors. **v2.5.4** — Added a template-level export chrome switch: set `data-export-progress="false"` on `<body>` to hide both the top progress bar and right-side nav dots in generated HTML and in native PPT export via [kai-html-export](https://github.com/kaisersong/kai-html-export). **v2.5.2–v2.5.3** — Added presenter remote-control keys (`PageDown`, `PageUp`, `Enter`, `Backspace`, `B`) and refreshed release packaging.
 
 English | [简体中文](README.zh-CN.md)
 
@@ -70,6 +70,7 @@ Every demo uses the same content (slide-creator's own introduction) — making i
 - **Notes editing panel** — In edit mode (`E` key), a notes bar appears at the bottom; click the title bar to collapse/expand; edits sync live to the presenter window
 - **Inline SVG diagrams** — Flowcharts, timelines, bar charts, comparison grids, org charts — no Mermaid.js, no external libs
 - **Custom theme system** — Drop a `reference.md` into `themes/your-theme/` to add your own design preset; `starter.html` optional for complex visual systems
+- **Template export chrome switch** — Set `data-export-progress="false"` on `<body>` to hide both the top progress bar and right-side nav dots in HTML playback and native PPT export
 - **Blue Sky starter template** — Complete boilerplate so models never mis-implement the visual system
 - **Image pipeline** — Auto-evaluate and process assets (Pillow)
 - **PPT import** — Convert `.pptx` files to web presentations
@@ -287,6 +288,8 @@ The two-file convention (`reference.md` + optional `starter.html`) mirrors the B
 
 This separation means simple custom themes need only one file, while complex ones (with animated backgrounds, custom JS, non-trivial layout systems) can ship a complete working template.
 
+If a custom theme should not render export chrome, add `data-export-progress="false"` to the template's `<body>`. That single flag hides both the top progress bar and the right-side nav dots in browser playback and when the deck is exported in native mode through `kai-html-export`.
+
 ### 5. Content-Type Routing as Intelligent Defaults
 
 The 21-preset library is large enough to be expressive but small enough to be curated. Rather than asking users to browse all 21 options, slide-creator maps content types to style recommendations:
@@ -298,6 +301,64 @@ Developer tool / API docs   → Terminal Green, Neon Cyber, Neo-Retro Dev Deck
 ```
 
 This routing table in SKILL.md serves two audiences simultaneously: human users who want a sensible starting point, and AI agents calling the skill programmatically (where the agent may know the content type but not which style to choose).
+
+### 6. Design Quality Baseline: Against Slide Slop
+
+The most common failure mode in AI-generated slides is not broken CSS or wrong colors — it's **accidental emptiness**. A slide with two bullet points centered in a full-height viewport, or a two-column layout where one column has four items and the other has one, looks unfinished regardless of how polished the design system is.
+
+`references/design-quality.md` (loaded during `--generate` alongside the style file) encodes rules that force layout decisions based on content density, not just content type:
+
+**Minimum fill rule.** Every slide must use at least 65% of the slide area. When content is sparse, the model must choose a different layout — not center the content and call it done:
+
+```
+2 bullet points → Switch to quote/big-stat layout, or expand to 2-line statements
+1 key insight   → Large quote / single stat / manifesto with visual treatment
+3 thin bullets  → Expand each with supporting detail, or switch to 3-card grid
+```
+
+The distinction that matters: *intentional* whitespace (a breathing-room slide with oversized type, deliberately placed) is a design choice. *Accidental* whitespace (content floating in the middle of a half-empty slide) is a generation failure.
+
+**Multi-column balance rule.** No column in a 2-col or 3-col layout should have less than 60% of the tallest column's height. When content is unequal, the model must choose one of three remediation paths: expand the shorter column with supporting detail, redesign as an explicitly asymmetric layout (e.g., `2fr 1fr` with visual purpose), or merge to a single column.
+
+**90/8/2 color law.** 90% neutral surface, 8% structural accent used on at most 3 element types, 2% bullet-point accent on 1–2 precise hits. This prevents the common pattern of accent color appearing on every heading, every icon, every border, and every button — which produces visual noise rather than hierarchy.
+
+**No 3 consecutive full-bullet slides.** After two bullet-list slides, the next must be a visual anchor: a single large stat, a pull quote, a diagram, or a layout-break slide. This is a cognitive pacing rule, not an aesthetic preference — dense lists without visual relief cause readers to disengage.
+
+**Content-tone color calibration.** The planning template now suggests tone-matched accent colors based on content type, so the color system reinforces the emotional register of the content:
+
+```
+Contemplative / Research → #7C6853 warm brown (grounded, editorial)
+Technical / Engineering  → #3D5A80 navy (precise, authoritative)
+Business / Data          → #0F7B6C deep teal (confident, forward)
+Narrative / Annual       → #B45309 amber (warm, momentum)
+```
+
+**Pre-output self-check.** Before writing the final HTML, the model runs a 6-gate check: viewport overflow, minimum fill, column balance, color law compliance, 3-consecutive-bullet rule, and the anti-slop question: *"If you told someone 'an AI made this' — would they immediately believe it?"* If yes, revise before output.
+
+---
+
+## Use Case: Brand Style Migration
+
+Migrate an existing `.pptx` to a custom brand design system — get both a pixel-perfect archive and an editable version in one workflow.
+
+**Setup:** Create `themes/your-brand/` with a `reference.md` describing colors, fonts, and layouts (and optionally a `starter.html` for complex visual systems).
+
+```bash
+# Step 1 — re-style: slide-creator reads the PPTX and migrates to your brand theme
+/slide-creator --plan "migrate company-deck.pptx to our brand style"
+# review PLANNING.md, then:
+/slide-creator --generate
+# → branded-deck.html
+
+# Step 2 — export both modes (requires kai-html-export)
+/kai-html-export branded-deck.html
+# → branded-deck.pptx  (pixel-perfect, for sharing)
+
+/kai-html-export --pptx --mode native branded-deck.html
+# → branded-deck.pptx  (editable text, for editing)
+```
+
+This workflow is especially useful when an internal template or brand guidelines exist as a `starter.html` — slide-creator uses it as the base and fills in content from the source PPTX.
 
 ---
 
