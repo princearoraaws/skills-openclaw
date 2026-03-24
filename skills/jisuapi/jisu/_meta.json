@@ -3,11 +3,16 @@
   "slug": "jisu",
   "displayName": "Summary of JisuAPI - 极速数据API汇总",
   "latest": {
-    "version": "1.0.7",
-    "publishedAt": 1773719838660,
-    "commit": "https://github.com/openclaw/skills/commit/46e7f2889e931c8c095047e8442e3d0449b635f9"
+    "version": "1.0.8",
+    "publishedAt": 1774349512166,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.7",
+      "publishedAt": 1773719838660,
+      "commit": "https://github.com/openclaw/skills/commit/46e7f2889e931c8c095047e8442e3d0449b635f9"
+    },
     {
       "version": "1.0.6",
       "publishedAt": 1773634915426,
