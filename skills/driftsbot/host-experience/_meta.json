@@ -3,11 +3,16 @@
   "slug": "host-experience",
   "displayName": "Host Experience",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1773767211848,
-    "commit": "https://github.com/openclaw/skills/commit/fee218f736154fd2db8a7b2d668d553d34bbfc78"
+    "version": "1.0.3",
+    "publishedAt": 1774212420036,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1773767211848,
+      "commit": "https://github.com/openclaw/skills/commit/fee218f736154fd2db8a7b2d668d553d34bbfc78"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1773040780973,
