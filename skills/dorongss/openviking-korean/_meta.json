@@ -1,13 +1,18 @@
 {
   "owner": "dorongss",
   "slug": "openviking-korean",
-  "displayName": "OpenViking Korean",
+  "displayName": "Openviking Korean",
   "latest": {
-    "version": "1.0.4",
-    "publishedAt": 1773639882360,
-    "commit": "https://github.com/openclaw/skills/commit/4470e847a9f4eff997f988f151b4b5cc1ff1dd98"
+    "version": "1.4.0",
+    "publishedAt": 1774374326998,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.4",
+      "publishedAt": 1773639882360,
+      "commit": "https://github.com/openclaw/skills/commit/4470e847a9f4eff997f988f151b4b5cc1ff1dd98"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1773636034497,
