@@ -3,9 +3,15 @@
   "slug": "recipe-share-event-materials",
   "displayName": "Recipe Share Event Materials",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773494465767,
-    "commit": "https://github.com/openclaw/skills/commit/b0a06e11b7ab79077bd6ab5e7247f235a2ffdd1f"
+    "version": "1.0.2",
+    "publishedAt": 1774375531681,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773494465767,
+      "commit": "https://github.com/openclaw/skills/commit/b0a06e11b7ab79077bd6ab5e7247f235a2ffdd1f"
+    }
+  ]
 }
