@@ -86,6 +86,10 @@ echo "🔄 同步健康数据..."
 rsync -av --delete --exclude='.DS_Store' "$HEALTH_DATA_SOURCE/" "$BACKUP_REPO/health-users/" > /dev/null 2>&1
 echo "✅ 数据同步完成"
 
+# 清理编辑工具产生的 .backup 文件
+find "$BACKUP_REPO/health-users" -name "*.backup" -type f -delete 2>/dev/null || true
+echo "🧹 已清理备份文件（.backup）"
+
 # 检查是否有需要提交的更改（排除 .DS_Store）
 # 添加 .gitignore 规则（临时）
 echo ".DS_Store" > .gitignore 2>/dev/null || true

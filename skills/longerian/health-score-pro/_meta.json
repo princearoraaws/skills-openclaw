@@ -1,13 +1,18 @@
 {
   "owner": "longerian",
   "slug": "health-score-pro",
-  "displayName": "Health Score Pro",
+  "displayName": "Health Management",
   "latest": {
-    "version": "1.4.6",
-    "publishedAt": 1773665395642,
-    "commit": "https://github.com/openclaw/skills/commit/69c3d75143bb25c846fc6421b825e7bb756dd42e"
+    "version": "1.6.1",
+    "publishedAt": 1774150422936,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.4.6",
+      "publishedAt": 1773665395642,
+      "commit": "https://github.com/openclaw/skills/commit/69c3d75143bb25c846fc6421b825e7bb756dd42e"
+    },
     {
       "version": "1.4.3",
       "publishedAt": 1773653717924,
