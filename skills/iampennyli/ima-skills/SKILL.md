@@ -1,229 +1,219 @@
 ---
-name: ima-note
+name: ima-skill
 description: |
-  IMA 个人笔记服务 API skill，用于管理用户的 IMA 笔记。支持搜索笔记、浏览笔记本、获取笔记内容、新建笔记和追加内容。
-  当用户提到笔记、备忘录、记事、知识库，或者想要查找、阅读、创建、编辑笔记内容时，使用此 skill。
-  即使用户没有明确说"笔记"，只要意图涉及个人文档的存取（如"帮我记一下"、"我之前写过一个关于XX的东西"、"把这段内容保存下来"），也应触发此 skill。
+  统一的 IMA OpenAPI 技能，支持笔记管理和知识库操作。
+  当用户提到知识库、资料库、笔记、备忘录、记事，或者想要上传文件、添加网页到知识库、
+  搜索知识库内容、搜索/浏览/创建/编辑笔记时，使用此 skill。
+  即使用户没有明确说"知识库"或"笔记"，只要意图涉及文件上传到知识库、网页收藏、
+  知识搜索、个人文档存取（如"帮我记一下"、"搜一下知识库里有没有XX"），也应触发此 skill。
 homepage: https://ima.qq.com
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "📝",
-        "requires": { "env": ["IMA_OPENAPI_CLIENTID", "IMA_OPENAPI_APIKEY"] },
-        "primaryEnv": "IMA_OPENAPI_CLIENTID"
-      },
-  }
+  openclaw:
+    emoji: '🔧'
+    requires: { env: ['IMA_OPENAPI_CLIENTID', 'IMA_OPENAPI_APIKEY'] }
+    primaryEnv: 'IMA_OPENAPI_CLIENTID'
+  security:
+    credentials_usage: |
+      This skill requires user-provisioned IMA OpenAPI credentials (Client ID and API Key)
+      to authenticate with the official IMA API at https://ima.qq.com.
+      Credentials are ONLY sent to the official IMA API endpoint (ima.qq.com) as HTTP headers.
+      No credentials are logged, stored in files, or transmitted to any other destination.
+    allowed_domains:
+      - ima.qq.com
 ---
 
-# ima-note
+# ima-skill
 
-通过 IMA OpenAPI 管理用户个人笔记，支持读取（搜索、列表、获取内容）和写入（新建、追加）。
-
-完整的数据结构和接口参数详见 `references/api.md`。
+Unified IMA OpenAPI skill. Currently supports: **notes**, **knowledge-base**.
 
 ## Setup
 
-1. 请打开 https://ima.qq.com/agent-interface 获取 **Client ID** 和 **Api Key**
-2. 配置环境变量：
+> **Security note:** This skill authenticates with the **official IMA API** (`ima.qq.com`) — the same service the user already uses. Credentials are only sent as HTTP headers to `ima.qq.com` and never to any other domain, file, or log.
+
+1. 打开 https://ima.qq.com/agent-interface 获取 **Client ID** 和 **API Key**
+2. 存储凭证（二选一）：
+
+**方式 A — 配置文件（推荐）：**
+
+```bash
+mkdir -p ~/.config/ima
+echo "your_client_id" > ~/.config/ima/client_id
+echo "your_api_key" > ~/.config/ima/api_key
+```
+
+**方式 B — 环境变量：**
 
 ```bash
 export IMA_OPENAPI_CLIENTID="your_client_id"
 export IMA_OPENAPI_APIKEY="your_api_key"
 ```
 
-> 建议将上述 export 语句写入 `~/.zshrc` 或 `~/.bashrc`，避免每次重开终端失效。
+Agent 会按优先级依次尝试：环境变量 → 配置文件。
 
 ## 凭证预检
 
-每次调用 API 前，先确认凭证可用。如果环境变量未设置，停止操作并提示用户按 Setup 步骤配置。
+每次调用 API 前，先确认凭证可用。如果两个值都为空，停止操作并提示用户按 Setup 步骤配置。
 
 ```bash
-if [ -z "$IMA_OPENAPI_CLIENTID" ] || [ -z "$IMA_OPENAPI_APIKEY" ]; then
-  echo "缺少 IMA 凭证，请按 Setup 步骤配置环境变量 IMA_OPENAPI_CLIENTID 和 IMA_OPENAPI_APIKEY"
+# Load user-provisioned IMA credentials (used ONLY for ima.qq.com API authentication)
+IMA_CLIENT_ID="${IMA_OPENAPI_CLIENTID:-$(cat ~/.config/ima/client_id 2>/dev/null)}"
+IMA_API_KEY="${IMA_OPENAPI_APIKEY:-$(cat ~/.config/ima/api_key 2>/dev/null)}"
+if [ -z "$IMA_CLIENT_ID" ] || [ -z "$IMA_API_KEY" ]; then
+  echo "缺少 IMA 凭证，请按 Setup 步骤配置 Client ID 和 API Key"
   exit 1
 fi
 ```
 
 ## API 调用模板
 
-所有请求统一为 **HTTP POST + JSON Body**，Base URL 为 `https://ima.qq.com/openapi/note/v1`。
+所有请求统一为 **HTTP POST + JSON Body**，仅发往官方 Base URL `https://ima.qq.com`。
 
-定义辅助函数避免重复 header：
+定义辅助函数避免重复 header — 每个模块传入完整路径：
 
 ```bash
+# All requests go ONLY to the official IMA API (ima.qq.com)
 ima_api() {
-  local endpoint="$1" body="$2"
-  curl -s -X POST "https://ima.qq.com/openapi/note/v1/$endpoint" \
-    -H "ima-openapi-clientid: $IMA_OPENAPI_CLIENTID" \
-    -H "ima-openapi-apikey: $IMA_OPENAPI_APIKEY" \
+  local path="$1" body="$2"
+  curl -s -X POST "https://ima.qq.com/$path" \
+    -H "ima-openapi-clientid: $IMA_CLIENT_ID" \
+    -H "ima-openapi-apikey: $IMA_API_KEY" \
     -H "Content-Type: application/json" \
     -d "$body"
 }
 ```
 
-> **隐私规则：** 笔记内容属于用户隐私，在群聊场景中只展示标题和摘要，禁止展示笔记正文。
+> **Note:** All IMA OpenAPI endpoints currently use HTTP POST. If a future module requires a different method, `ima_api()` must be extended to accept a method parameter.
 
-## 接口决策表
+## 模块决策表
 
-| 用户意图 | 调用接口 | 关键参数 |
-|---------|---------|---------|
-| 搜索/查找笔记 | `search_note_book` | `query_info`（QueryInfo 对象） |
-| 查看笔记本列表 | `list_note_folder_by_cursor` | `cursor`(必填，首页传`"0"`) + `limit`(必填) |
-| 浏览某笔记本里的笔记,当用户表述"最新"、"最近"之类的通用限定，没有指明笔记本时，都应该直接在全部笔记里去拉 | `list_note_by_folder_id` | `folder_id`(选填,空为全部笔记本) + `cursor`(必填，首次传`""`) + `limit`(必填) |
-| 读取笔记正文 | `get_doc_content` | `doc_id` + `target_content_format`(必填，推荐`0`纯文本) |
-| 新建一篇笔记 | `import_doc` | `content` + `content_format`(必填，固定`1`) + 可选 `folder_id` |
-| 往已有笔记追加内容 | `append_doc` | `doc_id` + `content` + `content_format`(必填，固定`1`) |
+| 用户意图                                                                                   | 模块           | 读取                      |
+| ------------------------------------------------------------------------------------------ | -------------- | ------------------------- |
+| 搜索笔记、浏览笔记本、获取笔记内容、创建笔记、追加内容                                     | notes          | `notes/SKILL.md`          |
+| 上传文件、添加网页链接、搜索知识库、浏览知识库内容、获取知识库信息、获取可添加的知识库列表 | knowledge-base | `knowledge-base/SKILL.md` |
 
-## 常用工作流
+### ⚠️ 易混淆场景
 
-### 查找并阅读笔记
+以下场景容易误判模块，需特别注意：
 
-先搜索获取 `docid`，再用 `get_doc_content` 读取正文：
+| 用户说的                                                 | 实际意图                   | 正确路由                                                             |
+| -------------------------------------------------------- | -------------------------- | -------------------------------------------------------------------- |
+| "把这段内容添加到知识库XX里的笔记YY"                     | 往已有**笔记**追加内容     | **notes** — 先搜索笔记获取 `doc_id`，再用 `append_doc`               |
+| "把这个写到XX笔记里"、"记到XX笔记"                       | 往已有**笔记**追加内容     | **notes** — `append_doc`                                             |
+| "把这篇笔记添加到知识库"                                 | 将笔记关联到**知识库**     | **knowledge-base** — `add_knowledge` with `media_type=11`            |
+| "上传文件到知识库"                                       | 上传**文件**到知识库       | **knowledge-base** — `create_media` → COS → `add_knowledge`          |
+| "新建一篇笔记记录这些内容"                               | **创建**新笔记             | **notes** — `import_doc`                                             |
+| "帮我记一下"、"记录一下"、"保存为笔记"（未指定已有笔记） | 意图不明确，**需要确认**   | **notes** — 先询问用户是创建新笔记还是追加到哪篇已有笔记，再决定接口 |
+| "添加到笔记里"（未指定具体哪篇）                         | 意图不明确，**需要确认**   | **notes** — 先询问用户是创建新笔记还是追加到哪篇已有笔记，再决定接口 |
+| "把知识库里的XX内容记到笔记"                             | 先从知识库读取，再写入笔记 | **多模块** — knowledge-base 搜索/读取 → notes 创建/追加              |
 
-```bash
-# 1. 按标题搜索
-ima_api "search_note_book" '{"search_type": 0, "query_info": {"title": "会议纪要"}, "start": 0, "end": 20}'
-# 从返回的 docs[].doc.basic_info.docid 中取目标笔记 ID
+**核心判断规则**：
 
-# 2. 读取正文（纯文本格式，Markdown 格式目前不支持）
-ima_api "get_doc_content" '{"doc_id": "目标docid", "target_content_format": 0}'
-```
+- 目标是**笔记的内容**（读、写、追加）→ notes 模块
+- 目标是**知识库的条目**（上传文件、添加链接、关联笔记到知识库）→ knowledge-base 模块
+- 用户提到"知识库"只是在**描述笔记的位置**（如"知识库里的那篇笔记"），真正操作对象仍是笔记 → notes 模块
 
-### 浏览笔记本里的笔记
-
-先拉笔记本列表获取 `folder_id`，再拉该笔记本下的笔记：
-
-```bash
-# 1. 列出笔记本（首页 cursor 传 "0"）
-ima_api "list_note_folder_by_cursor" '{"cursor": "0", "limit": 20}'
-
-# 2. 拉取指定笔记本的笔记（首页 cursor 传 ""）
-ima_api "list_note_by_folder_id" '{"folder_id": "user_list_xxx", "cursor": "", "limit": 20}'
-```
-
-### 新建笔记
-
-```bash
-# 新建到默认位置
-ima_api "import_doc" '{"content_format": 1, "content": "# 标题\n\n正文内容"}'
-
-# 新建到指定笔记本
-ima_api "import_doc" '{"content_format": 1, "content": "# 标题\n\n正文内容", "folder_id": "笔记本ID"}'
-# 返回 doc_id，后续可用于 append_doc
-```
-
-### 追加内容到已有笔记
-
-```bash
-ima_api "append_doc" '{"doc_id": "笔记ID", "content_format": 1, "content": "\n## 补充内容\n\n追加的文本"}'
-```
-
-### 按正文搜索
-
-```bash
-ima_api "search_note_book" '{"search_type": 1, "query_info": {"content": "项目排期"}, "start": 0, "end": 20}'
-```
-
-## 核心响应字段
-
-**搜索结果**（`SearchedDoc`）：笔记信息路径为 `doc.basic_info`（DocBasic），关键字段：`docid`、`title`、`summary`、`folder_id`、`folder_name`、`create_time`（Unix 毫秒）、`modify_time`、`status`。额外包含 `highlight_info`（高亮匹配，key 为 `doc_title`，value 含 `<em>高亮词</em>`）。
-
-**笔记本条目**（`NoteBookFolder`）：信息路径为 `folder.basic_info`（NoteBookFolderBasic），关键字段：`folder_id`、`name`、`note_number`、`create_time`、`modify_time`、`folder_type`（`0`=用户自建，`1`=全部笔记，`2`=未分类）、`status`。
-
-**笔记列表条目**（`NoteBookInfo`）：信息路径为 `basic_info.basic_info`（DocBasicInfo → DocBasic），关键字段：`docid`、`title`、`summary`、`folder_id`、`folder_name`、`create_time`、`modify_time`、`status`。
-
-**写入结果**（`import_doc`/`append_doc`）：返回 `doc_id`（新建或目标笔记的唯一 ID）。
-
-完整字段定义见 `references/api.md`。
-
-## 分页
-
-- **游标分页 — 笔记本列表**（`list_note_folder_by_cursor`）：首次 `cursor: "0"`，后续用 `next_cursor`，`is_end=true` 时停止。
-- **游标分页 — 笔记列表**（`list_note_by_folder_id`）：首次 `cursor: ""`，后续用 `next_cursor`，`is_end=true` 时停止。
-- **偏移量分页**（`search_note_book`）：首次 `start: 0, end: 20`，翻页时递增，`is_end=true` 时停止。
-
-## 枚举值
-
-- **`content_format`：** `0`=纯文本，`1`=Markdown，`2`=JSON。写入（`import_doc`/`append_doc`）目前仅支持 `1`（Markdown）。读取（`get_doc_content`）推荐 `0`（纯文本），Markdown 格式不支持。
-- **`search_type`：** `0`=标题检索（默认），`1`=正文检索
-- **`sort_type`：** `0`=更新时间（默认），`1`=创建时间，`2`=标题，`3`=大小（仅 `search_note_book` 使用）
-- **`folder_type`：** `0`=用户自建，`1`=全部笔记（根目录），`2`=未分类
+> **多模块任务**：当用户意图涉及多个模块时（如"从知识库搜索内容并记到笔记"），按意图顺序依次读取对应的模块文档并逐步执行。先完成前一个模块的操作，再进入下一个模块。
 
 ## 注意事项
 
-- `folder_id` 不可为 `"0"`，根目录 ID 格式为 `user_list_{userid}`（从 `folder_type=1` 的笔记本条目获取）
-- 笔记内容有大小上限，超过时返回 `100009`，可拆分为多次 `append_doc` 写入
-- 展示笔记列表时只展示标题、摘要和修改时间，不要主动展示正文
-- 时间字段是 Unix 毫秒时间戳，展示时转为可读格式
-- 返回数据为嵌套结构：搜索结果取 `docs[].doc.basic_info.docid`，笔记本取 `note_book_folders[].folder.basic_info.folder_id`，笔记列表取 `note_book_list[].basic_info.basic_info.docid`，注意按层级解析
-- **UTF-8 编码**：内容写入前必须确保为 UTF-8 编码。当内容来自临时文件、WebFetch 或外部来源时，按运行环境选择合适的方式转码：
+- **UTF-8 编码（仅 notes 模块）**：见下方「⚠️ UTF-8 编码强制要求」章节。notes 模块的所有写入操作前**必须**完成 UTF-8 编码校验，否则会导致内容乱码且无法修复。
+- **文件上传保持原样（knowledge-base 模块）**：当用户要求上传文件到知识库时，**必须保持文件原始内容不变**，不得进行任何编码转换。文件以二进制方式上传，服务端会自行处理编码。擅自转码可能破坏文件内容（如 PDF、图片、Excel 等非文本文件，或用户有意使用特定编码的文本文件）。
+- **PowerShell 5.1 环境（所有模块）**：见下方「⚠️ PowerShell 5.1 环境检测」章节。此问题影响**所有** API 调用（notes、knowledge-base 等），PowerShell 5.1 会静默将请求 Body 转为 GBK 编码导致乱码。
 
-  **Python（推荐，几乎所有环境都有）：**
-  ```bash
-  # 读取文件，自动检测编码并转为 UTF-8
-  content=$(python3 -c "
-  import sys
-  data = open('tmpfile', 'rb').read()
-  for enc in ['utf-8', 'gbk', 'gb2312', 'big5', 'latin-1']:
-      try:
-          sys.stdout.write(data.decode(enc))
-          break
-      except (UnicodeDecodeError, LookupError):
-          continue
-  " 2>/dev/null)
+## ⚠️ UTF-8 编码强制要求（CRITICAL — 仅适用于 notes 模块）
 
-  # 如果内容已在变量中，清洗非法 UTF-8 字节
-  content=$(printf '%s' "$content" | python3 -c "import sys; sys.stdout.write(sys.stdin.buffer.read().decode('utf-8','ignore'))")
-  ```
+> **此规则为强制性要求，不可跳过。** 非法编码会导致内容在 IMA 中显示为乱码，且无法修复，必须重新写入。
+>
+> **适用范围：notes 模块**（`import_doc`、`append_doc` 等文本写入 API）。
+>
+> **不适用于 knowledge-base 模块的文件上传**：上传文件时必须保持文件原始内容，不得转码。文件以二进制方式上传，服务端自行处理。
 
-  **Node.js：**
-  ```bash
-  content=$(node -e "const fs=require('fs');const buf=fs.readFileSync('tmpfile');process.stdout.write(buf.toString('utf8'))")
-  # 已知编码（如 GBK）：
-  content=$(node -e "const fs=require('fs');process.stdout.write(new TextDecoder('gbk').decode(fs.readFileSync('tmpfile')))")
-  ```
+**每次调用 notes 写入类 API（`import_doc`/`append_doc`）之前，必须对 `content`、`title` 等所有字符串字段执行 UTF-8 编码校验/转换。** 无论内容来源如何——用户直接输入、从文件读取、WebFetch 抓取、剪贴板粘贴、外部 API 返回——都不能假设已经是合法 UTF-8，必须显式确认。
 
-  **Unix (macOS/Linux)：**
-  ```bash
-  content=$(iconv -f "$(file -b --mime-encoding tmpfile)" -t UTF-8 tmpfile 2>/dev/null || cat tmpfile)
-  ```
+### 强制检查清单（notes 模块写入前）
 
-  **Windows PowerShell：**
-  ```powershell
-  # 读取非 UTF-8 文件并转码
-  $content = [System.IO.File]::ReadAllText('tmpfile', [System.Text.Encoding]::Default)
-  [System.IO.File]::WriteAllText('tmpfile.utf8', $content, [System.Text.Encoding]::UTF8)
-  ```
+在构造 notes 写入请求的 body **之前**，完成以下步骤：
 
-  > **PowerShell 5.1 发送请求注意事项：**
-  > `Invoke-RestMethod` 传入字符串 Body 时，默认使用系统 ANSI 编码（中文 Windows 为 GBK），而非 UTF-8，即使设置了 `Content-Type: charset=utf-8` 也无效。必须**显式转为 UTF-8 字节数组**再传入 `-Body`，同时使用 `ConvertTo-Json` 构建 JSON 以避免手动拼接的转义风险：
-  >
-  > ```powershell
-  > $body = @{ title = "标题"; content = $content; content_format = 1 } | ConvertTo-Json -Depth 10
-  > $utf8Bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
-  > Invoke-RestMethod -Uri $url -Method Post -Body $utf8Bytes -ContentType "application/json; charset=utf-8" -Headers $headers
-  > ```
-  >
-  > PowerShell 7+ 默认使用 UTF-8，无需额外处理。
+1. **来自文件的内容**：先检测文件编码，转为 UTF-8 后再读入变量（注意：这是指读取文件内容作为笔记正文写入，不是上传文件到知识库）
+2. **来自 WebFetch / HTTP 请求的内容**：响应可能为 GBK/Latin-1 等，必须转码
+3. **来自用户输入或变量拼接的内容**：清洗非法 UTF-8 字节（`\xff\xfe` 等）
+4. **标题字段同理**：`title` 也必须为合法 UTF-8
 
-  标题同理，确保传入 API 的所有字符串字段均为合法 UTF-8。
+### 各环境转码方法
 
+**Python（推荐，几乎所有环境都有）：**
 
-## 错误处理
+```bash
+# 读取文件，自动检测编码并转为 UTF-8
+content=$(python3 -c "
+import sys
+data = open('tmpfile', 'rb').read()
+for enc in ['utf-8', 'gbk', 'gb2312', 'big5', 'latin-1']:
+    try:
+        sys.stdout.write(data.decode(enc))
+        break
+    except (UnicodeDecodeError, LookupError):
+        continue
+" 2>/dev/null)
 
-| 错误码 | 含义              | 建议处理                  |
-|--------|-----------------|-----------------------|
-| 0 | 成功              | —                     |
-| 100001 | 参数错误            | 检查请求参数格式和必填字段         |
-| 100002 | 无效 ID           | 检查凭证配置                |
-| 100003 | 服务器内部错误         | 等待后重试                 |
-| 100004 | size 不合法 / 空间不够 | 检查参数范围                |
-| 100005 | 无权限             | 确认操作的是用户自己的笔记         |
-| 100006 | 笔记已删除           | 告知用户该笔记不存在            |
-| 100008 | 版本冲突            | 重新获取内容后再操作            |
-| 100009 | 超过大小限制          | 拆分为多次 `append_doc` 写入 |
-| 310001 | 笔记本不存在          | 检查 `folder_id` 是否正确   |
-| 20002 | apiKey超过最大限频    |
-| 20004 | apikey 鉴权失败     | 检查凭证配置是否正确            |
-| 110037 | apikey 过期       | 请获取最新apikey：https://ima.qq.com/agent-interface          |
+# 如果内容已在变量中，清洗非法 UTF-8 字节
+content=$(printf '%s' "$content" | python3 -c "import sys; sys.stdout.write(sys.stdin.buffer.read().decode('utf-8','ignore'))")
+```
+
+**Node.js：**
+
+```bash
+content=$(node -e "const fs=require('fs');const buf=fs.readFileSync('tmpfile');process.stdout.write(buf.toString('utf8'))")
+# 已知编码（如 GBK）：
+content=$(node -e "const fs=require('fs');process.stdout.write(new TextDecoder('gbk').decode(fs.readFileSync('tmpfile')))")
+```
+
+**Unix (macOS/Linux)：**
+
+```bash
+content=$(iconv -f "$(file -b --mime-encoding tmpfile)" -t UTF-8 tmpfile 2>/dev/null || cat tmpfile)
+```
+
+**Windows PowerShell：**
+
+```powershell
+# 读取非 UTF-8 文件并转码
+$content = [System.IO.File]::ReadAllText('tmpfile', [System.Text.Encoding]::Default)
+[System.IO.File]::WriteAllText('tmpfile.utf8', $content, [System.Text.Encoding]::UTF8)
+```
+
+### ⚠️ PowerShell 5.1 环境检测（CRITICAL — 适用于所有模块）
+
+> **此问题影响所有 API 调用（notes、knowledge-base 等）**
+>
+> **此问题极其隐蔽：PowerShell 5.1 下 `Invoke-RestMethod` 会静默将请求 Body 从 UTF-8 转为系统 ANSI 编码（中文 Windows 为 GBK），即使设置了 `Content-Type: charset=utf-8` 也无效。结果是请求看起来发送成功，但服务端收到的内容已经是乱码，且无任何错误提示。**
+
+**当 agent 运行在 PowerShell 环境时，必须在首次 API 调用前检测版本：**
+
+```powershell
+# 检测 PowerShell 版本 — 在任何 API 调用之前执行（notes 和 knowledge-base 都需要）
+if ($PSVersionTable.PSVersion.Major -le 5) {
+    Write-Host "⚠️ 检测到 PowerShell 5.1，将使用 UTF-8 字节数组模式发送请求"
+    $useUtf8Bytes = $true
+} else {
+    Write-Host "✅ PowerShell 7+，默认 UTF-8，无需额外处理"
+    $useUtf8Bytes = $false
+}
+```
+
+**PowerShell 5.1 下必须使用以下方式发送请求**（用 `ConvertTo-Json` 构建 JSON 以避免手动拼接的转义风险，再显式转为 UTF-8 字节数组）：
+
+```powershell
+# PowerShell 5.1 安全请求模板（适用于所有模块的所有 API 调用）
+$body = @{ title = "标题"; content = $content; content_format = 1 } | ConvertTo-Json -Depth 10
+if ($useUtf8Bytes) {
+    # CRITICAL: 必须转为字节数组，否则中文/非ASCII内容会变成乱码
+    $utf8Bytes = [System.Text.Encoding]::UTF8.GetBytes($body)
+    Invoke-RestMethod -Uri $url -Method Post -Body $utf8Bytes -ContentType "application/json; charset=utf-8" -Headers $headers
+} else {
+    # PowerShell 7+ 可直接传字符串
+    Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json; charset=utf-8" -Headers $headers
+}
+```
+
+> **总结：** 在 PowerShell 5.1 环境中，**所有** API 调用（无论 notes 还是 knowledge-base）都必须将 Body 显式转为 UTF-8 字节数组。不检测版本直接发请求 = 中文内容必乱码。这是 PowerShell 5.1 的已知设计缺陷，不是 bug 可以被修复。
