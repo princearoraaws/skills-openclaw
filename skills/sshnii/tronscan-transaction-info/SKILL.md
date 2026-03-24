@@ -83,6 +83,22 @@ metadata:
 - **API**: `getTransactionStatistics` — Get transaction statistics (total tx, token tx volume, etc.); `getTransferStatistics` — Get transfer statistics by token type
 - **Use when**: User asks for "tx volume" or "transfer distribution".
 
+### getExchangeTransactions
+
+- **API**: `getExchangeTransactions` — Get exchange-type transactions
+- **Use when**: User asks for "exchange transactions" or "DEX transactions".
+- **Response**: Exchange-type transaction list.
+
+## Workflow: Transaction Investigation
+
+> User: "Why did this tx fail?" or "Who sent it, what did it do?"
+
+1. **tronscan-transaction-info** — Use tx hash to call `getTransactionDetail` → result, confirmation, from/to, amount, energy/bandwidth.
+2. If asking about **sender or receiver**: **tronscan-account-profiler** — `getAccountDetail`(from/to address) for balance and resources; if counterparty is a contract, **tronscan-contract-analysis** — `getContractDetail`(contract address).
+3. If **token transfers within the tx** are needed: `getTransactionDetail` response already includes `trc20TransferInfo`, `transfersAllList`, etc. — no need to call transfer list tools. If **internal calls** needed: `getInternalTransactions` (pass tx hash as parameter where supported).
+
+**Data handoff**: User-provided tx hash is input for step 1. The from/to or contract address from step 1 feeds into step 2.
+
 ## Troubleshooting
 
 - **MCP connection failed**: If you see "Connection refused", verify TronScan MCP is connected in Settings > Extensions.
