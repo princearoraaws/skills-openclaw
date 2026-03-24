@@ -1,11 +1,17 @@
 {
   "owner": "jwelten",
   "slug": "pg-update",
-  "displayName": "ProxyGate Update",
+  "displayName": "Pg Update",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1773687457856,
-    "commit": "https://github.com/openclaw/skills/commit/d361e7193aea6d15d6b303a04467f83c53c41bb9"
+    "version": "0.2.1",
+    "publishedAt": 1774132423552,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1773687457856,
+      "commit": "https://github.com/openclaw/skills/commit/d361e7193aea6d15d6b303a04467f83c53c41bb9"
+    }
+  ]
 }
