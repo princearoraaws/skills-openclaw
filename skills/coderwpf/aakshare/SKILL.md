@@ -515,8 +515,71 @@ print(result[["代码", "名称", "最新价", "市盈率-动态", "市净率", 
 
 ---
 
+## 🤖 AI Agent 高阶使用指南
+
+对于 AI Agent，在使用 AKShare 时应遵循以下高阶策略和最佳实践，以确保数据的准确性和任务的高效完成：
+
+### 1. 数据校验与错误处理
+在获取数据后，AI 应当主动检查数据格式是否符合预期，以及是否存在缺失值（NaN）。
+```python
+import akshare as ak
+import pandas as pd
+
+def safe_get_stock_data(symbol="600519"):
+    try:
+        df = ak.stock_zh_a_hist(symbol=symbol, period="daily", start_date="20230101", adjust="qfq")
+        if df.empty:
+            return "获取的数据为空，请检查股票代码或日期范围。"
+        # 填充或丢弃缺失值
+        df = df.dropna()
+        return df.head()
+    except Exception as e:
+        return f"获取数据时发生错误: {str(e)}"
+
+print(safe_get_stock_data())
+```
+
+### 2. 跨市场数据聚合分析
+AI 经常需要进行宏观经济分析或跨市场对比。以下演示如何组合多接口数据进行分析：
+```python
+import akshare as ak
+import pandas as pd
+
+# 1. 获取 A股 指数数据（上证指数）
+df_sh = ak.stock_zh_index_daily_em(symbol="sh000001")
+df_sh = df_sh[['date', 'close']].rename(columns={'close': 'SH_Close', 'date': 'Date'})
+
+# 2. 获取 美股 指数数据（标普500）
+df_spx = ak.index_us_stock_sina(symbol=".INX")
+df_spx = df_spx[['date', 'close']].rename(columns={'close': 'SPX_Close', 'date': 'Date'})
+
+# 3. 合并数据进行趋势对比
+df_merged = pd.merge(df_sh, df_spx, on='Date', how='inner')
+print("中美股市指数对比:")
+print(df_merged.tail())
+```
+
+### 3. 构建动态监控指标
+AI 可以定期调用以下代码来获取实时的异动信息（如涨跌停板），从而做出及时的策略响应：
+```python
+import akshare as ak
+
+# 获取当日涨停板数据
+df_limit_up = ak.stock_zt_pool_em(date="20231010")  # 可替换为当日日期，如 "20240101"
+if not df_limit_up.empty:
+    print(f"发现 {len(df_limit_up)} 只涨停股票！")
+    # 筛选连板数大于等于3的强势股
+    strong_stocks = df_limit_up[df_limit_up['连板数'] >= 3]
+    print("强势连板股：")
+    print(strong_stocks[['代码', '名称', '最新价', '连板数']])
+else:
+    print("未获取到涨停板数据，可能是非交易日。")
+```
+
+---
+
 ## 社区与支持
 
-由 **大佬量化 (BossQuant)** 维护 — 量化交易教学与策略研发团队。
+由 **大佬量化** 维护 — 量化交易教学与策略研发团队。
 
 微信客服: **bossquant1** · [Bilibili](https://space.bilibili.com/48693330) · 搜索 **大佬量化** — 微信公众号 / Bilibili / 抖音
