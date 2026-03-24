@@ -31,6 +31,14 @@ This skill does not patch bundled OpenClaw skills. It creates explicit SSH wrapp
 - The Mac node already has any required macOS privacy permissions granted
 - You know which Mac should own the tool
 
+## Path Rules
+
+Use dynamic paths by default.
+
+- Wrapper install dir defaults to `OPENCLAW_BIN_DIR`, then `XDG_DATA_HOME/openclaw/bin`, then `HOME/.openclaw/bin`
+- Preset installs resolve remote binaries dynamically with `command -v`, remote `brew --prefix`, and common Homebrew prefixes
+- Use `--target-dir` or `--remote-bin` only when you intentionally need to override the defaults
+
 ## Trust Model
 
 This skill assumes:
@@ -61,8 +69,14 @@ Default pattern:
 If you are unsure, verify first:
 
 ```bash
-scripts/verify-node-tool.sh --host agent1@192.168.88.13 --bin /opt/homebrew/bin/imsg
-scripts/verify-node-tool.sh --host agent2@192.168.88.12 --bin /opt/homebrew/bin/remindctl
+scripts/verify-node-tool.sh --host agent1@mac-mini.local --tool imsg
+scripts/verify-node-tool.sh --host agent2@macbook-pro.local --tool remindctl
+```
+
+If the tool lives outside the normal shell path or Homebrew defaults, pass an explicit path:
+
+```bash
+scripts/verify-node-tool.sh --host agent2@macbook-pro.local --bin /custom/path/remindctl
 ```
 
 ### 2. Install A Wrapper On The Gateway
@@ -72,8 +86,7 @@ For a known tool preset:
 ```bash
 scripts/install-preset.sh \
   --tool imsg \
-  --host agent1@192.168.88.13 \
-  --target-dir /home/node/.openclaw/bin
+  --host agent1@mac-mini.local
 ```
 
 Or install a generic wrapper:
@@ -81,16 +94,24 @@ Or install a generic wrapper:
 ```bash
 scripts/install-wrapper.sh \
   --name remindctl-mbp \
-  --host agent2@192.168.88.12 \
-  --remote-bin /opt/homebrew/bin/remindctl \
-  --target-dir /home/node/.openclaw/bin
+  --host agent2@macbook-pro.local \
+  --remote-bin /opt/homebrew/bin/remindctl
+```
+
+Override the wrapper directory only when you need a non-default layout:
+
+```bash
+scripts/install-preset.sh \
+  --tool memo \
+  --host agent1@mac-mini.local \
+  --target-dir "$HOME/.local/bin"
 ```
 
 ### 3. Verify The Wrapper
 
 ```bash
-/home/node/.openclaw/bin/imsg chats --limit 1
-/home/node/.openclaw/bin/remindctl-mbp lists
+"${OPENCLAW_BIN_DIR:-${XDG_DATA_HOME:-$HOME/.openclaw}/openclaw/bin}"/imsg chats --limit 1
+"${OPENCLAW_BIN_DIR:-${XDG_DATA_HOME:-$HOME/.openclaw}/openclaw/bin}"/remindctl-mbp lists
 ```
 
 If the wrapper works but a bundled OpenClaw skill still shows gray, that is expected on a Linux gateway. Use the wrapper-backed workflow or publish a wrapper-aware skill instead of patching OpenClaw core.
@@ -99,7 +120,7 @@ If the wrapper works but a bundled OpenClaw skill still shows gray, that is expe
 
 When building a new ClawHub skill on top of this bridge:
 
-- call the wrapper by absolute path
+- call the wrapper through a configurable path contract, not a user-specific absolute home path
 - document which node owns the tool
 - keep secrets and tokens on the node or gateway config, not in the skill folder
 - treat the wrapper as the stable contract
@@ -131,7 +152,7 @@ Supported presets in `scripts/install-preset.sh`:
 - `brew`
 - `gh`
 
-These map to the expected Homebrew path under `/opt/homebrew/bin`.
+The preset installer resolves the remote binary dynamically. If resolution fails, pass `--remote-bin` explicitly.
 
 ## Examples
 
@@ -140,8 +161,7 @@ These map to the expected Homebrew path under `/opt/homebrew/bin`.
 ```bash
 scripts/install-preset.sh \
   --tool imsg \
-  --host agent1@192.168.88.13 \
-  --target-dir /home/node/.openclaw/bin
+  --host agent1@mac-mini.local
 ```
 
 ### Wire Reminders Through MacBook Pro
@@ -149,8 +169,7 @@ scripts/install-preset.sh \
 ```bash
 scripts/install-preset.sh \
   --tool remindctl \
-  --host agent2@192.168.88.12 \
-  --target-dir /home/node/.openclaw/bin \
+  --host agent2@macbook-pro.local \
   --name remindctl-mbp
 ```
 
@@ -159,15 +178,14 @@ scripts/install-preset.sh \
 ```bash
 scripts/install-wrapper.sh \
   --name my-mac-tool \
-  --host agent2@192.168.88.12 \
-  --remote-bin /opt/homebrew/bin/my-mac-tool \
-  --target-dir /home/node/.openclaw/bin
+  --host agent2@macbook-pro.local \
+  --remote-bin /custom/tools/my-mac-tool
 ```
 
 ## Files
 
 - `scripts/install-wrapper.sh`: create one secure SSH wrapper for a remote binary
-- `scripts/install-preset.sh`: install wrappers for common macOS tools
-- `scripts/verify-node-tool.sh`: verify SSH and remote binary availability
+- `scripts/install-preset.sh`: install wrappers for common macOS tools with dynamic remote resolution
+- `scripts/verify-node-tool.sh`: verify SSH and remote binary availability by path or tool name
 - `references/publish-pattern.md`: how to build a publishable wrapper-aware skill on top
 - `references/security-model.md`: trust boundaries, least privilege, audit trail, and rollback expectations

@@ -4,11 +4,27 @@ set -euo pipefail
 usage() {
   cat <<'EOF'
 Usage:
-  install-wrapper.sh --name NAME --host USER@HOST --remote-bin /abs/path/to/bin --target-dir DIR
+  install-wrapper.sh --name NAME --host USER@HOST --remote-bin /abs/path/to/bin [--target-dir DIR]
                      [--ssh-key /abs/path/to/key] [--known-hosts /abs/path/to/known_hosts]
 
 Creates a small wrapper script that runs a remote macOS binary over SSH.
+
+Defaults:
+  --target-dir defaults to OPENCLAW_BIN_DIR, then XDG_DATA_HOME/openclaw/bin,
+  then HOME/.openclaw/bin.
 EOF
+}
+
+resolve_target_dir() {
+  if [[ -n "${OPENCLAW_BIN_DIR:-}" ]]; then
+    printf '%s\n' "$OPENCLAW_BIN_DIR"
+    return
+  fi
+  if [[ -n "${XDG_DATA_HOME:-}" ]]; then
+    printf '%s/openclaw/bin\n' "$XDG_DATA_HOME"
+    return
+  fi
+  printf '%s/.openclaw/bin\n' "$HOME"
 }
 
 NAME=""
@@ -31,7 +47,9 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-[[ -n "$NAME" && -n "$HOST" && -n "$REMOTE_BIN" && -n "$TARGET_DIR" ]] || {
+TARGET_DIR="${TARGET_DIR:-$(resolve_target_dir)}"
+
+[[ -n "$NAME" && -n "$HOST" && -n "$REMOTE_BIN" ]] || {
   usage
   exit 1
 }
