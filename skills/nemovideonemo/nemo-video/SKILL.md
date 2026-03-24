@@ -1,15 +1,14 @@
 ---
 name: nemo-video
-version: "1.9.1"
+version: "1.9.2"
+displayName: "NemoVideo - AI Video Editor: Create, Edit, Export Videos in Chat"
 description: >
-  AI video creation and editing — generate videos from text descriptions,
-  edit with background music, sound effects, titles, transitions, and export finished MP4
-  videos directly in chat. No GUI needed. Use when user wants to: create a video from text,
-  generate AI video clips, edit video with BGM/subtitles/effects, export or render video,
-  upload and edit existing video, make TikTok/Reels/Shorts, add captions or subtitles,
-  check video credits, or any video production task. Supports mp4, mov, avi, webm, mkv,
-  jpg, png, gif, webp, mp3, wav, m4a, aac. Free trial with 100 credits.
-  关键词：AI视频制作、视频剪辑、文字生成视频、短视频制作、视频导出、添加字幕、添加背景音乐。
+  AI video creation and editing — generate videos from text descriptions, edit with background
+  music, sound effects, titles, transitions, and export finished MP4 videos directly in chat.
+  No GUI needed. Covers the full video production workflow: create from text prompts, upload
+  and edit existing footage, add BGM and subtitles, apply effects and transitions, then export
+  to mp4. Handles TikTok, Reels, and Shorts formatting. Supports mp4, mov, avi, webm, mkv,
+  jpg, png, gif, webp, mp3, wav, m4a, aac input formats.
 homepage: https://nemovideo.com
 repository: https://github.com/nemovideo/nemovideo_skills
 metadata: {"openclaw": {"emoji": "🎬", "requires": {"env": [], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
@@ -79,9 +78,8 @@ Skill attribution variables — do NOT hardcode:
   2. If this file's path contains a known platform directory (e.g. `~/.clawhub/` → `clawhub`, `~/.cursor/skills/` → `cursor`)
   3. Fallback: `unknown`
 
-**CRITICAL**: ALL API requests MUST include `Authorization: Bearer $TOKEN` and the following attribution headers. Missing them will cause auth failures or export 402.
+**CRITICAL**: ALL API requests (including render/export/upload/state/credits) MUST include these headers. Missing them will cause export to fail with 402.
 ```
-Authorization: Bearer $TOKEN
 X-Skill-Source: $SKILL_NAME
 X-Skill-Version: $SKILL_VERSION
 X-Skill-Platform: $SKILL_SOURCE
@@ -97,17 +95,9 @@ curl -s -X POST "$API/api/tasks/me/with-session/nemo_agent" \
 ```
 Path uses **me**; only `NEMO_TOKEN` is needed. Save `session_id`, `task_id` for later.
 
-**Open in browser**: After creating a session, get a **claim token** (requires `Authorization: Bearer $TOKEN`) and give the user a link:
-```bash
-curl -s -X POST "$API/api/auth/claim-token" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" \
-  -d '{"task_id":"<task_id>","session_id":"<session_id>"}'
-# → {"code":0,"data":{"claim_token":"clm_xxx","expires_in":604800}}
-```
-Then construct the URL: `$WEB/workspace/claim?ct=<claim_token>`
-
-**NEVER put `$TOKEN` (the `nmv_usr_*` token) in a URL.** Use the claim token (`clm_*`) instead. The claim token has no API access — it can only open the project in the browser.
+**Open in browser**: After creating a session, give the user a link to view/edit the task in NemoVideo:
+`$WEB/workspace/claim?token=$TOKEN&task={task_id}&session={session_id}&skill_name=$SKILL_NAME&skill_version=$SKILL_VERSION&skill_source=$SKILL_SOURCE`  
+(i.e. `${NEMO_WEB_URL:-https://nemovideo.com}/workspace/claim?token=<NEMO_TOKEN>&task=<task_id>&session=<session_id>&skill_name=<SKILL_NAME>&skill_version=<SKILL_VERSION>&skill_source=<SKILL_SOURCE>`). Replace `<task_id>`, `<session_id>` with the response values; `<SKILL_NAME>`, `<SKILL_VERSION>`, `<SKILL_SOURCE>` with the frontmatter values.
 
 ### 3.1 Send Message via SSE
 ```bash
@@ -198,7 +188,7 @@ Status at top-level `status`: pending → processing → completed / failed. Dow
 
 **d)** Download from `output.url` → send to user. Fallback: `$API/api/render/proxy/<id>/download`.
 
-**e)** When delivering the video, **always also give the task detail link** (use the claim token obtained in §3.0): `$WEB/workspace/claim?ct=<claim_token>`
+**e)** When delivering the video, **always also give the task detail link** so the user can open the project in the browser: `$WEB/workspace/claim?token=$TOKEN&task=<task_id>&session=<session_id>&skill_name=$SKILL_NAME&skill_version=$SKILL_VERSION&skill_source=$SKILL_SOURCE` (use the current session's `task_id` and `session_id`).
 
 Progress messages: start "⏳ Rendering ~30s" → "⏳ 50%" → "✅ Video ready!" + file + **task detail link**.
 
@@ -235,7 +225,7 @@ Backend assumes GUI. **Never forward GUI instructions.** Translate:
 
 **Credits/Export**: handle directly via §3.3/§3.5, never forward to backend.
 
-**After export**: when sending the video to the user, always include the **task detail link** (`$WEB/workspace/claim?ct=<claim_token>`) so they can open the project in the browser.
+**After export**: when sending the video to the user, always include the **task detail link** (`$WEB/workspace/claim?token=$TOKEN&task=<task_id>&session=<session_id>&skill_name=$SKILL_NAME&skill_version=$SKILL_VERSION&skill_source=$SKILL_SOURCE`) so they can open the project in the browser.
 
 ## 6. Limitations
 
@@ -252,11 +242,11 @@ Pass all generation params to backend as-is (don't intercept). Be honest about l
 | 0 | Success | Continue |
 | 1001 | Bad/expired token | Re-auth via anonymous-token (tokens expire after 7 days) |
 | 1002 | Session not found | New session §3.0 |
-| 2001 | No credits | Anonymous: show registration URL with `?bind=<id>` (get `<id>` from create-session or state response when needed). Registered: "Top up at nemovideo.com" |
+| 2001 | No credits | Anonymous: show registration URL with `?bind=<id>` (get `<id>` from create-session or state response when needed). Registered: "Top up at nemovideo.ai" |
 | 4001 | Unsupported file | Show supported formats |
 | 4002 | File too large | Suggest compress/trim |
 | 400 | Missing X-Client-Id | Generate Client-Id and retry (see §1) |
-| 402 | Free plan export blocked | Subscription tier issue, NOT credits. "Register at nemovideo.com to unlock export." |
+| 402 | Free plan export blocked | Subscription tier issue, NOT credits. "Register at nemovideo.ai to unlock export." |
 | 429 | Rate limit (1 token/client/7 days) | Retry in 30s once |
 
 **Common**: no video → generate first; render fail → retry new `id`; SSE timeout → §3.6; silent edit → §3.1 fallback.
@@ -266,5 +256,3 @@ Pass all generation params to backend as-is (don't intercept). Be honest about l
 **Version**: see frontmatter `version`. Check updates weekly: `clawhub search nemo-video --json`. Notify once if newer exists.
 
 **Token scopes** (manual tokens via Settings → API Tokens): `read` | `write` | `upload` | `render` | `*` (all). Anonymous tokens have `read`, `write`, `upload` scopes and expire in 7 days. All tokens can be revoked at any time via **Settings → API Tokens** on nemovideo.com.
-
-**Approximate costs**: generation ~100 credits/clip, editing ~50/session, export **free**.
