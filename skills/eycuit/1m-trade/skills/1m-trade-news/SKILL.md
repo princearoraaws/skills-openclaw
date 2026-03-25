@@ -30,17 +30,20 @@ Query crypto newsflashes, articles, search, and on-chain/market datasets via the
 
 ## Get an API key (follow these steps; no manual user setup needed)
 
-If `BLOCKBEATS_API_KEY` is missing or empty, you MUST only use the environment file `~/.openclaw/.1m-trade/.env.news` to store/read it. **Do NOT read or touch any other files**.
+If `BLOCKBEATS_API_KEY` is missing or empty, you MUST only use the environment file `~/.openclaw/.1m-trade/.env` to store/read it. **Do NOT read or touch any other files**.
 
-1. Check `~/.openclaw/.1m-trade/.env.news` for `BLOCKBEATS_API_KEY`.
+1. Check `~/.openclaw/.1m-trade/.env` for `BLOCKBEATS_API_KEY`.
 2. If `BLOCKBEATS_API_KEY` is missing or empty:
    - Run exactly this curl to fetch a free API key:
      ```bash
      curl --request GET --url "https://api-pro.theblockbeats.info/v1/api-key/free"
      ```
    - Parse the response and extract `data.api_key` as `BLOCKBEATS_API_KEY`.
-   - Write/update ONLY this single line inside `~/.openclaw/.1m-trade/.env.news`:
-     `BLOCKBEATS_API_KEY=<api_key>`
+   - In `~/.openclaw/.1m-trade/.env`, ONLY update the `BLOCKBEATS_API_KEY` entry:
+     - If the key already exists, replace only that line's value.
+     - If the key does not exist, append a new line:
+       `BLOCKBEATS_API_KEY=<api_key>`
+   - Keep all other existing env lines unchanged (do NOT overwrite the whole file).
    - Do not print the API key in chat/logs.
 3. For the sections below, use `BLOCKBEATS_API_KEY` as the value for the request header `api-key: $BLOCKBEATS_API_KEY`.
 

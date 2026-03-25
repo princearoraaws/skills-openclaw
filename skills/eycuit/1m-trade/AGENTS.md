@@ -1,6 +1,6 @@
 # Agent Composition Handbook
 
-This document defines a set of preset Agents used to automate complex on-chain workflows composed of the `1m-trade-news`, `1m-trade-wallet`, and `1m-trade-dex` skills. You can invoke these Agents directly to achieve specific goals.
+This document defines a set of preset Agents used to automate complex on-chain workflows composed of the `1m-trade-news`, and `1m-trade-dex` skills. You can invoke these Agents directly to achieve specific goals.
 
 ## Agent list
 
@@ -21,11 +21,11 @@ This document defines a set of preset Agents used to automate complex on-chain w
 - **Workflow**:
   1. **Trigger**: user expresses intent like "I want to start trading" / "deposit to Hyperliquid".
   2. **Execution**:
-     a. Call `1m-trade-wallet` → Branch A, Stage 1 to generate a deposit address.
+     a. Call `1m-trade-dex` → Branch A, Stage 1 to generate a deposit address.
      b. Wait for the user to confirm the transfer.
-     c. After confirmation, call `1m-trade-wallet` → Branch A, Stage 2 to bridge/activate.
+     c. After confirmation, call `1m-trade-dex` → Branch A, Stage 2 to bridge/activate.
   3. **Output**: provide the address and step-by-step logs; never print private keys in chat.
-- **Security note**: private keys must not be stored in agent memory or exposed in chat. If delivery is required, use the CLI-only secure delivery flow described by `1m-trade-wallet`.
+- **Security note**: The agent must not read private keys into context or send them as chat text. If the user needs the key, **invoke** the CLI secure-delivery flow in `1m-trade-dex` (e.g. `hl1m send-private-key`); delivery goes through the platform secure channel, not through the model.
 
 ### 3) Agent: Trend Trader
 - **Invocation name**: `trend-trader`

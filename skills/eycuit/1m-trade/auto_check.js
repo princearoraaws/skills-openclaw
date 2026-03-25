@@ -3,16 +3,14 @@
 
 // Cross-platform prerequisite checker for auto trading.
 // - Works on Linux/macOS/Windows (Node.js required).
-// - Follows the same .env path resolution as:
-//   skills/1m-trade-wallet/scripts/index.js
 // - MUST NOT print secret values.
 
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const { spawnSync } = require("child_process");
 
 const requiredKeys = [
-  "HYPERLIQUID_PRIVATE_KEY",
   "HYPERLIQUID_WALLET_ADDRESS",
   "BLOCKBEATS_API_KEY",
 ];
@@ -61,7 +59,45 @@ function readDotenvValue(fileContent, key) {
   return value;
 }
 
+function hasCommand(cmd) {
+  const probe = process.platform === "win32" ? "where" : "which";
+  const out = spawnSync(probe, [cmd], { stdio: "pipe" });
+  return out.status === 0;
+}
+
 function main() {
+  const missingBins = [];
+  if (!hasCommand("node")) missingBins.push("node");
+  if (!hasCommand("hl1m")) missingBins.push("hl1m");
+  if (!hasCommand("openclaw")) missingBins.push("openclaw");
+  if (!hasCommand("curl")) missingBins.push("curl");
+
+  if (missingBins.length > 0) {
+    console.error("❌ Auto-trading cannot be enabled: required binaries are missing.");
+    console.error(`   Missing: ${missingBins.join(" ")}`);
+    console.error("");
+    if (missingBins.includes("hl1m")) {
+      console.error("Next step (1m-trade CLI):");
+      console.error("- Install pipx if needed: `python3 -m pip install --user pipx`");
+      console.error("- Install CLI: `pipx install 1m-trade`");
+      console.error("- Verify: `hl1m --help`");
+      console.error("");
+    }
+    if (missingBins.includes("openclaw")) {
+      console.error("Next step (OpenClaw CLI):");
+      console.error("- Install/enable `openclaw` CLI and ensure it is in PATH.");
+      console.error("- Verify: `openclaw --help`");
+      console.error("");
+    }
+    if (missingBins.includes("curl")) {
+      console.error("Next step (curl):");
+      console.error("- Install curl and ensure it is in PATH.");
+      console.error("");
+    }
+    console.error("After fixing missing binaries, re-run: `node auto_check.js`");
+    process.exit(1);
+  }
+
   const envPath = getEnvPath();
 
   let content = "";
@@ -75,6 +111,24 @@ function main() {
     if (!v) missing.push(k);
   }
 
+  // Encrypted private key is required; plaintext key must not be used.
+  const encPk = readDotenvValue(content, "HYPERLIQUID_PRIVATE_KEY_ENC");
+  const encPassword = readDotenvValue(content, "HYPERLIQUID_PK_ENC_PASSWORD");
+  if (!encPk) missing.push("HYPERLIQUID_PRIVATE_KEY_ENC");
+  if (!encPassword) missing.push("HYPERLIQUID_PK_ENC_PASSWORD");
+
+  const plainPk = readDotenvValue(content, "HYPERLIQUID_PRIVATE_KEY");
+  if (plainPk) {
+    console.error("❌ Auto-trading cannot be enabled: plaintext private key is not allowed.");
+    console.error("   Found: HYPERLIQUID_PRIVATE_KEY");
+    console.error("   Required: HYPERLIQUID_PRIVATE_KEY_ENC + HYPERLIQUID_PK_ENC_PASSWORD");
+    console.error("");
+    console.error("Next step:");
+    console.error("- Remove `HYPERLIQUID_PRIVATE_KEY` from the .env file.");
+    console.error("- Keep only encrypted key fields and wallet address.");
+    process.exit(1);
+  }
+
   if (missing.length > 0) {
     console.error("❌ Auto-trading cannot be enabled: required .env values are missing or empty.");
     console.error(`   Missing: ${missing.join(" ")}`);
@@ -82,7 +136,7 @@ function main() {
 
     const missingSet = new Set(missing);
     const missingBlockbeats = missingSet.has("BLOCKBEATS_API_KEY");
-    const missingHlPk = missingSet.has("HYPERLIQUID_PRIVATE_KEY");
+    const missingHlPk = missingSet.has("HYPERLIQUID_PRIVATE_KEY_ENC") || missingSet.has("HYPERLIQUID_PK_ENC_PASSWORD");
     const missingHlAddr = missingSet.has("HYPERLIQUID_WALLET_ADDRESS");
 
     if (missingBlockbeats) {
@@ -94,8 +148,8 @@ function main() {
 
     if (missingHlPk || missingHlAddr) {
       console.error("Next step (Hyperliquid wallet):");
-      console.error("- Create a wallet using the wallet skill so it writes `HYPERLIQUID_PRIVATE_KEY` and `HYPERLIQUID_WALLET_ADDRESS` into the same .env file.");
-      console.error("- Command: `node skills/1m-trade-wallet/scripts/index.js createWallet`");
+      console.error("- Create a wallet using the wallet skill so it persists an encrypted private key (HYPERLIQUID_PRIVATE_KEY_ENC) and the corresponding password (HYPERLIQUID_PK_ENC_PASSWORD), plus HYPERLIQUID_WALLET_ADDRESS.");
+      console.error("- Command: `hl1m create-wallet --target <chat_user_id> --lang <zh_or_en>`");
       console.error("- Do NOT paste private keys into chat.");
       console.error("");
     }

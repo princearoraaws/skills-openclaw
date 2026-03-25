@@ -10,9 +10,15 @@ metadata:
       bins:
         - curl
         - node
+        - hl1m
+        - openclaw
+      configPaths:
+        - ~/.openclaw/.1m-trade/.env
+        - $OPENCLAW_STATE_DIR/.1m-trade/.env
       env:
         - BLOCKBEATS_API_KEY
-        - HYPERLIQUID_PRIVATE_KEY
+        - HYPERLIQUID_PRIVATE_KEY_ENC
+        - HYPERLIQUID_PK_ENC_PASSWORD
         - HYPERLIQUID_WALLET_ADDRESS
     os:
       - darwin
@@ -32,8 +38,18 @@ metadata:
 ## After first install
 Scan and verify all required dependencies for sub-skills and install what is needed.
 
+Optional runtime override:
+- `OPENCLAW_STATE_DIR` can be set to change where local `.1m-trade` state files are read/written.
+- If not set, tools default to `~/.openclaw/.1m-trade/`.
+
+Secret source-of-truth policy:
+- API key and wallet credentials are expected in the local state `.env` file under the paths above.
+- Process environment variables may be used only as explicit runtime overrides by underlying tools.
+- **LLM boundary**: The model must **not** read `.env` or private keys into its context, quote them, or type them into chat. It may only **invoke CLI commands** (e.g. `hl1m …`, `openclaw …`) whose implementations read local state and deliver secrets **via the platform secure channel**—the key never passes through the model.
+- Never print secret values in assistant-visible chat or user-facing logs from the model.
+
 ## Overview
-This skill (`1m-trade`) is an orchestration hub that integrates multiple sub-skills into a single coherent workflow. You describe your goal (e.g., "check today's sentiment then fund my account", "analyze BTC fund flows and open a long with half my balance", "generate a wallet", "auto-trade BTC"), and this skill decomposes the request and calls `1m-trade-news`, `1m-trade-wallet`, and `1m-trade-dex` to complete the operation.
+This skill (`1m-trade`) is an orchestration hub that integrates multiple sub-skills into a single coherent workflow. You describe your goal (e.g., "check today's sentiment then fund my account", "analyze BTC fund flows and open a long with half my balance", "generate a wallet", "auto-trade BTC"), and this skill decomposes the request and calls `1m-trade-news`, and `1m-trade-dex` to complete the operation.
 
 ## Core workflows
 Based on **intent keywords**, this skill routes into one of the workflows below (or composes them).
@@ -71,11 +87,11 @@ Based on **intent keywords**, this skill routes into one of the workflows below 
 ### Workflow 2: Wallet & funding channel (Wallet & Funding)
 **Triggers**: `open account`, `fund`, `deposit`, `generate address`, `arrived?`, `check balance`
 
-**Skill**: `1m-trade-wallet`
+**Skill**: `1m-trade-dex`
 
 **Logic**:
-1. **Stage A - generate address**: run the relevant `1m-trade-wallet` skill.
-2. **Stage B - bridge & activate**: when the user confirms funding, run the relevant `1m-trade-wallet` skill and return the full logs. If the private key is missing, inform the user that funds tied to the old address cannot be recovered and a new address must be created.
+1. **Stage A - generate address**: run the relevant `1m-trade-dex` skill.
+2. **Stage B - bridge & activate**: when the user confirms funding, run the relevant `1m-trade-dex` skill and return the full logs. If the private key is missing, inform the user that funds tied to the old address cannot be recovered and a new address must be created.
 
 ### Workflow 3: Trading execution & management (Trading & Management)
 **Triggers**: `trade`, `order`, `open`, `close`, `positions`, `price`, `kline`, `HIP3`, `AAPL`, `GOLD`
@@ -120,15 +136,25 @@ Based on **intent keywords**, this skill routes into one of the workflows below 
    - If it exists, ask the user to stop/remove it before creating a new one.
    - If the user confirms it should be removed and it is still present, attempt to remove it with `openclaw cron rm <task id>`, then re-run `openclaw cron list` to confirm it is gone.
 
-3. Create a periodic workflow using the command below. `--session isolated` is fixed and must not be changed. Default is every 20 minutes (`*/20`); replace with `*/N` if needed:
+3. Create a periodic workflow using the command below. `--session isolated` is fixed and must not be changed. The default interval is every 20 minutes (`*/20`); replace with `*/N` if needed. Send the trading report to the user.
+   Security constraints for the cron message:
+   - Include ONLY the "#### Workflow content" block as the job prompt template.
+   - Never include any secrets (API keys, private keys, passwords, `.env` contents, tokens).
+   - Never include unrelated user/system text, terminal logs, or file contents.
+   - Keep shell commands/placeholders unchanged, but you may translate natural-language instructions for locale.
+4. ``
 ```bash
 openclaw cron add \
   --name "1m-trade-auto-trader" \
   --cron "*/20 * * * *" \
   --session isolated \
-  --message "<Paste EVERYTHING from '#### Workflow content' to the end of this file. Translate it into the user's language faithfully (no summary/rewrites), keep commands/placeholders unchanged, keep structure/line breaks unchanged, and output ONLY the final trading report. Replace this placeholder ONLY.>" \
-  --timeoutSeconds 600
+  --message "<Paste ONLY the '#### Workflow content' template. Do not include any secrets or unrelated text. Translate natural-language text to the user's language faithfully (no summary/rewrites), keep commands/placeholders unchanged, keep structure/line breaks unchanged, and output ONLY the final trading report. Replace this placeholder ONLY.>" \
+  --timeoutSeconds 600 \
+  --announce \
+  --channel <channel e.g. telegram> \
+  --to "<user id>" \
 ```
+
 #### Workflow content
 Pre-start: dependency memory check
 All skills are installed locally.
