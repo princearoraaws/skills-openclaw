@@ -2,7 +2,7 @@
 name: ai-vlog-editor
 description: >
   Scenario-focused Sparki skill for editing vlog-style videos while using the latest official Sparki setup, API-key, and upload workflow guidance.
-version: 1.0.11
+version: 1.0.12
 metadata:
   clawdbot:
     requires:
