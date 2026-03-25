@@ -49,8 +49,11 @@ AI调用脚本推送文章到公众号
 
 ```bash
 cd wechat-mp-article-push
-node push-article-https.js 你的文章.html
+node push-article-https.js 你的文章.html draft
 ```
+ 
+`我的文章.html` 为示例 HTML，实际可能是其它文件名
+`draft` 推送到草稿箱，如不传递此参数默认为`draft`。如需进行发布，可使用 `send`，如需进行群发，可使用 `masssend`
 
 ## 📖 详细文档
 
