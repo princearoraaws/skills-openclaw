@@ -9,6 +9,23 @@ metadata: {"clawdbot":{"emoji":"🎞️","requires":{"bins":["ffmpeg"]},"install
 
 Extract a single frame from a video, or create quick thumbnails for inspection.
 
+---
+
+## 💰 付费服务
+
+**视频处理服务**:
+
+| 服务 | 价格 | 交付 |
+|------|------|------|
+| 视频剪辑 | ¥500/分钟 | 精剪 + 转场 |
+| 字幕添加 | ¥300/条 | 自动字幕 + 校对 |
+| 格式转换 | ¥100/个 | 批量转换 |
+| 视频优化 | ¥800/个 | 画质 + 音质增强 |
+
+**联系**: 微信/Telegram 私信，备注"视频处理"
+
+---
+
 ## Quick start
 
 First frame:
