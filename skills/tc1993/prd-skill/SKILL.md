@@ -1,187 +1,88 @@
 ---
 name: prd-skill
-description: 根据用户自然语言需求自动生成结构化PRD文档。当用户说"做一个"、"开发一个"、"需求"、"PRD"时触发。生成包含功能、页面、流程、技术要求的完整产品需求文档。
+description: Generate structured Product Requirements Documents (PRD) from natural language user requirements. Use when a user provides an app idea or feature request and needs a comprehensive PRD with functional requirements, user flows, technical specifications, and implementation details. This is the first step in the auto-dev-pipeline that triggers dev-skill and qa-skill automatically.
 ---
 
-# PRD Skill - 产品需求文档生成器
+# PRD Skill - Product Requirements Document Generator
 
-## 🎯 功能概述
+## Overview
 
-本skill根据用户自然语言需求，自动生成结构化PRD文档。作为"一人公司自动开发流水线"的第一环节，负责需求分析和文档化。
+This skill transforms natural language app ideas into structured Product Requirements Documents (PRD). It analyzes user requirements and generates comprehensive documentation including functional specifications, user flows, technical requirements, and implementation details.
 
-## 🔄 触发条件
+## Workflow
 
-当用户输入包含以下关键词时自动触发：
-- "做一个"、"开发一个"、"需求"、"PRD"
-- "iOS app"、"小程序"、"网站"、"应用"
-- "功能"、"需求分析"、"产品文档"
+### 1. Input Analysis
+- Parse natural language requirements
+- Identify core features and user needs
+- Determine app type and target platform
 
-## 📋 输入输出规范
+### 2. PRD Structure Generation
+Generate a structured PRD with the following sections:
 
-### 输入
-- 用户自然语言需求描述
-- 示例："做一个iOS悬浮时钟app"
+#### 2.1 Product Overview
+- App name and description
+- Target audience
+- Core value proposition
+- Success metrics
 
-### 输出
-结构化PRD文档，包含以下部分：
+#### 2.2 Functional Requirements
+- Feature list with priority (P0, P1, P2)
+- User stories and acceptance criteria
+- Screen-by-screen specifications
 
-#### 1. 项目概述
-- 项目名称
-- 项目描述
-- 目标用户
-- 核心价值
+#### 2.3 User Flows
+- User journey maps
+- Navigation flow diagrams
+- Key user interactions
 
-#### 2. 功能需求
-- 核心功能列表
-- 功能优先级（P0/P1/P2）
-- 功能详细描述
+#### 2.4 Technical Specifications
+- Platform requirements (iOS version, device support)
+- Architecture decisions
+- Third-party integrations
+- Data models and APIs
 
-#### 3. 页面设计
-- 页面列表
-- 页面流程图
-- 交互说明
+#### 2.5 Non-Functional Requirements
+- Performance requirements
+- Security considerations
+- Accessibility standards
+- Localization needs
 
-#### 4. 业务流程
-- 用户旅程图
-- 关键流程
-- 异常处理
+### 3. Output Format
+The PRD is generated in markdown format with clear section headers and structured content. After generating the PRD, the skill automatically triggers the dev-skill to begin implementation.
 
-#### 5. 技术要求
-- 技术栈选择
-- 架构设计
-- 第三方依赖
-- 部署要求
+## Examples
 
-#### 6. 非功能需求
-- 性能要求
-- 安全要求
-- 兼容性要求
+**User Input:** "做一个待办事项App，支持分类、提醒和分享功能"
 
-## 🚀 处理流程
+**Generated PRD Sections:**
+1. **Product Overview**: Todo List App with categorization, reminders, and sharing
+2. **Functional Requirements**: 
+   - P0: Create/Edit/Delete tasks
+   - P1: Task categorization with tags
+   - P1: Push notifications for reminders
+   - P2: Share tasks via iMessage/Email
+3. **User Flows**: Onboarding → Task creation → Categorization → Reminder setup
+4. **Technical Specs**: SwiftUI, Core Data, UserNotifications framework
+5. **Non-Functional**: Offline support, iCloud sync, accessibility features
 
-### 步骤1：需求解析
-1. 提取关键信息：应用类型、核心功能、目标平台
-2. 识别用户痛点和使用场景
-3. 确定项目范围和边界
+## Auto-Trigger Next Steps
 
-### 步骤2：结构化分析
-1. 将需求分解为功能模块
-2. 设计用户界面流程
-3. 确定技术实现方案
+After generating the PRD, this skill automatically:
+1. Saves the PRD to `prd-output/` directory with timestamp
+2. Triggers `dev-skill` with the PRD as input
+3. Monitors the pipeline progress through session messaging
 
-### 步骤3：文档生成
-1. 生成完整PRD文档
-2. 格式化为Markdown
-3. 保存到指定位置
+## Integration with Auto-Dev-Pipeline
 
-### 步骤4：流水线传递
-1. 自动触发dev-skill
-2. 传递PRD文档作为输入
-3. 记录处理状态
+This skill is designed to work seamlessly with:
+- **dev-skill**: Receives PRD and generates SwiftUI code
+- **qa-skill**: Receives code and generates test cases
+- **session coordination**: Uses `sessions_send` to trigger next steps
 
-## 📁 文件输出
+## Best Practices
 
-生成的PRD文档保存到：
-```
-/Users/tangchao/.openclaw/workspace/prd-output/
-├── {项目名称}-prd.md
-└── {项目名称}-metadata.json
-```
-
-## 🔗 与其他Skill的集成
-
-### 向下游传递
-- 自动调用 `dev-skill` 进行开发
-- 传递PRD文档路径
-- 传递项目元数据
-
-### 状态管理
-- 记录PRD生成状态
-- 跟踪流水线进度
-- 错误处理和重试机制
-
-## ⚙️ 配置参数
-
-### 默认配置
-```yaml
-output_dir: /Users/tangchao/.openclaw/workspace/prd-output
-template: standard-prd-template.md
-auto_trigger_dev: true
-```
-
-### 可调整参数
-- `detail_level`: 详细程度（basic/standard/detailed）
-- `tech_stack`: 默认技术栈（iOS/SwiftUI）
-- `include_mockups`: 是否包含界面草图
-
-## 📊 质量保证
-
-### 验证规则
-1. PRD必须包含所有必需部分
-2. 功能需求必须可量化
-3. 技术要求必须可实现
-4. 文档格式必须规范
-
-### 错误处理
-- 需求不明确时请求澄清
-- 技术不可行时提供替代方案
-- 生成失败时记录错误日志
-
-## 🎨 模板示例
-
-### 基础PRD模板
-```markdown
-# {项目名称} - 产品需求文档
-
-## 1. 项目概述
-- **项目名称**: {名称}
-- **项目描述**: {描述}
-- **目标用户**: {用户群体}
-- **核心价值**: {价值主张}
-
-## 2. 功能需求
-### P0 - 核心功能
-1. {功能1}: {描述}
-2. {功能2}: {描述}
-
-### P1 - 重要功能
-1. {功能3}: {描述}
-
-## 3. 页面设计
-### 页面列表
-1. {页面1}: {功能}
-2. {页面2}: {功能}
-
-## 4. 技术要求
-- **平台**: iOS
-- **技术栈**: SwiftUI
-- **最低版本**: iOS 15.0
-- **第三方依赖**: {依赖列表}
-```
-
-## 📈 性能指标
-
-### 处理时间
-- 小型项目: < 2分钟
-- 中型项目: < 5分钟
-- 大型项目: < 10分钟
-
-### 成功率
-- 需求明确时: > 95%
-- 需求模糊时: > 80%
-
-## 🔄 持续改进
-
-### 学习机制
-1. 收集用户反馈
-2. 分析生成质量
-3. 优化模板和规则
-
-### 版本更新
-- 定期更新技术栈
-- 添加新功能模板
-- 优化分析算法
-
----
-
-**注意**: 本skill是"一人公司自动开发流水线"的第一环节，生成PRD后会自动触发dev-skill进行开发，无需人工干预。
+1. **Be specific**: Ask clarifying questions if requirements are vague
+2. **Prioritize**: Always assign priority levels to features
+3. **Consider constraints**: Include iOS platform limitations
+4. **Think MVP**: Focus on minimum viable product first
+5. **Document assumptions**: Clearly state any assumptions made
