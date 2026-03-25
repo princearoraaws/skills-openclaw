@@ -55,9 +55,37 @@ cp SKILL.md ~/.openclaw/skills/linux-system-health/
 |-----------|--------|
 | OpenClaw | `clawhub install linux-system-health` |
 | Qoder | Copy to `.qoder/skills/linux-system-health/SKILL.md` |
-| Claude Code | Reference in `CLAUDE.md` |
+| Claude Code | See below |
 | Cursor | Reference in `.cursorrules` |
 | Codex | Reference in `AGENTS.md` |
+
+### Claude Code
+
+**Method 1: One-command install (recommended)**
+
+```bash
+claude install-skill https://raw.githubusercontent.com/ecsgo-helper/openclaw-system-health/main/linux-system-health/SKILL.md
+```
+
+This installs the skill to `.claude/skills/` and makes it available as a slash command in Claude Code sessions.
+
+**Method 2: Manual install**
+
+```bash
+mkdir -p .claude/skills
+cp SKILL.md .claude/skills/linux-system-health.md
+```
+
+**Method 3: Reference in CLAUDE.md** (always active)
+
+Add to your project's `CLAUDE.md`:
+
+```markdown
+## Linux Diagnostics
+
+When diagnosing Linux server issues (performance, memory, disk, network, processes),
+follow the diagnostic procedures in `.claude/skills/linux-system-health.md`.
+```
 
 ## Issue Domains (53 issues)
 
