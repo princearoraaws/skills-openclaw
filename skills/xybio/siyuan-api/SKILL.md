@@ -1,74 +1,85 @@
 ---
 name: siyuan-api
-description: 轻量化思源笔记原生API集成，无需额外依赖，支持笔记本、文档、块、资源全操作，可通过SQL搜索笔记。Lightweight direct API integration for SiYuan note-taking, no extra dependencies. Supports all core operations: notebooks, documents, blocks, assets, SQL search.
+description: Local SiYuan API integration for notebook/document/block/asset operations and SQL search. Uses only local HTTP endpoints and environment-based token auth.
+homepage: https://github.com/siyuan-note/siyuan
 metadata:
   openclaw:
     requires:
       env:
         SIYUAN_API_TOKEN:
-          description: SiYuan API token from Settings → About
+          description: SiYuan API token from Settings > About
           required: true
         SIYUAN_API_URL:
-          description: SiYuan API endpoint, default: http://127.0.0.1:6806
+          description: SiYuan API base URL. Default is http://127.0.0.1:6806
           required: false
 ---
 
-# **SiYuan 思源笔记技能**  
-集成思源笔记本地 API，支持管理笔记本、文档、块、资源，执行 SQL 搜索。
+# SiYuan Skill
 
-  
-## **特点**  
-• **轻量化**：无需安装 Node.js 依赖，不捆绑 CLI 包装  
-• **原生直接调用**：Agent 直接调用官方 API，灵活组合操作  
-• **简洁**：只提供 API 规范和常用示例，保持最小体积  
-• **安全**：不在技能包存储任何凭据，Token 由用户本地环境配置  
-• 本技能仅和用户本地运行的 SiYuan API 通信，不会将数据发送到第三方服务器  
-• 本技能提供完整的读写能力，操作你的 SiYuan 笔记，请确认在信任环境使用  
+本技能用于调用本地运行的 SiYuan HTTP API，支持笔记本、文档、块、资源、SQL 查询等常见操作。
+它只描述调用规范和示例，不包含可执行安装脚本或第三方依赖。
 
-  
-## **配置要求**  
-• 思源笔记本地运行，默认地址 `http://127.0.0.1:6806`  
-• API Token 在思源 → 设置 → 关于 中获取  
-• Token 通过环境变量 `SIYUAN_API_TOKEN` 提供  
+## Security Scope
 
-  
-## **使用场景**  
-• 创建 / 重命名 / 删除笔记本  
-• Markdown 创建新文档  
-• 插入 / 追加 / 更新 / 删除块  
-• 上传资源文件  
-• SQL 搜索笔记  
-• 导出文档为 Markdown  
-• 读写思源工作区文件  
+- Only call local SiYuan endpoint (`127.0.0.1`, `localhost`, or user-provided local URL).
+- Do not send requests to third-party internet endpoints.
+- Never hardcode or print `SIYUAN_API_TOKEN` in logs.
+- This skill has read/write authority over your SiYuan notes. Use only in trusted local environments.
 
-  
-## **API 参考**  
-完整 API 文档分语言提供，需要详细端点规范时读取对应文件：  
-• [references/api-zh.md](references/api-zh.md) - 中文  
-• [references/api.md](references/api.md) - 英文  
+## Configuration
 
-  
-## **常用示例**
+Configuration can be provided via either:
+1. Environment variables in your shell
+2. `~/.openclaw/.env` file (recommended) - add lines like:
+   ```
+   SIYUAN_API_TOKEN=your_token_here
+   SIYUAN_API_URL=http://127.0.0.1:6806
+   ```
 
-### **列出所有笔记本**  
+- `SIYUAN_API_TOKEN` (required): from SiYuan `Settings > About`.
+- `SIYUAN_API_URL` (optional): defaults to `http://127.0.0.1:6806`.
+
+## Typical Use Cases
+
+- Create, rename, and remove notebooks
+- Create documents from Markdown
+- Insert, append, update, move, and delete blocks
+- Upload assets
+- Query notes by SQL
+- Export documents as Markdown
+- Read/write workspace files through SiYuan file APIs
+
+## API References
+
+- [references/api-zh.md](references/api-zh.md) (Chinese)
+- [references/api.md](references/api.md) (English)
+
+## Common Examples
+
+### List Notebooks
 ```javascript
-fetch('http://127.0.0.1:6806/api/notebook/lsNotebooks', {
+const SIYUAN_API_TOKEN = process.env.SIYUAN_API_TOKEN;
+const SIYUAN_API_URL = process.env.SIYUAN_API_URL || 'http://127.0.0.1:6806';
+
+fetch(`${SIYUAN_API_URL}/api/notebook/lsNotebooks`, {
   method: 'POST',
   headers: {
-    'Authorization': 'token ' + token,
+    'Authorization': 'token ' + SIYUAN_API_TOKEN,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({})
 })
 ```
 
-  
-### **创建新文档**  
+### Create Document with Markdown
 ```javascript
-fetch('http://127.0.0.1:6806/api/filetree/createDocWithMd', {
+const SIYUAN_API_TOKEN = process.env.SIYUAN_API_TOKEN;
+const SIYUAN_API_URL = process.env.SIYUAN_API_URL || 'http://127.0.0.1:6806';
+
+fetch(`${SIYUAN_API_URL}/api/filetree/createDocWithMd`, {
   method: 'POST',
   headers: {
-    'Authorization': 'token ' + token,
+    'Authorization': 'token ' + SIYUAN_API_TOKEN,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
@@ -79,13 +90,15 @@ fetch('http://127.0.0.1:6806/api/filetree/createDocWithMd', {
 })
 ```
 
-  
-### **在文档末尾追加块**  
+### Append Block
 ```javascript
-fetch('http://127.0.0.1:6806/api/block/appendBlock', {
+const SIYUAN_API_TOKEN = process.env.SIYUAN_API_TOKEN;
+const SIYUAN_API_URL = process.env.SIYUAN_API_URL || 'http://127.0.0.1:6806';
+
+fetch(`${SIYUAN_API_URL}/api/block/appendBlock`, {
   method: 'POST',
   headers: {
-    'Authorization': 'token ' + token,
+    'Authorization': 'token ' + SIYUAN_API_TOKEN,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
@@ -96,13 +109,15 @@ fetch('http://127.0.0.1:6806/api/block/appendBlock', {
 })
 ```
 
-  
-### **SQL 搜索笔记**  
+### SQL Query
 ```javascript
-fetch('http://127.0.0.1:6806/api/query/sql', {
+const SIYUAN_API_TOKEN = process.env.SIYUAN_API_TOKEN;
+const SIYUAN_API_URL = process.env.SIYUAN_API_URL || 'http://127.0.0.1:6806';
+
+fetch(`${SIYUAN_API_URL}/api/query/sql`, {
   method: 'POST',
   headers: {
-    'Authorization': 'token ' + token,
+    'Authorization': 'token ' + SIYUAN_API_TOKEN,
     'Content-Type': 'application/json'
   },
   body: JSON.stringify({
@@ -111,9 +126,9 @@ fetch('http://127.0.0.1:6806/api/query/sql', {
 })
 ```
 
-  
-## **注意事项**  
-• 重复调用 `createDocWithMd` 同一路径**不会**覆盖已有文档  
-• 自定义块属性必须以 `custom-` 为前缀  
-• 所有接口都使用 POST 方法，返回统一格式 `{code, msg, data}`  
-• Authorization 头部格式：`token <你的token>` —— "token" 必须为小写  
+## Notes
+
+- Repeated `createDocWithMd` on the same path does not overwrite existing documents.
+- Custom block attributes must be prefixed with `custom-`.
+- All endpoints use `POST` and return `{ code, msg, data }`.
+- Header format is `Authorization: token <your-token>` (lowercase `token`).
