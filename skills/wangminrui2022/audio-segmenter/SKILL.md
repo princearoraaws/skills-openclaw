@@ -1,9 +1,8 @@
 ---
 name: Audio-Segmenter
 description: |-
-  支持单个文件或整个文件夹，自动保留原始目录结构。
-  未指定输出路径时：单文件输出到源目录，文件夹自动创建「原文件夹名_sliced_audio」。
-  首次运行自动下载 ffmpeg（通过 ffmpeg-downloader），无需手动安装。
+  一款专为高效处理音频素材设计的智能切片工具。
+  它支持单文件或海量文件夹的递归切片，能够自动处理复杂的依赖环境，并完美保留原始目录结构。
 metadata:
   openclaw:
     requires:
