@@ -1,11 +1,17 @@
 {
   "owner": "henryczq",
   "slug": "wechat-article-assistant",
-  "displayName": "Wechat Article Assistant",
+  "displayName": "多个微信公众号文章同步和下载",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1774088416297,
-    "commit": "https://github.com/openclaw/skills/commit/04261ce716d7d11e77b20b752e865b0a230a039b"
+    "version": "0.3.0",
+    "publishedAt": 1774326624270,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1774088416297,
+      "commit": "https://github.com/openclaw/skills/commit/04261ce716d7d11e77b20b752e865b0a230a039b"
+    }
+  ]
 }
