@@ -1,6 +1,6 @@
 # Knowledge Base Skill
 
-**Version**: v1.0.0
+**Version**: v1.2.0
 **Repository**: https://github.com/ThomasLiu/knowledge-base-skill
 
 ---
@@ -13,7 +13,8 @@
 - "knowledge base" / "知识库" / "KB"
 - "记得这个" / "保存上下文" / "记忆"
 - "检索知识库" / "查一下 KB"
-- "OpenClaw/GitHub/HuggingFace 源码同步"
+
+---
 
 ## 功能
 
@@ -38,6 +39,8 @@ kb retrieve --topic-key "entry-key"
 
 在 `after_turn` hook 中自动调用，判断并存储重要内容。
 
+---
+
 ## 使用方式
 
 ### 存储信息
@@ -54,17 +57,7 @@ Agent: 使用 kb store 命令存储
 Agent: 使用 kb search 查询并返回结果
 ```
 
-### 自动 Hook
-
-需要在 OpenClaw 配置 hooks：
-
-```bash
-# before_agent_start
-hooks before_agent_start --context "用户消息"
-
-# after_turn  
-hooks after_turn --user "用户消息" --agent "Agent回复"
-```
+---
 
 ## 脚本列表
 
@@ -81,13 +74,56 @@ hooks after_turn --user "用户消息" --agent "Agent回复"
 - sqlite3
 - python3
 
+---
+
 ## 配置
 
-```bash
-# 私有 KB（默认）
-export KNOWLEDGE_DB="$HOME/.openclaw/agents/current/knowledge.db"
+### 默认模式（安装即用）
 
-# 共享 KB
-export KNOWLEDGE_KB_MODE="shared"
-export KNOWLEDGE_DB_SHARED="$HOME/.openclaw/shared/knowledge-bases/<kb-name>/knowledge.db"
+Skill 安装后默认使用**自身目录**存储，无需任何配置：
+
+```
+~/.openclaw/workspace/skills/kb-mini/data/knowledge.db
+```
+
+### 共享 KB 模式（多 Agent 共用）
+
+多个 Agent 共用同一个知识库：
+
+```bash
+# 在调用 skill 前设置
+export KNOWLEDGE_SHARED_NAME="coding-kb"
+# 实际路径: ~/.openclaw/shared/knowledge-bases/coding-kb/knowledge.db
+```
+
+### 显式路径模式
+
+指定任意路径作为 KB：
+
+```bash
+export KNOWLEDGE_DB="/path/to/your/knowledge.db"
+```
+
+### 环境变量优先级
+
+| 优先级 | 变量 | 说明 |
+|--------|------|------|
+| 1 | `KNOWLEDGE_DB` | 显式指定路径 |
+| 2 | `KNOWLEDGE_SHARED_NAME` | 共享 KB 名称 |
+| 3 | Skill 内部目录 | 默认，安装即用 |
+
+---
+
+## 目录结构
+
+```
+kb-mini/
+├── data/
+│   └── knowledge.db      # 默认 KB 路径
+├── scripts/
+│   ├── storage.sh        # 存储 API
+│   ├── retriever.sh      # 检索 API
+│   ├── hooks.sh          # Hooks 集成
+│   └── lifecycle.sh      # 生命周期
+└── SKILL.md
 ```

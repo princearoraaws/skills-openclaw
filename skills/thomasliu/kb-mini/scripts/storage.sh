@@ -8,8 +8,16 @@ set -e
 # 配置
 # ============================================
 
-# 数据库路径（默认私有 KB）
-export KNOWLEDGE_DB="${KNOWLEDGE_DB:-$HOME/.openclaw/agents/current/knowledge.db}"
+# 数据库路径
+# 1. 显式环境变量（最高优先）
+# 2. 共享 KB 模式（通过 KNOWLEDGE_SHARED_NAME 指定）
+# 3. Skill 内部目录（默认，安装后即用）
+SKILL_DIR="${KNOWLEDGE_SKILL_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+if [[ -n "$KNOWLEDGE_SHARED_NAME" ]]; then
+    export KNOWLEDGE_DB="${KNOWLEDGE_DB:-$HOME/.openclaw/shared/knowledge-bases/$KNOWLEDGE_SHARED_NAME/knowledge.db}"
+else
+    export KNOWLEDGE_DB="${KNOWLEDGE_DB:-$SKILL_DIR/data/knowledge.db}"
+fi
 
 # FTS5 权重配置
 FTS_WEIGHT_TITLE="${KNOWLEDGE_FTS_WEIGHT_TITLE:-2.0}"
