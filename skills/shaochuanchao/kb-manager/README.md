@@ -1,17 +1,18 @@
 # kb-manager
 
-A lightweight OpenClaw skill for creating and managing a local knowledge base inside an agent workspace.
+A lightweight OpenClaw skill for building and maintaining a structured local knowledge base inside an agent workspace.
 
 It helps you:
 
 - initialize a standard knowledge base structure
 - decide whether content is worth saving
-- classify content automatically
+- classify content automatically by purpose
 - save knowledge as structured Markdown
-- use `00_inbox` as a fallback when classification is uncertain
+- use `00_inbox` as a safe fallback when classification is uncertain
 - organize inbox items later
+- keep naming, templates, and metadata consistent over time
 
-This version is designed as a **publishable v1**: small enough to use, clear enough to teach, and easy to extend later.
+This version is intentionally small, practical, and easy to extend.
 
 ---
 
@@ -23,6 +24,8 @@ kb-manager/
   templates/
     default-entry.md
     project-entry.md
+    research-entry.md
+    reference-entry.md
   docs/
     classification-rules.md
     naming-rules.md
@@ -42,12 +45,13 @@ kb-manager/
 Its main responsibilities are:
 
 - initialize a `knowledge/` directory
-- create standard subdirectories and meta files
+- create standard subdirectories and core meta files
 - evaluate whether incoming content should be saved
 - classify content by purpose
 - format saved content with Markdown templates
 - send uncertain items to `knowledge/00_inbox/`
 - help organize inbox items when asked
+- keep the knowledge base coherent over time
 
 ---
 
@@ -87,18 +91,29 @@ knowledge/
   04_research/
   05_playbooks/
   06_prompts/
-  07_archive/
+  99_archive/
   _meta/
 ```
 
-And these meta files:
+### Core meta files created during initialization
 
 ```text
+knowledge/_meta/README.md
 knowledge/_meta/classification-rules.md
 knowledge/_meta/naming-rules.md
 knowledge/_meta/template.md
 knowledge/_meta/intake-log.md
 ```
+
+### Optional meta files that can be added later
+
+```text
+knowledge/_meta/topics.md
+knowledge/_meta/projects-index.md
+knowledge/_meta/recent.md
+```
+
+Create the optional index files only when the knowledge base grows large enough to benefit from them.
 
 ---
 
@@ -158,12 +173,15 @@ Requirements:
    - 04_research
    - 05_playbooks
    - 06_prompts
-   - 07_archive
+   - 99_archive
    - _meta
-3. Create meta files for classification rules, naming rules, active template, and intake log
-4. Use `templates/default-entry.md` as the default template
-5. Use `templates/project-entry.md` for project-related content
-6. Put uncertain items into `00_inbox`
+3. Copy `docs/classification-rules.md` to `knowledge/_meta/classification-rules.md`
+4. Copy `docs/naming-rules.md` to `knowledge/_meta/naming-rules.md`
+5. Copy `templates/default-entry.md` to `knowledge/_meta/template.md` as the active template
+6. Create `knowledge/_meta/README.md` and `knowledge/_meta/intake-log.md`
+7. Keep optional index files for later unless the user explicitly wants them now
+8. Use `templates/project-entry.md` for project-related content
+9. Put uncertain items into `00_inbox`
 ```
 
 ---
@@ -180,7 +198,7 @@ Please save this article to the knowledge base.
 Requirements:
 1. Decide whether it is worth saving
 2. Classify it automatically
-3. Use the default entry template
+3. Use the most suitable template
 4. If classification is uncertain, put it into `00_inbox`
 5. Output the save path, filename, and structured Markdown
 ```
@@ -195,7 +213,7 @@ Please turn this PDF into a knowledge entry.
 Requirements:
 1. If it is an official document, prefer `01_reference`
 2. If it is a tutorial or study material, prefer `02_learning`
-3. Use the default entry template
+3. Use the most suitable template
 4. Output the final path, filename, and structured Markdown
 ```
 
@@ -218,120 +236,25 @@ Requirements:
 
 ## Templates
 
+This skill currently includes:
+
+- `templates/default-entry.md`
+- `templates/project-entry.md`
+- `templates/research-entry.md`
+- `templates/reference-entry.md`
+
 ### Default entry template
 
-File:
-
-```text
-templates/default-entry.md
-```
-
-Used for most articles, documents, notes, research, prompts, and playbooks.
+Used for general notes, articles, study materials, prompts, and reusable knowledge.
 
 ### Project entry template
 
-File:
+Used for project-specific discussions, plans, meeting notes, architecture notes, and decisions.
 
-```text
-templates/project-entry.md
-```
+### Research entry template
 
-Used for project-related discussions, plans, meeting notes, and design decisions.
+Used for comparisons, evaluations, investigations, and exploratory reports.
 
----
+### Reference entry template
 
-## Editable files
-
-If you want to customize behavior:
-
-### Change intake and classification behavior
-
-Edit:
-
-```text
-SKILL.md
-```
-
-### Change default entry structure
-
-Edit:
-
-```text
-templates/default-entry.md
-```
-
-### Change project entry structure
-
-Edit:
-
-```text
-templates/project-entry.md
-```
-
-### Change readable rule docs
-
-Edit:
-
-```text
-docs/classification-rules.md
-docs/naming-rules.md
-```
-
-### Change the active template after initialization
-
-Edit:
-
-```text
-knowledge/_meta/template.md
-```
-
----
-
-## Classification summary
-
-- `01_reference`: official docs, APIs, specs, product docs
-- `02_learning`: tutorials, articles, learning notes
-- `03_projects/<project-name>`: project notes, discussions, plans, design docs
-- `04_research`: research, comparisons, investigations
-- `05_playbooks`: SOPs, workflows, procedures
-- `06_prompts`: prompts and reusable operating instructions
-- `00_inbox`: uncertain items
-
----
-
-## Notes
-
-This release focuses on the core workflow:
-
-- initialize
-- intake
-- classify
-- save
-- inbox fallback
-- basic organization
-
-It does **not** try to implement everything at once.
-
-Later versions can expand into:
-
-- stronger duplicate detection
-- richer templates
-- search and indexing
-- exports
-- reviews and maintenance flows
-
----
-
-## Included files
-
-```text
-SKILL.md
-templates/default-entry.md
-templates/project-entry.md
-docs/classification-rules.md
-docs/naming-rules.md
-examples/init.txt
-examples/intake-article.txt
-examples/intake-pdf.txt
-examples/organize-inbox.txt
-```
+Used for commands, specifications, operational notes, and durable references.

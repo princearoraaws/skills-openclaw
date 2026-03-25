@@ -1,25 +1,27 @@
 # Title
 
-- Source:
-- Original Link:
-- Collected Date:
-- Tags:
-- Type: reference / learning / research / playbook / prompt
-- Status: inbox / reviewed / evergreen / archived
-
 ## Summary
+Briefly describe what this entry is about and why it matters.
 
 ## Key Points
+- Point 1
+- Point 2
+- Point 3
 
-- 
-- 
-- 
+## Tags
+- tag1
+- tag2
 
-## My Understanding and Application
+## Source
+Describe the source, link, file, conversation, or origin if known.
 
-## Action Items
+## Related
+- Related topic
+- Related project
+- Related entry
 
-- [ ] 
-- [ ] 
-
-## Quoted Excerpts
+## Metadata
+- Created: YYYY-MM-DD
+- Updated: YYYY-MM-DD
+- Tags:
+- Confidence: high | medium | low

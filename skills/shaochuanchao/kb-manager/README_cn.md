@@ -1,86 +1,86 @@
 # kb-manager
 
-将文章、PDF、提示词、项目笔记整理为 OpenClaw agent 工作区中的本地结构化知识库。
+一个轻量的 OpenClaw skill，用于在 agent 工作区中构建并维护结构化的本地知识库。
 
-`kb-manager` 提供一套轻量但可用的知识管理流程：
+它可以帮助你：
 
-- 自动初始化知识库目录
-- 按用途自动分类内容
-- 以结构化 Markdown 保存知识条目
-- 分类不确定时回落到 `00_inbox`
-- 后续可继续整理，不丢信息
+- 初始化标准知识库结构
+- 判断内容是否值得保存
+- 按内容用途自动分类
+- 以结构化 Markdown 形式保存知识
+- 在分类不确定时，将内容安全放入 `00_inbox`
+- 后续再整理 inbox 内容
+- 长期保持命名、模板和元数据的一致性
 
-这是一个适合首发试用的 **v1**：足够小，足够清晰，也方便后续扩展。
-
----
-
-## 为什么使用它
-
-当知识散落在聊天记录、零散笔记和随手文件里时，后续几乎无法复用。
-
-`kb-manager` 的目标很简单：
-
-1. 把内容发送给 knowledge agent
-2. 让 skill 判断是否值得保存
-3. 自动归类到合适目录
-4. 用统一 Markdown 模板保存
-5. 把暂时不确定的内容放进 `00_inbox`，后面再整理
+这个版本刻意保持小而实用，便于直接上手，也方便后续扩展。
 
 ---
 
-## 适合管理的内容
+## 目录结构
 
-- 官方文档
-- 教程与学习笔记
-- 项目讨论与方案
-- 调研内容
-- 提示词与操作指令
-- 个人总结
+```text
+kb-manager/
+  SKILL.md
+  templates/
+    default-entry.md
+    project-entry.md
+    research-entry.md
+    reference-entry.md
+  docs/
+    classification-rules.md
+    naming-rules.md
+  examples/
+    init.txt
+    intake-article.txt
+    intake-pdf.txt
+    organize-inbox.txt
+```
 
 ---
 
-## 快速开始
+## 这个 skill 会做什么
 
-### 1. 创建独立的 knowledge agent
+`kb-manager` 适合放在一个专门负责知识管理的 `knowledge` agent 工作区中使用。
+
+它的核心职责包括：
+
+- 初始化 `knowledge/` 目录
+- 创建标准子目录和核心 `_meta` 文件
+- 判断输入内容是否值得保存
+- 按内容用途进行分类
+- 用 Markdown 模板格式化保存内容
+- 在不确定时将内容放入 `knowledge/00_inbox/`
+- 在用户要求时帮助整理 inbox
+- 长期保持知识库结构清晰、内容一致
+
+---
+
+## 推荐使用方式
+
+建议为知识管理单独创建一个 OpenClaw agent。
+
+例如：
 
 ```bash
 openclaw agents add knowledge
 ```
 
-### 2. 将本 skill 放入 agent 的 workspace
+然后把这个 skill 放到该 agent 的工作区中：
 
 ```text
-skills/kb-manager/
-```
-
-### 3. 使用该 agent 开启新会话
-
-### 4. 初始化知识库
-
-```text
-请使用 kb-manager 初始化知识库。
-
-要求：
-1. 在当前 workspace 下创建 `knowledge/` 目录
-2. 创建标准子目录：
-   - 00_inbox
-   - 01_reference
-   - 02_learning
-   - 03_projects
-   - 04_research
-   - 05_playbooks
-   - 06_prompts
-   - 07_archive
-   - _meta
-3. 创建分类规则、命名规则、当前模板和入库日志文件
-4. 默认使用 `templates/default-entry.md` 作为通用模板
-5. 项目类内容优先使用 `templates/project-entry.md`
-6. 分类不确定时统一进入 `00_inbox`
+skills/
+  kb-manager/
+    SKILL.md
+    templates/
+    docs/
+    examples/
 ```
 
 ---
 
-## 初始化后会生成的目录
+## 标准知识库结构
+
+初始化时，skill 应创建如下结构：
 
 ```text
 knowledge/
@@ -91,121 +91,174 @@ knowledge/
   04_research/
   05_playbooks/
   06_prompts/
-  07_archive/
+  99_archive/
   _meta/
 ```
 
-元文件：
+### 初始化时创建的核心元数据文件
 
 ```text
+knowledge/_meta/README.md
 knowledge/_meta/classification-rules.md
 knowledge/_meta/naming-rules.md
 knowledge/_meta/template.md
 knowledge/_meta/intake-log.md
 ```
 
+### 后续按需创建的可选元数据文件
+
+```text
+knowledge/_meta/topics.md
+knowledge/_meta/projects-index.md
+knowledge/_meta/recent.md
+```
+
+只有当知识库规模增长到确实有必要时，才建议创建这些可选索引文件。
+
 ---
 
-## 常见工作流
+## 安装方式
+
+### 方式 A：安装现成 skill
+
+如果 ClawHub 上已经有合适的知识库 skill，可以直接安装。
+
+```bash
+clawhub search "knowledge base"
+clawhub install <skill-slug>
+```
+
+### 方式 B：手动加入当前 skill
+
+把 `kb-manager/` 目录复制到 agent 工作区中：
+
+```text
+skills/kb-manager/
+```
+
+这是体验当前版本最直接的方式。
+
+---
+
+## 快速开始
+
+### 1. 创建 knowledge agent
+
+```bash
+openclaw agents add knowledge
+```
+
+### 2. 添加 skill
+
+把 `kb-manager` 文件夹放入该 agent 的 `skills/` 目录中。
+
+### 3. 启动一个新的 knowledge 会话
+
+确保新会话中已经加载了这个 skill。
+
+### 4. 初始化知识库
+
+可以直接使用 `examples/init.txt` 中的示例提示词，或者发送类似下面的内容：
+
+```text
+请使用 kb-manager 初始化一个知识库。
+
+要求：
+1. 在当前工作区中创建 `knowledge/` 目录
+2. 创建标准子目录：
+   - 00_inbox
+   - 01_reference
+   - 02_learning
+   - 03_projects
+   - 04_research
+   - 05_playbooks
+   - 06_prompts
+   - 99_archive
+   - _meta
+3. 将 `docs/classification-rules.md` 复制到 `knowledge/_meta/classification-rules.md`
+4. 将 `docs/naming-rules.md` 复制到 `knowledge/_meta/naming-rules.md`
+5. 将 `templates/default-entry.md` 复制到 `knowledge/_meta/template.md` 作为当前激活模板
+6. 创建 `knowledge/_meta/README.md` 和 `knowledge/_meta/intake-log.md`
+7. 可选索引文件先不要创建，除非用户明确要求：
+   - `knowledge/_meta/topics.md`
+   - `knowledge/_meta/projects-index.md`
+   - `knowledge/_meta/recent.md`
+8. 项目相关内容优先使用 `templates/project-entry.md`
+9. 分类不确定的内容先放入 `00_inbox`
+10. 输出创建后的目录结构和初始化完成的 `_meta` 文件列表
+```
+
+---
+
+## 常见使用示例
 
 ### 保存文章
 
+可以使用 `examples/intake-article.txt`，或者发送：
+
 ```text
-请把这篇文章收入知识库。
+请把这篇文章保存到知识库中。
 
 要求：
-1. 先判断是否值得保存
-2. 自动分类
-3. 使用默认模板整理
+1. 先判断它是否值得保存
+2. 自动完成分类
+3. 选择最合适的模板
 4. 如果分类不确定，放入 `00_inbox`
-5. 输出保存路径、文件名和结构化 Markdown
+5. 输出保存路径、文件名和结构化 Markdown 内容
 ```
 
 ### 保存 PDF
 
+可以使用 `examples/intake-pdf.txt`，或者发送：
+
 ```text
-请把这份 PDF 整理成知识条目。
+请把这个 PDF 整理成一个知识条目。
 
 要求：
-1. 如果是官方文档，优先归类到 `01_reference`
-2. 如果是教程或学习资料，优先归类到 `02_learning`
-3. 使用默认模板整理
-4. 输出最终路径、文件名和结构化 Markdown
+1. 如果它是官方文档，优先归入 `01_reference`
+2. 如果它是教程或学习材料，优先归入 `02_learning`
+3. 选择最合适的模板
+4. 输出最终保存路径、文件名和结构化 Markdown 内容
 ```
 
 ### 整理 inbox
+
+可以使用 `examples/organize-inbox.txt`，或者发送：
 
 ```text
 请整理 `knowledge/00_inbox/`。
 
 要求：
-1. 对高置信度内容重新分类
+1. 对高置信度条目重新分类
 2. 补充或优化标签
-3. 对低价值内容建议归档或删除
-4. 仍不确定的内容继续保留在 inbox
-5. 输出简短整理报告
+3. 对低价值内容给出归档或删除建议
+4. 不确定的内容继续保留在 inbox
+5. 输出一份简短的整理报告
 ```
 
 ---
 
-## 模板文件
+## 模板说明
 
-默认模板：
+当前 skill 包含以下模板：
 
-```text
-templates/default-entry.md
-```
+- `templates/default-entry.md`
+- `templates/project-entry.md`
+- `templates/research-entry.md`
+- `templates/reference-entry.md`
 
-项目模板：
+### 默认条目模板
 
-```text
-templates/project-entry.md
-```
+用于一般笔记、文章、学习材料、提示词和通用知识条目。
 
-你可以按需要修改。
+### 项目条目模板
 
----
+用于项目相关讨论、计划、会议纪要、架构说明和决策记录。
 
-## 分类说明
+### 研究条目模板
 
-- `01_reference`：官方文档、API、规范、产品说明
-- `02_learning`：教程、文章、学习笔记
-- `03_projects/<project-name>`：项目笔记、讨论、方案、设计文档
-- `04_research`：调研、对比、研究
-- `05_playbooks`：SOP、流程、操作方法
-- `06_prompts`：提示词与可复用操作指令
-- `00_inbox`：暂时无法稳定判断的内容
+用于对比分析、评估、调研、探索性报告等内容。
 
----
+### 参考条目模板
 
-## 可修改的位置
-
-可以根据需要调整以下文件：
-
-- `SKILL.md` → 入库与分类行为
-- `templates/default-entry.md` → 默认知识条目模板
-- `templates/project-entry.md` → 项目知识模板
-- `docs/classification-rules.md` → 可读的分类说明
-- `docs/naming-rules.md` → 命名规则说明
-- `knowledge/_meta/template.md` → 初始化后正在使用的模板
-
----
-
-## 当前 v1 范围
-
-当前版本聚焦于：
-
-- 初始化
-- 入库
-- 分类
-- 保存
-- inbox 兜底
-- 基础 inbox 整理
-
-后续如有真实需求，再考虑扩展：
-
-- 更强的重复检测
-- 更丰富的模板体系
-- 搜索与索引
-- 导出与备份
-- 回顾流程
+用于命令、规范、操作说明以及长期参考资料。
