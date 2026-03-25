@@ -47,10 +47,6 @@ export function validateSubmit(input) {
     }
   }
 
-  if (referenceAudio && !isPublicUrl(referenceAudio)) {
-    errors.push('`reference_audio` must be a public `http` or `https` URL.');
-  }
-
   if (referenceAudio && !audioName) {
     errors.push('`audio_name` is recommended when `reference_audio` is provided, and is required by this CLI for clearer task provenance.');
   }

@@ -15,7 +15,7 @@ export async function runScript(argv, handler, helpText) {
     dryRun: flags.dryRun,
     requestTimeoutMs: Number(process.env.WERYAI_REQUEST_TIMEOUT_MS) || 30_000,
     pollIntervalMs: Number.isFinite(pollIntervalEnv) ? pollIntervalEnv : null,
-    pollTimeoutMs: Number(process.env.WERYAI_POLL_TIMEOUT_MS) || 600_000,
+    pollTimeoutMs: Number(process.env.WERYAI_POLL_TIMEOUT_MS) || 1800_000,
   };
 
   try {
@@ -43,7 +43,7 @@ function parseFlags(argv) {
     params: {},
   };
 
-  for (let i = 0; i < argv.length; i++) {
+  for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
     if (arg === '--help' || arg === '-h') {
       flags.help = true;
@@ -54,11 +54,9 @@ function parseFlags(argv) {
     } else if (arg === '--json') {
       flags.json = argv[++i] ?? null;
     } else if (arg.startsWith('--') && i + 1 < argv.length && !argv[i + 1]?.startsWith('--')) {
-      const key = arg.slice(2);
-      flags.params[key] = argv[++i];
+      flags.params[arg.slice(2)] = argv[++i];
     } else if (arg.startsWith('--')) {
-      const key = arg.slice(2);
-      flags.params[key] = true;
+      flags.params[arg.slice(2)] = true;
     }
   }
 
@@ -75,9 +73,7 @@ async function resolveInput(flags) {
     return raw ? JSON.parse(raw) : {};
   }
 
-  if (flags.json) {
-    return JSON.parse(flags.json);
-  }
+  if (flags.json) return JSON.parse(flags.json);
 
   const result = {};
   for (const [key, value] of Object.entries(flags.params)) {
