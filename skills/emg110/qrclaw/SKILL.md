@@ -1,6 +1,6 @@
 ---
 name: qrclaw
-description: "Generate QR codes for any string or URL using the QRClaw service (qrclaw.goplausible.xyz). Use this skill whenever the user asks to create a QR code, generate a scannable code, share a link as a QR, make something scannable, or needs a visual/terminal-friendly QR representation of text or URLs. Also use when the user says 'make a QR', 'QR code for this', 'generate QR', 'scannable link', or wants to share content via QR. Covers both terminal (UTF-8 block characters) and web (image smart link) output formats."
+description: "Generate QR codes for any string or URL using the QRClaw open source service (qrclaw.goplausible.xyz). Use this skill whenever the user asks to create a QR code, generate a scannable code, share a link as a QR, make something scannable, or needs a visual/terminal-friendly QR representation of text or URLs. Also use when the user says 'make a QR', 'QR code for this', 'generate QR', 'scannable link', or wants to share content via QR. Covers both terminal (UTF-8 block characters) and web (image smart link) output formats."
 ---
 
 # QRClaw — QR Code Generation for Agents
@@ -30,21 +30,16 @@ QRClaw is designed for public or semi-public data: URLs, payment URIs, contact i
 - User wants a QR code they can paste into a terminal, chat, or document
 - An MCP tool or workflow produces a URI that should be made scannable
 
-## API
+## API for agents and CLI tools (JSON response)
 
 **Single endpoint — one GET request does everything.**
 
 ```
-GET https://qrclaw.goplausible.xyz/?q=<url-encoded-string>
+https://qrclaw.goplausible.xyz/?q=<url-encoded-string>
 ```
-
-### For agents and CLI tools (JSON response)
 
 **You must always include the `Accept: application/json` header.** Without it, the service returns a 302 redirect to the HTML page instead of JSON data. Agents cannot parse the redirect — they need the JSON response containing the `qr` and `link` fields.
 
-```bash
-curl -H "Accept: application/json" "https://qrclaw.goplausible.xyz/?q=$(python3 -c 'import urllib.parse; print(urllib.parse.quote("YOUR STRING HERE"))')"
-```
 
 Response:
 
@@ -113,65 +108,9 @@ QR code: https://qrclaw.goplausible.xyz/q/abc123...
 - If you're posting to a **messaging platform** or the output will be forwarded to one → use social format
 - When in doubt, **ask the user** or default to TUI format (it includes everything)
 
-## Implementation Examples
-
-### Using fetch (JavaScript/TypeScript)
-
-```typescript
-const input = "https://example.com";
-const res = await fetch(
-  `https://qrclaw.goplausible.xyz/?q=${encodeURIComponent(input)}`,
-  { headers: { Accept: "application/json" } }
-);
-const { link, qr, data, expires_in } = await res.json();
-```
-
-### Using curl (shell)
-
-```bash
-INPUT="https://example.com"
-RESPONSE=$(curl -s -H "Accept: application/json" \
-  "https://qrclaw.goplausible.xyz/?q=$(python3 -c "import urllib.parse; print(urllib.parse.quote('$INPUT'))")")
-echo "$RESPONSE" | jq -r '.qr'
-echo "Link: $(echo "$RESPONSE" | jq -r '.link')"
-```
-
-### Using Python
-
-```python
-import requests, urllib.parse
-
-data = "https://example.com"
-r = requests.get(
-    f"https://qrclaw.goplausible.xyz/?q={urllib.parse.quote(data)}",
-    headers={"Accept": "application/json"}
-)
-result = r.json()
-print(result["qr"])
-print(f"Link: {result['link']}")
-```
-
-### Using WebFetch (Claude Code / MCP agents)
-
-Agents with a `WebFetch` tool can call QRClaw directly:
-
-```
-WebFetch("https://qrclaw.goplausible.xyz/?q=https%3A%2F%2Fexample.com", {
-  headers: { "Accept": "application/json" }
-})
-```
 
 Parse the JSON response to extract `qr` (UTF-8 QR code) and `link` (smart link URL), then display both to the user.
 
-### Using WebSearch + WebFetch (discovery)
-
-If an agent doesn't know the QRClaw URL, it can discover it:
-
-```
-WebSearch("QRClaw QR code generator goplausible")
-```
-
-Then use `WebFetch` with the discovered URL as shown above.
 
 ## Important Details
 
@@ -199,4 +138,4 @@ QRClaw works well as the final step in workflows:
 - Build any deep link or app URI scheme and make it shareable
 - Share WiFi credentials, calendar events, or vCards as QR codes
 
-The pattern is always: **produce a string** → **send to QRClaw** → **get back a scannable QR + shareable link**.
+The pattern is always: **produce a string** → **call the QRClaw API** → **get back a scannable QR + shareable link**.
