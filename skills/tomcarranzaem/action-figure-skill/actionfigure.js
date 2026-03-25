@@ -76,7 +76,7 @@ const body = {
   rawPrompt: [{ type: "freetext", value: prompt, weight: 1 }],
   width,
   height,
-  meta: { entrance: "PICTURE,VERSE" },
+  meta: { entrance: "PICTURE,CLI" },
   context_model_series: "8_image_edit",
 };
 
@@ -89,7 +89,7 @@ if (refUuid) {
 
 // --- Submit job ---
 async function main() {
-  const makeRes = await fetch("https://api.talesofai.cn/v3/make_image", {
+  const makeRes = await fetch(`${process.env.NETA_API_URL || 'https://api.talesofai.com'}/v3/make_image`, {
     method: "POST",
     headers: HEADERS,
     body: JSON.stringify(body),
@@ -118,7 +118,7 @@ async function main() {
     await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
 
     const pollRes = await fetch(
-      `https://api.talesofai.cn/v1/artifact/task/${taskUuid}`,
+      `${process.env.NETA_API_URL || 'https://api.talesofai.com'}/v1/artifact/task/${taskUuid}`,
       { headers: HEADERS }
     );
 
@@ -131,9 +131,11 @@ async function main() {
     const pollData = await pollRes.json();
     const status = pollData.task_status;
 
-    if (status === "PENDING" || status === "MODERATION") {
-      continue;
-    }
+    if (['PENDING', 'MODERATION'].includes(status)) { continue; }
+  if (['FAILURE', 'TIMEOUT', 'DELETED', 'ILLEGAL_IMAGE'].includes(status)) {
+    console.error('Error: generation failed with status ' + status + (pollData.err_msg ? ' — ' + pollData.err_msg : ''));
+    process.exit(1);
+  }
 
     // Done — extract image URL
     const url =

@@ -1,1 +1,7 @@
-{"name":"action-figure-skill","version":"1.0.0","type":"module","description":"AI Action Figure Generator — AI-powered ai action figure generator toy packaging","license":"MIT"}
+{
+  "name": "action-figure-skill",
+  "version": "1.0.5",
+  "type": "module",
+  "description": "AI Action Figure Generator — AI-powered ai action figure generator toy packaging",
+  "license": "MIT"
+}
