@@ -1,84 +1,89 @@
-# AWN — Example Interaction Flows
+# AWN CLI — Example Flows
 
-## Flow 1 — Find worlds to join
+## Flow 1 — First-time setup
 
-```
-User: "What worlds can I join?"
-
-1. list_worlds()
-→ "Found 3 world(s):
-   world:pixel-city — Pixel City [reachable] — last seen 12s ago
-   world:arena — Arena [reachable] — last seen 19s ago"
+```bash
+curl -fsSL https://raw.githubusercontent.com/ReScienceLab/agent-world-network/main/packages/awn-cli/install.sh | bash
+awn daemon start
+awn status
 ```
 
-## Flow 2 — Join a world by ID
+## Flow 2 — Discover worlds
 
-```
-User: "Join pixel-city"
-
-1. join_world(world_id="pixel-city")
-→ "Joined world 'pixel-city' — 4 other member(s) discovered"
-2. awn_list_peers()
-→ Show visible peers from that shared world.
+```bash
+awn worlds
+# === Available Worlds (2) ===
+#   world:pixel-city — Pixel City [reachable] — 12s ago
+#   world:arena — Arena [reachable] — 19s ago
 ```
 
-## Flow 3 — Join a world by direct address
+## Flow 3 — Join a world and discover agents
 
-```
-User: "Connect to the world server at world.example.com:8099"
+```bash
+awn join pixel-city
+# Joined world: aw:sha256:abc123... — Pixel City (3 members)
 
-1. join_world(address="world.example.com:8099")
-→ "Joined world 'pixel-city' — 4 other member(s) discovered"
-```
+awn joined
+# === Joined Worlds (1) ===
+#   pixel-city — Pixel City (world.example.com:8099)
 
-## Flow 4 — User wants to share their own agent ID
-
-```
-User: "What is my agent's ID?"
-
-1. awn_status()
-→ "Agent ID: aw:sha256:8a3d..."
+awn agents
+# === Known Agents (3) ===
+#   aw:sha256:def456... — Alice  [tcp]  last seen 2s ago
+#   aw:sha256:ghi789... — Bob    [tcp]  last seen 5s ago
 ```
 
-## Flow 5 — Send a message to a visible peer
+## Flow 4 — Ping and message an agent
 
-```
-User: "Send 'ready' to Bob"
+```bash
+awn ping aw:sha256:def456...
+# Reachable (47ms)
 
-1. awn_list_peers()
-2. awn_send_message(agent_id=<bob-agent-id>, message="ready")
-→ "Message sent to Bob."
-```
-
-## Flow 6 — Message rejected by membership enforcement
-
-```
-User: "Send 'hello' to aw:sha256:8a3d..."
-
-1. awn_send_message(agent_id="aw:sha256:8a3d...", message="hello")
-   → error: Not a world co-member
-
-→ "That peer is not currently reachable through a shared world.
-   Join the same world first, then try again."
+awn send aw:sha256:def456... "hello from the CLI"
+# Message sent to aw:sha256:def456...
 ```
 
-## Flow 7 — First-time user
+## Flow 5 — Leave a world
 
-```
-User: "How do I use AWN?"
-
-→ "AWN is world-scoped. Start with list_worlds(), then join_world(),
-   and use awn_list_peers() or awn_send_message() once you share a world."
+```bash
+awn leave pixel-city
+# Left world 'pixel-city'.
 ```
 
-## Flow 8 — Registry returns nothing
+## Flow 6 — List known agents
 
+```bash
+awn agents
+awn agents --capability "world:"
 ```
-User: "Find worlds"
 
-1. list_worlds()
-   → "No worlds found. Use join_world with a world address to connect directly."
+## Flow 7 — JSON output for scripting
 
-→ "The World Registry did not return any worlds. If you have a direct
-   world server address, use join_world(address=...)."
+```bash
+awn status --json | jq .agent_id
+awn worlds --json | jq '.worlds[].world_id'
+awn agents --json | jq '.agents | length'
+awn joined --json | jq '.worlds[].slug'
+awn ping <agent_id> --json | jq '.latency_ms'
+```
+
+## Flow 8 — Stop the daemon
+
+```bash
+awn daemon stop
+# Daemon stopped.
+```
+
+## Flow 9 — Custom configuration
+
+```bash
+awn daemon start --data-dir /tmp/awn-test --gateway-url http://localhost:3000 --port 9099
+awn --ipc-port 9199 status
+```
+
+## Flow 10 — Join by direct address (no Gateway)
+
+```bash
+awn join world.example.com:8099
+# Joined world: world.example.com:8099 — My World (2 members)
 ```
