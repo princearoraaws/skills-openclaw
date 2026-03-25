@@ -1,16 +1,16 @@
 ---
 name: nemo-generate
+version: "1.8.3"
+displayName: "NemoGenerate - AI Video Generator: Text to Video, Create Video from Text"
 author: nemovideonemo
 description: >
-  AI video generation from text prompts — no camera, no footage, no timeline needed. Type a
-  prompt, get a video. NemoVideo's text-to-video engine creates original AI-generated clips,
-  product demo videos, B-roll footage, storyboard animatics, and social media content from a
-  single description. Supports style-directed generation, AI voiceover, background music, and
-  prompt-to-scene workflows. Trigger: generate video, create video from text, text to video,
-  AI video generator, make video from prompt, AI video creation, video from description,
-  AI-generated video, prompt to video, create B-roll, generate product demo, AI video maker,
-  storyboard from text, video without camera, produce video clip, AI video content creation,
-  generate marketing video, text-to-clip, AI scene generation. Start free, 100 credits included.
+  Create video from text and generate video from prompt — describe a scene, product, or
+  story and get a complete video without a camera. Handles marketing video generation,
+  product walkthroughs, explainer clips, and social media content from a text script. The
+  pipeline covers scene composition, voiceover, transitions, background music, and final
+  export as mp4. Works as a script to video tool: paste your script, pick a style, and get
+  a polished video back. No footage, no editing timeline — just a text prompt and a finished
+  clip. Supports mp4, mov, webm.
 metadata:
   openclaw:
     emoji: 🎬
@@ -34,7 +34,7 @@ The backend does NOT know about OpenClaw. It may say "click Export" or "view in 
 | Variable | Required | Default |
 |----------|----------|---------|
 | `NEMO_TOKEN` | No | Auto-generated (100 free credits, 7-day expiry) |
-| `NEMO_API_URL` | No | https://mega-api-dev.nemovideo.ai |
+| `NEMO_API_URL` | No | https://mega-api-prod.nemovideo.ai |
 | `NEMO_CLIENT_ID` | No | Auto-generated UUID, persisted to `~/.config/nemovideo/client_id` |
 
 If `NEMO_TOKEN` is not set, obtain one:
@@ -69,7 +69,7 @@ This skill is generation-first. If the user uploads a file wanting to edit exist
 
 ## 3. Core Flows
 
-`$API = ${NEMO_API_URL:-https://mega-api-dev.nemovideo.ai}`, `$TOKEN = ${NEMO_TOKEN}`.
+`$API = ${NEMO_API_URL:-https://mega-api-prod.nemovideo.ai}`, `$TOKEN = ${NEMO_TOKEN}`.
 
 All requests MUST include these headers:
 
@@ -89,7 +89,7 @@ curl -s -X POST "$API/api/tasks/me/with-session/nemo_agent" \
 # → {"code":0,"data":{"task_id":"...","session_id":"...","user_id":"..."}}
 ```
 
-Save `session_id`, `user_id`, `task_id`. Tell user: "Project link: https://nemovideo.ai/task/{task_id}"
+Save `session_id`, `task_id`. Tell user browser link: `${NEMO_WEB_URL:-https://dev.nemovideo.ai}/workspace/claim?token=$TOKEN&task=<task_id>&session=<session_id>`
 
 ### 3.1 Send Prompt via SSE
 
@@ -167,9 +167,9 @@ curl -s "$API/api/credits/balance/simple" \
 # → {"code":0,"data":{"available":XXX,"frozen":XX,"total":XXX}}
 ```
 
-`frozen` = reserved for in-progress generation. Approximate costs: generation ~100 credits/clip, export free.
+`frozen` = reserved for in-progress generation.
 
-Show before generating if user has < 120 credits: "You have {available} credits. This generation costs ~100 credits. Continue?"
+Show before generating if user has low credits: "You have {available} credits. Continue?"
 
 ### 3.4 Query State
 
@@ -303,5 +303,3 @@ Common issues: generation timeout → §3.6; silent edit → §3.1 fallback; ren
 Version: 1.0. Check updates: `clawhub search nemo-generate --json`. Notify once if newer exists.
 
 Token scopes (manual tokens via Settings → API Tokens): `read` | `write` | `upload` | `render` | `*` (all). Anonymous tokens have `*`.
-
-Approximate costs: generation ~100 credits/clip, export free.
