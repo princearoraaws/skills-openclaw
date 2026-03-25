@@ -16,6 +16,16 @@ import time
 import requests
 from wakeonlan import send_magic_packet
 
+# Load .env file if present (allows standalone use without system env vars)
+_env_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env")
+if os.path.isfile(_env_file):
+    with open(_env_file) as _f:
+        for _line in _f:
+            _line = _line.strip()
+            if _line and not _line.startswith("#") and "=" in _line:
+                _k, _v = _line.split("=", 1)
+                os.environ.setdefault(_k.strip(), _v.strip())
+
 TV_IP = os.environ.get("SONY_TV_IP")
 TV_PSK = os.environ.get("SONY_TV_PSK")
 TV_MAC = os.environ.get("SONY_TV_MAC")

@@ -1,11 +1,17 @@
 {
   "owner": "ssupppp",
   "slug": "sony-bravia-tv",
-  "displayName": "Sony Bravia TV Control",
+  "displayName": "Sony Tv",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773767531636,
-    "commit": "https://github.com/openclaw/skills/commit/5f6cf2aece1ec219ba1b3a136212f03ff59b7734"
+    "version": "1.1.0",
+    "publishedAt": 1774181925383,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773767531636,
+      "commit": "https://github.com/openclaw/skills/commit/5f6cf2aece1ec219ba1b3a136212f03ff59b7734"
+    }
+  ]
 }

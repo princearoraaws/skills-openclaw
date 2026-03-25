@@ -2,7 +2,7 @@
 name: sony-bravia-tv
 description: >
   Control Sony Bravia TV — power, volume, apps, playback, and full remote navigation via REST API and IRCC on local network.
-version: 1.0.0
+version: 1.1.0
 author: Vikas Menon
 license: MIT
 metadata:
