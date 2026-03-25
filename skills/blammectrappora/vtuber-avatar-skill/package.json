@@ -1,1 +1,7 @@
-{"name":"vtuber-avatar-skill","version":"1.0.0","type":"module","description":"VTuber Avatar Creator — AI-powered vtuber avatar creator ai","license":"MIT"}
+{
+  "name": "vtuber-avatar-skill",
+  "version": "1.0.5",
+  "type": "module",
+  "description": "VTuber Avatar Creator — AI-powered vtuber avatar creator ai",
+  "license": "MIT"
+}

@@ -77,7 +77,7 @@ const body = {
   rawPrompt: [{ type: "freetext", value: prompt, weight: 1 }],
   width,
   height,
-  meta: { entrance: "PICTURE,VERSE" },
+  meta: { entrance: "PICTURE,CLI" },
   context_model_series: "8_image_edit",
 };
 
@@ -87,7 +87,7 @@ if (ref) {
 
 // --- Submit job ---
 async function submitJob() {
-  const res = await fetch("https://api.talesofai.cn/v3/make_image", {
+  const res = await fetch(`${process.env.NETA_API_URL || 'https://api.talesofai.com'}/v3/make_image`, {
     method: "POST",
     headers,
     body: JSON.stringify(body),
@@ -107,7 +107,7 @@ async function submitJob() {
 
 // --- Poll for result ---
 async function pollTask(taskUuid) {
-  const url = `https://api.talesofai.cn/v1/artifact/task/${taskUuid}`;
+  const url = `${process.env.NETA_API_URL || 'https://api.talesofai.com'}/v1/artifact/task/${taskUuid}`;
   const maxAttempts = 90;
   const delayMs = 2000;
 
