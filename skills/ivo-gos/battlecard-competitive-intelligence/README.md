@@ -1,31 +1,67 @@
-# Battlecard - Competitive Intelligence for OpenClaw
+# Battlecard: Competitive Intelligence for OpenClaw
 
-Add competitive intelligence to your OpenClaw agent. Get battle cards, objection handlers, pricing comparisons, and pre-call briefings for any company vs any competitor.
+Know your competitor's weaknesses before the call starts. Practice your pitch against an AI buyer who fights back. Capture what you learn after every deal.
 
-## What It Does
-
-Battlecard gives your AI assistant access to real-time competitive intelligence tools. Ask your agent to generate battle cards, compare competitors, handle objections, and prepare for sales calls. All without leaving your workflow.
-
-## Available Tools
-
-| Tool | Description | Tier |
-|------|-------------|------|
-| `get_battle_card` | Compare two companies with strengths, weaknesses, positioning, objection handlers, and pricing | Free |
-| `compare_competitors` | Multi-competitor comparison matrix (up to 5 competitors) | Starter |
-| `get_objection_handlers` | Specific rebuttals for selling against a named competitor | Starter |
-| `capture_call_intelligence` | Extract and store competitive intel from sales call notes | Pro+ |
-| `get_field_intelligence` | Aggregate patterns from real sales conversations across your team | Team |
-| `generate_pre_call_briefing` | Focused preparation document for upcoming meetings | Pro+ |
-
-## Quick Start
-
-Install via OpenClaw:
+## Try it now
 
 ```bash
-openclaw install battlecard-competitive-intelligence
+./scripts/get_battle_card.sh "YourCompany" "Competitor"
 ```
 
-Or add the MCP server manually:
+No API key needed. No signup. Free tier gives you 4 battle cards, 2 text simulations, and 1 voice simulation.
+
+## What you get
+
+### Before the call
+- **Battle cards** - strengths, weaknesses, positioning strategy, objection handlers, and pricing comparison for any company vs any competitor
+- **Multi-competitor comparison** - side-by-side matrix for up to 5 competitors in one query
+- **Pre-call briefings** - focused preparation docs combining battle card data with field intelligence for a specific upcoming meeting
+
+### During the call
+- **Text simulations** - practice selling against an AI prospect who uses real competitor data to challenge you. Get scored on objection handling, positioning, discovery, and closing
+- **Voice simulations** - same as above, but the prospect talks back with a real voice. Audio responses you can play in Telegram, Slack, or any client that supports audio
+
+### After the call
+- **Capture call intelligence** - paste your call notes, the AI extracts competitor mentions, objections, pricing data, and stores it (Pro+)
+- **Field intelligence** - aggregate patterns from real sales conversations across all users. Most common objections, win/loss reasons, pricing trends (Team)
+
+## Example prompts
+
+"Get me a battle card for Notion vs Confluence"
+
+"I have a demo tomorrow against HubSpot. The prospect is a 200-person fintech company. Prep me."
+
+"Start a simulation selling Datadog against New Relic. Medium difficulty."
+
+"Extract the competitive intel from these call notes: [paste notes]"
+
+"What are the most common objections when selling against Salesforce?"
+
+## Pricing
+
+| | Free | Starter $49/mo | Pro $99/mo | Team $149/mo |
+|---|---|---|---|---|
+| Battle cards | 4 lifetime | 50/day | 500/day | 2,000/day |
+| Text simulations | 2 lifetime | 5/day | 20/day | Unlimited |
+| Voice simulations | 1 lifetime | 3/day | 15/day | Unlimited |
+| Capture intelligence | - | - | Yes | Yes |
+| Field intelligence | - | - | - | Yes |
+
+Free tier requires no signup and no API key.
+
+## Setup
+
+### Quick start (no config needed)
+
+```bash
+clawhub install battlecard-competitive-intelligence
+```
+
+Then run any script in the `scripts/` folder directly.
+
+### MCP configuration (for full access)
+
+Get your API key at [battlecard.northr.ai/signup](https://battlecard.northr.ai/signup), then add to your MCP config:
 
 ```json
 {
@@ -33,45 +69,29 @@ Or add the MCP server manually:
     "battlecard": {
       "url": "https://battlecard.northr.ai/mcp",
       "headers": {
-        "X-Battlecard-Key": "your_api_key_here"
+        "X-Battlecard-Key": "bc_live_your_key_here"
       }
     }
   }
 }
 ```
 
-Get your API key at [battlecard.northr.ai/signup](https://battlecard.northr.ai/signup). The free tier gives you 1 competitive snapshot to try it out.
+## All 11 tools
 
-## Example Usage
+| Tool | What it does | Tier |
+|---|---|---|
+| get_battle_card | Compare two companies | Free |
+| compare_competitors | Multi-competitor matrix (up to 5) | Free |
+| get_objection_handlers | Rebuttals for a specific competitor | Free |
+| generate_pre_call_briefing | Preparation doc for an upcoming meeting | Pro+ |
+| start_simulation | Begin a text-based sales simulation | Free (2) |
+| continue_simulation | Send your response during a text simulation | - |
+| end_simulation | Finish simulation and get scored | - |
+| start_simulation_voice | Begin a voice simulation (audio responses) | Free (1) |
+| continue_simulation_voice | Send response, get audio reply | - |
+| capture_call_intelligence | Extract intel from call notes | Pro+ |
+| get_field_intelligence | Aggregate patterns from real conversations | Team |
 
-**Generate a battle card:**
-> "Get me a battle card for Notion vs Confluence"
+Full docs: [battlecard.northr.ai/connect](https://battlecard.northr.ai/connect)
 
-The agent returns a complete competitive breakdown: what Confluence does well, where Notion wins, how to position against them, scripted objection handlers, and a pricing comparison.
-
-**Prepare for objections:**
-> "What objections will come up when selling against HubSpot in an enterprise deal?"
-
-Returns the top objections HubSpot users raise and specific rebuttals your reps can use on calls.
-
-**Pre-call briefing:**
-> "Generate a pre-call briefing for my meeting tomorrow. The prospect is evaluating Datadog vs New Relic for their observability stack."
-
-Returns a focused briefing covering both competitors, key talking points, pricing angles, and questions to ask the prospect.
-
-## Pricing
-
-| Tier | Price | Queries/Day | Access |
-|------|-------|-------------|--------|
-| Free | $0 | 1 query | Read-only, single snapshot |
-| Starter | $49/mo | 50 | Read-only, all comparison tools |
-| Pro | $99/mo | 500 | Read + write (capture intelligence) |
-| Team | $149/mo | 2,000 | Full access + aggregate team data |
-
-## Links
-
-- **Full docs:** [battlecard.northr.ai/connect](https://battlecard.northr.ai/connect)
-- **Sign up:** [battlecard.northr.ai/signup](https://battlecard.northr.ai/signup)
-- **Homepage:** [battlecard.northr.ai](https://battlecard.northr.ai)
-
-Built by [Northr AI](https://northr.ai).
+Built by [Northr AI](https://battlecard.northr.ai)
