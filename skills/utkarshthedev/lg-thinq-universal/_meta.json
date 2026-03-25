@@ -3,9 +3,15 @@
   "slug": "lg-thinq-universal",
   "displayName": "Lg Thinq Universal",
   "latest": {
-    "version": "0.1.28",
-    "publishedAt": 1774080263855,
-    "commit": "https://github.com/openclaw/skills/commit/c90aff7d7607578a5fd35ba55b200cd56be47dee"
+    "version": "1.1.0",
+    "publishedAt": 1774202496245,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.28",
+      "publishedAt": 1774080263855,
+      "commit": "https://github.com/openclaw/skills/commit/c90aff7d7607578a5fd35ba55b200cd56be47dee"
+    }
+  ]
 }
