@@ -1,11 +1,17 @@
 {
   "owner": "jolestar",
   "slug": "webmcp-bridge",
-  "displayName": "WebMCP Bridge",
+  "displayName": "Webmcp Bridge",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1773759390367,
-    "commit": "https://github.com/openclaw/skills/commit/82384bf2b430d4b726c8c4c4a4d86bbf19470963"
+    "version": "0.1.1",
+    "publishedAt": 1774368642062,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1773759390367,
+      "commit": "https://github.com/openclaw/skills/commit/82384bf2b430d4b726c8c4c4a4d86bbf19470963"
+    }
+  ]
 }
