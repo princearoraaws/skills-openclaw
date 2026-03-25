@@ -1,30 +1,30 @@
 ---
 name: clawgo-upload
-description: 将本地文件或目录打包成 zip 上传到 clawgo.me，并获取可分享的克隆链接。当用户需要分享、备份或传输本地配置文件、工作区文件或任意本地文件时使用。触发词：「上传到 clawgo」、「分享我的配置」、「打包上传」、「生成克隆链接」、「传文件到 clawgo」。
+description: Zip local files or folders, upload to clawgo.me, and get a shareable clone link. Use when the user wants to share, back up, or move local workspace Markdown or other files. Triggers — "upload to clawgo", "share my workspace", "zip and upload", "generate clone link", "send files to clawgo".
 ---
 
-# ClawGo 上传 Skill
+# ClawGo upload skill
 
-将本地文件上传到 [clawgo.me](https://clawgo.me)，获得一个 12 位 key 的可分享克隆链接。
+Upload local files to [clawgo.me](https://clawgo.me) and receive a 12-character key and shareable clone URL.
 
-## 服务约束
+## Service limits
 
-- 基础地址：`https://clawgo.me`
-- 仅支持 `.zip` 文件，最大 512MB
-- Key 状态：`pending`（已生成未上传）→ `ready`（可下载）
-- 对同一 key 重复上传会**覆盖**之前的 zip
-- 上传字段名：`file` 或 `zip` 均可
+- Base URL: `https://clawgo.me`
+- Only `.zip` uploads, max 512MB
+- Key lifecycle: `pending` (key issued, zip not uploaded yet) → `ready` (downloadable)
+- Uploading again for the same key **replaces** the zip previously stored for that key on the server
+- Form field name for the file: `file` or `zip` (either works)
 
-## 执行流程
+## Workflow
 
-### 第一步 — 打包文件为 zip
+### Step 1 — Build a zip
 
-优先使用 Python（服务器可能没有 `zip` 命令）：
+Prefer Python (the machine may not have a `zip` CLI):
 
 ```python
 import zipfile, os
 
-files = ['SOUL.md', 'AGENTS.md', 'TOOLS.md', 'IDENTITY.md', 'USER.md']   # 按需调整
+files = ['SOUL.md', 'AGENTS.md', 'TOOLS.md', 'IDENTITY.md', 'USER.md']   # adjust as needed
 output = '/tmp/upload-payload.zip'
 
 with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as z:
@@ -33,7 +33,7 @@ with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as z:
             z.write(f)
 ```
 
-打包整个目录：
+Zip an entire directory:
 
 ```python
 import zipfile, os
@@ -48,17 +48,17 @@ with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as z:
             z.write(fpath, os.path.relpath(fpath, os.path.dirname(src_dir)))
 ```
 
-打包完成后，确认 zip 文件存在且大小不为零再继续。
+Confirm the zip exists and is non-empty before continuing.
 
-### 第二步 — 生成 key
+### Step 2 — Mint a key
 
 ```bash
 curl -s -X POST https://clawgo.me/api/keys/generate
 ```
 
-从返回 JSON 中提取 `key` 字段（12 位大写字母数字）。
+Read the `key` field from the JSON (12 alphanumeric characters, uppercase).
 
-### 第三步 — 上传 zip
+### Step 3 — Upload the zip
 
 ```bash
 curl -s -X POST \
@@ -66,43 +66,44 @@ curl -s -X POST \
   https://clawgo.me/api/clones/{key}/upload
 ```
 
-成功响应包含 `"status": "ready"` 和 `"available": true`。
+A successful response includes `"status": "ready"` and `"available": true`.
 
-### 第四步 — 向用户汇报
+### Step 4 — Report to the user
 
-上传成功后，向用户报告：
-- **克隆链接**：`https://clawgo.me/clone/{key}` — 可分享的链接
-- **Key**：12 位 key
-- **文件名和大小**：来自响应的 `fileName` 和 `fileSize`
-- **上传时间**：来自响应的 `createdAt`
+After a successful upload, tell the user:
 
-## 验证（可选）
+- **Clone link**: `https://clawgo.me/clone/{key}` — shareable URL
+- **Key**: the 12-character key
+- **File name and size**: from `fileName` and `fileSize` in the response
+- **Upload time**: from `createdAt` in the response
+
+## Optional check
 
 ```bash
 curl -s https://clawgo.me/api/clones/{key}/availability
 ```
 
-确认 `"available": true` 后再向用户汇报。
+Only report success to the user after `"available": true`.
 
-## OpenClaw 核心配置文件速查
+## OpenClaw workspace file reference
 
-当用户需要上传 OpenClaw 人格/配置文件时，标准最小集合为：
+When uploading OpenClaw workspace Markdown (persona and rule-style notes), a typical minimal set is:
 
-| 文件 | 用途 |
+| File | Role |
 |------|------|
-| `SOUL.md` | 核心身份、思维模型、行为准则 |
-| `AGENTS.md` | 会话启动协议、工具策略、红线约束 |
-| `TOOLS.md` | 本地工具配置、API Key、代理设置 |
-| `IDENTITY.md` | 名称、角色、Emoji 元信息 |
-| `USER.md` | 用户画像与上下文 |
+| `SOUL.md` | Primary identity, reasoning style, behavioral guardrails |
+| `AGENTS.md` | Session bootstrap, tool policy, hard limits |
+| `TOOLS.md` | Local tooling notes, third-party access hints, proxy routing |
+| `IDENTITY.md` | Display name, role, emoji metadata |
+| `USER.md` | User profile and session context |
 
-所有文件位于 `~/.openclaw/workspace/`。
+These paths live under `~/.openclaw/workspace/`.
 
-## 错误处理
+## Errors
 
-| HTTP 状态码 | 原因 | 处理方式 |
-|------------|------|---------|
-| 400 | key 格式错误 / 字段名错误 / 非 zip 文件 | 检查 key 是否为 12 位、字段是否为 `file`、文件是否以 `.zip` 结尾 |
-| 404 | key 不存在 | 重新执行第二步生成新 key |
-| 404（下载时）| key 仍为 `pending` | 上传未完成，重试上传 |
-| 500 | 服务内部错误 | 重试一次；若持续失败，告知用户 |
+| HTTP | Cause | What to do |
+|------|-------|------------|
+| 400 | Bad key shape / wrong field name / not a zip | Ensure 12-char key, field is `file`, filename ends with `.zip` |
+| 404 | Unknown key | Repeat Step 2 to mint a new key |
+| 404 (on download) | Key still `pending` | Upload did not finish; retry upload |
+| 500 | Server fault | Retry once; if it persists, tell the user |
