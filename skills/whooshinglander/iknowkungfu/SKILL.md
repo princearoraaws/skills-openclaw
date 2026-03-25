@@ -1,5 +1,5 @@
 ---
-name: iknowkungfu
+name: Iknowkungfu
 description: "Skill discovery engine. Analyzes what your agent does and recommends ClawHub skills you're missing. Use when: /kungfu, /kungfu-scan, /kungfu-gaps, 'what skills am I missing', 'recommend skills', 'what should I install', 'skill discovery'."
 ---
 
@@ -78,6 +78,10 @@ See `references/scoring.md`. Factors: downloads (25%), stars (20%), author rep (
 - READ-ONLY. Never installs, modifies, or removes anything. Zero network calls.
 - Only recommends skills passing trust AND relevance thresholds.
 - Honest about confidence. If no good match exists, says so.
+- NEVER include full file contents in output. Only summarize patterns and categories.
+- NEVER print API keys, tokens, passwords, SSH keys, or any credential-like strings found in any file.
+- When reporting security flags, describe the PATTERN found (e.g. "env var reference in script"), never quote the actual value.
+- Redact any file paths that contain usernames or home directories in output.
 
 ## Limitations
 
