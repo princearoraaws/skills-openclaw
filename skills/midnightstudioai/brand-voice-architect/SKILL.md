@@ -1,10 +1,10 @@
 ---
 name: brand-voice-architect
 description: >
-  A high-precision engine for deconstructing, documenting, and automating brand-specific
+  A high-precision engine for deconstructing, documenting, and synthesizing brand-specific
   linguistic patterns and tonal architectures. Use this skill whenever a user wants to:
   create or generate a brand voice guide, analyze writing samples or a corpus for tone/style,
-  audit content for linguistic consistency, build a voice system prompt, define brand pillars,
+  review content for linguistic consistency, build a voice system prompt, define brand pillars,
   identify prohibited words or preferred vocabulary, create "this not that" style guides,
   adapt tone across platforms (LinkedIn vs. technical docs vs. social), or reverse-engineer
   competitor or reference brand voices. Trigger even for loosely related requests like
@@ -13,7 +13,7 @@ description: >
 
 # Brand Voice Architect (BVA)
 
-A skill for engineering, documenting, and automating brand-specific voice with quantifiable precision. Brand voice is treated as a **Linguistic DNA** — a measurable biometric, not an aesthetic preference.
+A skill for engineering, documenting, and synthesizing brand-specific voice with quantifiable precision. Brand voice is treated as a **Linguistic DNA** — a measurable baseline, not an aesthetic preference.
 
 ---
 
@@ -35,10 +35,12 @@ Build the voice matrix:
 
 → Use `scripts/prompt_synthesizer.py` to generate deployable system prompts.
 
-### Phase III: Synthesis & Automation
+### Phase III: Delivery
 1. **Artifact Generation** — Produce voice guide docs, style reference cards, prompt templates
-2. **Audit** — `/audit [output]` compares generated content against established BVA metrics
-3. **Platform Pivot** — `/pivot [context]` adapts voice for specific channels while preserving DNA
+2. **Manual Review** — `/review [output]` provides a qualitative checklist to assess whether output aligns with the established voice pillars (Claude-assisted, not script-automated)
+3. **Platform Pivot** — `/pivot [context]` adapts voice for specific channels while preserving DNA, using `generate_platform_pivot()` from `prompt_synthesizer.py`
+
+> **Note on prohibited words:** The generated system prompt instructs the LLM to replace prohibited words with preferred equivalents. This is a prompt-level instruction — enforcement depends on the model following the system prompt, not on automated script-level filtering.
 
 ---
 
@@ -71,24 +73,20 @@ Every Brand Voice engagement must produce:
 
 ## Quick Reference Commands
 
-| Command | Action |
-|---------|--------|
-| `/analyze [corpus]` | Linguistic audit on provided text |
-| `/synthesize [pillars]` | Generate LLM system prompt from pillars |
-| `/audit [output]` | Score output against established voice metrics |
-| `/pivot [context]` | Adapt voice for target platform/audience |
+| Command | Action | Implementation |
+|---------|--------|---------------|
+| `/analyze [corpus]` | Linguistic audit on provided text | `scripts/voice_analyzer.py` |
+| `/synthesize [pillars]` | Generate LLM system prompt from pillars | `scripts/prompt_synthesizer.py` |
+| `/review [output]` | Qualitative checklist review against voice pillars | Claude-assisted (no script) |
+| `/pivot [context]` | Adapt voice for target platform/audience | `generate_platform_pivot()` in prompt_synthesizer |
 
 ---
 
 ## Scripts
 
-- `scripts/voice_analyzer.py` — Computes lexical density, ASL, keyword frequency from a corpus
-- `scripts/prompt_synthesizer.py` — Generates deployable LLM system prompts from brand config
+- `scripts/voice_analyzer.py` — Computes lexical density, ASL, cadence variance, sentiment temperature, and top keywords from a corpus
+- `scripts/prompt_synthesizer.py` — Generates deployable LLM system prompts from a `BrandConfig` object; includes `generate_platform_pivot()` for channel-specific adaptations
 
 ## References
 
 - `references/methodology.md` — Full technical methodology: 4-Pillar Framework, Cadence Analysis, Semantic Salience, Human-AI Collaborative Loop
-
-## Evals
-
-- `evals/evals.json` — 5 benchmark scenarios covering brand pivot, crisis comms, lexical constraint enforcement, cadence matching, and ethical tone boundaries
