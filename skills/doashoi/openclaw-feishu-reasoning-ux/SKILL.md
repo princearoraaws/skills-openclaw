@@ -18,6 +18,71 @@ This skill is for:
 
 This skill is not for generic Feishu app setup, permissions, or bot connectivity unless those directly block card delivery.
 
+## Read this first
+
+Before making any change, read:
+
+- [references/proven-case-and-pitfalls.md](./references/proven-case-and-pitfalls.md)
+
+Do not skip it.
+
+That document contains:
+- the real successful practice this skill came from
+- the real failure patterns we actually hit
+- the specific traps that repeatedly caused false fixes or broken environments
+
+Only after reading it should you decide whether the current case is:
+- close enough to a proven pattern to continue
+- only safe for low-risk card changes
+- or outside the proven cases and should be explained to the user first
+
+## Core operating principles
+
+This is not a "silently fix everything" skill.
+
+Treat it as:
+- a diagnosis-first skill
+- a user-consent-first customization skill
+- a backup-and-rollback-first skill
+
+The user keeps control of the risky steps.
+
+That means:
+- if the current environment differs from the proven cases, do not silently push ahead
+- explain the difference, the likely risk, the expected benefit, and the rollback path first
+- let the user decide whether to continue
+
+When in doubt:
+- prefer stopping with a clear explanation
+- prefer low-risk card-layer improvements
+- avoid self-authorized runtime/session/provider surgery
+
+## Real-world reference case
+
+This skill was validated on a specific real deployment shape, but do not treat every detail of that environment as a hard prerequisite.
+
+Proven reference case:
+- a specific OpenClaw build/runtime path
+- OpenClaw's built-in Feishu channel
+- `minimax-cn/MiniMax-M2.7`
+- not `minimax-portal/*`
+
+Use this case as a comparison point, not as a rigid gate.
+
+The details that matter most are usually:
+- whether the channel is the built-in OpenClaw Feishu channel
+- whether the current path emits usable live reasoning signals
+- whether the installed build still exposes the runtime hooks this customization depends on
+- provider/model path
+- loaded runtime path (`src/` vs `dist/`)
+- session/service state
+
+Treat OpenClaw version/build as a compatibility factor, not a rigid gate by itself.
+The question is not "is the version identical to the reference case?"
+The question is "does this installed build still expose compatible runtime contracts?"
+
+Do not overfocus on WSL vs non-WSL unless logs show environment differences are actually relevant.
+
 ## Interaction style for end users
 
 Assume many users do not know Feishu card internals, provider runtime details, or OpenClaw file layout.
@@ -46,6 +111,166 @@ A correct Feishu customization usually has to satisfy all of these:
 - changes are documented so they can be rebuilt later
 
 Do not optimize appearance first if delivery or runtime lane selection is broken.
+
+## Safe rollout strategy
+
+Default to phased customization, not all-at-once modification.
+
+The safest order is:
+
+1. **Low-risk card appearance changes**
+- titles
+- colors
+- card 2.0 layout
+- collapsible containers
+- rich text / container structure
+
+2. **Normal answer streaming behavior**
+- confirm ordinary streaming still works
+- keep reasoning disabled for now if needed
+
+3. **Raw reasoning capability check**
+- verify whether the current model/provider/runtime truly supports readable live reasoning
+
+4. **Raw reasoning runtime/session wiring**
+- only after capability is proven
+- only after ordinary card sending and answer streaming are stable
+
+5. **Persistence fixes**
+- only after the behavior is correct
+- patch new-session defaults or shared runtime logic so it survives restart and `/new`
+
+If the user only wants a better Feishu card experience, stop after phase 1 or phase 2.
+Do not pull them into high-risk reasoning/runtime changes unnecessarily.
+
+### How to explain phased rollout to the user
+
+Prefer language like:
+
+- `我们先做风险最小的部分：标题、颜色和卡片 2.0 容器。`
+- `普通回复流式先确认稳定，再决定要不要动 raw reasoning。`
+- `raw reasoning 这层要先看模型支不支持，支持再继续。`
+
+Do not jump straight into runtime surgery unless the user clearly wants visible raw reasoning.
+
+## Backup and rollback are mandatory
+
+Before any non-trivial Feishu customization, create a recovery trail first.
+
+This is not optional.
+
+Always do all three before risky changes:
+
+1. **Create a written change note**
+- summarize what is about to be changed
+- record the current model/provider/session assumptions
+- record the target files
+
+2. **Create a file backup**
+- back up every file that will be modified
+- use a clearly named backup directory with date/time context
+- do this before the first edit, not after
+
+3. **Prepare a user-facing rollback guide**
+- tell the user exactly how to restore the prior state
+- include file paths
+- include whether a gateway restart is needed after restore
+
+If the user environment is fragile, prefer incremental backup points instead of one large backup.
+
+### Minimum rollback instructions to provide
+
+Before claiming a risky change is ready to test, the agent must be able to tell the user:
+
+- which files were changed
+- where the backups were saved
+- how to restore the backups
+- whether restoring requires a gateway restart
+- how to verify that rollback succeeded
+
+If you cannot explain rollback clearly, the change is not ready.
+
+## Necessary conditions vs compatibility factors
+
+Separate hard requirements from things that only increase risk.
+Do not treat every difference from the reference case as a blocker.
+
+### Necessary conditions for raw reasoning customization
+
+These are the conditions that actually have to be true before you try to modify the raw reasoning lane:
+
+1. The current Feishu path is truly the intended channel implementation.
+- Verify whether the user is on:
+  - OpenClaw's built-in Feishu channel
+  - or Feishu's own official plugin / another integration path
+- Do not treat those as interchangeable.
+
+2. The current session is truly running on the intended provider/model path.
+- Verify the active session transcript, not just the global default.
+- Do not trust the agent saying it already switched.
+
+3. The current runtime path is actually producing usable reasoning signals.
+- Check `~/.openclaw/logs/raw-stream.jsonl`.
+- For MiniMax CN, look for `assistant_thinking_stream`.
+- If the current request produces no usable reasoning signal, card changes cannot create true raw reasoning.
+
+4. The installed OpenClaw build still exposes compatible runtime hooks.
+- Examples:
+  - `reasoningMode = "stream"` is honored
+  - `onReasoningStream` / `onReasoningEnd` can reach the final `replyOptions`
+  - the dispatcher contract still matches the patch strategy
+- A different version is acceptable if these contracts are still compatible.
+
+5. A rollback path is ready before risky edits.
+- If you cannot explain backup and rollback clearly, do not patch runtime/session/provider layers.
+
+### Compatibility factors that can change the implementation
+
+These are important to inspect, but they are not automatic reasons to stop:
+
+- exact OpenClaw version/build
+- loaded runtime path (`src/` vs `dist/`)
+- gateway service environment vs shell environment
+- session initialization behavior
+- local model registry / alias table
+- WSL vs non-WSL
+
+They matter because they may change how you implement the fix.
+They do not automatically mean the fix is impossible.
+
+### What to verify first
+
+0. The running OpenClaw version/build is known.
+- Verify the actual installed OpenClaw version before assuming the same fix path applies.
+- Use this to compare contracts, not as a rigid stop condition by itself.
+
+1.5. The current Feishu path is truly the intended channel implementation.
+- If the user is not on the built-in OpenClaw Feishu channel, say that explicitly before continuing.
+
+2. The gateway service environment matches the shell path that was proven to work.
+- Proxy-related env differences can make shell tests succeed while live Feishu traffic fails.
+- If raw reasoning only works in local CLI tests, compare gateway service env before touching cards.
+
+4. The dispatcher is in true reasoning stream mode.
+- OpenClaw only emits live reasoning callbacks when the runtime is in `reasoningMode = "stream"`.
+- `thinkingLevel = low` alone is not enough.
+
+5. `onReasoningStream` / `onReasoningEnd` are attached to the final `replyOptions`.
+- Attaching them only to intermediate dispatcher options is not sufficient.
+- If provider logs show live thinking but Feishu still only shows `Thinking...`, check this first.
+
+6. New Feishu direct sessions inherit reasoning defaults.
+- A manual session patch is not enough.
+- If `/new` or next-day sessions lose raw reasoning, fix session initialization so new Feishu direct sessions default to:
+  - `reasoningLevel = "stream"`
+  - `thinkingLevel = "low"`
+
+7. The model is actually registered in the local model table.
+- `minimax-cn/MiniMax-M2.7` is a known trap: the provider may support it while the local model registry still silently falls back to `M2.5`.
+- Verify the local model table before claiming that "M2.7 does not work".
+
+If the necessary conditions are not met, do not attempt raw reasoning customization.
+If only compatibility factors differ, adapt the implementation instead of stopping by reflex.
 
 ## First pass: identify the real layer
 
@@ -79,6 +304,53 @@ Before editing anything, classify the issue into one of these layers:
 - media/image sending path differs from text sending path
 
 Do not assume a visual symptom is a card-layer problem. A "Thinking..." only state is often a runtime or session-state problem.
+Also do not assume all "Feishu plugins" are the same execution path.
+
+## Stop conditions for risky changes
+
+Do not modify high-risk layers if any of these are still unclear:
+
+- whether the user is on the built-in OpenClaw Feishu channel
+- actual provider/model path
+- whether live reasoning signals truly exist
+- whether the installed build still exposes compatible runtime hooks
+- how to roll back the exact files you are about to edit
+
+If any of those are unknown, stop at one of these safe outcomes:
+
+1. diagnostic conclusion only
+2. low-risk card 2.0 appearance changes only
+3. ordinary answer streaming fixes only
+
+Do not continue into:
+- provider registration changes
+- session initialization changes
+- runtime callback wiring changes
+- `dist/` patching
+
+unless the above preconditions are verified.
+
+Do not stop only because the installed OpenClaw version/build differs from the reference case.
+Stop only when the build's actual runtime contracts are unknown or incompatible.
+
+## What to do when the situation is not covered by this skill yet
+
+If the current failure mode, runtime behavior, or channel behavior is not covered by the documented patterns in this skill, do not improvise silently.
+
+In that case:
+
+1. Explain clearly to the user that this is outside the known proven cases.
+2. State what is known, what is unknown, and which assumption would have to be made.
+3. Explain the risk level of the next possible change.
+4. Explain the rollback path before making any risky edit.
+5. Prefer stopping at diagnosis or low-risk card-layer changes unless the user explicitly wants to continue.
+
+Required style in those cases:
+- do not say "this should be safe" unless it is proven
+- do not present a guess as a confirmed root cause
+- do not continue directly into runtime/provider/session patching without warning the user
+
+If the user still wants to continue, proceed incrementally and verify after each step.
 
 ## Files to inspect first
 
@@ -164,6 +436,19 @@ Only after this check may you decide whether the task is:
 - a session/runtime routing problem
 - or a provider/model capability limit
 
+Important:
+- do not collapse all non-live cases into "the model does not support reasoning"
+- distinguish:
+  - supports true live raw reasoning
+  - supports only snapshot/transcript reasoning
+  - exposes encrypted/opaque reasoning
+  - exposes no readable reasoning at all
+
+A snapshot-only result means:
+- the model may still support reasoning
+- but not true live raw reasoning through the current path
+- the correct user-facing explanation is not simply "unsupported"
+
 #### How to explain the result to the user
 
 After capability detection, always convert the result into one of these user-facing outcomes:
@@ -177,6 +462,14 @@ After capability detection, always convert the result into one of these user-fac
 - Offer alternatives:
   - keep current model and improve card 2.0 appearance
   - switch to a model/provider path that supports raw reasoning
+
+2.5. **Model supports only snapshot/transcript reasoning**
+- Say that the current path can retain reasoning after completion, but not stream true live raw reasoning.
+- Do not describe this as "no reasoning support" without qualification.
+- Offer alternatives:
+  - keep the current model and improve card 2.0 / ordinary answer streaming
+  - switch to a path that exposes live raw reasoning
+  - if appropriate, design a replay/summary experience instead of pretending it is live raw reasoning
 
 3. **Model/provider state is unclear**
 - Say that the current route is not trustworthy yet.
@@ -192,6 +485,12 @@ For Feishu direct sessions that should show raw reasoning, check:
 
 If new sessions keep dropping reasoning visibility, fix session initialization, not just the current session entry.
 
+Also verify that the failure is not just a stale or wrong model override:
+- `providerOverride`
+- `modelOverride`
+- `authProfileOverride`
+- actual provider/model recorded in the latest assistant turn
+
 ### 4. Confirm dispatcher wiring
 
 For raw reasoning to display, the Feishu dispatcher must receive reasoning callbacks through the final reply options that runtime actually uses.
@@ -199,6 +498,9 @@ For raw reasoning to display, the Feishu dispatcher must receive reasoning callb
 Do not attach `onReasoningStream` to the wrong layer.
 
 If provider logs show thinking stream but Feishu only shows a static placeholder, inspect how `onReasoningStream` and `onReasoningEnd` are passed into the runtime.
+
+Also verify that the runtime path is really in reasoning stream mode.
+If the runtime is only in plain "thinking enabled" mode, Feishu may still get final transcript thinking without ever receiving live reasoning callbacks.
 
 ### 5. Confirm card lane behavior
 
@@ -258,6 +560,36 @@ All message paths should share the same title/header strategy:
 - image/media fallback card paths
 
 If titles regress in only one path, inspect `outbound.ts` and fallback card builders.
+
+## Known-good path vs. lookalikes
+
+Do not treat these as equivalent without evidence:
+
+- `official Feishu channel`
+- `same minimax-cn provider`
+- `same model name on screen`
+
+These can still differ in the real failure points:
+- session override drift
+- model table fallback
+- gateway service env drift
+- runtime callback wiring drift
+
+Always prove the real path with logs and transcripts.
+
+## Anti-patterns
+
+Do not let the agent do any of these:
+
+- assume "same provider + same channel" means same runtime path
+- patch only the current session and claim the issue is solved
+- modify only `src/` files when runtime behavior suggests the loaded code is from `dist/`
+- promise raw reasoning on a model before checking whether readable live reasoning exists
+- silently restart the gateway
+- apply provider/session/runtime changes before low-risk card-layer changes are verified
+- change provider model tables just because a model name "should" work
+- patch session initialization before proving the current-session behavior is correct
+- patch runtime callback wiring before proving the current path really emits live reasoning
 
 ### Rule 5: Fix the system, not a single task
 
