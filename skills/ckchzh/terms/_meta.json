@@ -3,9 +3,15 @@
   "slug": "terms",
   "displayName": "Terms",
   "latest": {
-    "version": "2.0.0",
-    "publishedAt": 1773808111768,
-    "commit": "https://github.com/openclaw/skills/commit/01495ada95f8378f713bb1148547bf09c7117b9a"
+    "version": "2.0.2",
+    "publishedAt": 1774231592131,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "2.0.0",
+      "publishedAt": 1773808111768,
+      "commit": "https://github.com/openclaw/skills/commit/01495ada95f8378f713bb1148547bf09c7117b9a"
+    }
+  ]
 }
