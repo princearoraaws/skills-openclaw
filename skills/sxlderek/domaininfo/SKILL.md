@@ -6,7 +6,7 @@ description: "Look up domain WHOIS information, check email security (DMARC/SPF/
 
 # domaininfo
 
-Look up domain WHOIS information and capture website screenshots.
+Look up domain WHOIS information and (optionally) capture website screenshots.
 
 ## When to Use
 
@@ -14,47 +14,64 @@ When the user types `whois <domain>` or `whois <url>` or `whois <email>`:
 - Strip any `https://`, `http://`, `www.` prefixes
 - If input contains `@`, extract the domain part after `@` (e.g., `user@example.com` → `example.com`)
 
-## Workflow (Strict Buffer-First — NO INTERMEDIATE OUTPUT)
+## Security Considerations
 
-**CRITICAL**: Zero output until everything is ready. No "processing", "capturing", "buffering" messages.
+- **Input validation**: After extracting the domain, only allow alphanumeric, hyphen, and dot characters. Reject anything else.
+- **Command injection prevention**: Never interpolate user input directly into shell strings. Prefer argument arrays / safe libraries.
+- **Timeouts**: Every external call must have a bounded timeout (e.g., 10s for WHOIS/DNS, 10s for TLS).
+- **Error handling**: On failure, return a generic user-friendly message and keep details internal.
+- **Output sanitization**: Build the final message as a single string before sending; never send partial responses.
+- **File-system safety**: If writing screenshots, restrict writes to a known directory under the skill folder and verify paths stay within it.
+- **Rate-limiting & caching**: Cache IP-to-country lookups briefly to avoid hammering external services.
 
-**Phase 1 — Silent Buffer**:
-- Execute `whois <domain>` → store registrar data
-- Execute `dig <domain>` → store A/AAAA/NS/MX records
-- **IP Geolocation (Country Code)**:
-  - For each IP address found in A/AAAA records and resolved from NS/MX hostnames:
-    - Query `https://ipinfo.io/{IP_ADDRESS}/country` using `web_fetch`.
-    - Store the returned country code.
-- **Check Email Security (DMARC/SPF/DKIM)**:
-  ```bash
-  dig _dmarc.<domain> TXT +short          # DMARC record
-  dig <domain> TXT +short | grep v=spf1   # SPF record
-  dig default._domainkey.<domain> TXT +short  # DKIM (default selector)
-  dig google._domainkey.<domain> TXT +short   # DKIM (Google)
-  dig selector1._domainkey.<domain> TXT +short # DKIM (Microsoft/Office365)
-  ```
-  Store: DMARC policy (p=), SPF mechanisms, DKIM presence
+## Workflow (Strict Buffer-First — SAFE EXECUTION)
 
-**Phase 2 — Screenshot & TLS Check**:
-- Capture screenshot with Playwright (see [references/setup.md](references/setup.md) for script details)
-- If website is HTTPS, also check TLS/SSL:
-  ```bash
-  echo | openssl s_client -connect domain:443 -servername domain 2>/dev/null | openssl x509 -noout -issuer -dates 2>/dev/null
-  ```
-  Extract:
-  - TLS version (from cipher/ssl_version lines)
-  - Certificate issuer (CA name)
-  - Not After (expiry date)
-- Wait 1 second, verify screenshot file exists
+**CRITICAL**: Zero output until everything is ready. No progress messages.
 
-**Phase 3 — Single Final Output**:
-- Send screenshot via `message` tool (if exists)
-- Output complete WHOIS bullet list + Email Security section + TLS info (if HTTPS)
-- ONE message only — no progress/chatter
+### Phase 1 — Silent Buffer with Validation
+
+1. **Extract & validate domain**
+   - Strip `https://`, `http://`, `www.` prefixes.
+   - If input contains `@`, take the part after `@`.
+   - Validate with regex `^[a-z0-9.-]+$` (case-insensitive).
+   - If invalid, abort and return “❌ Invalid domain”.
+2. **WHOIS**: run `whois` via safe exec with timeout (10s). Store registrar data.
+3. **DNS**: run `dig` for A, AAAA, NS, MX via safe exec with timeout (10s). Store results.
+4. **IP Geolocation (Country Code)**
+   - For each IP from A/AAAA and resolved NS/MX hostnames:
+     - Query `https://ipinfo.io/{IP}/country` using `web_fetch` with timeout (5s).
+     - Store the returned 2-letter country code.
+5. **Email Security (DMARC/SPF/DKIM)**
+   - DMARC: query TXT for `_dmarc.<domain>`
+   - SPF: query TXT for `<domain>` and extract the string containing `v=spf1` (parse in code; avoid shell pipelines)
+   - DKIM: query TXT for common selectors (`default`, `google`, `selector1`)
+
+### Phase 2 — Optional Screenshot + TLS
+
+#### Screenshot (ONLY if screenshot tooling is already available)
+
+Only attempt a website screenshot if one of the following is already available in this runtime:
+
+- **OpenClaw browser tool** (preferred): use the `browser` tool to navigate to the site and take a screenshot.
+- **Bundled Playwright script**: `scripts/domain-screenshot.js` (only if Node + Playwright + a Chromium runtime are already installed).
+
+If neither is available (missing tool / missing module / missing browser runtime), **skip the screenshot silently** and continue the report.
+
+#### TLS/SSL Check (if HTTPS)
+
+- Fetch certificate info with `openssl` (timeout 10s).
+- Extract: certificate issuer and expiry date.
+- If it fails or times out, note “TLS check failed” but continue.
+
+### Phase 3 — Single Final Output
+
+- If a screenshot was successfully captured, send it via the `message` tool.
+- Send the final WHOIS + DNS + Email Security + TLS summary in **one** message only.
 
 ## Send Screenshot (SINGLE SEND ONLY)
 
 Use `message` tool with action=send and filePath:
+
 ```json
 {
   "action": "send",
@@ -63,32 +80,10 @@ Use `message` tool with action=send and filePath:
 }
 ```
 
-Do NOT also use curl fallback — single send only. If message tool fails, report failure rather than double-sending.
+Do NOT also implement provider-API fallbacks (e.g., raw HTTP requests). If message sending fails, report failure rather than double-sending.
 
-## Required Setup
+## Setup Notes
 
-For detailed setup instructions, including system dependencies, Node.js dependencies, and the Playwright screenshot script, please refer to [references/setup.md](references/setup.md).
-
-## Example Output Format
-
-```
-• Registrar: [name] (IANA ID: [id])
-• Creation Date: [YYYY-MM-DD]
-• Expiry Date: [YYYY-MM-DD]
-• Domain Status: [status flags]
-• DNS Servers: [ns1, ns2, ...]
-• A Record: [IP] (Country Code)
-• AAAA Record: [IP or none] (Country Code)
-• MX Record: [priority] [server] ([IP] Country Code)
-
-[Email Security Section]
-• DMARC: [✅/❌ Active] | Policy: [none/quarantine/reject]
-• DMARC Report: [rua=mailto:... or none]
-• SPF: [✅/❌ Active] | Mechanisms: [a mx ip4:...]
-• SPF Mode: [~all (soft) / -all (hard)]
-• DKIM: [✅/❌/❓ Found] | Selector: [default/google/selector1]
-• Security Score: [🟢 Excellent / 🟡 Good / 🔴 Poor]
-
-• Website: [URL] → [status]
-• Screenshot: [sent/attached]
-```
+- This skill does **not** include step-by-step installation instructions for Playwright/Chromium.
+- Screenshot is an **optional enhancement** and must be skipped if screenshot tooling is not already present.
+- See `references/setup.md` for non-invasive environment notes.
