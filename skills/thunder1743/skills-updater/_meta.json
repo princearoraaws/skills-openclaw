@@ -3,9 +3,15 @@
   "slug": "skills-updater",
   "displayName": "Skills Updater - 技能自动升级器",
   "latest": {
-    "version": "1.0.7",
-    "publishedAt": 1774404554345,
-    "commit": "https://github.com/openclaw/skills/commit/d03f54faccb39272835d178cb9db6cc726692145"
+    "version": "1.0.8",
+    "publishedAt": 1774404691724,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.7",
+      "publishedAt": 1774404554345,
+      "commit": "https://github.com/openclaw/skills/commit/d03f54faccb39272835d178cb9db6cc726692145"
+    }
+  ]
 }

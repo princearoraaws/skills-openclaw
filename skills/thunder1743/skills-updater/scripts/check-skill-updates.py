@@ -167,7 +167,10 @@ class SkillUpdater:
 
         try:
             url = f"{CLAWHUB_API_BASE}/download?slug={slug}"
-            temp_zip = Path(f"/tmp/{slug}-latest.zip")
+            # Use tempfile module for secure temp path (prevents TOCTOU attacks)
+            import tempfile
+            with tempfile.NamedTemporaryFile(suffix=f'-{slug}.zip', delete=False) as tmp:
+                temp_zip = Path(tmp.name)
             
             # Download with SSL context
             request = urllib.request.Request(url)
@@ -175,8 +178,12 @@ class SkillUpdater:
             with open(temp_zip, 'wb') as f:
                 f.write(response.read())
             
-            # Extract _meta.json from the zip
+            # Extract _meta.json from the zip with path traversal protection
             with zipfile.ZipFile(temp_zip, 'r') as z:
+                # Validate all zip entries for path traversal
+                for name in z.namelist():
+                    if name.startswith('/') or '..' in name:
+                        raise ValueError(f"Unsafe zip entry detected: {name}")
                 if '_meta.json' in z.namelist():
                     meta_content = z.read('_meta.json').decode('utf-8')
                     meta = json.loads(meta_content)
@@ -255,10 +262,13 @@ class SkillUpdater:
 
     def update_skill(self, skill_path: Path, slug: str, latest_meta: Dict) -> bool:
         """Download and update skill to latest version."""
+        import tempfile
         try:
             url = f"{CLAWHUB_API_BASE}/download?slug={slug}"
-            temp_zip = Path(f"/tmp/{slug}-update.zip")
-            temp_extract = Path(f"/tmp/{slug}-update")
+            # Use tempfile for secure paths (prevents TOCTOU attacks)
+            with tempfile.NamedTemporaryFile(suffix=f'-{slug}.zip', delete=False) as tmp:
+                temp_zip = Path(tmp.name)
+            temp_extract = Path(tempfile.mkdtemp(suffix=f'-{slug}-update'))
             
             # Download with SSL context
             request = urllib.request.Request(url)
@@ -266,19 +276,18 @@ class SkillUpdater:
             with open(temp_zip, 'wb') as f:
                 f.write(response.read())
             
-            # Extract to temp directory
-            if temp_extract.exists():
-                shutil.rmtree(temp_extract)
-            temp_extract.mkdir(parents=True, exist_ok=True)
-            
+            # Validate and extract (path traversal protection)
             with zipfile.ZipFile(temp_zip, 'r') as z:
+                for name in z.namelist():
+                    if name.startswith('/') or '..' in name:
+                        raise ValueError(f"Unsafe zip entry rejected: {name}")
                 z.extractall(temp_extract)
             
             # Remove old skill and replace
             shutil.rmtree(skill_path)
             shutil.copytree(temp_extract, skill_path)
             
-            # Cleanup
+            # Cleanup temp files
             temp_zip.unlink()
             shutil.rmtree(temp_extract)
             
