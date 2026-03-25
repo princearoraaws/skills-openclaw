@@ -1,72 +1,60 @@
 {
   "name": "clawvitals",
-  "version": "0.1.0",
+  "version": "1.3.2",
+  "always": false,
   "displayName": "ClawVitals",
-  "description": "Security health check and recurring assessment for OpenClaw installations. Finds real issues, tracks posture over time, alerts on regressions.",
+  "description": "Security vitals checker for OpenClaw. Scans your installation, scores your setup, and shows you exactly what to fix. First scan in seconds.",
   "author": "Anguarda",
-  "license": "Apache-2.0",
+  "license": "MIT",
   "homepage": "https://clawvitals.io",
-  "repository": "https://github.com/ANGUARDA/Portfolio",
+  "repository": "https://github.com/ANGUARDA/clawvitals-skill",
   "minOpenClawVersion": "2026.3.0",
-  "controlLibraryVersion": "0.1.0",
-  "controlLibraryVersionRange": ">=0.1.0 <0.2.0",
+  "controlLibraryVersion": "1.0.0",
+  "controlLibraryVersionRange": ">=1.0.0 <2.0.0",
   "permissions": [
     "exec:openclaw:security-audit",
     "exec:openclaw:health",
     "exec:openclaw:update",
     "exec:openclaw:version",
-    "exec:openclaw:cron",
-    "filesystem:workspace",
-    "network:outbound:telemetry.clawvitals.io",
-    "network:outbound:api.clawvitals.io"
+    "exec:node:version"
   ],
   "intents": [
     {
-      "pattern": ["run clawvitals", "clawvitals scan", "check clawvitals", "clawvitals check"],
+      "pattern": [
+        "run clawvitals",
+        "clawvitals scan",
+        "check clawvitals",
+        "clawvitals check"
+      ],
       "handler": "handleScan"
     },
     {
-      "pattern": ["show clawvitals details", "clawvitals full report", "clawvitals details"],
-      "handler": "handleDetail"
-    },
-    {
-      "pattern": ["clawvitals history"],
-      "handler": "handleHistory"
-    },
-    {
       "pattern": [
-        "clawvitals schedule",
-        "clawvitals setup schedule",
-        "clawvitals schedule daily",
-        "clawvitals schedule weekly",
-        "clawvitals schedule monthly",
-        "clawvitals schedule off"
+        "show clawvitals details",
+        "clawvitals full report",
+        "clawvitals details"
       ],
-      "handler": "handleSchedule"
-    },
-    {
-      "pattern": ["clawvitals telemetry on", "clawvitals telemetry off"],
-      "handler": "handleTelemetry"
-    },
-    {
-      "pattern": ["clawvitals exclude *", "clawvitals exclusions"],
-      "handler": "handleExclusions"
-    },
-    {
-      "pattern": ["clawvitals link *"],
-      "handler": "handleLink"
-    },
-    {
-      "pattern": ["clawvitals config *"],
-      "handler": "handleConfig"
-    },
-    {
-      "pattern": ["clawvitals status"],
-      "handler": "handleStatus"
+      "handler": "handleDetail"
     }
   ],
-  "cron": {
-    "jobName": "clawvitals:scheduled-scan",
-    "handler": "handleScheduledScan"
+  "tags": [
+    "security",
+    "audit",
+    "health-check",
+    "openclaw",
+    "monitoring",
+    "vitals",
+    "security-vitals"
+  ],
+  "metadata": {
+    "openclaw": {
+      "requires": {
+        "bins": [
+          "openclaw",
+          "node"
+        ]
+      },
+      "minVersion": "2026.3.0"
+    }
   }
 }
