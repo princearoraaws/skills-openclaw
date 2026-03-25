@@ -1,0 +1,11 @@
+{
+  "owner": "zebra6-web",
+  "slug": "fluid-network-agent-lenovo",
+  "displayName": "Fluid Network Agent",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1773974044731,
+    "commit": null
+  },
+  "history": []
+}
