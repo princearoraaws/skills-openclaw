@@ -10,9 +10,11 @@ digest 子命令：抓取后输出按来源分组的 Markdown（标题+链接简
 from __future__ import annotations
 
 import html
+import ipaddress
 import json
 import os
 import re
+import socket
 import sys
 import gzip
 import urllib.request
@@ -129,9 +131,98 @@ def _decode_xml_bytes(b: bytes) -> str:
     return b.decode("utf-8", errors="replace")
 
 
-def _fetch_url(url: str, timeout: float, max_bytes: int = 3_500_000) -> bytes:
-    if not (url.startswith("http://") or url.startswith("https://")):
+def _env_on(name: str, default: str = "1") -> bool:
+    v = os.environ.get(name, default).strip().lower()
+    return v not in ("0", "false", "no", "off")
+
+
+def _host_allowed_by_env(host: str) -> bool:
+    """
+    可选域名白名单：
+    - NEWS_CN_ALLOW_HOSTS="36kr.com,ithome.com,.sina.com.cn"
+    - 支持精确匹配与前缀点后缀匹配（.example.com 表示子域）
+    """
+    raw = os.environ.get("NEWS_CN_ALLOW_HOSTS", "").strip()
+    if not raw:
+        return True
+    h = (host or "").lower().strip(".")
+    if not h:
+        return False
+    for item in raw.split(","):
+        p = item.strip().lower()
+        if not p:
+            continue
+        if p.startswith("."):
+            sfx = p[1:]
+            if sfx and (h == sfx or h.endswith("." + sfx)):
+                return True
+        else:
+            if h == p or h.endswith("." + p):
+                return True
+    return False
+
+
+def _resolve_host_ips(host: str) -> List[str]:
+    out: List[str] = []
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except Exception:
+        return out
+    for info in infos:
+        try:
+            ip = info[4][0]
+        except Exception:
+            continue
+        if ip and ip not in out:
+            out.append(ip)
+    return out
+
+
+def _ip_is_privateish(ip: str) -> bool:
+    try:
+        a = ipaddress.ip_address(ip)
+    except Exception:
+        return True
+    return bool(
+        a.is_loopback
+        or a.is_private
+        or a.is_link_local
+        or a.is_multicast
+        or a.is_reserved
+        or a.is_unspecified
+    )
+
+
+def _validate_remote_url(url: str) -> None:
+    """
+    URL 访问安全检查：
+    - 仅 http/https
+    - 可选白名单 NEWS_CN_ALLOW_HOSTS
+    - 默认拦截本机/私网/链路本地等地址（NEWS_CN_BLOCK_PRIVATE=0 可关闭）
+    """
+    p = urlparse(url)
+    if p.scheme not in ("http", "https"):
         raise ValueError("only http(s) URLs allowed")
+    host = (p.hostname or "").strip().lower()
+    if not host:
+        raise ValueError("url host is empty")
+    if not _host_allowed_by_env(host):
+        raise ValueError("host not allowed by NEWS_CN_ALLOW_HOSTS: %s" % host)
+    if not _env_on("NEWS_CN_BLOCK_PRIVATE", "1"):
+        return
+    if host == "localhost" or host.endswith(".localhost"):
+        raise ValueError("blocked private/local host: %s" % host)
+    ips = _resolve_host_ips(host)
+    if not ips:
+        # 解析失败时保持安全默认，避免未知主机绕过
+        raise ValueError("dns resolve failed for host: %s" % host)
+    bad = [ip for ip in ips if _ip_is_privateish(ip)]
+    if bad:
+        raise ValueError("blocked private/local address for host %s: %s" % (host, ",".join(bad)))
+
+
+def _fetch_url(url: str, timeout: float, max_bytes: int = 3_500_000) -> bytes:
+    _validate_remote_url(url)
     ua = os.environ.get(
         "NEWS_CN_UA",
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",

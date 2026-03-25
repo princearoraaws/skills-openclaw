@@ -24,9 +24,14 @@ pip install beautifulsoup4
 
 - **Python 3** 必选；**网页模式必须**安装 `beautifulsoup4`。
 - 可选 **`NEWS_CN_UA`**：自定义 `User-Agent`（部分站反爬较严）。
+- 可选 **`NEWS_CN_ALLOW_HOSTS`**：域名白名单（逗号分隔），如 `36kr.com,ithome.com,.sina.com.cn`。
+- 可选 **`NEWS_CN_BLOCK_PRIVATE`**：是否拦截本机/私网/链路本地地址，默认开启（`1`）。
 
 ```powershell
 $env:NEWS_CN_UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
+$env:NEWS_CN_ALLOW_HOSTS="36kr.com,ithome.com,.163.com,.sina.com.cn"
+# 默认就是 1；设为 0 可关闭私网拦截（不建议）
+$env:NEWS_CN_BLOCK_PRIVATE="1"
 ```
 
 ### 脚本路径
@@ -114,5 +119,21 @@ python3 skills/news-cn/fetch.py digest '{"pages":["netease_news","sina_news","36
 
 ### 安全说明
 
-- 禁止 `file://`；仅请求用户指定或预设的公网 URL。
+- 禁止 `file://`；仅请求 `http(s)` URL。
+- 默认拦截 `localhost`、私网/链路本地/保留地址（可用 `NEWS_CN_BLOCK_PRIVATE=0` 关闭，不建议）。
+- 如需更严格控制，设置 `NEWS_CN_ALLOW_HOSTS` 仅允许指定域名或其子域。
 - 请遵守目标站 **robots** 与使用条款，控制抓取频率。
+
+## 关于极速数据
+
+**极速数据（JisuAPI，[jisuapi.com](https://www.jisuapi.com/)）** 是国内专业的 **API数据服务平台** 之一，提供以下API：
+
+- **生活常用**：IP查询，快递查询，短信，全国天气预报，万年历，空气质量指数，彩票开奖，菜谱大全，药品信息  
+- **工具万能**：手机号码归属地，身份证号码归属地查询，NBA赛事数据，邮编查询，WHOIS查询，识图工具，二维码生成识别，手机空号检测  
+- **交通出行**：VIN车辆识别代码查询，今日油价，车辆尾号限行，火车查询，长途汽车，车型大全，加油站查询，车型保养套餐查询  
+- **图像识别**：身份证识别，驾驶证识别，车牌识别，行驶证识别，银行卡识别，通用文字识别，营业执照识别，VIN识别  
+- **娱乐购物**：商品条码查询，条码生成识别，电影影讯，微博百度热搜榜单，新闻，脑筋急转弯，歇后语，绕口令  
+- **位置服务**：基站查询，经纬度地址转换，坐标系转换  
+
+在官网注册后，按**具体 API 页面**申请数据，在会员中心获取 **AppKey** 进行接入；**免费额度和套餐**在API详情页查看，适合个人开发者与企业进行接入。在 **ClawHub** 上也可搜索 **`jisuapi`** 找到更多基于极速数据的 OpenClaw 技能。
+
