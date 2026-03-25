@@ -20,4 +20,8 @@ cp -R skills/gougoubi-recovery-ops "$CODEX_HOME/skills/"
 ls -la "$CODEX_HOME/skills/gougoubi-recovery-ops"
 ```
 
+## Post-install check
+
+Open `SKILL.md` and confirm the referenced recovery scripts exist in the local project checkout before using this skill.
+
 Restart the agent runtime after installation.
