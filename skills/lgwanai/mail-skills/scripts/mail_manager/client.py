@@ -5,6 +5,7 @@ from email.policy import default
 import smtplib
 import imap_tools
 from imap_tools import MailBox, A
+import imaplib
 import logging
 from bs4 import BeautifulSoup
 
@@ -25,13 +26,32 @@ class MailClient:
         use_ssl = str(self.config.get('USE_SSL', 'true')).lower() == 'true' or imap_port == 993
         
         try:
-            if use_ssl:
-                mailbox = MailBox(imap_server, port=imap_port)
-            else:
-                mailbox = MailBox(imap_server, port=imap_port)
+            print(f"Connecting to {imap_server}:{imap_port} (is_netease={any(domain in imap_server.lower() for domain in ['163.com', '126.com', 'yeah.net'])}, use_ssl={use_ssl})")
+            
+            # Standard connection for all providers
+            mailbox = MailBox(imap_server, port=imap_port)
+            
+            # Special handling for Netease (163/126/yeah) mail servers
+            # They require an ID command before LOGIN to avoid "Unsafe Login" errors
+            is_netease = any(domain in imap_server.lower() for domain in ['163.com', '126.com', 'yeah.net'])
+            if is_netease:
+                try:
+                    mailbox.client._simple_command('ID', '("name" "PythonMailClient" "version" "1.0")')
+                except Exception:
+                    tag = mailbox.client._new_tag()
+                    mailbox.client.send(f'{tag} ID ("name" "PythonMailClient" "version" "1.0")\r\n'.encode())
+                    while True:
+                        line = mailbox.client.readline()
+                        if tag in line:
+                            break
+            
+            # Now login
             mailbox.login(self.email, self.password)
             return mailbox
+                
         except Exception as e:
+            import traceback
+            traceback.print_exc()
             logger.error(f"Failed to connect to IMAP server {imap_server}: {e}")
             raise
 
@@ -169,10 +189,29 @@ class MailClient:
             mailbox.folder.set(folder)
             mailbox.flag(uids, imap_tools.MailMessageFlags.FLAGGED, is_starred)
             
+    def create_folder(self, folder_name):
+        """Create a new folder on the server"""
+        try:
+            with self._get_mailbox() as mailbox:
+                if not mailbox.folder.exists(folder_name):
+                    mailbox.folder.create(folder_name)
+                    return True
+                return False
+        except Exception as e:
+            logger.error(f"Failed to create folder {folder_name}: {e}")
+            raise
+
     def move_emails(self, uids, destination_folder, source_folder='INBOX'):
         """Move emails to another folder"""
         if not uids:
             return
+        
+        # Try to create folder first, ignore if it already exists
+        try:
+            self.create_folder(destination_folder)
+        except:
+            pass
+            
         with self._get_mailbox() as mailbox:
             mailbox.folder.set(source_folder)
             mailbox.move(uids, destination_folder)
