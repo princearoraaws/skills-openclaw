@@ -1,0 +1,18 @@
+{
+  "name": "360-web-search",
+  "version": "1.0.3",
+  "description": "Real-time Chinese web search powered by 360's search engine API",
+  "homepage": "https://ai.360.cn",
+  "env": {
+    "SEARCH_360_API_KEY": {
+      "description": "360 Search API key. Get yours at https://ai.360.cn — Open Platform → API Key Management",
+      "required": true,
+      "value": ""
+    }
+  },
+  "settings": {
+    "default_count": 5,
+    "default_fresh_day": 7,
+    "ref_prom": "aiso-pro"
+  }
+}
