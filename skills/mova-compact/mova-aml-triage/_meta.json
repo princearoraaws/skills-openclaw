@@ -1,0 +1,11 @@
+{
+  "owner": "mova-compact",
+  "slug": "mova-aml-triage",
+  "displayName": "Mova Aml Triage",
+  "latest": {
+    "version": "2.0.1",
+    "publishedAt": 1774364127871,
+    "commit": null
+  },
+  "history": []
+}
