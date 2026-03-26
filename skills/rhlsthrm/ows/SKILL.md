@@ -6,30 +6,26 @@ Local-first, multi-chain wallet management for AI agents. By MoonPay.
 - GitHub: https://github.com/open-wallet-standard/core
 - npm: https://www.npmjs.com/package/@open-wallet-standard/core
 
+## Prerequisites
+
+OWS CLI (`ows`) must be pre-installed by the user. This skill does not install software. See https://openwallet.sh for installation instructions.
+
 ## When to Use
 
 - Checking wallet balances
-- Signing transactions or messages (EVM, Solana, Bitcoin, Cosmos, etc.)
+- Signing transactions or messages
 - Making x402 payments to paid APIs
-- Creating and managing agent wallets
-
-## Install
-
-```bash
-npm install -g @open-wallet-standard/core
-```
+- Querying wallet info
 
 ## CLI Reference
 
 ```bash
-# Wallet management
-ows wallet create --name <name>    # Create new wallet (all chains derived automatically)
+# Wallet info
 ows wallet list                    # List all wallets
 ows wallet info                    # Show vault path + supported chains
 
 # Balances
 ows fund balance --wallet <name> --chain <chain>   # Check balance (base, ethereum, solana, etc.)
-ows fund deposit --wallet <name> --chain <chain>    # Get deposit link
 
 # Signing
 ows sign message --wallet <name> --chain <chain> --message <msg>
@@ -43,9 +39,8 @@ ows pay discover <url>                       # Discover x402 services
 ## Node.js SDK
 
 ```typescript
-import { createWallet, signMessage } from "@open-wallet-standard/core";
+import { signMessage } from "@open-wallet-standard/core";
 
-const wallet = createWallet("my-wallet");
 const sig = signMessage("my-wallet", "evm", "hello");
 ```
 
@@ -55,13 +50,14 @@ EVM (Ethereum, Base, Polygon, Arbitrum), Solana, Bitcoin, Cosmos, Tron, TON, Sui
 
 ## Security Model
 
-- Keys encrypted at rest (AES-256-GCM) in `~/.ows/wallets/`
+- Keys encrypted at rest (AES-256-GCM)
 - Keys decrypted only during signing, wiped from memory immediately after
 - Pre-signing policy engine for spending limits and chain allowlists
 - The OWS API never returns raw private keys
-- Append-only audit log at `~/.ows/logs/audit.jsonl`
+- Append-only audit log
 
 ## Important
 
 - Never ask for or handle raw private keys. OWS signs internally.
-- See the full docs at https://openwallet.sh for policy engine and advanced usage.
+- Do not install or update OWS packages. Only use pre-installed CLI.
+- See https://openwallet.sh for full documentation.
