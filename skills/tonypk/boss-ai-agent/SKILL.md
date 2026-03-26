@@ -1,8 +1,8 @@
 ---
 name: boss-ai-agent
 title: "Boss AI Agent"
-version: "3.0.0"
-description: "Boss AI Agent — your AI management advisor. 16 mentor philosophies, 9 culture packs, C-Suite board simulation. Works instantly after install. Connect manageaibrain.com MCP for full team automation: auto check-ins, tracking, reports, 23+ platform messaging."
+version: "5.1.0"
+description: "Boss AI Agent — your AI management advisor. 16 mentor philosophies, 9 culture packs, C-Suite board simulation, execution intelligence engine, AI recommendation engine. Works instantly after install. Connect manageaibrain.com MCP for full team automation: auto check-ins, tracking, KPI metrics, task management, risk signals, incentive scoring, AI recommendations, 23+ platform messaging. Integrates with OpenClaw MCP connectors (Notion, Jira, GitHub, Slack, etc.) to build a company context layer — the foundation for all management intelligence."
 user-invocable: true
 emoji: "🤖"
 homepage: "https://manageaibrain.com"
@@ -32,10 +32,56 @@ Always respond in the boss's language. Auto-detect from conversation context.
 
 Check if the `get_team_status` MCP tool is available in your tool list.
 
-- **If YES → Team Operations Mode**: Use all 13 MCP tools for real team management — send check-ins, track responses, generate reports, chase non-responders, deliver messages. Announce: "Running in Team Operations Mode — connected to your team."
+- **If YES → Team Operations Mode**: Use all 24 MCP tools for real team management — send check-ins, track responses, generate reports, chase non-responders, deliver messages, monitor KPIs, track execution risks, manage incentives. Announce: "Running in Team Operations Mode — connected to your team."
 - **If NO → Advisor Mode**: Use the embedded mentor frameworks below to answer management questions directly — generate check-in questions, prepare 1:1s, simulate C-Suite discussions, advise on decisions. No cloud connection needed. Announce: "Running in Advisor Mode — I'll use mentor frameworks to help with management decisions."
 
 If MCP becomes available mid-session (user connects it), announce the mode upgrade. If MCP drops, fall back to Advisor Mode gracefully.
+
+## OpenClaw Integration Architecture
+
+Boss AI Agent is designed as the **brain layer** that sits on top of OpenClaw's MCP connector ecosystem. The skill itself does NOT integrate directly with external tools — OpenClaw handles all tool connections. The skill consumes the data these connectors provide.
+
+```
+OpenClaw Runtime (user environment)
+  ├── MCP Connectors (user self-installs via OpenClaw)
+  │    ├── Storage: Notion / Jira / Google Sheets
+  │    ├── Development: GitHub / Linear / Calendar / Gmail
+  │    └── Communication: Telegram / Slack / Discord / Lark / Signal
+  │
+  └── Boss AI Agent Skill (brain layer)
+       └── manageaibrain.com API
+            ├── Company Context Layer  ← foundation for all reasoning
+            ├── Execution Intelligence ← signals, risks, working memory
+            ├── Communication Parser   ← check-ins → structured events
+            ├── Incentive Engine       ← context-aware scoring
+            └── AI Recommendation Engine ← proactive management suggestions
+```
+
+### Company Context Layer
+
+The Context Layer is the **foundation** — all intelligence engines depend on it. It aggregates:
+
+- **Organization context**: strategic priorities, key risks, management style, countries of operation
+- **Employee context**: execution scores, current workload, strengths, risk flags, work scope
+- **Goal context**: OKRs, KPIs with baselines and targets, goal ownership and attribution
+- **Project context**: active projects, task status, blockers, delivery timelines
+
+When OpenClaw MCP connectors are installed, they enrich the context layer automatically:
+- **Notion/Jira/Sheets** → project updates, task status, documentation changes flow into the context
+- **GitHub/Linear** → PR activity, commit patterns, CI status feed into execution signals
+- **Telegram/Slack/Discord/Lark** → employee messages are parsed into structured management events (blockers reported, tasks completed, commitments made, delays flagged)
+
+### Data Ingestion Pipeline
+
+External tool data flows through the brain in stages:
+
+1. **OpenClaw connectors** deliver raw data (GitHub commits, Jira updates, Slack messages, check-in reports)
+2. **Communication Parser** extracts structured management events (event types: `blocker_reported`, `task_completed`, `commitment_made`, `delay_reported`, `escalation_needed`, `proactive_update`)
+3. **State Engine** generates execution signals from events + metrics + tasks (overload risk, delivery risk, engagement drops, blocker cascades)
+4. **Working Memory** maintains the AI's situational awareness — focus areas, momentum, pending decisions, recent wins
+5. **Recommendation Engine** synthesizes all context through the active mentor's lens to generate prioritized management suggestions
+
+**Key principle**: the skill reasons from company context first, not from isolated data points. Always call `get_company_state` before making management recommendations.
 
 ## Permissions & Data
 
@@ -49,7 +95,7 @@ If MCP becomes available mid-session (user connects it), announce the mode upgra
 
 All Advisor Mode permissions, plus:
 
-- **MCP tools**: All 13 MCP tools are hosted on `manageaibrain.com/mcp`. Tool parameters (e.g. employee name, discussion topic, report period) are sent to the cloud server for processing. 9 tools are read-only queries; 4 write tools (`send_checkin`, `chase_employee`, `send_summary`, `send_message`) actively send messages to employees via Telegram/Slack/Lark/Signal — use with intent.
+- **MCP tools**: All 24 MCP tools are hosted on `manageaibrain.com/mcp`. Tool parameters (e.g. employee name, discussion topic, report period) are sent to the cloud server for processing. 18 tools are read-only queries; 4 write tools (`send_checkin`, `chase_employee`, `send_summary`, `send_message`) actively send messages to employees via Telegram/Slack/Lark/Signal — use with intent; 2 recommendation tools (`get_recommendations`, `execute_recommendation`) manage AI-generated management suggestions.
 - **Cron jobs**: registers up to 5 recurring jobs via OpenClaw's cron API. Solo founder mode (team=0) only registers 2 jobs. See [Cron Job Management](#cron-job-management) for details.
 - **External services** (GitHub, Linear, Jira, Notion): accessed through OpenClaw's configured integrations — the skill does NOT store or manage tokens for these services.
 - **Cloud API** (optional): when `BOSS_AI_AGENT_API_KEY` is set, the skill additionally makes read-only GET requests to `manageaibrain.com/api/v1/` for extended mentor configs and analytics dashboards.
@@ -69,10 +115,10 @@ No network communication. All mentor knowledge is embedded in this skill file.
 | Direction | What | How |
 |-----------|------|-----|
 | Skill → MCP Server | Tool parameters (employee names, topics, report periods) | MCP protocol to `manageaibrain.com/mcp` |
-| MCP Server → Skill | Query results (team status, reports, alerts, profiles) | MCP protocol response |
+| MCP Server → Skill | Query results (team status, reports, alerts, profiles, context, signals) | MCP protocol response |
 | MCP Server → Employees | Check-in questions, chase reminders, summaries, messages | Write tools trigger delivery via Telegram/Slack/Lark/Signal |
 | Cloud API → Skill | Mentor YAML configs, analytics dashboards | GET with API key auth (optional) |
-| OpenClaw → Skill | Employee messages, GitHub/Jira data | Via OpenClaw's configured integrations |
+| OpenClaw Connectors → Brain | Storage data (Notion pages, Jira tasks, Sheets), dev data (GitHub PRs, commits), messages (Slack, Discord) | Via OpenClaw's MCP connectors → parsed into management events |
 | Skill → Local disk | `config.json` with full team settings | Single file, user-editable |
 
 **What goes to the cloud**: MCP tool parameters (employee names, discussion topics, message content) are processed on `manageaibrain.com`. The server stores team data in PostgreSQL.
@@ -105,9 +151,9 @@ The skill registers up to 5 recurring cron jobs during first run:
 
 ### MCP Tools
 
-All backend operations use 13 MCP tools (Team Operations Mode only). Use these directly — no manual API calls needed.
+All backend operations use 24 MCP tools (Team Operations Mode only). Use these directly — no manual API calls needed.
 
-### Read Tools (query only)
+### Read Tools — Daily Operations (9)
 
 | Tool | What it does |
 |------|-------------|
@@ -121,7 +167,21 @@ All backend operations use 13 MCP tools (Team Operations Mode only). Use these d
 | `list_employees` | List all active employees with roles |
 | `get_employee_profile` | Employee profile with sentiment trend and submission history |
 
-### Write Tools (sends messages to employees)
+### Read Tools — Execution Intelligence (9)
+
+| Tool | What it does |
+|------|-------------|
+| `get_company_state` | Full operational snapshot: risks, overdue tasks, event counts, blocked projects, working memory |
+| `get_execution_signals` | AI-generated risk signals: overload, delivery, engagement, blockers, spikes, anomalies |
+| `get_communication_events` | Structured events extracted from check-ins: blockers, completions, commitments, delays |
+| `get_top_risks` | Highest-severity execution risks sorted by urgency score |
+| `get_working_memory` | AI's situational awareness: focus areas, momentum, pending decisions, action items |
+| `get_kpi_dashboard` | All KPI metrics with latest values vs targets |
+| `get_overdue_tasks` | Tasks past their due date with priority and assignee |
+| `get_task_stats` | Task status breakdown: todo, in_progress, in_review, done, blocked |
+| `get_incentive_scores` | Per-employee incentive scores for a period with breakdowns and review flags |
+
+### Write Tools (4 — sends messages to employees)
 
 | Tool | What it does |
 |------|-------------|
@@ -131,6 +191,15 @@ All backend operations use 13 MCP tools (Team Operations Mode only). Use these d
 | `send_message` | Send a custom message to an employee via their preferred channel |
 
 Write tools actively send messages via Telegram/Slack/Lark/Signal. OpenClaw users can also use `message send` for multi-platform messaging.
+
+### AI Recommendations (2)
+
+| Tool | What it does |
+|------|-------------|
+| `get_recommendations` | Get pending AI management recommendations with suggested actions, priority, evidence |
+| `execute_recommendation` | Execute a specific action on a recommendation (send message, schedule meeting, etc.) |
+
+The recommendation engine runs a daily scan (10:30 AM) analyzing team data through the active mentor's lens, plus real-time triggers on events like consecutive missed check-ins, sentiment drops, and overdue tasks. Each recommendation includes prioritized suggested actions that can be executed directly.
 
 ## First Run
 
@@ -266,9 +335,9 @@ User: "Switch to Inamori" → update `config.json` mentor field and apply new fr
 
 ## Team Operations Mode
 
-In Team Operations Mode (MCP tools detected), you have access to all Advisor Mode capabilities PLUS 13 MCP tools, 5 cron jobs, and persistent data storage. The sections below (Cron Job Management, MCP Tools, Scenarios) only apply in this mode.
+In Team Operations Mode (MCP tools detected), you have access to all Advisor Mode capabilities PLUS 24 MCP tools, 5 cron jobs, and persistent data storage. The sections below (Cron Job Management, MCP Tools, Scenarios) only apply in this mode.
 
-### 7 Automated Scenarios
+### 11 Automated Scenarios
 
 | # | Scenario | Trigger | What happens |
 |---|----------|---------|-------------|
@@ -279,8 +348,12 @@ In Team Operations Mode (MCP tools detected), you have access to all Advisor Mod
 | 5 | Signal Scanning | Every 30min during work hours | Monitor channels for urgent/warning/positive signals |
 | 6 | Knowledge Base | "record this decision" | Save to Notion/Sheets/local files + memory |
 | 7 | Emergency Response | 2+ critical signals detected | Alert boss immediately → gather intel → recommend action |
+| 8 | Execution Risk Review | "what are our risks?" or daily cron | `get_company_state` + `get_top_risks` → risk summary with recommended actions |
+| 9 | KPI Health Check | "how are our metrics?" or weekly cron | `get_kpi_dashboard` → metrics vs targets, off-track alerts |
+| 10 | Incentive Review | "show incentive scores for {period}" | `get_incentive_scores` → per-employee breakdown, human review flags |
+| 11 | AI Recommendations | "any recommendations?" or daily 10:30 AM scan | `get_recommendations` → show pending AI suggestions with priority, evidence, and one-click actions |
 
-Use MCP tools to power these scenarios. Read tools (`get_team_status`, `get_report`, `get_alerts`, `get_employee_profile`) for monitoring. Write tools (`send_checkin`, `chase_employee`, `send_summary`, `send_message`) for proactive outreach. The mentor and culture settings shape how each scenario communicates.
+Use MCP tools to power these scenarios. Read tools for monitoring: `get_team_status`, `get_report`, `get_alerts`, `get_employee_profile` for people; `get_company_state`, `get_execution_signals`, `get_top_risks` for operations; `get_kpi_dashboard`, `get_task_stats` for metrics. Write tools (`send_checkin`, `chase_employee`, `send_summary`, `send_message`) for proactive outreach. The mentor and culture settings shape how each scenario communicates.
 
 ## Mentor System
 
@@ -370,9 +443,30 @@ When `config.mentorBlend` is set (e.g. `{"secondary": "inamori", "weight": 70}`)
 
 **Team Operations Mode**: Use `board_discuss` for persistent discussion history stored on server, enriched with actual team data. Use `chat_with_seat` for direct questions to individual executives.
 
+## 中文介绍
+
+Boss AI Agent 是老板的 AI 管理中间件。安装后立即可用（Advisor 模式），无需注册账号。
+
+**两种模式：**
+- **顾问模式**（零依赖）— 16 位导师哲学框架（稻盛和夫、马云、马斯克等）、9 套文化包（中国、菲律宾、新加坡等）、C-Suite 董事会模拟、1:1 准备、管理决策建议。装了就能用，不联网。
+- **团队运营模式**（连接 MCP）— 24 个 MCP 工具实现自动签到、追踪、报表、消息推送、执行力分析、KPI 仪表盘、任务管理、激励评分、AI 推荐引擎，6 个定时任务，23+ 平台支持。
+
+**OpenClaw 集成架构（v5.1 新增）：** Boss AI Agent 作为"大脑层"，与 OpenClaw 的 MCP 连接器生态配合使用：
+- **储存工具**（Notion / Jira / Google Sheets）→ 项目更新、任务状态、文档变更自动汇入公司上下文
+- **开发工具**（GitHub / Linear / Calendar）→ PR 活动、提交模式、CI 状态转化为执行力信号
+- **沟通工具**（Telegram / Slack / Discord / Lark / Signal）→ 员工消息被解析为结构化管理事件（阻塞上报、任务完成、承诺、延迟等）
+
+**公司上下文层**是所有智能引擎的地基 — 执行力分析、AI 推荐、激励评分都依赖它。上下文包括：组织架构、战略重点、员工负载、目标 KPI、项目状态。OpenClaw 连接器自动丰富上下文数据。
+
+**AI 推荐引擎（v5.0 新增）：** 每日 10:30 自动扫描团队数据，结合导师视角生成管理建议（如：连续缺勤提醒、情绪下降预警、任务逾期跟进）。支持一键执行建议动作，也可通过实时触发器即时生成。
+
+**数据说明：** 顾问模式不发送任何数据到云端。团队运营模式中，MCP 工具参数发送至 `manageaibrain.com` 处理，本地文件不上传。外部工具（Notion、GitHub 等）通过 OpenClaw 连接器访问，Skill 不直接管理这些工具的令牌。
+
+安装：`clawhub install boss-ai-agent`
+
 ## Links
 
 - Website: https://manageaibrain.com
-- MCP Server (Team Operations Mode): `https://manageaibrain.com/mcp` — cloud-hosted MCP endpoint where all 13 tools are processed. Claude Code connects via stdio; ChatGPT/Gemini connect via MCP HTTP to this URL.
+- MCP Server (Team Operations Mode): `https://manageaibrain.com/mcp` — cloud-hosted MCP endpoint where all 24 tools are processed. Claude Code connects via stdio; ChatGPT/Gemini connect via MCP HTTP to this URL.
 - GitHub: https://github.com/tonypk/ai-management-brain
 - ClawHub: https://clawhub.ai/tonypk/boss-ai-agent
