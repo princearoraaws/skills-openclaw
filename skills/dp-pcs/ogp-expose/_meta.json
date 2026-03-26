@@ -1,0 +1,11 @@
+{
+  "owner": "dp-pcs",
+  "slug": "ogp-expose",
+  "displayName": "OGP Expose",
+  "latest": {
+    "version": "0.2.3",
+    "publishedAt": 1774411277650,
+    "commit": null
+  },
+  "history": []
+}
