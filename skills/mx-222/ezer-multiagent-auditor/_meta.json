@@ -1,0 +1,11 @@
+{
+  "owner": "mx-222",
+  "slug": "ezer-multiagent-auditor",
+  "displayName": "Ezer Multi-Agent Report Auditor",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774341444977,
+    "commit": null
+  },
+  "history": []
+}
