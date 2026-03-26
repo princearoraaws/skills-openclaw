@@ -1,0 +1,11 @@
+{
+  "owner": "trackoverflow",
+  "slug": "requirement-agent",
+  "displayName": "Requirement Agent",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774435522609,
+    "commit": null
+  },
+  "history": []
+}
