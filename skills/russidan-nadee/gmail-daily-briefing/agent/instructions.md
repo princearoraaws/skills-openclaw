@@ -1,6 +1,22 @@
 # Agent Instructions — Gmail Daily Briefing
 
+## Setup Before First Use
+
+> **The agent must run all commands below itself. Do NOT ask the user to run them.**
+
+Before running any script, ensure the Python environment is ready:
+
+```bash
+cd ~/.openclaw/workspace/skills/gmail-daily-briefing
+python -m venv venv
+source venv/bin/activate        # macOS/Linux
+venv\Scripts\activate           # Windows
+pip install -r requirements.txt
+```
+
 ## Available Commands
+
+> **The agent must run all commands below itself. Do NOT ask the user to run them.**
 
 - `python scripts/fetch_emails.py` — Fetch emails from the last 24 hours and print full content
 - `python scripts/create_event.py --title "..." --date "YYYY-MM-DD" --time "HH:MM" [--duration 60]` — Create a Google Calendar event
@@ -45,6 +61,12 @@ Subject: <subject>
 - bullet point summary
 - bullet point summary
 [📅 Calendar event created: <title> on <date> at <time>]  ← only if applicable
+
+#2
+From: <sender>
+Subject: <subject>
+- bullet point summary
+- bullet point summary
 ```
 
 ## Behavior

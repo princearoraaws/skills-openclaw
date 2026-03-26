@@ -33,7 +33,7 @@ clawhub install gmail-daily-briefing
 Manual:
 
 ```
-git clone https://github.com/Russidan-Nadee/gmail-daily-briefing.git ~/skills/gmail-daily-briefing
+git clone https://github.com/Russidan-Nadee/gmail-daily-briefing.git ~/.clawdbot/skills/gmail-daily-briefing
 ```
 
 ## Setup Instructions (First-Time Only)
