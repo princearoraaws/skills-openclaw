@@ -3,9 +3,15 @@
   "slug": "163-email-monitor",
   "displayName": "163 Email Monitor",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1774247889594,
-    "commit": "https://github.com/openclaw/skills/commit/c3b599a6be28b370d067f5c2b7b712b57ce0e789"
+    "version": "1.0.1",
+    "publishedAt": 1774249108128,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1774247889594,
+      "commit": "https://github.com/openclaw/skills/commit/c3b599a6be28b370d067f5c2b7b712b57ce0e789"
+    }
+  ]
 }
