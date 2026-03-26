@@ -1,0 +1,11 @@
+{
+  "owner": "wanwan2qq",
+  "slug": "cheatsheet-generator",
+  "displayName": "生成结构化 Markdown 速查表，沉淀实战经验，支持导出分享",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774262477039,
+    "commit": null
+  },
+  "history": []
+}
