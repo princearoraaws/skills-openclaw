@@ -1,0 +1,11 @@
+{
+  "owner": "mova-compact",
+  "slug": "mova-contract-generation",
+  "displayName": "Mova Contract Generation",
+  "latest": {
+    "version": "1.2.0",
+    "publishedAt": 1774534496406,
+    "commit": null
+  },
+  "history": []
+}
