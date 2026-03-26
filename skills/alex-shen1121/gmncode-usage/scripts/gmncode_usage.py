@@ -2,8 +2,10 @@
 """Query GMNCODE usage data via HTTP APIs.
 
 Secure credential loading order:
-1. Environment variables: GMNCODE_EMAIL / GMNCODE_PASSWORD / GMNCODE_BASE_URL
+1. Environment variables: GMNCODE_EMAIL / GMNCODE_PASSWORD
 2. ~/.openclaw/.env entries with the same names
+
+Base URL is hardcoded to https://gmncode.cn because it is not sensitive.
 
 Features:
 - Login on demand and cache token locally with restrictive permissions
@@ -78,7 +80,7 @@ def load_credentials() -> tuple[str, str, str]:
     dotenv = load_dotenv(ENV_FILE)
     email = env_value("GMNCODE_EMAIL", dotenv)
     password = env_value("GMNCODE_PASSWORD", dotenv)
-    base_url = env_value("GMNCODE_BASE_URL", dotenv) or DEFAULT_BASE_URL
+    base_url = DEFAULT_BASE_URL
     if not email or not password:
         raise SystemExit(
             "Missing GMNCODE credentials. Set GMNCODE_EMAIL and GMNCODE_PASSWORD "

@@ -31,7 +31,8 @@ description: 通过 HTTP 接口查询 GMNCODE / gmncode.cn 中转站的大模型
 优先使用：
 - `GMNCODE_EMAIL`
 - `GMNCODE_PASSWORD`
-- `GMNCODE_BASE_URL`（可选）
+
+`GMNCODE_BASE_URL` 已固定写死为 `https://gmncode.cn`，因为这不是敏感信息，不需要放进环境变量。
 
 如果缺少凭据，就停止执行，并提示用户补充到 `~/.openclaw/.env`。
 

@@ -7,7 +7,6 @@
 ```bash
 GMNCODE_EMAIL=your_email@example.com
 GMNCODE_PASSWORD=your_password
-GMNCODE_BASE_URL=https://gmncode.cn
 ```
 
 建议权限：
@@ -19,6 +18,8 @@ chmod 600 ~/.openclaw/.env
 脚本读取顺序：
 1. 当前进程环境变量
 2. `~/.openclaw/.env`
+
+`GMNCODE_BASE_URL` 在 skill 里固定为 `https://gmncode.cn`，不需要额外配置。
 
 Token 缓存路径：
 - `~/.cache/openclaw/gmncode-usage/token.json`
