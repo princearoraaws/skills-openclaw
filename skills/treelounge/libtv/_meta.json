@@ -1,0 +1,11 @@
+{
+  "owner": "treelounge",
+  "slug": "libtv",
+  "displayName": "漫剧",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774533195638,
+    "commit": null
+  },
+  "history": []
+}
