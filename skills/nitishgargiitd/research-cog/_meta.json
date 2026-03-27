@@ -1,13 +1,18 @@
 {
   "owner": "nitishgargiitd",
   "slug": "research-cog",
-  "displayName": "research-cog",
+  "displayName": "Research Cog",
   "latest": {
-    "version": "1.0.4",
-    "publishedAt": 1773889155394,
-    "commit": "https://github.com/openclaw/skills/commit/697e95a3d7a2e7f56d55443bdbe5db35cbac953a"
+    "version": "1.0.5",
+    "publishedAt": 1774585077808,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.4",
+      "publishedAt": 1773889155394,
+      "commit": "https://github.com/openclaw/skills/commit/697e95a3d7a2e7f56d55443bdbe5db35cbac953a"
+    },
     {
       "version": "1.0.3",
       "publishedAt": 1770774412322,
