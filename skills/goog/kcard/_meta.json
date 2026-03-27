@@ -1,0 +1,11 @@
+{
+  "owner": "goog",
+  "slug": "kcard",
+  "displayName": "Knowledge card creator, your media helper",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1774599154083,
+    "commit": null
+  },
+  "history": []
+}
