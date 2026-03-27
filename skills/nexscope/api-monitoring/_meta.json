@@ -1,0 +1,11 @@
+{
+  "owner": "nexscope",
+  "slug": "api-monitoring",
+  "displayName": "API Monitoring",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774584330519,
+    "commit": null
+  },
+  "history": []
+}
