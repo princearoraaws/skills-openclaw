@@ -3,11 +3,16 @@
   "slug": "smart-followups",
   "displayName": "Smart Follow-ups",
   "latest": {
-    "version": "2.1.6",
-    "publishedAt": 1772545095934,
-    "commit": "https://github.com/openclaw/skills/commit/9699aa9742740ca2ba6e7b05461b715e81259cb6"
+    "version": "2.1.8",
+    "publishedAt": 1774629260037,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.1.6",
+      "publishedAt": 1772545095934,
+      "commit": "https://github.com/openclaw/skills/commit/9699aa9742740ca2ba6e7b05461b715e81259cb6"
+    },
     {
       "version": "2.1.5",
       "publishedAt": 1770802236955,
