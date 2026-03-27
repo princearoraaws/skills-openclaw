@@ -1,0 +1,11 @@
+{
+  "owner": "starlxa",
+  "slug": "weixin-sender",
+  "displayName": "Weixin Send Media",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1774524945944,
+    "commit": null
+  },
+  "history": []
+}
