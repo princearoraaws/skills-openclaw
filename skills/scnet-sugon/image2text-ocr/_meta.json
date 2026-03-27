@@ -1,0 +1,11 @@
+{
+  "owner": "scnet-sugon",
+  "slug": "image2text-ocr",
+  "displayName": "Image2text Ocr",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1774595959417,
+    "commit": null
+  },
+  "history": []
+}
