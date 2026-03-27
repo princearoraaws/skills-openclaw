@@ -292,6 +292,81 @@ def extract_title_from_entry(entry_content):
     return None
 
 
+def find_looking_back_entries(date_str, diary_path):
+    """Find entries from exactly 7, 30, and 365 days ago for 'On This Day' resurfacing"""
+    try:
+        current_date = datetime.strptime(date_str, "%Y-%m-%d")
+    except ValueError:
+        return []
+
+    lookback_days = [
+        (7, "1 week ago"),
+        (30, "1 month ago"),
+        (365, "1 year ago"),
+    ]
+
+    found = []
+    for days_back, label in lookback_days:
+        past_date = current_date - timedelta(days=days_back)
+        past_str = past_date.strftime("%Y-%m-%d")
+        past_file = diary_path / f"{past_str}.md"
+
+        if past_file.exists():
+            content = past_file.read_text()
+            # Extract a highlight: try Summary first, then first paragraph after title
+            highlight = None
+
+            # Try Summary section
+            summary_match = re.search(
+                r"## Summary\n(.+?)(?=\n##|\Z)", content, re.DOTALL
+            )
+            if summary_match:
+                highlight = summary_match.group(1).strip()
+
+            # Try title
+            title_match = re.search(
+                r"^# \d{4}-\d{2}-\d{2} — (.+)$", content, re.MULTILINE
+            )
+            title = title_match.group(1).strip() if title_match else None
+
+            if not highlight:
+                # Fallback: first non-heading, non-empty line
+                for line in content.split("\n"):
+                    line = line.strip()
+                    if line and not line.startswith("#") and len(line) > 20:
+                        highlight = line
+                        break
+
+            if highlight:
+                # Truncate long highlights
+                if len(highlight) > 200:
+                    highlight = highlight[:197] + "..."
+
+                found.append({
+                    "date": past_str,
+                    "label": label,
+                    "title": title,
+                    "highlight": highlight,
+                })
+
+    return found
+
+
+def build_looking_back_section(looking_back_entries):
+    """Build the 'Looking Back' markdown section from found old entries"""
+    if not looking_back_entries:
+        return ""
+
+    lines = ["\n## 🔙 Looking Back\n"]
+    for entry in looking_back_entries:
+        title_part = f" — *{entry['title']}*" if entry.get("title") else ""
+        lines.append(f"### {entry['label']} ({entry['date']}{title_part})")
+        lines.append(f"> {entry['highlight']}")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
 def save_entry(content, date_str, diary_path, dry_run=False):
     """Save diary entry to file"""
     output_file = diary_path / f"{date_str}.md"
@@ -499,9 +574,11 @@ def main():
     parser.add_argument("--emit-task", action="store_true", help="Print the sub-agent generation task JSON (for sessions_spawn)")
     parser.add_argument("--from-stdin", action="store_true", help="Read a pre-generated entry from stdin and save it")
     parser.add_argument("--from-file", help="Read a pre-generated entry from a file path and save it")
+    parser.add_argument("--auto", action="store_true", help="Auto-generate today's entry without interaction (for cron)")
     parser.add_argument("--dry-run", action="store_true", help="Preview without saving")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--no-persistent", action="store_true", help="Skip updating persistent files")
+    parser.add_argument("--no-looking-back", action="store_true", help="Skip 'Looking Back' section")
     parser.add_argument("--pdf", action="store_true", help="Generate/refresh the diary PDF after saving")
     
     args = parser.parse_args()
@@ -516,12 +593,39 @@ def main():
         print("Generation: sessions_spawn sub-agent (no direct HTTP in this script)")
     
     # Determine date
-    if args.today:
+    if args.today or args.auto:
         date_str = datetime.now().strftime("%Y-%m-%d")
     elif args.date:
         date_str = args.date
     else:
         date_str = datetime.now().strftime("%Y-%m-%d")
+    
+    # --auto mode: generate today's entry non-interactively via emit-task
+    if args.auto:
+        # Check config for auto_generate flag
+        if not config.get("auto_generate", False):
+            if args.verbose:
+                print("ℹ️  auto_generate is disabled in config.json. Enable it to use --auto.")
+                print("   Set \"auto_generate\": true in config.json")
+            # Still proceed — the flag on the CLI overrides config
+        
+        # Check if today's entry already exists
+        existing = diary_path / f"{date_str}.md"
+        if existing.exists():
+            print(f"ℹ️  Entry for {date_str} already exists. Skipping auto-generation.")
+            return
+        
+        # In auto mode, emit the task JSON so the caller (cron/agent) can spawn a sub-agent
+        print(f"\n📜 Agent Chronicle - Auto-generating diary for {date_str}")
+        print("=" * 50)
+        
+        result = generate_ai_diary(date_str, workspace, verbose=args.verbose, emit_task=True)
+        if result:
+            print(json.dumps(result, ensure_ascii=False, indent=2))
+        else:
+            print("❌ No session data available for auto-generation.")
+            sys.exit(1)
+        return
     
     print(f"\n📜 Agent Chronicle - Generating diary for {date_str}")
     print("=" * 50)
@@ -559,6 +663,13 @@ def main():
             content = interactive_mode(date_str)
     
     if content:
+        # Add "Looking Back" section if old entries exist
+        if not args.no_looking_back:
+            looking_back = find_looking_back_entries(date_str, diary_path)
+            if looking_back:
+                looking_back_section = build_looking_back_section(looking_back)
+                content = content.rstrip() + "\n" + looking_back_section
+
         # Save entry
         saved_file = save_entry(content, date_str, diary_path, dry_run=args.dry_run)
         

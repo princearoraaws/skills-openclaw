@@ -3,7 +3,14 @@
 > AI perspective journaling — document daily experiences, emotions, and learnings from the agent's viewpoint.
 
 [![ClawHub](https://img.shields.io/badge/ClawHub-ai--diary-blue)](https://www.clawhub.ai/skills/agent-chronicle)
-[![Version](https://img.shields.io/badge/version-0.6.0-green)](./skill.json)
+[![Version](https://img.shields.io/badge/version-0.7.0-green)](./skill.json)
+
+## What's New in v0.7.0
+
+- 🔙 **"On This Day" Resurfacing** — automatically surfaces entries from 7, 30, and 365 days ago as a "Looking Back" section
+- 📊 **Mood & Pattern Analytics** — `scripts/analyze.py` with mood timelines, sparklines, topic tracking, and win/frustration analysis
+- ⏰ **Cron Auto-Generation** — `--auto` flag for non-interactive daily diary generation via OpenClaw cron
+- 📋 **Weekly Digest** — `scripts/digest.py` synthesizes 7 daily entries into a weekly summary with quotes, wins, mood trends, and decisions
 
 ## What is this?
 
@@ -166,7 +173,10 @@ Create custom templates with your preferred sections and style.
 |--------|---------|
 | `setup.py` | First-run onboarding and configuration |
 | `generate.py` | Create diary entries from sessions or interactively |
+| `analyze.py` | Mood & pattern analytics across entries |
+| `digest.py` | Weekly digest generation |
 | `export.py` | Export to PDF/HTML using pandoc |
+| `export_pdf.py` | Beautiful PDF export (Velvet Edition) |
 
 ## Configuration
 

@@ -1,7 +1,7 @@
 {
   "name": "@openclaw/agent-chronicle",
-  "version": "0.6.3",
-  "description": "Chronicle your AI's journey - capture experiences, quotes, curiosities, decisions, and relationships from the agent's perspective",
+  "version": "0.7.1",
+  "description": "Chronicle your AI's journey - capture experiences, quotes, curiosities, decisions, relationships, mood analytics, weekly digests, and 'On This Day' resurfacing from the agent's perspective",
   "author": "robbyczgw-cla",
   "license": "MIT",
   "keywords": [
@@ -41,7 +41,11 @@
       "journal-generation",
       "quote-tracking",
       "curiosity-backlog",
-      "decision-archaeology"
+      "decision-archaeology",
+      "mood-analytics",
+      "weekly-digest",
+      "on-this-day",
+      "cron-auto-generation"
     ],
     "requirements": {
       "bins": [

@@ -82,10 +82,12 @@ def get_diary_path(config):
     return diary_path
 
 
-def load_entries(diary_path: Path):
-    """Load and return sorted diary entries"""
+def load_entries(diary_path: Path, month: str = None):
+    """Load and return sorted diary entries, optionally filtered by month (YYYY-MM)"""
     md_files = sorted(diary_path.glob("*.md"))
     dated = [f for f in md_files if re.match(r"\d{4}-\d{2}-\d{2}$", f.stem)]
+    if month:
+        dated = [f for f in dated if f.stem.startswith(month + "-")]
     return dated
 
 
@@ -891,14 +893,17 @@ def build_html(entries):
     return html
 
 
-def export_pdf(output_path: Path):
-    """Export diary entries to a beautiful PDF"""
+def export_pdf(output_path: Path, month: str = None):
+    """Export diary entries to a beautiful PDF, optionally filtered by month (YYYY-MM)"""
     config = load_config()
     diary_path = get_diary_path(config)
-    entries = load_entries(diary_path)
+    entries = load_entries(diary_path, month=month)
 
     if not entries:
-        print(f"No diary entries found in {diary_path}")
+        if month:
+            print(f"No diary entries found for {month} in {diary_path}")
+        else:
+            print(f"No diary entries found in {diary_path}")
         return False
 
     html = build_html(entries)
@@ -914,8 +919,9 @@ def export_pdf(output_path: Path):
     # print(f"✓ Debug HTML saved to {html_path}")
     
     HTML(string=html, base_url=str(diary_path)).write_pdf(str(output_path))
+    month_label = f" ({month})" if month else ""
     print(f"✓ Exported PDF to {output_path}")
-    print(f"  {len(entries)} entries • Velvet Edition v1.0")
+    print(f"  {len(entries)} entries{month_label} • Velvet Edition v1.0")
     return True
 
 
@@ -925,22 +931,42 @@ def main():
     )
     parser.add_argument("--output", "-o", help="Output PDF path")
     parser.add_argument("--debug-html", action="store_true", help="Also save HTML for debugging")
+    parser.add_argument(
+        "--month",
+        metavar="YYYY-MM",
+        help="Export only entries from this month (e.g. 2026-03). Defaults output to Cami-Diary-YYYY-MM.pdf",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Export all entries (default behavior when --month is not specified)",
+    )
     args = parser.parse_args()
+
+    # Validate --month format if provided
+    if args.month and not re.match(r"^\d{4}-\d{2}$", args.month):
+        parser.error(f"--month must be in YYYY-MM format, got: {args.month!r}")
 
     config = load_config()
     diary_path = get_diary_path(config)
 
-    output_path = Path(args.output) if args.output else diary_path / DEFAULT_OUTPUT_NAME
-    
+    # Determine output path
+    if args.output:
+        output_path = Path(args.output)
+    elif args.month:
+        output_path = diary_path / f"Cami-Diary-{args.month}.pdf"
+    else:
+        output_path = diary_path / DEFAULT_OUTPUT_NAME
+
     if args.debug_html:
-        entries = load_entries(diary_path)
+        entries = load_entries(diary_path, month=args.month)
         if entries:
             html = build_html(entries)
             html_path = output_path.with_suffix('.html')
             html_path.write_text(html)
             print(f"✓ Debug HTML saved to {html_path}")
-    
-    export_pdf(output_path)
+
+    export_pdf(output_path, month=args.month)
 
 
 if __name__ == "__main__":
