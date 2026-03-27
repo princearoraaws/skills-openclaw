@@ -1,0 +1,11 @@
+{
+  "owner": "diagnostikon",
+  "slug": "polymarket-48h-cross-asset-sync-trader",
+  "displayName": "48h Cross-Asset Sync Trader",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774609973343,
+    "commit": null
+  },
+  "history": []
+}
