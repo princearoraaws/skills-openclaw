@@ -1,6 +1,11 @@
 ---
 name: obsidian-memory-system
 description: "Structured persistent memory system using an Obsidian vault with daily journals, project docs, knowledge base, and self-improvement logging. Use when: (1) Setting up a new OpenClaw agent's memory system, (2) Agent needs persistent memory across sessions, (3) Organizing project documentation, daily journals, or knowledge base, (4) Logging errors, learnings, or feature requests for continuous improvement, (5) User says 'set up memory', 'initialize vault', 'create journal', 'log this error', 'remember this', or 'update memory'. Also covers semantic search setup and the promotion pipeline for learnings into brain files."
+metadata:
+  openclaw:
+    requires:
+      bins: ["openclaw"]
+    notes: "Semantic memory search (memorySearch) requires an embedding provider API key (e.g. OpenAI) configured in OpenClaw auth. The setup script only creates files — OpenClaw config changes are documented in references/openclaw-config.md and applied manually."
 ---
 
 # Obsidian Memory System
