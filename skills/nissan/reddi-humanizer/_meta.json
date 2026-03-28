@@ -1,13 +1,18 @@
 {
   "owner": "nissan",
   "slug": "reddi-humanizer",
-  "displayName": "Reddi Humanizer",
+  "displayName": "Humanizer",
   "latest": {
-    "version": "2.1.1",
-    "publishedAt": 1772829593949,
-    "commit": "https://github.com/openclaw/skills/commit/392d638872edd54cc8f4c831bc6e278196109d58"
+    "version": "2.2.0",
+    "publishedAt": 1774669989219,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.1.1",
+      "publishedAt": 1772829593949,
+      "commit": "https://github.com/openclaw/skills/commit/392d638872edd54cc8f4c831bc6e278196109d58"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1772144121258,

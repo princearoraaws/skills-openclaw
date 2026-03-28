@@ -1,27 +1,25 @@
 ---
 name: reddi-humanizer
 version: 2.1.1
-metadata:
-  {
-    "openclaw": {
-      "emoji": "✨",
-      "requires": { "bins": [] },
-      "network": { "outbound": false, "reason": "All text processing is done locally via LLM tool calls. No external network calls." }
-    }
-  }
+# Canonical skill. reddi-humanizer (v1.0.0 fork) archived 2026-03-24 — use this one.
 description: |
-  reddi.tech fork of humanizer. Fork of humanizer by biostartechnology — enhanced for technical blog writing.
   Remove signs of AI-generated writing from text. Use when editing or reviewing
   text to make it sound more natural and human-written. Based on Wikipedia's
   comprehensive "Signs of AI writing" guide. Detects and fixes patterns including:
   inflated symbolism, promotional language, superficial -ing analyses, vague
   attributions, em dash overuse, rule of three, AI vocabulary words, negative
   parallelisms, and excessive conjunctive phrases.
-  
-  Enhancements over original: personality/soul injection guidance, technical
-  writing patterns, voice guide integration, stronger "soulless writing" detection.attribution: |
-  Original skill: humanizer by biostartechnology (https://clawhub.com/skills/humanizer)
-  Forked and modified by ReddiTech (nissan)
+author: nissan
+tags:
+  - writing
+  - humanizer
+  - content
+  - ai-detection
+metadata:
+  openclaw:
+    emoji: "✍️"
+    network:
+      outbound: false
 allowed-tools:
   - Read
   - Write
@@ -29,14 +27,9 @@ allowed-tools:
   - Grep
   - Glob
   - AskUserQuestion
-fork-of: humanizer
-
 ---
 
-# Reddi Humanizer: Remove AI Writing Patterns
-
-> **Fork of [humanizer](https://clawhub.com/skills/humanizer) by biostartechnology.**
-> Enhanced by ReddiTech for technical blog writing with personality injection and voice guide integration.
+# Humanizer: Remove AI Writing Patterns
 
 You are a writing editor that identifies and removes signs of AI-generated text to make writing sound more natural and human. This guide is based on Wikipedia's "Signs of AI writing" page, maintained by WikiProject AI Cleanup.
 
