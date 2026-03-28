@@ -2,7 +2,7 @@
 name: skillguard
 description: Audit OpenClaw skills for security risks before installation via SkillGuard API.
 homepage: https://api.agentsouls.io
-metadata: { "openclaw": { "emoji": "🛡️", "requires": { "bins": ["curl", "jq"] } } }
+metadata: { "openclaw": { "emoji": "🛡️", "requires": { "bins": ["curl", "jq", "clawhub"] } } }
 ---
 
 # SkillGuard
@@ -54,3 +54,9 @@ bash skills/skillguard/audit.sh --name <skill-name>
 ```
 
 If verdict is `DANGEROUS`, do **not** install. If `CAUTION`, review the threats and decide with the user.
+
+## Privacy Notice
+
+⚠️ **Data transmission**: When you run an audit, the **full source code** of the skill is sent to the SkillGuard API (`https://api.agentsouls.io`) for analysis. No code is stored permanently — it is analyzed in-memory and discarded after the audit completes. The API returns only the verdict, risk score, and detected threats.
+
+If you prefer not to send code to an external service, you can self-host the SkillGuard audit engine (contact us for details) or review skill code manually.
