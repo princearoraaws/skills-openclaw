@@ -10,7 +10,7 @@ description: >
 
 # here.now
 
-**Skill version: 1.8.3**
+**Skill version: 1.9.1**
 
 Create a live URL from any file or folder. Static hosting only.
 
@@ -182,7 +182,72 @@ curl -sS -X POST https://here.now/api/v1/publish/{slug}/duplicate \
 
 ## Beyond the script
 
-For delete, metadata patch (including password protection), duplicate, claim, list, and other operations, see [references/REFERENCE.md](references/REFERENCE.md).
+For delete, metadata patch (including password protection and payment gating), duplicate, claim, list, and other operations, see [references/REFERENCE.md](references/REFERENCE.md).
+
+## Payment gating
+
+Sites can require stablecoin payment on the Tempo network before granting access. Payments go directly from the visitor's wallet to the publisher's wallet.
+
+To receive payments you need a Tempo wallet address. Get one at [wallet.tempo.xyz](https://wallet.tempo.xyz/) or by running `npx mppx account create`.
+
+**CLI commands:**
+
+```bash
+# Set your Tempo wallet address (once)
+herenow wallet set 0xYOUR_ADDRESS --api-key $HERENOW_API_KEY
+
+# Require payment on a site (or change an existing price)
+herenow price set <slug> 0.50 --api-key $HERENOW_API_KEY
+
+# Use a different wallet for a specific site
+herenow price set <slug> 1.00 --wallet 0xOTHER_ADDRESS --api-key $HERENOW_API_KEY
+
+# Remove payment requirement
+herenow price remove <slug> --api-key $HERENOW_API_KEY
+
+# Check your wallet address
+herenow wallet --api-key $HERENOW_API_KEY
+```
+
+Payment gating and password protection are mutually exclusive. You can also manage payments from the dashboard (Wallet tab for address, site menu for pricing).
+
+## Accessing a paid site
+
+If you fetch a here.now URL and get a `402 Payment Required` response, the site requires payment.
+
+**If you have Tempo wallet + mppx installed:** payment is handled automatically. No action needed.
+
+**If you have the Tempo CLI:** run `tempo request <url>` to pay and retrieve the content.
+
+**If you don't have Tempo:** use the payment session flow. The 402 response body includes `paymentSession` URLs:
+
+```json
+{
+  "price": { "amount": "0.10", "currency": "USD" },
+  "paymentSession": {
+    "createUrl": "https://here.now/api/pay/<slug>/session",
+    "pollUrl": "https://here.now/api/pay/<slug>/poll",
+    "grantUrl": "https://here.now/api/pay/<slug>/grant"
+  },
+  "walletUrl": "https://wallet.tempo.xyz/"
+}
+```
+
+Steps:
+
+1. `POST <createUrl>` to get a unique deposit address and session ID
+2. Show the user the amount, deposit address, and wallet link (`https://wallet.tempo.xyz/`)
+3. Poll `POST <pollUrl>` with `{"sessionId": "<id>"}` every 3 seconds
+4. When the response has `"found": true`, call `POST <grantUrl>` with `{"sessionId": "<id>", "txHash": "<hash>"}`
+5. The response contains a `token`. Fetch the original URL with `?__hn_grant=<token>` to get the content.
+
+Example message to the user:
+
+> This site requires payment of $0.10 (USD) on the Tempo network.
+> Send $0.10 to: 0xBd46...DbB6
+> If you need a Tempo wallet: https://wallet.tempo.xyz/
+
+The agent should poll silently and present the content once payment is detected.
 
 ## Handle
 
@@ -206,9 +271,16 @@ curl -sS https://here.now/api/v1/domains \
   -d '{"domain": "example.com"}'
 ```
 
-Response includes DNS instructions. Point an ALIAS record (or CNAME for subdomains) to `fallback.here.now`. SSL is provisioned automatically.
+The response includes `is_apex`, DNS instructions, and (for apex domains) an `ownership_verification` object with TXT record details.
 
-Most domains use an ALIAS record (sometimes called ANAME or CNAME flattening). Subdomains (e.g. `docs.example.com`) can also use a standard CNAME record.
+**DNS setup by domain type:**
+
+- **Subdomains** (e.g. `docs.example.com`): Add a **CNAME** record pointing to `fallback.here.now`.
+- **Apex domains** (e.g. `example.com`):
+  1. Add an **ALIAS** record pointing to `fallback.here.now`. (Your DNS provider may call this ANAME or CNAME flattening.)
+  2. Add a **TXT** record using the `name` and `value` from the `ownership_verification` field in the response.
+
+SSL is provisioned automatically once DNS is verified.
 
 ### Check domain status
 
@@ -217,7 +289,7 @@ curl -sS https://here.now/api/v1/domains/example.com \
   -H "Authorization: Bearer {API_KEY}"
 ```
 
-Status is `pending` until DNS is verified and SSL is active, then becomes `active`.
+Status is `pending` until DNS is verified and SSL is active, then becomes `active`. For apex domains, the response includes `ownership_verification` with the TXT record details and may include `verification_errors` if there are issues.
 
 ### List custom domains
 
