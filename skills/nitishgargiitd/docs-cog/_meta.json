@@ -1,13 +1,18 @@
 {
   "owner": "nitishgargiitd",
   "slug": "docs-cog",
-  "displayName": "docs-cog",
+  "displayName": "Docs Cog",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1774033641057,
-    "commit": "https://github.com/openclaw/skills/commit/7135f8cb5220a6d0d11b1625e131c80d646d5712"
+    "version": "1.0.4",
+    "publishedAt": 1774585039278,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1774033641057,
+      "commit": "https://github.com/openclaw/skills/commit/7135f8cb5220a6d0d11b1625e131c80d646d5712"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1770774090451,
