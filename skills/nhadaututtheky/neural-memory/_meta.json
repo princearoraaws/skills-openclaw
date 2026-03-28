@@ -1,13 +1,18 @@
 {
   "owner": "nhadaututtheky",
   "slug": "neural-memory",
-  "displayName": "Neural Memory",
+  "displayName": ".Claude Plugin",
   "latest": {
-    "version": "4.13.0",
-    "publishedAt": 1774020365420,
-    "commit": "https://github.com/openclaw/skills/commit/a7f1ecc39a023196da83198b95a3de40d89b7917"
+    "version": "4.21.0",
+    "publishedAt": 1774512277616,
+    "commit": null
   },
   "history": [
+    {
+      "version": "4.13.0",
+      "publishedAt": 1774020365420,
+      "commit": "https://github.com/openclaw/skills/commit/a7f1ecc39a023196da83198b95a3de40d89b7917"
+    },
     {
       "version": "4.12.0",
       "publishedAt": 1773777856637,
