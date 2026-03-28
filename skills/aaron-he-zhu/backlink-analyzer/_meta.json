@@ -3,11 +3,16 @@
   "slug": "backlink-analyzer",
   "displayName": "Backlink Analyzer",
   "latest": {
-    "version": "3.0.0",
-    "publishedAt": 1772640417488,
-    "commit": "https://github.com/openclaw/skills/commit/133bf96199b3b5df323adb7dc3e841f3b9b3f76b"
+    "version": "4.0.0",
+    "publishedAt": 1774347743231,
+    "commit": null
   },
   "history": [
+    {
+      "version": "3.0.0",
+      "publishedAt": 1772640417488,
+      "commit": "https://github.com/openclaw/skills/commit/133bf96199b3b5df323adb7dc3e841f3b9b3f76b"
+    },
     {
       "version": "2.0.0",
       "publishedAt": 1771042784574,
