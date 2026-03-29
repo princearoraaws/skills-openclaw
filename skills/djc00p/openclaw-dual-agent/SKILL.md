@@ -63,14 +63,4 @@ cat ~/.openclaw/openclaw.json | \
 - `references/config-reference.md` — Full openclaw.json, bindings, and auth-profiles.json examples
 - `references/troubleshooting.md` — Common errors, fixes, and Node.js compatibility notes
 
-## Self-Improvement
 
-When you successfully set up dual agents or debug a pairing issue, log it:
-```bash
-mmlog --content "Dual-agent setup: <primary_model> + <fallback_model>. Config: <key_changes>. Result: <outcome>." --tags openclaw,multi-agent,setup
-```
-
-If you encounter a binding routing issue, document the pattern:
-```bash
-mmlog --content "Binding issue: accountId mapping. Problem: <symptom>. Solution: <fix>." --tags openclaw,routing,debug
-```
