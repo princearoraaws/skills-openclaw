@@ -3,11 +3,16 @@
   "slug": "gws-calendar",
   "displayName": "Gws Calendar",
   "latest": {
-    "version": "1.0.9",
-    "publishedAt": 1774459904977,
-    "commit": "https://github.com/openclaw/skills/commit/a919bb651747da114af638d094346c7ebb113975"
+    "version": "1.0.11",
+    "publishedAt": 1774550952147,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.9",
+      "publishedAt": 1774459904977,
+      "commit": "https://github.com/openclaw/skills/commit/a919bb651747da114af638d094346c7ebb113975"
+    },
     {
       "version": "1.0.4",
       "publishedAt": 1774380347144,
