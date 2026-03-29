@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """ROS 2 launch commands for running launch files in tmux sessions."""
 
-import json
 import os
 
 from ros2_utils import (
@@ -25,10 +24,6 @@ from ros2_utils import (
 )
 
 
-# Cache for package information
-_package_cache = {}
-_package_cache_initialized = False
-
 # Cache for launch arguments: {(package, launch_file): [args]}
 _launch_args_cache = {}
 
@@ -44,7 +39,7 @@ def _get_launch_arguments(package, launch_file):
         return _launch_args_cache[cache_key]
     
     # Get the launch file path
-    prefix = _get_package_prefix(package)
+    prefix = get_package_prefix(package)
     if not prefix:
         return []
     
@@ -170,101 +165,11 @@ def _validate_launch_args(user_args, available_args):
     return validated, notices
 
 
-def _list_packages(force_refresh=False):
-    """List all ROS 2 packages (cached)."""
-    global _package_cache, _package_cache_initialized
-    
-    if force_refresh:
-        _package_cache = {}
-        _package_cache_initialized = False
-    
-    if _package_cache_initialized:
-        return _package_cache
-    
-    stdout, _, rc = run_cmd("ros2 pkg list")
-    if rc == 0:
-        packages = stdout.strip().split('\n') if stdout.strip() else []
-        for pkg in packages:
-            _package_cache[pkg] = True
-        _package_cache_initialized = True
-    
-    return _package_cache
-
-
-def _package_exists(package, force_refresh=False):
-    """Check if a package exists (uses cache, refreshes if not found or force_refresh=True)."""
-    packages = _list_packages(force_refresh=force_refresh)
-    if package in packages:
-        return True
-    
-    global _package_cache_initialized
-    if not force_refresh:
-        _package_cache_initialized = False
-        _list_packages()
-        return package in _list_packages()
-    
-    return False
-
-
-def _get_package_prefix(package):
-    """Get the prefix path for a package."""
-    stdout, _, rc = run_cmd(f"ros2 pkg prefix {package}")
-    if rc == 0 and stdout:
-        return stdout.strip()
-    return None
-
-
-def _get_sessions_file():
-    """Get path to session metadata file."""
-    return os.path.expanduser("~/.ros2_cli_sessions.json")
-
-
-def _load_sessions():
-    """Load session metadata from file."""
-    sessions_file = _get_sessions_file()
-    if os.path.exists(sessions_file):
-        try:
-            with open(sessions_file, 'r') as f:
-                return json.load(f)
-        except (json.JSONDecodeError, IOError):
-            return {}
-    return {}
-
-
-def _save_session(session_name, metadata):
-    """Save session metadata to file."""
-    sessions_file = _get_sessions_file()
-    sessions = _load_sessions()
-    sessions[session_name] = metadata
-    try:
-        with open(sessions_file, 'w') as f:
-            json.dump(sessions, f)
-    except IOError:
-        pass  # Silently fail if we can't write
-
-
-def _get_session_metadata(session_name):
-    """Get session metadata from file."""
-    sessions = _load_sessions()
-    return sessions.get(session_name)
-
-
-def _delete_session_metadata(session_name):
-    """Delete session metadata from file."""
-    sessions_file = _get_sessions_file()
-    sessions = _load_sessions()
-    if session_name in sessions:
-        del sessions[session_name]
-        try:
-            with open(sessions_file, 'w') as f:
-                json.dump(sessions, f)
-        except IOError:
-            pass
 
 
 def _find_launch_files(package):
     """Find launch files in a package."""
-    prefix = _get_package_prefix(package)
+    prefix = get_package_prefix(package)
     if not prefix:
         return []
     
@@ -298,16 +203,16 @@ def cmd_launch_run(args):
     launch_args = args.args or []
     
     # Check package exists (auto-refresh if not found)
-    if not _package_exists(package, force_refresh=False):
-        _list_packages(force_refresh=True)
-    if not _package_exists(package, force_refresh=False):
+    if not package_exists(package, force_refresh=False):
+        list_packages(force_refresh=True)
+    if not package_exists(package, force_refresh=False):
         return output({
             "error": f"Package '{package}' not found",
-            "available_packages": list(_list_packages().keys())[:20]
+            "available_packages": list(list_packages().keys())[:20]
         })
     
     # Find launch file
-    prefix = _get_package_prefix(package)
+    prefix = get_package_prefix(package)
     launch_files = _find_launch_files(package)
     
     # Try different possible paths
@@ -435,7 +340,7 @@ def cmd_launch_run(args):
         result["pid"] = pid_output.strip()
     
     # Save session metadata for restart
-    _save_session(session_name, {
+    save_session(session_name, {
         "type": "run",
         "package": package,
         "launch_file": os.path.basename(launch_path),
@@ -448,9 +353,91 @@ def cmd_launch_run(args):
 
 
 def cmd_launch_list(args):
-    """List running launch sessions in tmux."""
-    result = list_sessions("launch_")
-    return output(result)
+    """List running launch sessions in tmux, or search for launch files by keyword."""
+    import subprocess
+
+    keyword = getattr(args, 'keyword', None)
+
+    # No keyword → existing behaviour: list running tmux sessions
+    if not keyword:
+        result = list_sessions("launch_")
+        return output(result)
+
+    scan_all = keyword.lower() in ('all', '*')
+
+    try:
+        # Get all packages
+        pkg_proc = subprocess.run(
+            ["ros2", "pkg", "list"],
+            capture_output=True, text=True, timeout=30
+        )
+        if pkg_proc.returncode != 0:
+            return output({
+                "keyword": keyword,
+                "matches": [],
+                "count": 0,
+                "suggestion": "Could not retrieve package list — is ROS 2 sourced?",
+            })
+
+        all_pkgs = [p.strip() for p in pkg_proc.stdout.splitlines() if p.strip()]
+
+        # Filter packages by keyword (unless scan_all)
+        if scan_all:
+            candidate_pkgs = all_pkgs
+        else:
+            kw_lower = keyword.lower()
+            candidate_pkgs = [p for p in all_pkgs if kw_lower in p.lower()]
+
+        matches = []
+        note = None
+        if scan_all:
+            note = "full scan — may take several seconds"
+
+        for pkg in candidate_pkgs:
+            try:
+                files_proc = subprocess.run(
+                    ["ros2", "pkg", "files", pkg],
+                    capture_output=True, text=True, timeout=30
+                )
+                if files_proc.returncode != 0:
+                    continue
+                for fpath in files_proc.stdout.splitlines():
+                    fpath = fpath.strip()
+                    fname = os.path.basename(fpath)
+                    if not (fname.endswith('.launch.py') or
+                            fname.endswith('.launch.xml') or
+                            fname.endswith('.launch')):
+                        continue
+                    # Match: keyword in file name OR keyword already matched via package name
+                    kw_lower = keyword.lower() if not scan_all else ''
+                    if scan_all or kw_lower in fname.lower() or kw_lower in pkg.lower():
+                        matches.append({
+                            "package": pkg,
+                            "launch_file": fname,
+                            "launch_command": f"launch new {pkg} {fname}",
+                        })
+            except subprocess.TimeoutExpired:
+                continue
+            except Exception:
+                continue
+
+        result = {
+            "keyword": keyword,
+            "matches": matches,
+            "count": len(matches),
+        }
+        if note:
+            result["note"] = note
+        if not matches:
+            result["suggestion"] = (
+                "Try a broader keyword or check 'ros2 pkg list' for available packages"
+            )
+        return output(result)
+
+    except subprocess.TimeoutExpired:
+        return output({"error": "Timeout scanning packages", "keyword": keyword})
+    except Exception as e:
+        return output({"error": str(e)})
 
 
 def cmd_launch_kill(args):
@@ -485,7 +472,7 @@ def cmd_launch_restart(args):
         })
     
     # Load session metadata
-    metadata = _get_session_metadata(session)
+    metadata = get_session_metadata(session)
     
     if not metadata:
         return output({
@@ -554,18 +541,18 @@ def cmd_launch_foxglove(args):
         })
     
     # Check package exists (auto-refresh if not found)
-    if not _package_exists("foxglove_bridge", force_refresh=False):
-        _list_packages(force_refresh=True)
-    if not _package_exists("foxglove_bridge", force_refresh=False):
+    if not package_exists("foxglove_bridge", force_refresh=False):
+        list_packages(force_refresh=True)
+    if not package_exists("foxglove_bridge", force_refresh=False):
         return output({
             "error": "Package 'foxglove_bridge' not found",
             "suggestion": f"Install for your ROS 2 distro with:\n  sudo apt install ros-{ros_distro}-foxglove-bridge\n\nOr build from source:\n  git clone https://github.com/foxglove/ros2-foxglove-bridge.git",
             "current_distro": ros_distro,
-            "available_packages": list(_list_packages().keys())[:20]
+            "available_packages": list(list_packages().keys())[:20]
         })
     
     # Check if launch file exists (search multiple locations)
-    prefix = _get_package_prefix("foxglove_bridge")
+    prefix = get_package_prefix("foxglove_bridge")
     possible_launch_paths = [
         os.path.join(prefix, "share", "foxglove_bridge", "launch", "foxglove_bridge_launch.xml"),
         os.path.join(prefix, "lib", "foxglove_bridge", "launch", "foxglove_bridge_launch.xml"),
@@ -651,7 +638,7 @@ def cmd_launch_foxglove(args):
         result["warning"] = warning
     
     # Save session metadata for restart
-    _save_session(session_name, {
+    save_session(session_name, {
         "type": "foxglove",
         "port": port,
         "command": launch_cmd
@@ -659,3 +646,18 @@ def cmd_launch_foxglove(args):
     
     output(result)
     return result
+
+
+if __name__ == "__main__":
+    import sys
+    import os
+    _mod = os.path.basename(__file__)
+    _cli = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ros2_cli.py")
+    print(
+        f"[ros2-skill] '{_mod}' is an internal module — do not run it directly.\n"
+        "Use the main entry point:\n"
+        f"  python3 {_cli} <command> [subcommand] [args]\n"
+        f"See all commands:  python3 {_cli} --help",
+        file=sys.stderr,
+    )
+    sys.exit(1)

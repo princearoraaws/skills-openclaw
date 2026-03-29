@@ -2,7 +2,57 @@
 
 All notable changes to ros2-skill will be documented in this file.
 
-## [1.0.4] - 2026-03-13
+## [1.0.6] - 2026-03-24
+
+Completed the component command group, hardened agent self-recovery behaviour, and added vocabulary and rules for bags, camera calibration, log directories, and Nav2 goal preemption.
+
+### New Commands
+
+- `component list` / `component ls` — list all running component containers and their loaded components
+- `component load <container> <package> <plugin>` — load a composable node into an existing container
+- `component unload <container> <unique_id>` — unload a composable node by its unique ID
+- `component standalone <package> <plugin>` — start a fresh container in a tmux session and load the plugin in one step; container named `standalone_<plugin_class>` (e.g. `demo_nodes_cpp::Talker` → `/standalone_talker`)
+- `component kill <session>` — kill a standalone container session (`comp_*` prefix); companion to `run kill` and `launch kill`
+
+### Changes
+
+- Fixed `component standalone` container path for `component_container_isolated` (`/{name}/_container`); timeout error now distinguishes alive-but-slow, service at alternate path, and crashed; orphaned sessions cleaned up automatically on failure
+- Fixed `--log-level` argument type to prevent `PyLong_Check` assertion failure
+- Agent rules: act on CLI `hint` key immediately; autonomous tmux session error recovery table; banned "you may need to…"; background-launch narration banned; session kill routing by prefix
+- Bag vocabulary added (`record a bag`, `play back bag`, `bag info`); camera calibration vocabulary row added; log directory resolution added to session-start rules; Nav2 in-flight goal preemption added as companion to Rule 9
+- Documentation: `run kill` corrected to `component kill` everywhere; COMMANDS.md, EXAMPLES.md, CLI.md, README.md updated
+
+---
+
+## [1.0.5] - 2026-03-21
+
+Comprehensive self-reliance review. Added introspection commands, hardened safety and motion rules, introduced AGENTS.md, and made the deceleration zone dynamic.
+
+### New Commands
+
+- `bag info <bag_path>` — bag metadata (duration, message counts, per-topic stats); no live graph required
+- `component types` — list registered rclcpp composable node types; no live graph required
+- `daemon status` / `daemon start` / `daemon stop` — ROS 2 daemon management
+- `params find <pattern> [--node N]` — search all live nodes for params matching a substring
+- `tf tree` — ASCII visualization of the full TF frame hierarchy
+- `tf validate` — DFS cycle detection and multiple-parent checks across the TF graph
+- `topics qos-check <topic>` — compare publisher/subscriber QoS profiles; suggests fix flags
+- `launch list <keyword>` — find launch files across installed packages by keyword (no keyword = existing session list behaviour)
+- `pkg list` / `pkg ls` — list all installed packages; no live graph required
+- `pkg prefix <package>` — resolve the install prefix for a package
+- `pkg executables <package>` — list executable files provided by a package
+- `pkg xml <package>` — output the `package.xml` manifest for a package
+
+### Changes
+
+- `publish-until` deceleration zone auto-computed from kinematics; proximity sensor scan before long motions; velocity-limit scan extended to four sources; QoS auto-matching in `ConditionMonitor`
+- Rules: `estop` is a hard preemption; QoS + monitor field pre-flight mandatory; motion ceilings; `publish-until` > 30 s segmented; simulated clock re-verified before every timed command; TF staleness + cycle detection pre-flight; node crash monitoring for commands > 10 s
+- Fixes: `scale_twist_velocity` Twist/TwistStamped branching; `cmd_actions_details` None guard; `cmd_version` reports `rclpy_available`; unique per-topic node names
+- `AGENTS.md` added — condensed operational guide covering session-start, core rules, movement, and safety
+
+---
+
+## [1.0.4] - 2026-03-14
 
 Added launch, run, and tf commands. Hardened movement safety rules and `--rotate` rotation monitoring.
 
@@ -49,6 +99,10 @@ Added launch, run, and tf commands. Hardened movement safety rules and `--rotate
 - Rule 0.1: mandatory session-start checks — `doctor`, simulated time, lifecycle node states
 - Rule 0.5: never guess commands or flags; verify in COMMANDS.md then `--help` before use
 
+---
+
+## [1.0.3] - 2026-03-09
+
 Added parameter preset commands, diagnostics monitoring, battery monitoring, and global timeout/retry configuration.
 
 ### Global Options
@@ -63,10 +117,16 @@ Added parameter preset commands, diagnostics monitoring, battery monitoring, and
 - `cmd_actions_send`: moved `wait_for_server` inside the retry loop so server unavailability is actually retried
 - `cmd_actions_cancel`: added full retry loop (was missing entirely)
 
-### Topics — Diagnostics
+### Topics — Diagnostics & Battery
 
 - `topics diag-list` — list all topics publishing `DiagnosticArray` messages, discovered by **type** (not by name); works with `/diagnostics`, `<node>/diagnostics`, `<namespace>/diagnostics`, or any other convention
 - `topics diag` — subscribe to all discovered diagnostic topics simultaneously (or a specific `--topic`); returns parsed status with `level_name` (OK/WARN/ERROR/STALE), `name`, `message`, `hardware_id`, and key-value `values`; supports `--duration` + `--max-messages` for multi-message collection and `--timeout` for one-shot mode
+- `topics battery-list` — list all topics publishing `BatteryState` messages, discovered by type
+- `topics battery` — subscribe to battery topics; returns parsed state including percentage, voltage, current, charge, and cell details (handles NaN and numeric-to-label conversion for status/health/tech)
+
+### Skill
+
+- Auto-discovery: movement velocity limits, diagnostics, and battery topics are now auto-discovered by scanning the live graph's message types and parameters.
 
 ### Parameters — Presets
 

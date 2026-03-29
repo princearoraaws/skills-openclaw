@@ -1,439 +1,5 @@
 #!/usr/bin/env python3
-"""ROS 2 Skill - Standalone CLI tool for controlling ROS 2 robots directly via rclpy.
-
-Requires: rclpy (install via ROS 2) or pip install rclpy
-
-Commands:
-
-  version
-    Detect ROS 2 version and distro.
-    $ python3 ros2_cli.py version
-
-  estop
-    Emergency stop for mobile robots. Auto-detects velocity topic and type,
-    then publishes zero velocity. For mobile bases only (not arms).
-    $ python3 ros2_cli.py estop
-
-  topics list
-    List all active topics with their message types.
-    $ python3 ros2_cli.py topics list
-
-  topics type <topic>
-    Get the message type of a specific topic.
-    $ python3 ros2_cli.py topics type /cmd_vel
-    $ python3 ros2_cli.py topics type /turtle1/pose
-
-  topics details <topic>
-    Get topic details including type, publishers, and subscribers.
-    $ python3 ros2_cli.py topics details /cmd_vel
-
-  topics message <message_type>
-    Get the field structure of a message type.
-    $ python3 ros2_cli.py topics message geometry_msgs/Twist
-    $ python3 ros2_cli.py topics message sensor_msgs/LaserScan
-
-  topics subscribe <topic> [--duration SEC] [--max-messages N]
-  topics echo      <topic> [--duration SEC] [--max-messages N]
-  topics sub       <topic> [--duration SEC] [--max-messages N]
-    Subscribe to a topic (echo and sub are aliases for subscribe).
-    Without --duration, returns the first message and exits.
-    With --duration, collects messages for the specified time.
-    --duration SECONDS        Collect messages for this duration (default: single message)
-    --max-messages N          Max messages to collect during duration (default: 100)
-    --max-msgs N              Alias for --max-messages
-    $ python3 ros2_cli.py topics subscribe /turtle1/pose
-    $ python3 ros2_cli.py topics echo /odom
-    $ python3 ros2_cli.py topics sub /odom --duration 10 --max-msgs 50
-
-  topics publish           <topic> <json_message> [--duration SEC | --timeout SEC] [--rate HZ]
-  topics pub               <topic> <json_message> [--duration SEC | --timeout SEC] [--rate HZ]
-  topics publish-continuous <topic> <json_message> [--duration SEC | --timeout SEC] [--rate HZ]
-    Publish a message to a topic.  pub and publish-continuous are aliases for publish.
-    Without --duration / --timeout: sends once (single-shot).
-    With --duration / --timeout: publishes repeatedly at --rate Hz for the specified seconds,
-    then stops.  Reports stopped_by: "timeout" or "keyboard_interrupt".
-    --duration SECONDS   Publish repeatedly for this duration (--timeout is an alias)
-    --timeout SECONDS    Alias for --duration
-    --rate HZ            Publish rate (default: 10 Hz)
-    $ python3 ros2_cli.py topics publish /turtle1/cmd_vel \
-        '{"linear":{"x":2.0,"y":0,"z":0},"angular":{"x":0,"y":0,"z":0}}'
-    $ python3 ros2_cli.py topics pub /cmd_vel \
-        '{"linear":{"x":1.0,"y":0,"z":0},"angular":{"x":0,"y":0,"z":0}}' --duration 3
-    $ python3 ros2_cli.py topics publish /cmd_vel \
-        '{"linear":{"x":0.3},"angular":{"z":0}}' --timeout 5
-
-  topics publish-sequence <topic> <json_messages> <json_durations> [--rate HZ]
-  topics pub-seq          <topic> <json_messages> <json_durations> [--rate HZ]
-    Publish a sequence of messages (pub-seq is an alias for publish-sequence).
-    Each message is repeatedly published at --rate Hz for its corresponding duration.
-    This keeps velocity commands active for the full duration.
-    <json_messages>   JSON array of messages to publish in order
-    <json_durations>  JSON array of durations (seconds) for each message (must match length)
-    --rate HZ         Publish rate (default: 10 Hz)
-    $ python3 ros2_cli.py topics publish-sequence /turtle1/cmd_vel \
-        '[{"linear":{"x":1.0},"angular":{"z":0}},{"linear":{"x":0},"angular":{"z":0}}]' \
-        '[3.0, 0.5]'
-
-  topics publish-until <topic> <json_msg> --monitor <topic> (--delta|--above|--below|--equals|--rotate) <value> [--field <path>] [--euclidean] [--degrees]
-    Publish a message at --rate Hz while monitoring a second topic. Stops as soon as the
-    condition on the monitored field is satisfied, or after --timeout seconds (default: 60).
-    --monitor TOPIC        Topic to monitor for the stop condition
-    --field PATH [PATH...] One or more dot-separated field paths (e.g. pose.pose.position.x)
-    --euclidean            Compute Euclidean distance across all --field paths; requires --delta
-    --delta N              Stop when field changes by ±N (or Euclidean distance >= N)
-    --above N              Stop when field > N (absolute threshold; single field only)
-    --below N              Stop when field < N (absolute threshold; single field only)
-    --equals V             Stop when field == V (single field only)
-    --rate HZ              Publish rate (default: 10 Hz)
-    --timeout SEC          Safety timeout (default: 60 s)
-    $ python3 ros2_cli.py topics publish-until /cmd_vel \
-        '{"linear":{"x":0.3},"angular":{"z":0}}' \
-        --monitor /odom --field pose.pose.position.x --delta 1.0
-    $ python3 ros2_cli.py topics publish-until /cmd_vel \
-        '{"linear":{"x":0.2},"angular":{"z":0.1}}' \
-        --monitor /odom --field pose.pose.position.x pose.pose.position.y --euclidean --delta 2.0
-
-  topics hz <topic> [--window N] [--timeout SEC]
-    Measure the publish rate of a topic. Collects --window inter-message intervals
-    and reports rate, min/max delta, and standard deviation.
-    --window N    Number of intervals to sample (default: 10)
-    --timeout SEC Max wait time in seconds (default: 10)
-    $ python3 ros2_cli.py topics hz /turtle1/pose
-    $ python3 ros2_cli.py topics hz /scan --window 20 --timeout 15
-
-  topics find <message_type>
-    Find all topics publishing a specific message type.
-    Accepts both /msg/ and non-/msg/ formats (normalised for comparison).
-    $ python3 ros2_cli.py topics find geometry_msgs/msg/Twist
-    $ python3 ros2_cli.py topics find geometry_msgs/Twist
-
-  topics info <topic>
-    Alias for topics details (ros2 topic info).
-    $ python3 ros2_cli.py topics info /cmd_vel
-
-  services list
-    List all available services.
-    $ python3 ros2_cli.py services list
-
-  services type <service>
-    Get the type of a specific service.
-    $ python3 ros2_cli.py services type /reset
-
-  services details <service>
-    Get service details including type, request fields, and response fields.
-    $ python3 ros2_cli.py services details /spawn
-
-  services call <service> <json_request> [--service-type TYPE]
-    Call a service with a JSON request payload. Service type is auto-detected
-    from the ROS graph; use --service-type when the service is not yet visible.
-    $ python3 ros2_cli.py services call /reset '{}'
-    $ python3 ros2_cli.py services call /spawn \
-        '{"x":3.0,"y":3.0,"theta":0.0,"name":"turtle2"}'
-    $ python3 ros2_cli.py services call /emergency_stop \
-        '{"data": true}' --service-type std_srvs/srv/SetBool
-
-  services find <service_type>
-    Find all services of a specific type.
-    Accepts both /srv/ and non-/srv/ formats (normalised for comparison).
-    $ python3 ros2_cli.py services find std_srvs/srv/Empty
-    $ python3 ros2_cli.py services find std_srvs/Empty
-
-  services info <service>
-    Alias for services details (ros2 service info).
-    $ python3 ros2_cli.py services info /spawn
-
-  nodes list
-  nodes ls
-    List all active nodes.  (ls is an alias for list)
-    $ python3 ros2_cli.py nodes list
-    $ python3 ros2_cli.py nodes ls
-
-  nodes details <node>
-  nodes info     <node>
-    Get node details including publishers, subscribers, services, action servers,
-    and action clients. (info is an alias for details, ros2 node info)
-    $ python3 ros2_cli.py nodes details /turtlesim
-    $ python3 ros2_cli.py nodes info /turtlesim
-
-  params list <node>
-  params ls   <node>
-    List all parameters for a node.  (ls is an alias for list)
-    $ python3 ros2_cli.py params list /turtlesim
-    $ python3 ros2_cli.py params ls /turtlesim
-
-  params get <node:param_name>
-  params get <node> <param_name>
-    Get a parameter value. Both formats are accepted.
-    $ python3 ros2_cli.py params get /turtlesim:background_r
-    $ python3 ros2_cli.py params get /turtlesim background_r
-
-  params set <node:param_name> <value>
-  params set <node> <param_name> <value>
-    Set a parameter value. Both formats are accepted.
-    $ python3 ros2_cli.py params set /turtlesim:background_r 255
-    $ python3 ros2_cli.py params set /turtlesim background_r 255
-
-  actions list
-  actions ls
-    List all available action servers.  (ls is an alias for list)
-    $ python3 ros2_cli.py actions list
-    $ python3 ros2_cli.py actions ls
-
-  actions details <action>
-  actions info    <action>
-    Get action details including goal, result, and feedback fields.
-    (info is an alias for details, ros2 action info)
-    $ python3 ros2_cli.py actions details /turtle1/rotate_absolute
-    $ python3 ros2_cli.py actions info /turtle1/rotate_absolute
-
-  actions type <action>
-    Get the type of an action server.
-    $ python3 ros2_cli.py actions type /turtle1/rotate_absolute
-
-  actions send      <action> <json_goal> [--feedback]
-  actions send-goal <action> <json_goal> [--feedback]
-    Send an action goal and wait for the result.
-    --feedback    Collect feedback messages; included in output as feedback_msgs
-    (send-goal is an alias for send, ros2 action send_goal)
-    $ python3 ros2_cli.py actions send /turtle1/rotate_absolute '{"theta":3.14}'
-    $ python3 ros2_cli.py actions send-goal /turtle1/rotate_absolute '{"theta":3.14}'
-    $ python3 ros2_cli.py actions send /turtle1/rotate_absolute '{"theta":3.14}' --feedback
-
-  actions cancel <action> [--timeout SEC]
-    Cancel all in-flight goals on an action server.
-    Uses zero UUID + zero timestamp per ROS 2 CancelGoal spec to cancel all goals.
-    $ python3 ros2_cli.py actions cancel /turtle1/rotate_absolute
-
-  topics bw <topic> [--window N] [--timeout SEC]
-    Measure the bandwidth of a topic in bytes/s.
-    --window N    Number of message samples (default: 10)
-    --timeout SEC Max wait time in seconds (default: 10)
-    $ python3 ros2_cli.py topics bw /camera/image_raw
-    $ python3 ros2_cli.py topics bw /scan --window 20
-
-  topics delay <topic> [--window N] [--timeout SEC]
-    Measure end-to-end latency between header.stamp and wall clock.
-    Errors if the message has no header.stamp field.
-    --window N    Number of latency samples (default: 10)
-    --timeout SEC Max wait time in seconds (default: 10)
-    $ python3 ros2_cli.py topics delay /odom
-    $ python3 ros2_cli.py topics delay /scan --window 20
-
-  topics diag-list
-    List all topics that publish DiagnosticArray messages, discovered by type
-    (not by name — works with /diagnostics, <node>/diagnostics, or any name).
-    $ python3 ros2_cli.py topics diag-list
-
-  topics diag [--topic TOPIC] [--duration SEC] [--max-messages N] [--timeout SEC]
-    Subscribe to diagnostic topics (auto-discovered by DiagnosticArray type) and
-    return human-readable status with level_name (OK/WARN/ERROR/STALE), name,
-    message, hardware_id, and key-value pairs.
-    --topic TOPIC         Subscribe to this specific topic only
-    --duration SEC        Collect for N seconds (default: one-shot)
-    --max-messages N      Max messages per topic in --duration mode (default: 1)
-    --timeout SEC         Timeout waiting for first message (default: 10)
-    $ python3 ros2_cli.py topics diag
-    $ python3 ros2_cli.py topics diag --topic /my_node/diagnostics
-    $ python3 ros2_cli.py topics diag --duration 5 --max-messages 3
-
-  lifecycle nodes
-    List all managed (lifecycle) nodes in the ROS 2 graph.
-    $ python3 ros2_cli.py lifecycle nodes
-
-  lifecycle list [<node>]
-  lifecycle ls   [<node>]
-    List available states and transitions for a managed (lifecycle) node.
-    If no node is provided, queries all managed nodes.
-    (ls is an alias for list)
-    $ python3 ros2_cli.py lifecycle list /my_lifecycle_node
-    $ python3 ros2_cli.py lifecycle ls
-
-  lifecycle get <node>
-    Get the current lifecycle state of a managed node.
-    $ python3 ros2_cli.py lifecycle get /my_lifecycle_node
-
-  lifecycle set <node> <transition>
-    Trigger a lifecycle state transition. Accepts a label (e.g. configure) or
-    a numeric transition ID. Prefers label when a string is provided.
-    Common labels: configure, cleanup, activate, deactivate, shutdown
-    $ python3 ros2_cli.py lifecycle set /my_lifecycle_node configure
-    $ python3 ros2_cli.py lifecycle set /my_lifecycle_node 3
-
-  params describe <node:param_name>
-  params describe <node> <param_name>
-    Describe a parameter: type, description, read_only, dynamic_typing, constraints.
-    $ python3 ros2_cli.py params describe /turtlesim:background_r
-
-  params dump <node> [--timeout SEC]
-    Export all parameters for a node as a JSON dict {name: value}.
-    $ python3 ros2_cli.py params dump /turtlesim
-
-  params load <node> <json_or_file> [--timeout SEC]
-    Bulk-set parameters from a JSON string or a file path.
-    JSON format: {"param_name": value, ...}
-    $ python3 ros2_cli.py params load /turtlesim '{"background_r":255}'
-
-  params delete <node> <param_name> [extra_param_names...] [--timeout SEC]
-    Delete one or more parameters from a node via DeleteParameters service.
-    $ python3 ros2_cli.py params delete /turtlesim background_r
-
-Output:
-    All commands output JSON to stdout.
-    Successful results contain relevant data fields.
-    Errors contain an "error" field: {"error": "description"}
-
-Examples:
-    # Explore the robot system
-    python3 ros2_cli.py version
-    python3 ros2_cli.py topics list
-    python3 ros2_cli.py nodes list
-    python3 ros2_cli.py services list
-
-    # Move turtlesim forward 2 sec then stop
-    python3 ros2_cli.py topics publish-sequence /turtle1/cmd_vel \
-      '[{"linear":{"x":2},"angular":{"z":0}},{"linear":{"x":0},"angular":{"z":0}}]' \
-      '[2.0, 0.5]'
-
-    # Read LiDAR data
-    python3 ros2_cli.py topics subscribe /scan --duration 3
-
-    # Change turtlesim background to red
-    python3 ros2_cli.py params set /turtlesim:background_r 255
-    python3 ros2_cli.py params set /turtlesim:background_g 0
-    python3 ros2_cli.py params set /turtlesim:background_b 0
-
-  control list-controller-types [--controller-manager CM] [--timeout SEC]
-  control lct
-    List all controller types in the pluginlib registry with their base classes.
-    $ python3 ros2_cli.py control list-controller-types
-
-  control list-controllers [--controller-manager CM] [--timeout SEC]
-  control lc
-    List loaded controllers, their type and current state.
-    $ python3 ros2_cli.py control list-controllers
-
-  control list-hardware-components [--controller-manager CM] [--timeout SEC]
-  control lhc
-    List hardware components (actuator, sensor, system) managed by ros2_control.
-    $ python3 ros2_cli.py control list-hardware-components
-
-  control list-hardware-interfaces [--controller-manager CM] [--timeout SEC]
-  control lhi
-    List all command and state interfaces.
-    $ python3 ros2_cli.py control list-hardware-interfaces
-
-  control load-controller <name> [--controller-manager CM]
-  control load             <name>
-    Load a controller plugin by name.
-    $ python3 ros2_cli.py control load-controller joint_trajectory_controller
-
-  control unload-controller <name> [--controller-manager CM]
-  control unload             <name>
-    Unload a stopped controller.
-    $ python3 ros2_cli.py control unload-controller joint_trajectory_controller
-
-  control configure-controller <name> [--controller-manager CM]
-  control cc                   <name>
-    Configure a loaded controller (unconfigured → inactive). Surfaces on_configure()
-    errors that SwitchController's auto-configure silently hides.
-    $ python3 ros2_cli.py control configure-controller joint_trajectory_controller
-
-  control reload-controller-libraries [--force-kill] [--controller-manager CM]
-  control rcl
-    Reload all controller plugin libraries.
-    $ python3 ros2_cli.py control reload-controller-libraries --force-kill
-
-  control set-controller-state <name> <active|inactive> [--controller-manager CM]
-  control scs                  <name> <active|inactive>
-    Activate or deactivate a single controller.
-    $ python3 ros2_cli.py control set-controller-state joint_trajectory_controller active
-
-  control set-hardware-component-state <name> <unconfigured|inactive|active|finalized>
-  control shcs                          <name> <state>
-    Drive a hardware component through its lifecycle.
-    $ python3 ros2_cli.py control set-hardware-component-state my_robot active
-
-  control switch-controllers [--activate CTRL ...] [--deactivate CTRL ...]
-                             [--strictness BEST_EFFORT|STRICT] [--activate-asap]
-  control sc
-  control swc
-    Atomically switch multiple controllers in one call.
-    $ python3 ros2_cli.py control switch-controllers \
-        --activate joint_trajectory_controller --deactivate cartesian_controller
-
-  control view-controller-chains [--output FILE] [--channel-id ID] [--config PATH]
-  control vcc
-    Write a Graphviz diagram of chained controllers to .artifacts/ and optionally
-    send the PDF to Discord. Requires graphviz: sudo apt install graphviz
-    $ python3 ros2_cli.py control view-controller-chains
-    $ python3 ros2_cli.py control view-controller-chains \
-        --output my_diagram.pdf --channel-id 1234567890
-
-  doctor [--report/-r] [--report-failed/-rf] [--exclude-packages/-ep] [--include-warnings/-iw]
-  wtf    [same flags]
-    Run ROS 2 system health checks (network, platform, packages, topics, QoS, RMW).
-    Requires ros2doctor: sudo apt install ros-$ROS_DISTRO-ros2doctor
-    --report / -r           Include all checker report sections in output
-    --report-failed / -rf   Include report sections for failed checks only
-    --exclude-packages / -ep  Skip the package checker
-    --include-warnings / -iw  Treat warnings as failures in the summary
-    $ python3 ros2_cli.py doctor
-    $ python3 ros2_cli.py doctor --report-failed --include-warnings
-    $ python3 ros2_cli.py wtf
-
-  doctor hello [--topic TOPIC] [--timeout SEC]
-  wtf    hello [--topic TOPIC] [--timeout SEC]
-    Check cross-host ROS 2 connectivity. Publishes to a topic and sends UDP
-    multicast; reports which remote hosts responded.
-    --topic / -t   Topic to use (default: /canyouhearme)
-    --timeout / -to  How long to listen in seconds (default: 10.0)
-    $ python3 ros2_cli.py doctor hello
-    $ python3 ros2_cli.py doctor hello --topic /ros2_hello --timeout 5
-
-  multicast send [--group GROUP] [--port PORT]
-    Send one UDP multicast datagram to GROUP:PORT.
-    --group / -g   Multicast group (default: 225.0.0.1)
-    --port  / -p   UDP port (default: 49150)
-    $ python3 ros2_cli.py multicast send
-    $ python3 ros2_cli.py multicast send --group 225.0.0.1 --port 49150
-
-  multicast receive [--group GROUP] [--port PORT] [--timeout SEC]
-    Listen for UDP multicast packets and report all received within timeout.
-    --group   / -g   Multicast group (default: 225.0.0.1)
-    --port    / -p   UDP port (default: 49150)
-    --timeout / -t   How long to listen in seconds (default: 5.0)
-    $ python3 ros2_cli.py multicast receive
-    $ python3 ros2_cli.py multicast receive --timeout 10
-
-  interface list
-    List all interface types (messages, services, actions) installed on this system.
-    No ROS 2 graph required — reads from the ament resource index.
-    $ python3 ros2_cli.py interface list
-
-  interface show <type>
-    Show the field structure of a message, service, or action type.
-    Accepts pkg/msg/Name, pkg/srv/Name, pkg/action/Name, or shorthand pkg/Name.
-    $ python3 ros2_cli.py interface show std_msgs/msg/String
-    $ python3 ros2_cli.py interface show std_srvs/srv/SetBool
-    $ python3 ros2_cli.py interface show nav2_msgs/action/NavigateToPose
-    $ python3 ros2_cli.py interface show std_msgs/String
-
-  interface proto <type>
-    Show a default-value prototype of a message, service, or action type.
-    Unlike 'show' (type strings), 'proto' returns instantiated default values —
-    useful as a copy-paste template for ros2 topic pub payloads.
-    $ python3 ros2_cli.py interface proto std_msgs/msg/String
-    $ python3 ros2_cli.py interface proto geometry_msgs/msg/Twist
-
-  interface packages
-    List all packages that define at least one interface type.
-    $ python3 ros2_cli.py interface packages
-
-  interface package <package>
-    List all interface types (messages, services, actions) for a package.
-    $ python3 ros2_cli.py interface package std_msgs
-    $ python3 ros2_cli.py interface package geometry_msgs
-"""
+"""ROS 2 Skill CLI — see references/COMMANDS.md for full command reference."""
 
 import argparse
 import os
@@ -444,7 +10,6 @@ import sys
 # and callers that do: import ros2_cli; ros2_cli.output(...)
 # ---------------------------------------------------------------------------
 from ros2_utils import (  # noqa: F401 – intentional re-exports
-    MSG_ALIASES,
     get_msg_type,
     get_action_type,
     get_srv_type,
@@ -478,8 +43,7 @@ from ros2_topic import (
     cmd_topics_diag,
     cmd_topics_battery_list,
     cmd_topics_battery,
-    cmd_services_echo,
-    cmd_actions_echo,
+    cmd_topics_qos_check,
 )
 
 from ros2_node import (
@@ -499,6 +63,7 @@ from ros2_param import (
     cmd_params_preset_load,
     cmd_params_preset_list,
     cmd_params_preset_delete,
+    cmd_params_find,
 )
 
 from ros2_service import (
@@ -506,6 +71,7 @@ from ros2_service import (
     cmd_services_type,
     cmd_services_details,
     cmd_services_call,
+    cmd_services_echo,
     cmd_services_find,
 )
 
@@ -513,6 +79,7 @@ from ros2_action import (
     cmd_actions_list,
     cmd_actions_details,
     cmd_actions_send,
+    cmd_actions_echo,
     cmd_actions_type,
     cmd_actions_cancel,
     cmd_actions_find,
@@ -551,6 +118,8 @@ from ros2_tf import (
     cmd_tf_quaternion_from_euler_degrees,
     cmd_tf_transform_point,
     cmd_tf_transform_vector,
+    cmd_tf_tree,
+    cmd_tf_validate,
 )
 from ros2_lifecycle import (
     cmd_lifecycle_nodes,
@@ -564,6 +133,28 @@ from ros2_interface import (
     cmd_interface_proto,
     cmd_interface_packages,
     cmd_interface_package,
+)
+from ros2_bag import (
+    cmd_bag_info,
+)
+from ros2_component import (
+    cmd_component_types,
+    cmd_component_list,
+    cmd_component_load,
+    cmd_component_unload,
+    cmd_component_standalone,
+    cmd_component_kill,
+)
+from ros2_pkg import (
+    cmd_pkg_list,
+    cmd_pkg_prefix,
+    cmd_pkg_executables,
+    cmd_pkg_xml,
+)
+from ros2_daemon import (
+    cmd_daemon_status,
+    cmd_daemon_start,
+    cmd_daemon_stop,
 )
 from ros2_control import (
     cmd_control_list_controller_types,
@@ -580,10 +171,6 @@ from ros2_control import (
     cmd_control_view_controller_chains,
 )
 
-# Keep rclpy available for the main() finally block
-import rclpy  # noqa: E402 (imported after sys.exit guard in ros2_utils)
-
-
 # ---------------------------------------------------------------------------
 # Built-in commands that don't need rclpy
 # ---------------------------------------------------------------------------
@@ -591,7 +178,12 @@ import rclpy  # noqa: E402 (imported after sys.exit guard in ros2_utils)
 def cmd_version(args):
     domain_id = int(os.environ.get('ROS_DOMAIN_ID', 0))
     distro = os.environ.get('ROS_DISTRO', 'unknown')
-    output({"version": "2", "distro": distro, "domain_id": domain_id})
+    try:
+        import rclpy  # noqa: F401
+        rclpy_available = True
+    except ImportError:
+        rclpy_available = False
+    output({"version": "2", "distro": distro, "domain_id": domain_id, "rclpy_available": rclpy_available})
 
 
 # ---------------------------------------------------------------------------
@@ -654,7 +246,6 @@ def build_parser():
     p.add_argument("message_type", help="Message type (e.g. geometry_msgs/msg/Twist)")
     _add_subscribe_args(tsub.add_parser("subscribe", help="Subscribe to a topic"))
     _add_subscribe_args(tsub.add_parser("echo", help="Echo topic messages (alias for subscribe)"))
-    _add_subscribe_args(tsub.add_parser("sub", help="Alias for subscribe"))
     p = tsub.add_parser("capture-image", help="Capture image from ROS 2 topic")
     p.add_argument("--topic", required=True,
                    help="ROS 2 image topic (e.g., /camera/image_raw/compressed)")
@@ -686,6 +277,10 @@ def build_parser():
                    help="Number of messages to sample (default: 10)")
     p.add_argument("--timeout", type=float, default=10.0,
                    help="Max wait time in seconds (default: 10)")
+    p = tsub.add_parser("qos-check", help="Check QoS compatibility between publishers and subscribers")
+    p.add_argument("topic", help="Topic name (e.g. /odom)")
+    p.add_argument("--timeout", type=float, default=5.0,
+                   help="Timeout in seconds (default: 5)")
     tsub.add_parser("diag-list",
                     help="List all topics publishing DiagnosticArray messages (by type)")
     p = tsub.add_parser("diag",
@@ -722,19 +317,17 @@ def build_parser():
                        help="Publish repeatedly for this many seconds (--timeout is an alias)")
         p.add_argument("--rate", type=float, default=10.0,
                        help="Publish rate in Hz (default: 10)")
-    for _seq_name in ("publish-sequence", "pub-seq"):
-        p = tsub.add_parser(_seq_name,
-                            help="Publish message sequence with delays"
-                            if _seq_name == "publish-sequence"
-                            else "Alias for publish-sequence")
-        p.add_argument("topic", nargs="?", help="Topic name to publish to (e.g. /cmd_vel)")
-        p.add_argument("messages", nargs="?", help="JSON array of messages")
-        p.add_argument("durations", nargs="?",
-                       help="JSON array of durations in seconds (message is repeated during each)")
-        p.add_argument("--msg-type", dest="msg_type", default=None,
-                       help="Message type (auto-detected if not provided)")
-        p.add_argument("--rate", type=float, default=10.0,
-                       help="Publish rate in Hz (default: 10)")
+        p.add_argument("--retries", type=int, default=None,
+                       help="Number of attempts before giving up (overrides global --retries)")
+    p = tsub.add_parser("publish-sequence", help="Publish message sequence with delays")
+    p.add_argument("topic", nargs="?", help="Topic name to publish to (e.g. /cmd_vel)")
+    p.add_argument("messages", nargs="?", help="JSON array of messages")
+    p.add_argument("durations", nargs="?",
+                   help="JSON array of durations in seconds (message is repeated during each)")
+    p.add_argument("--msg-type", dest="msg_type", default=None,
+                   help="Message type (auto-detected if not provided)")
+    p.add_argument("--rate", type=float, default=10.0,
+                   help="Publish rate in Hz (default: 10)")
     p = tsub.add_parser("publish-until",
                         help="Publish until a monitor-topic condition is met")
     p.add_argument("topic", nargs="?", help="Topic name to publish to (e.g. /cmd_vel)")
@@ -766,10 +359,22 @@ def build_parser():
                         "Requires --monitor with an odometry topic.")
     p.add_argument("--degrees", action="store_true", default=False,
                    help="Interpret --rotate angle in degrees instead of radians")
+    p.add_argument("--slow-last", dest="slow_last", type=float, default=None,
+                   help="Begin decelerating when this many units remain before the target. "
+                        "Units match the movement type: metres for --field/--euclidean distance, "
+                        "degrees if --degrees is set, radians otherwise for --rotate. "
+                        "Velocity ramps linearly from full commanded speed at --slow-last remaining "
+                        "down to --slow-factor × full speed at the target.")
+    p.add_argument("--slow-factor", dest="slow_factor", type=float, default=0.25,
+                   help="Minimum velocity as a fraction of the commanded velocity at the end of "
+                        "the decel zone (0–1, default 0.25). E.g. 0.25 means the robot finishes "
+                        "at 25%% of its commanded speed.")
     p.add_argument("--rate", type=float, default=10.0,
                    help="Publish rate in Hz (default: 10)")
     p.add_argument("--timeout", type=float, default=60.0,
                    help="Safety timeout in seconds (default: 60)")
+    p.add_argument("--retries", type=int, default=None,
+                   help="Number of attempts before giving up (overrides global --retries)")
     p.add_argument("--msg-type", dest="msg_type", default=None,
                    help="Publish topic message type (auto-detected)")
     p.add_argument("--monitor-msg-type", dest="monitor_msg_type", default=None,
@@ -879,29 +484,21 @@ def build_parser():
         p.add_argument("--timeout", type=float, default=5.0,
                        help="Service call timeout in seconds (default: 5)")
 
-    for _name in ("list-controller-types", "lct"):
-        p = csub.add_parser(_name,
-            help="List available controller types and their base classes"
-            if _name == "list-controller-types" else "Alias for list-controller-types")
-        _add_cm_args(p)
+    p = csub.add_parser("list-controller-types",
+                        help="List available controller types and their base classes")
+    _add_cm_args(p)
 
-    for _name in ("list-controllers", "lc"):
-        p = csub.add_parser(_name,
-            help="List loaded controllers, their type and status"
-            if _name == "list-controllers" else "Alias for list-controllers")
-        _add_cm_args(p)
+    p = csub.add_parser("list-controllers",
+                        help="List loaded controllers, their type and status")
+    _add_cm_args(p)
 
-    for _name in ("list-hardware-components", "lhc"):
-        p = csub.add_parser(_name,
-            help="List available hardware components"
-            if _name == "list-hardware-components" else "Alias for list-hardware-components")
-        _add_cm_args(p)
+    p = csub.add_parser("list-hardware-components",
+                        help="List available hardware components")
+    _add_cm_args(p)
 
-    for _name in ("list-hardware-interfaces", "lhi"):
-        p = csub.add_parser(_name,
-            help="List available command and state interfaces"
-            if _name == "list-hardware-interfaces" else "Alias for list-hardware-interfaces")
-        _add_cm_args(p)
+    p = csub.add_parser("list-hardware-interfaces",
+                        help="List available command and state interfaces")
+    _add_cm_args(p)
 
     for _name in ("load-controller", "load"):
         p = csub.add_parser(_name,
@@ -917,66 +514,54 @@ def build_parser():
         p.add_argument("name", help="Controller name")
         _add_cm_args(p)
 
-    for _name in ("configure-controller", "cc"):
-        p = csub.add_parser(_name,
-            help="Configure a loaded controller (unconfigured → inactive)"
-            if _name == "configure-controller" else "Alias for configure-controller")
-        p.add_argument("name", help="Controller name")
-        _add_cm_args(p)
+    p = csub.add_parser("configure-controller",
+                        help="Configure a loaded controller (unconfigured → inactive)")
+    p.add_argument("name", help="Controller name")
+    _add_cm_args(p)
 
-    for _name in ("reload-controller-libraries", "rcl"):
-        p = csub.add_parser(_name,
-            help="Reload controller libraries"
-            if _name == "reload-controller-libraries" else "Alias for reload-controller-libraries")
-        p.add_argument("--force-kill", dest="force_kill", action="store_true", default=False,
-                       help="Force kill controllers before reloading")
-        _add_cm_args(p)
+    p = csub.add_parser("reload-controller-libraries",
+                        help="Reload controller libraries")
+    p.add_argument("--force-kill", dest="force_kill", action="store_true", default=False,
+                   help="Force kill controllers before reloading")
+    _add_cm_args(p)
 
-    for _name in ("set-controller-state", "scs"):
-        p = csub.add_parser(_name,
-            help="Adjust the state of the controller"
-            if _name == "set-controller-state" else "Alias for set-controller-state")
-        p.add_argument("name", help="Controller name")
-        p.add_argument("state", choices=["active", "inactive"],
-                       help="Target state: active or inactive")
-        _add_cm_args(p)
+    p = csub.add_parser("set-controller-state",
+                        help="Adjust the state of the controller")
+    p.add_argument("name", help="Controller name")
+    p.add_argument("state", choices=["active", "inactive"],
+                   help="Target state: active or inactive")
+    _add_cm_args(p)
 
-    for _name in ("set-hardware-component-state", "shcs"):
-        p = csub.add_parser(_name,
-            help="Adjust the state of the hardware component"
-            if _name == "set-hardware-component-state" else "Alias for set-hardware-component-state")
-        p.add_argument("name", help="Hardware component name")
-        p.add_argument("state", choices=["unconfigured", "inactive", "active", "finalized"],
-                       help="Target lifecycle state")
-        _add_cm_args(p)
+    p = csub.add_parser("set-hardware-component-state",
+                        help="Adjust the state of the hardware component")
+    p.add_argument("name", help="Hardware component name")
+    p.add_argument("state", choices=["unconfigured", "inactive", "active", "finalized"],
+                   help="Target lifecycle state")
+    _add_cm_args(p)
 
-    for _name in ("switch-controllers", "sc", "swc"):
-        p = csub.add_parser(_name,
-            help="Switch controllers in the controller manager"
-            if _name == "switch-controllers" else "Alias for switch-controllers")
-        p.add_argument("--activate", nargs="*", default=[],
-                       help="Controllers to activate")
-        p.add_argument("--deactivate", nargs="*", default=[],
-                       help="Controllers to deactivate")
-        p.add_argument("--strictness", choices=["BEST_EFFORT", "STRICT"],
-                       default="BEST_EFFORT",
-                       help="Switching strictness (default: BEST_EFFORT)")
-        p.add_argument("--activate-asap", dest="activate_asap", action="store_true",
-                       default=False,
-                       help="Activate controllers as soon as possible")
-        _add_cm_args(p)
+    p = csub.add_parser("switch-controllers",
+                        help="Switch controllers in the controller manager")
+    p.add_argument("--activate", nargs="*", default=[],
+                   help="Controllers to activate")
+    p.add_argument("--deactivate", nargs="*", default=[],
+                   help="Controllers to deactivate")
+    p.add_argument("--strictness", choices=["BEST_EFFORT", "STRICT"],
+                   default="BEST_EFFORT",
+                   help="Switching strictness (default: BEST_EFFORT)")
+    p.add_argument("--activate-asap", dest="activate_asap", action="store_true",
+                   default=False,
+                   help="Activate controllers as soon as possible")
+    _add_cm_args(p)
 
-    for _name in ("view-controller-chains", "vcc"):
-        p = csub.add_parser(_name,
-            help="Generate a diagram of loaded chained controllers"
-            if _name == "view-controller-chains" else "Alias for view-controller-chains")
-        p.add_argument("--output", default="controller_diagram.pdf",
-                       help="Output filename saved in .artifacts/ (default: controller_diagram.pdf)")
-        p.add_argument("--channel-id", dest="channel_id", default=None,
-                       help="Discord channel ID; if provided, sends the PDF via discord_tools")
-        p.add_argument("--config", default="~/.nanobot/config.json",
-                       help="Path to nanobot config for Discord (default: ~/.nanobot/config.json)")
-        _add_cm_args(p)
+    p = csub.add_parser("view-controller-chains",
+                        help="Generate a diagram of loaded chained controllers")
+    p.add_argument("--output", default="controller_diagram.pdf",
+                   help="Output filename saved in .artifacts/ (default: controller_diagram.pdf)")
+    p.add_argument("--channel-id", dest="channel_id", default=None,
+                   help="Discord channel ID; if provided, sends the PDF via discord_tools")
+    p.add_argument("--config", default="~/.nanobot/config.json",
+                   help="Path to nanobot config for Discord (default: ~/.nanobot/config.json)")
+    _add_cm_args(p)
 
     # ------------------------------------------------------------------
     # params
@@ -1028,6 +613,12 @@ def build_parser():
                    help="Additional parameter names to delete")
     p.add_argument("--timeout", type=float, default=5.0,
                    help="Timeout in seconds (default: 5)")
+    p = psub.add_parser("find", help="Search for parameters matching a pattern across all nodes")
+    p.add_argument("pattern", help="Case-insensitive substring to match (use 'all' or '*' for everything)")
+    p.add_argument("--node", default=None,
+                   help="Limit search to a single node (e.g. /turtlesim)")
+    p.add_argument("--timeout", type=float, default=10.0,
+                   help="Timeout per node in seconds (default: 10)")
     p = psub.add_parser("preset-save", help="Save node parameters as a named preset")
     p.add_argument("node", help="Node name (e.g. /turtlesim)")
     p.add_argument("preset", help="Preset name (e.g. indoor)")
@@ -1057,18 +648,15 @@ def build_parser():
     p.add_argument("action", nargs="?", help="Action server name (e.g. /turtle1/rotate_absolute)")
     p.add_argument("--timeout", type=float, default=5.0,
                    help="Timeout in seconds (default: 5)")
-    for _send_name in ("send", "send-goal"):
-        p = asub.add_parser(_send_name,
-                            help="Send action goal" if _send_name == "send"
-                            else "Alias for send (ros2 action send_goal)")
-        p.add_argument("action", help="Action server name (e.g. /turtle1/rotate_absolute)")
-        p.add_argument("goal", help="JSON goal")
-        p.add_argument("--timeout", type=float, default=30.0,
-                       help="Timeout in seconds (default: 30)")
-        p.add_argument("--retries", type=int, default=None,
-                       help="Number of attempts before giving up (overrides global --retries)")
-        p.add_argument("--feedback", action="store_true", default=False,
-                       help="Collect and return feedback messages alongside the result")
+    p = asub.add_parser("send", help="Send action goal")
+    p.add_argument("action", help="Action server name (e.g. /turtle1/rotate_absolute)")
+    p.add_argument("goal", help="JSON goal")
+    p.add_argument("--timeout", type=float, default=30.0,
+                   help="Timeout in seconds (default: 30)")
+    p.add_argument("--retries", type=int, default=None,
+                   help="Number of attempts before giving up (overrides global --retries)")
+    p.add_argument("--feedback", action="store_true", default=False,
+                   help="Collect and return feedback messages alongside the result")
     p = asub.add_parser("cancel",
                         help="Cancel all in-flight goals on an action server")
     p.add_argument("action", nargs="?", help="Action server name (e.g. /turtle1/rotate_absolute)")
@@ -1175,6 +763,8 @@ def build_parser():
     # tf monitor <frame>
     p = tfsub.add_parser("monitor", help="Monitor transform updates for a frame")
     p.add_argument("frame", help="Frame to monitor")
+    p.add_argument("--reference-frame", "-r", dest="reference_frame", default=None,
+                   help="Reference frame to look up against (default: auto-discovered root frame via tf list)")
     p.add_argument("--timeout", "-t", type=float, default=5.0, help="Timeout per lookup")
     p.add_argument("--count", "-n", type=int, default=5, help="Number of updates")
 
@@ -1193,27 +783,9 @@ def build_parser():
     p.add_argument("y", type=float, help="Quaternion y")
     p.add_argument("z", type=float, help="Quaternion z")
     p.add_argument("w", type=float, help="Quaternion w")
-    p = tfsub.add_parser("e2q", help="Alias for euler-from-quaternion")
-    p.add_argument("x", type=float, help="Quaternion x")
-    p.add_argument("y", type=float, help="Quaternion y")
-    p.add_argument("z", type=float, help="Quaternion z")
-    p.add_argument("w", type=float, help="Quaternion w")
-    p = tfsub.add_parser("quat2euler", help="Alias for euler-from-quaternion")
-    p.add_argument("x", type=float, help="Quaternion x")
-    p.add_argument("y", type=float, help="Quaternion y")
-    p.add_argument("z", type=float, help="Quaternion z")
-    p.add_argument("w", type=float, help="Quaternion w")
 
     # tf quaternion-from-euler <roll> <pitch> <yaw>
     p = tfsub.add_parser("quaternion-from-euler", help="Convert Euler to quaternion (radians)")
-    p.add_argument("roll", type=float, help="Euler roll (radians)")
-    p.add_argument("pitch", type=float, help="Euler pitch (radians)")
-    p.add_argument("yaw", type=float, help="Euler yaw (radians)")
-    p = tfsub.add_parser("q2e", help="Alias for quaternion-from-euler")
-    p.add_argument("roll", type=float, help="Euler roll (radians)")
-    p.add_argument("pitch", type=float, help="Euler pitch (radians)")
-    p.add_argument("yaw", type=float, help="Euler yaw (radians)")
-    p = tfsub.add_parser("euler2quat", help="Alias for quaternion-from-euler")
     p.add_argument("roll", type=float, help="Euler roll (radians)")
     p.add_argument("pitch", type=float, help="Euler pitch (radians)")
     p.add_argument("yaw", type=float, help="Euler yaw (radians)")
@@ -1224,38 +796,15 @@ def build_parser():
     p.add_argument("y", type=float, help="Quaternion y")
     p.add_argument("z", type=float, help="Quaternion z")
     p.add_argument("w", type=float, help="Quaternion w")
-    p = tfsub.add_parser("e2qdeg", help="Alias for euler-from-quaternion-deg")
-    p.add_argument("x", type=float, help="Quaternion x")
-    p.add_argument("y", type=float, help="Quaternion y")
-    p.add_argument("z", type=float, help="Quaternion z")
-    p.add_argument("w", type=float, help="Quaternion w")
 
     # tf quaternion-from-euler-deg <roll> <pitch> <yaw>
     p = tfsub.add_parser("quaternion-from-euler-deg", help="Convert Euler to quaternion (degrees)")
     p.add_argument("roll", type=float, help="Euler roll (degrees)")
     p.add_argument("pitch", type=float, help="Euler pitch (degrees)")
     p.add_argument("yaw", type=float, help="Euler yaw (degrees)")
-    p = tfsub.add_parser("q2edeg", help="Alias for quaternion-from-euler-deg")
-    p.add_argument("roll", type=float, help="Euler roll (degrees)")
-    p.add_argument("pitch", type=float, help="Euler pitch (degrees)")
-    p.add_argument("yaw", type=float, help="Euler yaw (degrees)")
 
     # tf transform-point <target> <source> <x> <y> <z>
     p = tfsub.add_parser("transform-point", help="Transform a point between frames")
-    p.add_argument("target", help="Target frame")
-    p.add_argument("source", help="Source frame")
-    p.add_argument("x", type=float, help="Point x")
-    p.add_argument("y", type=float, help="Point y")
-    p.add_argument("z", type=float, help="Point z")
-    p.add_argument("--timeout", "-t", type=float, default=5.0, help="Timeout")
-    p = tfsub.add_parser("tp", help="Alias for transform-point")
-    p.add_argument("target", help="Target frame")
-    p.add_argument("source", help="Source frame")
-    p.add_argument("x", type=float, help="Point x")
-    p.add_argument("y", type=float, help="Point y")
-    p.add_argument("z", type=float, help="Point z")
-    p.add_argument("--timeout", "-t", type=float, default=5.0, help="Timeout")
-    p = tfsub.add_parser("point", help="Alias for transform-point")
     p.add_argument("target", help="Target frame")
     p.add_argument("source", help="Source frame")
     p.add_argument("x", type=float, help="Point x")
@@ -1271,20 +820,16 @@ def build_parser():
     p.add_argument("y", type=float, help="Vector y")
     p.add_argument("z", type=float, help="Vector z")
     p.add_argument("--timeout", "-t", type=float, default=5.0, help="Timeout")
-    p = tfsub.add_parser("tv", help="Alias for transform-vector")
-    p.add_argument("target", help="Target frame")
-    p.add_argument("source", help="Source frame")
-    p.add_argument("x", type=float, help="Vector x")
-    p.add_argument("y", type=float, help="Vector y")
-    p.add_argument("z", type=float, help="Vector z")
-    p.add_argument("--timeout", "-t", type=float, default=5.0, help="Timeout")
-    p = tfsub.add_parser("vector", help="Alias for transform-vector")
-    p.add_argument("target", help="Target frame")
-    p.add_argument("source", help="Source frame")
-    p.add_argument("x", type=float, help="Vector x")
-    p.add_argument("y", type=float, help="Vector y")
-    p.add_argument("z", type=float, help="Vector z")
-    p.add_argument("--timeout", "-t", type=float, default=5.0, help="Timeout")
+
+    # tf tree
+    p = tfsub.add_parser("tree", help="Display TF frame tree as ASCII diagram")
+    p.add_argument("--duration", "-d", type=float, default=2.0,
+                   help="Seconds to collect TF data (default: 2.0)")
+
+    # tf validate
+    p = tfsub.add_parser("validate", help="Validate TF tree for cycles and multiple parents")
+    p.add_argument("--duration", "-d", type=float, default=2.0,
+                   help="Seconds to collect TF data (default: 2.0)")
 
     # ------------------------------------------------------------------
     # launch
@@ -1300,8 +845,13 @@ def build_parser():
     p.add_argument("args", nargs="*", help="Additional launch arguments")
     p.add_argument("--timeout", type=float, default=30.0, help="Timeout for launch to start (default: 30)")
 
-    lsub.add_parser("list", help="List running launch sessions")
-    lsub.add_parser("ls", help="Alias for list")
+    p = lsub.add_parser("list", help="List running launch sessions, or search for launch files by keyword")
+    p.add_argument("keyword", nargs="?", default=None,
+                   help="Optional keyword to search installed packages for matching launch files "
+                        "(use 'all' to list every launch file)")
+    p = lsub.add_parser("ls", help="Alias for list")
+    p.add_argument("keyword", nargs="?", default=None,
+                   help="Optional keyword to search for launch files")
 
     p = lsub.add_parser("kill", help="Kill a running launch session")
     p.add_argument("session", help="Session name to kill")
@@ -1361,6 +911,92 @@ def build_parser():
     p = ifsub.add_parser("package", help="List all interface types for a single package")
     p.add_argument("package", help="Package name (e.g. std_msgs, geometry_msgs)")
 
+    # ------------------------------------------------------------------
+    # bag
+    # ------------------------------------------------------------------
+    bag = sub.add_parser("bag", help="ROS 2 bag file utilities")
+    bagsub = bag.add_subparsers(dest="subcommand")
+
+    p = bagsub.add_parser("info", help="Show metadata for a ROS 2 bag (no graph required)")
+    p.add_argument("bag_path", metavar="bag_path",
+                   help="Path to a bag directory, metadata.yaml, or storage file")
+
+    # ------------------------------------------------------------------
+    # component
+    # ------------------------------------------------------------------
+    comp = sub.add_parser("component", help="ROS 2 composable node utilities")
+    compsub = comp.add_subparsers(dest="subcommand")
+
+    compsub.add_parser("types", help="List all registered rclcpp composable node types (no graph required)")
+    p = compsub.add_parser("list", help="List all running component containers and their loaded components")
+    p.add_argument("--timeout", type=float, default=5.0, dest="timeout",
+                   help="Seconds to wait per container service (default: 5.0)")
+    p = compsub.add_parser("ls", help="Alias for list")
+    p.add_argument("--timeout", type=float, default=5.0, dest="timeout",
+                   help="Seconds to wait per container service (default: 5.0)")
+    p = compsub.add_parser("load", help="Load a composable node into a component container")
+    p.add_argument("container",    help="Container node name (e.g. /my_container)")
+    p.add_argument("package_name", help="Package containing the plugin (e.g. demo_nodes_cpp)")
+    p.add_argument("plugin_name",  help="Fully-qualified plugin class name (e.g. demo_nodes_cpp::Talker)")
+    p.add_argument("--node-name",      dest="node_name",      default="", help="Override the loaded node's name")
+    p.add_argument("--node-namespace", dest="node_namespace", default="", help="Override the loaded node's namespace")
+    p.add_argument("--remap", dest="remap_rules", nargs="*", default=[], help="Remap rules (e.g. /from:=/to)")
+    p.add_argument("--log-level",      dest="log_level",      type=int, default=0, help="Log level for the loaded node (uint8: 0=unset, 10=DEBUG, 20=INFO, 30=WARN, 40=ERROR, 50=FATAL)")
+    p.add_argument("--timeout", type=float, default=5.0, dest="timeout",  help="Service call timeout in seconds (default: 5.0)")
+    p = compsub.add_parser("unload", help="Unload a composable node from a component container")
+    p.add_argument("container",  help="Container node name (e.g. /my_container)")
+    p.add_argument("unique_id",  type=int, help="Unique ID of the component to unload (from component load or component list)")
+    p.add_argument("--timeout",  type=float, default=5.0, dest="timeout", help="Service call timeout in seconds (default: 5.0)")
+    p = compsub.add_parser("kill", help="Kill a standalone component container session (comp_* sessions)")
+    p.add_argument("session", help="Session name to kill (e.g. comp_demo_nodes_cpp_standalone_talker)")
+    p = compsub.add_parser(
+        "standalone",
+        help="Run a composable node in its own standalone container (tmux session)",
+    )
+    p.add_argument("package_name", help="Package containing the component plugin")
+    p.add_argument("plugin_name",  help="Fully-qualified plugin class name (e.g. demo_nodes_cpp::Talker)")
+    p.add_argument("--container-type", dest="container_type",
+                   choices=["component_container", "component_container_mt", "component_container_isolated"],
+                   default="component_container",
+                   help="Container executable to use (default: component_container)")
+    p.add_argument("--node-name",      dest="node_name",      default="",
+                   help="Override the loaded node's name")
+    p.add_argument("--node-namespace", dest="node_namespace", default="",
+                   help="Override the loaded node's namespace")
+    p.add_argument("--remap",          dest="remap_rules",    nargs="*", default=[],
+                   help="Remap rules (e.g. /from:=/to)")
+    p.add_argument("--log-level",      dest="log_level",      type=int, default=0,
+                   help="Log level for the loaded node (uint8: 0=unset, 10=DEBUG, 20=INFO, 30=WARN, 40=ERROR, 50=FATAL)")
+    p.add_argument("--timeout",        dest="timeout", type=float, default=10.0,
+                   help="Total timeout for container start + component load (default: 10.0s)")
+
+    # ------------------------------------------------------------------
+    # daemon
+    # ------------------------------------------------------------------
+    daemon = sub.add_parser("daemon", help="ROS 2 daemon lifecycle management")
+    daemonsub = daemon.add_subparsers(dest="subcommand")
+    daemonsub.add_parser("status", help="Check whether the ROS 2 daemon is running")
+    daemonsub.add_parser("start",  help="Start the ROS 2 daemon")
+    daemonsub.add_parser("stop",   help="Stop the ROS 2 daemon")
+
+    # ------------------------------------------------------------------
+    # pkg
+    # ------------------------------------------------------------------
+    pkg = sub.add_parser("pkg", help="ROS 2 package utilities (no graph required)")
+    pkgsub = pkg.add_subparsers(dest="subcommand")
+
+    pkgsub.add_parser("list", help="List all installed packages")
+    pkgsub.add_parser("ls",   help="Alias for list")
+
+    p = pkgsub.add_parser("prefix", help="Output the prefix path of a package")
+    p.add_argument("package", help="Package name (e.g. nav2_bringup)")
+
+    p = pkgsub.add_parser("executables", help="List executables provided by a package")
+    p.add_argument("package", help="Package name (e.g. turtlesim)")
+
+    p = pkgsub.add_parser("xml", help="Output the package.xml of a package")
+    p.add_argument("package", help="Package name (e.g. std_msgs)")
+
     return parser
 
 
@@ -1392,14 +1028,13 @@ DISPATCH = {
     ("topics", "battery"): cmd_topics_battery,
     # topics — aliases
     ("topics", "echo"): cmd_topics_subscribe,
-    ("topics", "sub"): cmd_topics_subscribe,
     ("topics", "pub"): cmd_topics_publish,
-    ("topics", "pub-seq"): cmd_topics_publish_sequence,
     ("topics", "ls"): cmd_topics_list,
     ("topics", "info"): cmd_topics_details,
     # topics — Phase 2
     ("topics", "bw"): cmd_topics_bw,
     ("topics", "delay"): cmd_topics_delay,
+    ("topics", "qos-check"): cmd_topics_qos_check,
     # services — canonical
     ("services", "list"): cmd_services_list,
     ("services", "type"): cmd_services_type,
@@ -1437,19 +1072,8 @@ DISPATCH = {
     ("control", "switch-controllers"):           cmd_control_switch_controllers,
     ("control", "view-controller-chains"):       cmd_control_view_controller_chains,
     # control — aliases
-    ("control", "lct"):   cmd_control_list_controller_types,
-    ("control", "lc"):    cmd_control_list_controllers,
-    ("control", "lhc"):   cmd_control_list_hardware_components,
-    ("control", "lhi"):   cmd_control_list_hardware_interfaces,
     ("control", "load"):  cmd_control_load_controller,
     ("control", "unload"): cmd_control_unload_controller,
-    ("control", "cc"):    cmd_control_configure_controller,
-    ("control", "rcl"):   cmd_control_reload_controller_libraries,
-    ("control", "scs"):   cmd_control_set_controller_state,
-    ("control", "shcs"):  cmd_control_set_hardware_component_state,
-    ("control", "sc"):    cmd_control_switch_controllers,
-    ("control", "swc"):   cmd_control_switch_controllers,
-    ("control", "vcc"):   cmd_control_view_controller_chains,
     # params — canonical
     ("params", "list"): cmd_params_list,
     ("params", "get"): cmd_params_get,
@@ -1462,6 +1086,7 @@ DISPATCH = {
     ("params", "preset-load"):   cmd_params_preset_load,
     ("params", "preset-list"):   cmd_params_preset_list,
     ("params", "preset-delete"): cmd_params_preset_delete,
+    ("params", "find"): cmd_params_find,
     # params — alias
     ("params", "ls"): cmd_params_list,
     # actions — canonical
@@ -1474,7 +1099,6 @@ DISPATCH = {
     ("actions", "find"): cmd_actions_find,
     # actions — aliases
     ("actions", "info"): cmd_actions_details,
-    ("actions", "send-goal"): cmd_actions_send,
     ("actions", "ls"): cmd_actions_list,
     # doctor — canonical
     ("doctor", None):    cmd_doctor_check,
@@ -1494,21 +1118,13 @@ DISPATCH = {
     ("tf", "monitor"): cmd_tf_monitor,
     ("tf", "static"): cmd_tf_static,
     ("tf", "euler-from-quaternion"): cmd_tf_euler_from_quaternion,
-    ("tf", "e2q"): cmd_tf_euler_from_quaternion,
-    ("tf", "quat2euler"): cmd_tf_euler_from_quaternion,
     ("tf", "quaternion-from-euler"): cmd_tf_quaternion_from_euler,
-    ("tf", "q2e"): cmd_tf_quaternion_from_euler,
-    ("tf", "euler2quat"): cmd_tf_quaternion_from_euler,
     ("tf", "euler-from-quaternion-deg"): cmd_tf_euler_from_quaternion_degrees,
-    ("tf", "e2qdeg"): cmd_tf_euler_from_quaternion_degrees,
     ("tf", "quaternion-from-euler-deg"): cmd_tf_quaternion_from_euler_degrees,
-    ("tf", "q2edeg"): cmd_tf_quaternion_from_euler_degrees,
     ("tf", "transform-point"): cmd_tf_transform_point,
-    ("tf", "tp"): cmd_tf_transform_point,
-    ("tf", "point"): cmd_tf_transform_point,
     ("tf", "transform-vector"): cmd_tf_transform_vector,
-    ("tf", "tv"): cmd_tf_transform_vector,
-    ("tf", "vector"): cmd_tf_transform_vector,
+    ("tf", "tree"): cmd_tf_tree,
+    ("tf", "validate"): cmd_tf_validate,
     # launch
     ("launch", "new"):   cmd_launch_run,
     ("launch", "list"):   cmd_launch_list,
@@ -1529,6 +1145,26 @@ DISPATCH = {
     ("interface", "proto"):    cmd_interface_proto,
     ("interface", "packages"): cmd_interface_packages,
     ("interface", "package"):  cmd_interface_package,
+    # bag
+    ("bag", "info"): cmd_bag_info,
+    # component
+    ("component", "types"): cmd_component_types,
+    ("component", "list"):  cmd_component_list,
+    ("component", "ls"):    cmd_component_list,
+    ("component", "load"):   cmd_component_load,
+    ("component", "unload"): cmd_component_unload,
+    ("component", "kill"):      cmd_component_kill,
+    ("component", "standalone"): cmd_component_standalone,
+    # pkg
+    ("pkg", "list"):        cmd_pkg_list,
+    ("pkg", "ls"):          cmd_pkg_list,
+    ("pkg", "prefix"):      cmd_pkg_prefix,
+    ("pkg", "executables"): cmd_pkg_executables,
+    ("pkg", "xml"):         cmd_pkg_xml,
+    # daemon
+    ("daemon", "status"): cmd_daemon_status,
+    ("daemon", "start"):  cmd_daemon_start,
+    ("daemon", "stop"):   cmd_daemon_stop,
 }
 
 
@@ -1577,15 +1213,7 @@ def main():
     key = (args.command, getattr(args, "subcommand", None))
     handler = DISPATCH.get(key)
     if handler:
-        try:
-            handler(args)
-        finally:
-            # Guarantee rclpy is shut down even if an exception escapes the
-            # handler's own try/except (e.g. a bug or KeyboardInterrupt).
-            try:
-                rclpy.shutdown()
-            except Exception:
-                pass
+        handler(args)
     else:
         parser.print_help()
         sys.exit(1)

@@ -1,13 +1,8 @@
 # ROS 2 Skill
 
-![Status](https://img.shields.io/badge/Status-Active-green)
-[![ClawHub](https://img.shields.io/badge/ClawHub-ros2--skill-orange)](https://clawhub.ai/adityakamath/ros2-skill)
-![Static Badge](https://img.shields.io/badge/ROS%202-Supported-green)
-[![Repo](https://img.shields.io/badge/Repo-adityakamath%2Fros2--skill-purple)](https://github.com/adityakamath/ros2-skill)
-[![Blog](https://img.shields.io/badge/Blog-kamathrobotics.com-darkorange)](https://kamathrobotics.com)
-[![Ask DeepWiki (Experimental)](https://deepwiki.com/badge.svg)](https://deepwiki.com/adityakamath/ros2-skill)
-![Python](https://img.shields.io/badge/python-3.10%2B-blue)
-![Static Badge](https://img.shields.io/badge/License-Apache%202.0-blue)
+![Status](https://img.shields.io/badge/Status-Active-green) [![Repo](https://img.shields.io/badge/Repo-adityakamath%2Fros2--skill-purple?style=flat&logo=github&logoSize=auto)](https://github.com/adityakamath/ros2-skill) [![Blog](https://img.shields.io/badge/Blog-kamathrobotics.com-darkorange?style=flat&logo=hashnode&logoSize=auto)](https://kamathrobotics.com) [![Ask DeepWiki (Experimental)](https://deepwiki.com/badge.svg)](https://deepwiki.com/adityakamath/ros2-skill) ![Python](https://img.shields.io/badge/python-3.10%2B-blue?style=flat&logo=python&logoColor=white) ![Static Badge](https://img.shields.io/badge/License-Apache%202.0-blue)
+
+[![SKILL.md](https://img.shields.io/badge/docs-SKILL.md-green)](SKILL.md) [![AGENTS.md](https://img.shields.io/badge/docs-AGENTS.md-green)](AGENTS.md) [![RULES.md](https://img.shields.io/badge/docs-RULES.md-7aab8a)](references/RULES.md) [![COMMANDS.md](https://img.shields.io/badge/docs-COMMANDS.md-7aab8a)](references/COMMANDS.md) [![EXAMPLES.md](https://img.shields.io/badge/docs-EXAMPLES.md-7aab8a)](references/EXAMPLES.md) [![CLI.md](https://img.shields.io/badge/docs-CLI.md-7aab8a)](references/CLI.md)
 
 [Agent Skill](https://agentskills.io) for ROS 2 robot control via rclpy.
 
@@ -21,26 +16,7 @@ An AI agent skill that lets agents control ROS 2 robots through natural language
 
 The long-term goal is full parity with the `ros2` CLI — every command available in a terminal, made accessible to an AI agent. Beyond that baseline, ros2-skill adds capabilities that only make sense in an agent context: goal-conditioned publishing, sensor image capture, system diagnostics, and external integrations like Discord reporting.
 
-## Quick Start (CLI)
-
-```bash
-# Source ROS 2 environment
-source /opt/ros/${ROS_DISTRO}/setup.bash
-
-# Run commands
-python3 scripts/ros2_cli.py version
-python3 scripts/ros2_cli.py topics list
-python3 scripts/ros2_cli.py nodes list
-
-# Move robot forward for 3 seconds
-python3 scripts/ros2_cli.py topics publish /cmd_vel \
-  '{"linear":{"x":1.0,"y":0,"z":0},"angular":{"x":0,"y":0,"z":0}}' --duration 3
-
-# Read sensor data
-python3 scripts/ros2_cli.py topics subscribe /scan --duration 3
-```
-
-## Quick Start (AI Agent)
+## Quick Start
 
 **ros2-skill** works with any AI agent that supports [Agent Skills](https://agentskills.io). For easy setup, I recommend using [nanobot](https://github.com/HKUDS/nanobot), a lightweight alternative to [OpenClaw](https://github.com/openclaw/openclaw) that can run directly on-board the ROS 2 robot's computer. Install **ros2-skill** from [ClawHub](https://clawhub.ai/adityakamath/ros2-skill) and talk to your robot:
 
@@ -49,89 +25,17 @@ python3 scripts/ros2_cli.py topics subscribe /scan --duration 3
 - "Trigger the emergency stop"
 
 **Agent Workflow:** The agent automatically:
-1. Understands user intent (subscribe/publish/call/send)
-2. Discovers relevant topics, services, actions from the live graph
+1. Understands user intent (subscribe/publish/call/send/run/launch)
+2. Discovers relevant launch files, nodes, topics, services, actions from the live graph
 3. Finds message types and structures
 4. Applies safety limits from parameters
 5. Executes the command
 
-No user clarification needed — the agent uses ros2-skill tools to answer all its own questions.
+No user clarification needed — the agent uses ros2-skill tools to answer all its own questions, including finding and launching the robot stack if it isn't already running.
 
-## Supported Commands
+For nanobot deployments, load both `SKILL.md` (command reference) and `AGENTS.md` (operational rules and safety constraints) into the agent's system prompt. The full rule set is in [`references/RULES.md`](references/RULES.md).
 
-| Category | Commands |
-| -------- | -------- |
-| Connection | `version` |
-| Topics | `list`, `type`, `details`, `message`, `subscribe`, `publish`, `hz`, `bw`, `delay`, `find` |
-| Services | `list`, `type`, `details`, `call`, `find`, `echo` |
-| Nodes | `list`, `details` |
-| Parameters | `list`, `get`, `set`, `describe`, `dump`, `load`, `delete`, `preset-*` |
-| Actions | `list`, `details`, `type`, `send`, `cancel`, `echo`, `find` |
-| Lifecycle | `nodes`, `list`, `get`, `set` |
-| Control | `list-controller-types`, `list-controllers`, `list-hardware-components`, `list-hardware-interfaces`, `load-controller`, `unload-controller`, `configure-controller`, `reload-controller-libraries`, `set-controller-state`, `set-hardware-component-state`, `switch-controllers`, `view-controller-chains` |
-| Doctor | `check` (default), `hello` |
-| Wtf | alias for `doctor` — same commands |
-| Multicast | `send`, `receive` |
-| Interface | `list`, `show`, `proto`, `packages`, `package` |
-| Launch | `run`, `list`, `ls`, `kill` |
-
-All commands output JSON. See [`SKILL.md`](SKILL.md) for quick reference and [`references/COMMANDS.md`](references/COMMANDS.md) for full details with examples.
-
-## Agent Features
-
-Capabilities that go beyond standard `ros2` CLI parity — designed specifically for AI agents operating on mobile robots:
-
-| Feature | Command(s) | Description |
-|---------|------------|-------------|
-| **Emergency stop** | `estop` | Send zero-velocity command to halt mobile robots safely |
-| **Publish sequence** | `topics publish-sequence` | Publish a timed sequence of different messages in one call |
-| **Publish-until** | `topics publish-until` | Publish repeatedly and stop automatically when a condition is met (supports Euclidean distance and rotation) |
-| **Image capture** | `topics capture-image` | Grab a frame from any ROS 2 image topic and save to `.artifacts/` |
-| **Diagnostics monitoring** | `topics diag-list`, `topics diag` | Discover and read `DiagnosticArray` topics by type, with human-readable level names |
-| **Battery monitoring** | `topics battery-list`, `topics battery` | Discover and read `BatteryState` topics by type, with decoded status, health, and technology names |
-| **Parameter presets** | `params preset-save/load/list/delete` | Save and restore complete parameter sets for a node by name |
-| **Launch files** | `launch new/list/kill/restart/foxglove` | Run launch files in tmux sessions, list/kill/restart running sessions, launch foxglove_bridge |
-| **Run executables** | `run new/list/kill/restart` | Run executables in tmux sessions, list/kill/restart running sessions |
-| **TF2 transforms** | `tf list/lookup/echo/monitor/static` | Query transforms, list frames, echo transforms, monitor frames, publish static transforms |
-| **TF2 helpers** | `tf e2q/q2e/tp/tv` | Quaternion/Euler conversion, point/vector transformation |
-| **Discord integration** | `discord_tools.py send-image` | Send images (or PDFs) to a Discord channel via bot token |
-
-### Global Options
-
-Place these **before** the command name to apply a setting to every service/action call:
-
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--timeout SECONDS` | per-command default | Override the per-command timeout (useful for slow networks) |
-| `--retries N` | `1` | Total attempts before giving up; `1` = no retry |
-
-```bash
-python3 scripts/ros2_cli.py --timeout 30 --retries 3 lifecycle get /camera_driver
-```
-
-### Message Type Aliases
-
-The skill supports 50 message type aliases for commonly used ROS 2 message types. Use short names instead of full type names:
-
-- `twist` → `geometry_msgs/Twist`
-- `odom` → `nav_msgs/Odometry`
-- `laserscan` → `sensor_msgs/LaserScan`
-- `image` → `sensor_msgs/Image`
-
-**Example:**
-```bash
-# Using alias
-python3 scripts/ros2_cli.py topics message twist
-
-# Equivalent to
-python3 scripts/ros2_cli.py topics message geometry_msgs/Twist
-```
-
-See [Message Type Aliases](references/COMMANDS.md#message-type-aliases) for the full list.
-
-See [`EXAMPLES.md`](EXAMPLES.md) for usage examples including image capture and Discord integration.
-
----
+> **Note:** `ros2_cli.py` is intended for debugging and development only. Normal usage is through the chat interface or messaging gateway of your agent platform. See [`references/CLI.md`](references/CLI.md) for the full command list.
 
 ## How It Works
 
@@ -140,9 +44,9 @@ See [`EXAMPLES.md`](EXAMPLES.md) for usage examples including image capture and 
 3. User asks something like "move the robot forward"
 4. **Agent thinks:** "This requires publishing velocity commands. I need to find Twist topics, get the message structure, check safety limits, then publish."
 5. **Agent auto-discovers:**
-   - `topics find geometry_msgs/Twist` + `TwistStamped` → finds `/cmd_vel`
+   - `topics find geometry_msgs/Twist` + `TwistStamped` → finds the velocity topic
    - `topics message geometry_msgs/Twist` → gets structure
-   - `params list /diff_drive_controller` → gets safety limits
+   - `nodes list` + `params list <controller_node>` → gets safety limits
 6. Agent executes: `python3 {baseDir}/scripts/ros2_cli.py topics publish /cmd_vel ...`
 7. `ros2_cli.py` uses rclpy to communicate with ROS 2 and returns JSON
 8. Agent parses the JSON and responds in natural language
@@ -157,9 +61,9 @@ ros2-skill/
 ├── scripts/
 │   ├── ros2_cli.py            # Entry point — parser, dispatch table, re-exports
 │   ├── ros2_utils.py          # Shared infrastructure (ROS2CLI node, output, msg helpers)
-│   ├── ros2_topic.py          # Topic commands + estop
+│   ├── ros2_topic.py          # Topic commands + estop + battery + diag
 │   ├── ros2_node.py           # Node commands
-│   ├── ros2_param.py          # Parameter commands
+│   ├── ros2_param.py          # Parameter commands + presets
 │   ├── ros2_service.py        # Service commands
 │   ├── ros2_action.py         # Action commands
 │   ├── ros2_lifecycle.py      # Lifecycle (managed node) commands
@@ -167,21 +71,61 @@ ros2-skill/
 │   ├── ros2_doctor.py         # Doctor / Wtf system diagnostics
 │   ├── ros2_multicast.py      # Multicast (UDP) diagnostics
 │   ├── ros2_control.py        # Controller manager commands
+│   ├── ros2_tf.py             # TF2 transform commands and math helpers
+│   ├── ros2_launch.py         # Launch file session management (tmux)
+│   ├── ros2_run.py            # Executable session management (tmux)
+│   ├── ros2_bag.py            # Bag file utilities (info)
+│   ├── ros2_component.py      # Composable node utilities (types, list, load, unload, kill, standalone)
+│   ├── ros2_pkg.py            # Package utilities (list, prefix, executables, xml)
+│   ├── ros2_daemon.py         # ROS 2 daemon management
 │   └── discord_tools.py       # Discord integration
 ├── references/
-│   └── COMMANDS.md            # Full command reference with output examples
-└── tests/
-    └── test_ros2_cli.py       # Unit tests
+│   ├── CLI.md                 # Supported commands, agent features, global options
+│   ├── COMMANDS.md            # Full command reference with output examples
+│   ├── EXAMPLES.md            # Practical usage guide for agents
+│   └── RULES.md               # Agent safety rules and operational constraints
+├── tests/
+│   └── test_ros2_cli.py       # Unit tests
+├── AGENTS.md                  # Agent system prompt — load alongside SKILL.md for nanobot deployments
+└── CHANGELOG.md               # Version history
 ```
 
 ## Requirements
 
 - Python 3.10+
-- ROS 2 (Humble, Iron, Jazzy, or compatible distribution), environment sourced
+- ROS 2, environment sourced
+- `tmux` — required for `launch` and `run` commands (session management)
 
 **Optional:**
 - `opencv-python` and `numpy` — required for `topics capture-image`
 - `requests` — required for `discord_tools.py send-image`
+
+## Output Directories
+
+Commands that produce file artifacts write to subdirectories of the skill installation root:
+
+| Directory | Contents |
+|-----------|----------|
+| `.artifacts/` | Captured images, logs, and all other generated outputs |
+| `.presets/` | Saved parameter presets (`params preset-save` / `params preset-load`) |
+| `.profiles/` | Robot profiles |
+
+## Discord Setup
+
+`discord_tools.py send-image` reads its bot token from a config file — the same one used by nanobot:
+
+```json
+// ~/.nanobot/config.json
+{
+  "channels": {
+    "discord": {
+      "token": "YOUR_BOT_TOKEN"
+    }
+  }
+}
+```
+
+See [`AGENTS.md`](AGENTS.md) for the full Discord image-sending workflow.
 
 ## Testing
 
@@ -192,9 +136,11 @@ python3 -m pytest tests/ -v
 
 Tests that require a live ROS 2 environment will skip gracefully if one is not available.
 
+Tested with ROS 2 Kilted and [nanobot](https://github.com/HKUDS/nanobot) on a Raspberry Pi.
+
 ## Changelog
 
-See [CHANGELOG.md](CHANGELOG.md).
+Current version: **v1.0.5**. See [CHANGELOG.md](CHANGELOG.md) for the full history.
 
 ---
 

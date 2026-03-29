@@ -26,8 +26,20 @@ from ros2_utils import (
 
 def _find_executables(package):
     """Find executables in a package."""
-    from ros2_utils import get_package_prefix
     prefix = get_package_prefix(package)
+    if not prefix:
+        return []
+
+    lib_dir = os.path.join(prefix, "lib", package)
+
+    executables = []
+    if os.path.isdir(lib_dir):
+        for f in os.listdir(lib_dir):
+            full_path = os.path.join(lib_dir, f)
+            if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
+                executables.append(f)
+
+    return executables
 
 
 def _fuzzy_match(query, candidates, threshold=0.5):
@@ -80,19 +92,6 @@ def _auto_match_executable(user_executable, available_executables):
         return matches[0][0], f"Auto-matched '{user_executable}' to '{matches[0][0]}'"
     
     return user_executable, None
-    if not prefix:
-        return []
-    
-    lib_dir = os.path.join(prefix, "lib", package)
-    
-    executables = []
-    if os.path.isdir(lib_dir):
-        for f in os.listdir(lib_dir):
-            full_path = os.path.join(lib_dir, f)
-            if os.path.isfile(full_path) and os.access(full_path, os.X_OK):
-                executables.append(f)
-    
-    return executables
 
 
 def _apply_params(params_str):
@@ -373,3 +372,18 @@ def cmd_run_restart(args):
     result = cmd_run(args_restart)
     result["message"] = "Session restarted"
     return result
+
+
+if __name__ == "__main__":
+    import sys
+    import os
+    _mod = os.path.basename(__file__)
+    _cli = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ros2_cli.py")
+    print(
+        f"[ros2-skill] '{_mod}' is an internal module — do not run it directly.\n"
+        "Use the main entry point:\n"
+        f"  python3 {_cli} <command> [subcommand] [args]\n"
+        f"See all commands:  python3 {_cli} --help",
+        file=sys.stderr,
+    )
+    sys.exit(1)

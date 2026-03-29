@@ -3,11 +3,16 @@
   "slug": "ros2-skill",
   "displayName": "ROS 2 Skill",
   "latest": {
-    "version": "1.0.4",
-    "publishedAt": 1773431242738,
-    "commit": "https://github.com/openclaw/skills/commit/bb4478bf45e042557d4774af53991ffbc061b5f5"
+    "version": "1.0.6",
+    "publishedAt": 1774483597158,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.4",
+      "publishedAt": 1773431242738,
+      "commit": "https://github.com/openclaw/skills/commit/bb4478bf45e042557d4774af53991ffbc061b5f5"
+    },
     {
       "version": "1.0.3",
       "publishedAt": 1772395251085,

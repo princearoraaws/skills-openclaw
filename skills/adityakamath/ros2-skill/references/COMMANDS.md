@@ -102,6 +102,29 @@ python3 {baseDir}/scripts/ros2_cli.py launch new --help
 python3 {baseDir}/scripts/ros2_cli.py run new --help
 python3 {baseDir}/scripts/ros2_cli.py interface show --help
 python3 {baseDir}/scripts/ros2_cli.py version --help
+
+# bag (no live ROS 2 graph required)
+python3 {baseDir}/scripts/ros2_cli.py bag info --help
+
+# component
+python3 {baseDir}/scripts/ros2_cli.py component types --help        # no live graph required
+python3 {baseDir}/scripts/ros2_cli.py component list --help
+python3 {baseDir}/scripts/ros2_cli.py component ls --help
+python3 {baseDir}/scripts/ros2_cli.py component load --help
+python3 {baseDir}/scripts/ros2_cli.py component unload --help
+python3 {baseDir}/scripts/ros2_cli.py component kill --help
+python3 {baseDir}/scripts/ros2_cli.py component standalone --help
+
+# pkg (no live ROS 2 graph required)
+python3 {baseDir}/scripts/ros2_cli.py pkg list --help
+python3 {baseDir}/scripts/ros2_cli.py pkg prefix --help
+python3 {baseDir}/scripts/ros2_cli.py pkg executables --help
+python3 {baseDir}/scripts/ros2_cli.py pkg xml --help
+
+# daemon (no live ROS 2 graph required)
+python3 {baseDir}/scripts/ros2_cli.py daemon status --help
+python3 {baseDir}/scripts/ros2_cli.py daemon start --help
+python3 {baseDir}/scripts/ros2_cli.py daemon stop --help
 ```
 
 **Rule:** If you are about to use a flag and you have any doubt it exists, run `--help` for that subcommand first. Never guess flag names.
@@ -239,11 +262,9 @@ Error: --channel-id argument is required
 
 ---
 
-## topics publish-sequence `<topic>` `<json_messages>` `<json_durations>` [options] / topics pub-seq
+## topics publish-sequence `<topic>` `<json_messages>` `<json_durations>` [options]
 
 Publish a sequence of messages in order. Each message is repeated at `--rate` Hz for its corresponding duration before moving to the next. Arrays must be the same length. The final message should usually be all-zeros to stop the robot.
-
-**Aliases:** `topics pub-seq`
 
 **ROS 2 CLI equivalent:** No direct equivalent (requires scripting multiple `ros2 topic pub` calls)
 
@@ -270,13 +291,6 @@ python3 {baseDir}/scripts/ros2_cli.py topics publish-sequence /cmd_vel \
   '[3.0, 0.5]'
 ```
 
-**[FALLBACK] Forward 2s, turn left 1s, forward 2s, stop (choreographed pattern, no sensor feedback):**
-```bash
-python3 {baseDir}/scripts/ros2_cli.py topics pub-seq /cmd_vel \
-  '[{"linear":{"x":0.5},"angular":{"z":0}},{"linear":{"x":0},"angular":{"z":0.8}},{"linear":{"x":0.5},"angular":{"z":0}},{"linear":{"x":0},"angular":{"z":0}}]' \
-  '[2.0, 1.0, 2.0, 0.5]'
-```
-
 **[FALLBACK] Draw a square (turtlesim — simulation only, odometry not relevant):**
 ```bash
 python3 {baseDir}/scripts/ros2_cli.py topics publish-sequence /turtle1/cmd_vel \
@@ -296,7 +310,7 @@ Error (array length mismatch):
 
 ---
 
-## topics publish-until `<topic>` `<json_message>` [options]
+## topics publish-until `<topic>` `<msg>` [options]
 
 Publish a message at a fixed rate while simultaneously monitoring a second topic. Stops as soon as a condition on the monitored field is satisfied, or after the safety timeout. Supports single-field conditions and N-dimensional Euclidean distance.
 
@@ -328,8 +342,34 @@ Publish a message at a fixed rate while simultaneously monitoring a second topic
 | `--timeout SECONDS` | No | `60` | Safety stop if condition not met within this time |
 | `--msg-type TYPE` | No | auto-detect | Override publish topic message type |
 | `--monitor-msg-type TYPE` | No | auto-detect | Override monitor topic message type |
+| `--slow-last N` | No | **auto** | Override the auto-computed deceleration zone (see below). Units: metres for `--field`/`--euclidean`; degrees if `--degrees` set, radians otherwise for `--rotate`. |
+| `--slow-factor F` | No | **auto** | Override the auto-computed fine-control floor (0–1 fraction of commanded speed). |
 
-**Note:** Either `--field` OR `--rotate` must be specified, but not both.
+**Note:** Either `--field` OR `--rotate` must be specified, but not both. `--slow-last` works with `--delta`, `--euclidean --delta`, and `--rotate`; ignored for `--above`/`--below`/`--equals`.
+
+#### Auto-computed deceleration zone
+
+When `--slow-last` is **not** provided, the skill computes the decel zone automatically at startup from the commanded velocity and live node params (2 s timeout):
+
+| Move type | Formula | Fallback `a_max` | Fallback fine-control floor |
+|-----------|---------|-----------------|----------------------------|
+| linear.x | `v_cmd² / (2 × a_max)`, clamped [0.05 m, distance × 0.4] | 0.5 m/s² | 0.125 m/s |
+| linear.y | same | 0.5 m/s² | 0.100 m/s |
+| angular.z | `ω_cmd² / (2 × α_max)`, clamped [3°, angle × 0.4] | 1.0 rad/s² | 0.375 rad/s |
+
+Params searched: `max_accel`, `accel_limit`, `decel_limit` (accel); `min_vel_x/y`, `min_vel`, `min_speed` (min vel); `max_ang_accel`, `ang_accel_limit` (angular accel); `min_ang_vel`, `min_angular_speed` (min angular vel). First numeric match wins. Falls back to defaults if nothing found.
+
+The computed zone is reported in every `publish-until` result:
+```json
+"decel_zone": {
+  "auto_computed": true,
+  "slow_last": 0.32,
+  "slow_factor": 0.28,
+  "params_source": "/velocity_controller:max_accel"
+}
+```
+
+If `--slow-last` **is** provided, auto-compute is skipped and `"decel_zone": {"auto_computed": false}` is returned.
 
 **Move forward until x-position increases by 1 m (straight path):**
 ```bash
@@ -389,6 +429,31 @@ python3 {baseDir}/scripts/ros2_cli.py topics publish-until /cmd_vel \
 python3 {baseDir}/scripts/ros2_cli.py topics publish-until /cmd_vel \
   '{"linear":{"x":0},"angular":{"z":0.5}}' \
   --monitor /odom --rotate 3.14159 --timeout 30
+```
+
+**Drive 10 m forward with deceleration for the last 0.3 m (precision landing):**
+```bash
+python3 {baseDir}/scripts/ros2_cli.py topics publish-until /cmd_vel \
+  '{"linear":{"x":0.2},"angular":{"z":0}}' \
+  --monitor /odom --field pose.pose.position --euclidean --delta 10.0 \
+  --slow-last 0.3 --slow-factor 0.25 --timeout 120
+```
+
+**Drive 15 cm forward — short distance, decel zone spans the whole move:**
+```bash
+python3 {baseDir}/scripts/ros2_cli.py topics publish-until /cmd_vel \
+  '{"linear":{"x":0.1},"angular":{"z":0}}' \
+  --monitor /odom --field pose.pose.position --euclidean --delta 0.15 \
+  --slow-last 0.3 --slow-factor 0.25 --timeout 15
+```
+*(When `--slow-last` > total distance, deceleration applies from the start — velocity ramps from 0.1 × (0.15/0.3) = 0.05 m/s down to 0.1 × 0.25 = 0.025 m/s.)*
+
+**Rotate 10° CCW with decel for the last 20° (or the whole move, whichever is shorter):**
+```bash
+python3 {baseDir}/scripts/ros2_cli.py topics publish-until /cmd_vel \
+  '{"linear":{"x":0},"angular":{"z":0.3}}' \
+  --monitor /odom --rotate 10 --degrees \
+  --slow-last 20 --slow-factor 0.25 --timeout 15
 ```
 
 **Stop when temperature exceeds 50°C:**
@@ -773,14 +838,12 @@ Get the full field structure of a message type as a JSON template.
 
 | Argument | Required | Description |
 |----------|----------|-------------|
-| `message_type` | Yes | Full message type (e.g. `geometry_msgs/Twist`, `sensor_msgs/LaserScan`) or alias (e.g. `twist`, `laserscan`) |
-
-**Note:** Message type aliases are supported. You can use short names instead of full type names (e.g. `twist` instead of `geometry_msgs/Twist`). See [Message Type Aliases](#message-type-aliases) section below for the full list.
+| `message_type` | Yes | Message type — full form (`geometry_msgs/msg/Twist`) or short form (`geometry_msgs/Twist`) both accepted |
 
 ```bash
-python3 {baseDir}/scripts/ros2_cli.py topics message geometry_msgs/Twist
+python3 {baseDir}/scripts/ros2_cli.py topics message geometry_msgs/msg/Twist
 python3 {baseDir}/scripts/ros2_cli.py topics message-structure geometry_msgs/msg/Twist
-python3 {baseDir}/scripts/ros2_cli.py topics message-struct sensor_msgs/LaserScan
+python3 {baseDir}/scripts/ros2_cli.py topics message-struct sensor_msgs/msg/LaserScan
 ```
 
 Output:
@@ -796,11 +859,11 @@ Output:
 
 ---
 
-## topics subscribe `<topic>` [options] / topics echo / topics sub
+## topics subscribe `<topic>` [options] / topics echo
 
 Subscribe to a topic and receive messages. Without `--duration`, returns the first message received. With `--duration`, collects multiple messages for the specified number of seconds.
 
-**Aliases:** `topics echo`, `topics sub`
+**Aliases:** `topics echo`
 
 **ROS 2 CLI equivalent:** `ros2 topic echo /topic`
 
@@ -819,7 +882,6 @@ Subscribe to a topic and receive messages. Without `--duration`, returns the fir
 ```bash
 python3 {baseDir}/scripts/ros2_cli.py topics subscribe /turtle1/pose
 python3 {baseDir}/scripts/ros2_cli.py topics echo /odom
-python3 {baseDir}/scripts/ros2_cli.py topics sub /scan
 ```
 
 Output (single message):
@@ -833,7 +895,7 @@ Output (single message):
 ```bash
 python3 {baseDir}/scripts/ros2_cli.py topics subscribe /odom --duration 5
 python3 {baseDir}/scripts/ros2_cli.py topics echo /scan --duration 10 --max-messages 50
-python3 {baseDir}/scripts/ros2_cli.py topics sub /joint_states --duration 3 --max-msgs 20
+python3 {baseDir}/scripts/ros2_cli.py topics subscribe /joint_states --duration 3 --max-msgs 20
 ```
 
 Output (multiple messages):
@@ -951,6 +1013,65 @@ Output:
 Error (insufficient messages):
 ```json
 {"error": "Fewer than 2 messages received within 10.0s on '/turtle1/pose'"}
+```
+
+---
+
+## topics qos-check `<topic>` [options]
+
+Inspect the QoS profiles of all publishers and subscribers on `<topic>` and report whether they are compatible. When a publisher uses `BEST_EFFORT` reliability and a subscriber uses `RELIABLE`, messages are silently discarded — this command detects that and suggests the corrective flag.
+
+**Run this before `publish-until` or any subscribe that times out unexpectedly.** It replaces manual interpretation of `topics details` output.
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `topic` | Yes | Full topic name (e.g. `/odom`) |
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--timeout SECONDS` | `5` | Node spin timeout |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py topics qos-check /odom
+python3 {baseDir}/scripts/ros2_cli.py topics qos-check /cmd_vel
+```
+
+**Output (incompatible):**
+```json
+{
+  "topic": "/odom",
+  "publisher_count": 1,
+  "subscriber_count": 1,
+  "publishers": [{"node": "/ekf_node", "reliability": "BEST_EFFORT", "durability": "VOLATILE"}],
+  "subscribers": [{"node": "/my_controller", "reliability": "RELIABLE", "durability": "VOLATILE"}],
+  "compatible": false,
+  "issues": ["reliability mismatch: publisher BEST_EFFORT vs subscriber RELIABLE on /my_controller"],
+  "suggestion": "Add --qos-reliability best_effort to your subscribe command to match the publisher"
+}
+```
+
+**Output (compatible):**
+```json
+{
+  "topic": "/cmd_vel",
+  "publisher_count": 1,
+  "subscriber_count": 1,
+  "compatible": true,
+  "issues": [],
+  "suggestion": "QoS is compatible — no flags needed"
+}
+```
+
+**Output (no publisher):**
+```json
+{
+  "topic": "/odom",
+  "publisher_count": 0,
+  "subscriber_count": 0,
+  "compatible": false,
+  "issues": ["no publisher on topic /odom"],
+  "suggestion": "Check nodes list to verify the publishing node is running"
+}
 ```
 
 ---
@@ -1594,6 +1715,52 @@ Output (rejected — node disallows undeclaring):
 
 ---
 
+## params find `<pattern>` [options]
+
+Search all running nodes (or a specific node) for parameters whose names contain `<pattern>` (case-insensitive substring match). Fetches the value of each matching parameter. Use pattern `all` or `*` to return every parameter on every node.
+
+**Use this instead of:** `nodes list` → `params list <node>` × N → manual grep. Automates the full cross-node scan required by Rule 0 velocity-limit discovery.
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `pattern` | Yes | Substring to match against parameter names (case-insensitive). Use `all` or `*` to return everything. |
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--node NODE` | (all nodes) | Restrict search to a single node |
+| `--timeout SECONDS` | `10` | Per-node service timeout |
+
+```bash
+# Find all velocity-related params across all nodes
+python3 {baseDir}/scripts/ros2_cli.py params find vel
+
+# Find limit params on a specific node
+python3 {baseDir}/scripts/ros2_cli.py params find limit --node /base_controller
+
+# Dump all params from all nodes
+python3 {baseDir}/scripts/ros2_cli.py params find all
+```
+
+**Output (matches found):**
+```json
+{
+  "pattern": "vel",
+  "node_filter": null,
+  "matches": [
+    {"node": "/base_controller", "param": "max_vel_x", "full_name": "/base_controller:max_vel_x", "value": "0.5"},
+    {"node": "/teleop_node", "param": "scale_linear_vel", "full_name": "/teleop_node:scale_linear_vel", "value": "0.3"}
+  ],
+  "count": 2
+}
+```
+
+**Output (no matches):**
+```json
+{"pattern": "vel", "node_filter": null, "matches": [], "count": 0, "error": "No parameters matching 'vel' found on any node"}
+```
+
+---
+
 ## actions list / actions ls
 
 List all available action servers.
@@ -1679,11 +1846,9 @@ Error (not found):
 
 ---
 
-## actions send `<action>` `<json_goal>` [options] / actions send-goal
+## actions send `<action>` `<json_goal>` [options]
 
 Send an action goal and wait for the result. Optionally collects intermediate feedback messages.
-
-**Aliases:** `actions send-goal`
 
 **ROS 2 CLI equivalent:** `ros2 action send_goal /action turtlesim/action/RotateAbsolute '{"theta": 3.14}'`
 
@@ -1701,10 +1866,6 @@ Send an action goal and wait for the result. Optionally collects intermediate fe
 # Basic goal
 python3 {baseDir}/scripts/ros2_cli.py actions send /turtle1/rotate_absolute \
   '{"theta":3.14}'
-
-# Using alias
-python3 {baseDir}/scripts/ros2_cli.py actions send-goal /turtle1/rotate_absolute \
-  '{"theta":1.57}'
 
 # With feedback collection
 python3 {baseDir}/scripts/ros2_cli.py actions send /turtle1/rotate_absolute \
@@ -1883,104 +2044,9 @@ No matches:
 
 ---
 
-# Message Type Aliases
-
-The ROS 2 skill supports message type aliases for commonly used message types. Instead of using the full message type name (e.g., `geometry_msgs/Twist`), you can use a short alias (e.g., `twist`). Aliases are case-insensitive.
-
----
-
-## Supported Aliases
-
-### std_msgs
-- `string` → `std_msgs/String`
-- `int32` → `std_msgs/Int32`
-- `int64` → `std_msgs/Int64`
-- `uint8` → `std_msgs/UInt8`
-- `float32` → `std_msgs/Float32`
-- `float64` → `std_msgs/Float64`
-- `bool` → `std_msgs/Bool`
-- `header` → `std_msgs/Header`
-- `empty` → `std_msgs/Empty`
-- `colorrgba` → `std_msgs/ColorRGBA`
-
-### geometry_msgs
-- `twist` → `geometry_msgs/Twist`
-- `pose` → `geometry_msgs/Pose`
-- `posearray` → `geometry_msgs/PoseArray`
-- `point` → `geometry_msgs/Point`
-- `pointstamped` → `geometry_msgs/PointStamped`
-- `quaternion` → `geometry_msgs/Quaternion`
-- `vector3` → `geometry_msgs/Vector3`
-- `posestamped` → `geometry_msgs/PoseStamped`
-- `twiststamped` → `geometry_msgs/TwistStamped`
-- `transform` → `geometry_msgs/Transform`
-- `transformstamped` → `geometry_msgs/TransformStamped`
-- `wrench` → `geometry_msgs/Wrench`
-- `accel` → `geometry_msgs/Accel`
-- `polygon` → `geometry_msgs/Polygon`
-- `polygonstamped` → `geometry_msgs/PolygonStamped`
-
-### sensor_msgs
-- `laserscan` → `sensor_msgs/LaserScan`
-- `image` → `sensor_msgs/Image`
-- `compressedimage` → `sensor_msgs/CompressedImage`
-- `pointcloud2` → `sensor_msgs/PointCloud2`
-- `imu` → `sensor_msgs/Imu`
-- `camerainfo` → `sensor_msgs/CameraInfo`
-- `jointstate` → `sensor_msgs/JointState`
-- `range` → `sensor_msgs/Range`
-- `temperature` → `sensor_msgs/Temperature`
-- `batterystate` → `sensor_msgs/BatteryState`
-- `navsatfix` → `sensor_msgs/NavSatFix`
-- `fluidpressure` → `sensor_msgs/FluidPressure`
-- `magneticfield` → `sensor_msgs/MagneticField`
-
-### nav_msgs
-- `odometry` → `nav_msgs/Odometry`
-- `odom` → `nav_msgs/Odometry`
-- `path` → `nav_msgs/Path`
-- `occupancygrid` → `nav_msgs/OccupancyGrid`
-- `mapmetadata` → `nav_msgs/MapMetaData`
-- `gridcells` → `nav_msgs/GridCells`
-
-### visualization_msgs
-- `marker` → `visualization_msgs/Marker`
-- `markerarray` → `visualization_msgs/MarkerArray`
-
-### action_msgs
-- `goalstatus` → `action_msgs/GoalStatus`
-- `goalstatusarray` → `action_msgs/GoalStatusArray`
-
-### trajectory_msgs
-- `jointtrajectory` → `trajectory_msgs/JointTrajectory`
-- `jointtrajectorypoint` → `trajectory_msgs/JointTrajectoryPoint`
-
----
-
-## Usage Examples
-
-```bash
-# Using alias instead of full type
-python3 scripts/ros2_cli.py topics message twist
-# Equivalent to:
-python3 scripts/ros2_cli.py topics message geometry_msgs/Twist
-
-# Publishing with alias
-python3 scripts/ros2_cli.py topics publish /cmd_vel '{"linear":{"x":1.0}}' --msg-type twist
-
-# Subscribing with alias
-python3 scripts/ros2_cli.py topics subscribe /odom --msg-type odom
-```
-
-Aliases work with all commands that accept message types: `topics message`, `topics publish`, `topics subscribe`, `topics find`, etc.
-
----
-
 ## lifecycle nodes
 
 List all managed (lifecycle) nodes in the ROS 2 graph. Discovers nodes by scanning for services of type `lifecycle_msgs/srv/GetState`.
-
-**Aliases:** none
 
 **ROS 2 CLI equivalent:** `ros2 lifecycle nodes`
 
@@ -2087,8 +2153,6 @@ Output (error):
 
 Get the current lifecycle state of a managed node.
 
-**Aliases:** none
-
 **ROS 2 CLI equivalent:** `ros2 lifecycle get <node>`
 
 | Argument | Required | Description |
@@ -2127,8 +2191,6 @@ Output (error):
 Trigger a lifecycle state transition on a managed node. Accepts a transition by label (preferred) or numeric ID.
 
 When a label is given, the node's available transitions are queried first to resolve the correct numeric ID. This ensures correctness because the `ChangeState` service dispatches on ID, not label. Numeric IDs bypass the extra lookup.
-
-**Aliases:** none
 
 **ROS 2 CLI equivalent:** `ros2 lifecycle set <node> <transition>`
 
@@ -2197,8 +2259,6 @@ Output (error — unknown label, with available options):
 
 List all controller types available in the pluginlib registry with their base classes.
 
-**Alias:** `lct`
-
 | Option | Required | Description |
 |--------|----------|-------------|
 | --controller-manager | No | Controller manager node name (default: /controller_manager) |
@@ -2207,7 +2267,7 @@ List all controller types available in the pluginlib registry with their base cl
 Example:
 ```bash
 python3 scripts/ros2_cli.py control list-controller-types
-python3 scripts/ros2_cli.py control lct --controller-manager /my_robot/controller_manager
+python3 scripts/ros2_cli.py control list-controller-types --controller-manager /my_robot/controller_manager
 ```
 
 Output (success):
@@ -2231,8 +2291,6 @@ Output (error):
 
 List all loaded controllers, their type, and current state.
 
-**Alias:** `lc`
-
 | Option | Required | Description |
 |--------|----------|-------------|
 | --controller-manager | No | Controller manager node name (default: /controller_manager) |
@@ -2241,7 +2299,6 @@ List all loaded controllers, their type, and current state.
 Example:
 ```bash
 python3 scripts/ros2_cli.py control list-controllers
-python3 scripts/ros2_cli.py control lc
 ```
 
 Output (success):
@@ -2265,8 +2322,6 @@ Output (error):
 
 List hardware components (actuator, sensor, system) managed by ros2_control.
 
-**Alias:** `lhc`
-
 | Option | Required | Description |
 |--------|----------|-------------|
 | --controller-manager | No | Controller manager node name (default: /controller_manager) |
@@ -2275,7 +2330,6 @@ List hardware components (actuator, sensor, system) managed by ros2_control.
 Example:
 ```bash
 python3 scripts/ros2_cli.py control list-hardware-components
-python3 scripts/ros2_cli.py control lhc
 ```
 
 Output (success):
@@ -2298,8 +2352,6 @@ Output (error):
 
 List all available command and state interfaces.
 
-**Alias:** `lhi`
-
 | Option | Required | Description |
 |--------|----------|-------------|
 | --controller-manager | No | Controller manager node name (default: /controller_manager) |
@@ -2308,7 +2360,6 @@ List all available command and state interfaces.
 Example:
 ```bash
 python3 scripts/ros2_cli.py control list-hardware-interfaces
-python3 scripts/ros2_cli.py control lhi
 ```
 
 Output (success):
@@ -2389,8 +2440,6 @@ Configure a loaded controller, driving it from the `unconfigured` state to `inac
 
 Use this command when a controller is stuck in `unconfigured` after `load-controller`, or when you need to confirm that configuration succeeds before attempting to activate.
 
-**Alias:** `cc`
-
 **ROS 2 CLI equivalent:** `ros2 control configure_controller <name>`
 
 | Argument | Required | Description |
@@ -2406,8 +2455,6 @@ python3 scripts/ros2_cli.py control load-controller joint_trajectory_controller
 
 # 2. Configure it (unconfigured → inactive); errors from on_configure() are visible here
 python3 scripts/ros2_cli.py control configure-controller joint_trajectory_controller
-# or using alias:
-python3 scripts/ros2_cli.py control cc joint_trajectory_controller
 
 # 3. Activate it (inactive → active)
 python3 scripts/ros2_cli.py control set-controller-state joint_trajectory_controller active
@@ -2432,8 +2479,6 @@ Output (error — service not available):
 
 Reload all controller plugin libraries in the controller manager.
 
-**Alias:** `rcl`
-
 | Option | Required | Description |
 |--------|----------|-------------|
 | --force-kill | No | Force kill controllers before reloading |
@@ -2443,7 +2488,7 @@ Reload all controller plugin libraries in the controller manager.
 Example:
 ```bash
 python3 scripts/ros2_cli.py control reload-controller-libraries
-python3 scripts/ros2_cli.py control rcl --force-kill
+python3 scripts/ros2_cli.py control reload-controller-libraries --force-kill
 ```
 
 Output (success):
@@ -2461,8 +2506,6 @@ Output (error):
 
 Activate or deactivate a single controller via SwitchController (STRICT mode).
 
-**Alias:** `scs`
-
 | Option | Required | Description |
 |--------|----------|-------------|
 | name | Yes | Controller name (positional) |
@@ -2473,7 +2516,7 @@ Activate or deactivate a single controller via SwitchController (STRICT mode).
 Example:
 ```bash
 python3 scripts/ros2_cli.py control set-controller-state joint_trajectory_controller active
-python3 scripts/ros2_cli.py control scs joint_trajectory_controller inactive
+python3 scripts/ros2_cli.py control set-controller-state joint_trajectory_controller inactive
 ```
 
 Output (success):
@@ -2491,8 +2534,6 @@ Output (error):
 
 Drive a hardware component through its lifecycle state machine.
 
-**Alias:** `shcs`
-
 | Option | Required | Description |
 |--------|----------|-------------|
 | name | Yes | Hardware component name (positional) |
@@ -2503,7 +2544,7 @@ Drive a hardware component through its lifecycle state machine.
 Example:
 ```bash
 python3 scripts/ros2_cli.py control set-hardware-component-state my_robot active
-python3 scripts/ros2_cli.py control shcs my_robot inactive
+python3 scripts/ros2_cli.py control set-hardware-component-state my_robot inactive
 ```
 
 Output (success):
@@ -2521,8 +2562,6 @@ Output (error):
 
 Atomically activate and/or deactivate multiple controllers in a single call.
 
-**Aliases:** `sc`, `swc`
-
 | Option | Required | Description |
 |--------|----------|-------------|
 | --activate | No | Controllers to activate (space-separated list) |
@@ -2536,7 +2575,7 @@ Example:
 ```bash
 python3 scripts/ros2_cli.py control switch-controllers \
     --activate joint_trajectory_controller --deactivate cartesian_controller
-python3 scripts/ros2_cli.py control sc --activate ctrl_a ctrl_b --strictness STRICT
+python3 scripts/ros2_cli.py control switch-controllers --activate ctrl_a ctrl_b --strictness STRICT
 ```
 
 Output (success):
@@ -2559,8 +2598,6 @@ Output (error):
 
 Generate a Graphviz diagram of loaded chained controllers, save as PDF to `.artifacts/`, and optionally send to Discord.
 
-**Alias:** `vcc`
-
 Requires graphviz: `sudo apt install graphviz`
 
 | Option | Required | Description |
@@ -2574,7 +2611,7 @@ Requires graphviz: `sudo apt install graphviz`
 Example:
 ```bash
 python3 scripts/ros2_cli.py control view-controller-chains
-python3 scripts/ros2_cli.py control vcc --output my_diagram.pdf --channel-id 1234567890
+python3 scripts/ros2_cli.py control view-controller-chains --output my_diagram.pdf --channel-id 1234567890
 ```
 
 Output (success):
@@ -2804,6 +2841,66 @@ Output (nothing received):
 
 TF2 transform utilities for querying, listing, and monitoring coordinate frame transforms.
 
+### tf tree [options]
+
+Subscribe to `/tf` and `/tf_static` for a short duration and output the full frame hierarchy as an ASCII tree. Use this to understand the robot's transform topology before any spatial operation.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--duration SECONDS` | `2.0` | How long to collect TF messages |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py tf tree
+python3 {baseDir}/scripts/ros2_cli.py tf tree --duration 3
+```
+
+**Output:**
+```json
+{
+  "frames": ["world", "odom", "base_link", "laser_link", "camera_link"],
+  "root_frames": ["world"],
+  "tree": "world\n└── odom\n    └── base_link\n        ├── laser_link\n        └── camera_link",
+  "transform_count": 4
+}
+```
+
+**No frames received:**
+```json
+{"error": "No TF frames received within 2.0s — is a TF publisher running?"}
+```
+
+### tf validate [options]
+
+Collect TF transforms and check for structural problems: cycles, frames with multiple parents, and empty trees. Run this before any TF-dependent operation when the tree is unfamiliar or after a node restart.
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--duration SECONDS` | `2.0` | How long to collect TF messages |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py tf validate
+```
+
+**Output (valid):**
+```json
+{
+  "valid": true,
+  "frames": ["world", "odom", "base_link", "laser_link"],
+  "issues": [],
+  "warnings": ["Frame 'laser_link' has no children — leaf node (expected for sensors)"]
+}
+```
+
+**Output (cycle detected):**
+```json
+{
+  "valid": false,
+  "frames": ["odom", "base_link", "odom"],
+  "issues": ["Cycle detected involving frame 'odom'", "Frame 'base_link' has multiple parents: odom, world"],
+  "warnings": []
+}
+```
+
 ### tf list / tf ls
 
 List all available coordinate frames.
@@ -2891,7 +2988,7 @@ Publish static transform. Runs in tmux session.
 python3 {baseDir}/scripts/ros2_cli.py tf static 0 0 0 0 0 0 base_link odom
 ```
 
-### tf euler-from-quaternion / tf e2q / tf quat2euler `<x>` `<y>` `<z>` `<w>`
+### tf euler-from-quaternion `<x>` `<y>` `<z>` `<w>`
 
 Convert quaternion to Euler angles (radians).
 
@@ -2899,7 +2996,7 @@ Convert quaternion to Euler angles (radians).
 python3 {baseDir}/scripts/ros2_cli.py tf euler-from-quaternion 0 0 0 1
 ```
 
-### tf quaternion-from-euler / tf q2e / tf euler2quat `<roll>` `<pitch>` `<yaw>`
+### tf quaternion-from-euler `<roll>` `<pitch>` `<yaw>`
 
 Convert Euler angles to quaternion (radians).
 
@@ -2907,7 +3004,7 @@ Convert Euler angles to quaternion (radians).
 python3 {baseDir}/scripts/ros2_cli.py tf quaternion-from-euler 0 0 1.57
 ```
 
-### tf euler-from-quaternion-deg / tf e2qdeg `<x>` `<y>` `<z>` `<w>`
+### tf euler-from-quaternion-deg `<x>` `<y>` `<z>` `<w>`
 
 Convert quaternion to Euler angles (degrees).
 
@@ -2915,7 +3012,7 @@ Convert quaternion to Euler angles (degrees).
 python3 {baseDir}/scripts/ros2_cli.py tf euler-from-quaternion-deg 0 0 0 1
 ```
 
-### tf quaternion-from-euler-deg / tf q2edeg `<roll>` `<pitch>` `<yaw>`
+### tf quaternion-from-euler-deg `<roll>` `<pitch>` `<yaw>`
 
 Convert Euler angles to quaternion (degrees).
 
@@ -2923,7 +3020,7 @@ Convert Euler angles to quaternion (degrees).
 python3 {baseDir}/scripts/ros2_cli.py tf quaternion-from-euler-deg 0 0 90
 ```
 
-### tf transform-point / tf tp `<target>` `<source>` `<x>` `<y>` `<z>`
+### tf transform-point `<target>` `<source>` `<x>` `<y>` `<z>`
 
 Transform a point from source to target frame.
 
@@ -2931,7 +3028,7 @@ Transform a point from source to target frame.
 python3 {baseDir}/scripts/ros2_cli.py tf transform-point map base_link 1 0 0
 ```
 
-### tf transform-vector / tf tv `<target>` `<source>` `<x>` `<y>` `<z>`
+### tf transform-vector `<target>` `<source>` `<x>` `<y>` `<z>`
 
 Transform a vector from source to target frame.
 
@@ -3039,15 +3136,20 @@ Error (session already exists):
 
 ---
 
-## launch list / launch ls
+## launch list / launch ls `[keyword]`
 
-List running launch sessions in tmux.
+Without a keyword, lists running launch sessions in tmux. With a keyword, searches all installed ROS 2 packages for launch files whose path contains the keyword (case-insensitive).
 
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `keyword` | No | Substring to search for in package names or launch file paths |
+
+**List running sessions (no keyword):**
 ```bash
 python3 {baseDir}/scripts/ros2_cli.py launch list
 ```
 
-**Output:**
+**Output (no keyword):**
 ```json
 {
   "all_sessions": ["launch_navigation2_navigation2", "launch_turtlesim_turtlesim"],
@@ -3061,6 +3163,42 @@ python3 {baseDir}/scripts/ros2_cli.py launch list
   ]
 }
 ```
+
+**Search for launch files by keyword:**
+```bash
+python3 {baseDir}/scripts/ros2_cli.py launch list navigation
+```
+
+**Output (with keyword):**
+```json
+{
+  "keyword": "navigation",
+  "matches": [
+    {
+      "package": "navigation2",
+      "launch_file": "navigation2.launch.py",
+      "full_path": "/opt/ros/humble/share/navigation2/launch/navigation2.launch.py"
+    },
+    {
+      "package": "nav2_bringup",
+      "launch_file": "bringup_launch.py",
+      "full_path": "/opt/ros/humble/share/nav2_bringup/launch/bringup_launch.py"
+    }
+  ],
+  "count": 2
+}
+```
+
+**Common keywords:**
+
+| Intent | Keyword |
+|--------|---------|
+| Navigation stack | `navigation` or `nav2` |
+| Robot description / URDF | `robot_description` or `urdf` |
+| Teleop / joystick | `teleop` |
+| Camera / sensors | `camera` or `sensor` |
+| Control framework | `ros2_control` or `controller` |
+| Simulation | `gazebo` or `sim` |
 
 ---
 
@@ -3558,3 +3696,780 @@ Output (unknown package):
 ```json
 {"error": "Package 'nonexistent_pkg' not found or has no interfaces"}
 ```
+
+---
+
+## bag info `<bag_path>`
+
+Show metadata for a ROS 2 bag: duration, starting time, storage format, message count, and the topic list with per-topic message counts.
+
+**No live ROS 2 graph required.** Parses `metadata.yaml` from the bag directory using the filesystem only. Works with any storage backend (`sqlite3`, `mcap`, etc.).
+
+**ROS 2 CLI equivalent:** `ros2 bag info <bag_path>`
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `bag_path` | Yes | Path to a bag directory (containing `metadata.yaml`), or directly to the `metadata.yaml` file, or to any storage file inside the bag directory |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py bag info /path/to/my_bag
+python3 {baseDir}/scripts/ros2_cli.py bag info /path/to/my_bag/metadata.yaml
+```
+
+Output:
+```json
+{
+  "bag_path": "/absolute/path/to/my_bag",
+  "storage_identifier": "sqlite3",
+  "duration": {
+    "nanoseconds": 10000000000,
+    "seconds": 10.0
+  },
+  "starting_time": {
+    "nanoseconds_since_epoch": 1700000000000000000
+  },
+  "message_count": 1500,
+  "topic_count": 3,
+  "topics": [
+    {
+      "name": "/cmd_vel",
+      "type": "geometry_msgs/msg/Twist",
+      "serialization_format": "cdr",
+      "offered_qos_profiles": "",
+      "message_count": 100
+    },
+    {
+      "name": "/odom",
+      "type": "nav_msgs/msg/Odometry",
+      "serialization_format": "cdr",
+      "offered_qos_profiles": "",
+      "message_count": 1000
+    },
+    {
+      "name": "/scan",
+      "type": "sensor_msgs/msg/LaserScan",
+      "serialization_format": "cdr",
+      "offered_qos_profiles": "",
+      "message_count": 400
+    }
+  ]
+}
+```
+
+Topics are sorted alphabetically by name. The optional `compression_format`, `compression_mode`, and `files` fields are included when present in the bag metadata.
+
+Error (metadata not found):
+```json
+{
+  "error": "metadata.yaml not found in '/path/to/dir'. Provide the path to a bag directory that contains metadata.yaml.",
+  "hint": "Provide the path to a bag directory that contains metadata.yaml."
+}
+```
+
+Error (PyYAML not installed):
+```json
+{"error": "PyYAML is required for bag info: pip install pyyaml"}
+```
+
+---
+
+## pkg list / pkg ls
+
+List all ROS 2 packages installed on this system.
+
+**No live ROS 2 graph required.** Reads the ament resource index from the filesystem.
+
+**ROS 2 CLI equivalent:** `ros2 pkg list`
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py pkg list
+python3 {baseDir}/scripts/ros2_cli.py pkg ls
+```
+
+Output:
+```json
+{
+  "packages": [
+    "ackermann_msgs",
+    "action_msgs",
+    "geometry_msgs",
+    "...and many more..."
+  ],
+  "total": 312
+}
+```
+
+---
+
+## pkg prefix `<package>`
+
+Output the install prefix path for a package.
+
+**No live ROS 2 graph required.**
+
+**ROS 2 CLI equivalent:** `ros2 pkg prefix <package>`
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `package` | Yes | Package name (e.g. `nav2_bringup`) |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py pkg prefix nav2_bringup
+python3 {baseDir}/scripts/ros2_cli.py pkg prefix turtlesim
+```
+
+Output:
+```json
+{"package": "turtlesim", "prefix": "/opt/ros/humble"}
+```
+
+Error (package not found):
+```json
+{"error": "Package 'bad_pkg' not found. Is it installed and sourced?"}
+```
+
+---
+
+## pkg executables `<package>`
+
+List all executable files provided by a package.
+
+**No live ROS 2 graph required.** Walks `<prefix>/lib/<package>/` and returns files with the executable bit set.
+
+**ROS 2 CLI equivalent:** `ros2 pkg executables <package>`
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `package` | Yes | Package name (e.g. `turtlesim`) |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py pkg executables turtlesim
+python3 {baseDir}/scripts/ros2_cli.py pkg executables demo_nodes_cpp
+```
+
+Output:
+```json
+{
+  "package": "turtlesim",
+  "executables": ["draw_square", "mimic", "turtle_teleop_key", "turtlesim_node"],
+  "total": 4,
+  "lib_dir": "/opt/ros/humble/lib/turtlesim"
+}
+```
+
+If the package has no executables (e.g. a message-only package), `executables` is `[]` and `total` is `0`.
+
+Error (package not found):
+```json
+{"error": "Package 'bad_pkg' not found. Is it installed and sourced?"}
+```
+
+---
+
+## pkg xml `<package>`
+
+Output the `package.xml` manifest of a package.
+
+**No live ROS 2 graph required.** Reads `<prefix>/share/<package>/package.xml` from the filesystem.
+
+**ROS 2 CLI equivalent:** `ros2 pkg xml <package>`
+
+| Argument | Required | Description |
+|----------|----------|-------------|
+| `package` | Yes | Package name (e.g. `std_msgs`) |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py pkg xml std_msgs
+python3 {baseDir}/scripts/ros2_cli.py pkg xml turtlesim
+```
+
+Output:
+```json
+{
+  "package": "std_msgs",
+  "path": "/opt/ros/humble/share/std_msgs/package.xml",
+  "xml": "<?xml version=\"1.0\"?>\n<package format=\"3\">...</package>\n"
+}
+```
+
+Error (package not found):
+```json
+{"error": "Package 'bad_pkg' not found. Is it installed and sourced?"}
+```
+
+---
+
+## component types
+
+List all registered `rclcpp` composable node types installed on this system.
+
+**No live ROS 2 graph required.** Reads the `rclcpp_components` ament resource index from the filesystem. Each package that exports composable nodes registers a resource file whose lines are component class names (e.g. `my_pkg::MyNode`).
+
+**ROS 2 CLI equivalent:** `ros2 component types`
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py component types
+```
+
+Output:
+```json
+{
+  "components": [
+    {"package": "composition", "type_name": "composition::Talker"},
+    {"package": "composition", "type_name": "composition::Listener"},
+    {"package": "composition", "type_name": "composition::NodeLikeListener"},
+    {"package": "my_pkg", "type_name": "my_pkg::MyNode"}
+  ],
+  "total": 4,
+  "packages": ["composition", "my_pkg"]
+}
+```
+
+Components are sorted by package name, then by declaration order within each package's resource file. The `packages` field is an alphabetically sorted list of unique package names. If any package's resource file cannot be read, a `warnings` array is included with per-package error details — remaining packages are still enumerated.
+
+Output (with per-package warning):
+```json
+{
+  "components": [{"package": "good_pkg", "type_name": "good_pkg::GoodNode"}],
+  "total": 1,
+  "packages": ["good_pkg"],
+  "warnings": [{"package": "bad_pkg", "error": "disk error"}]
+}
+```
+
+Error (`ament_index_python` not installed):
+```json
+{
+  "error": "ament_index_python is required: pip install ament-index-python",
+  "detail": "No module named 'ament_index_python'"
+}
+```
+
+---
+
+## component list
+
+List all running component containers and their loaded components. Discovers containers by scanning the live graph for `composition_interfaces/srv/ListNodes` services.
+
+**ROS 2 CLI equivalent:** `ros2 component list`
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--timeout SECS` | `5.0` | Seconds to wait per container service |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py component list
+python3 {baseDir}/scripts/ros2_cli.py component ls
+```
+
+Output:
+```json
+{
+  "containers": [
+    {
+      "container": "/my_container",
+      "component_count": 2,
+      "components": [
+        {"unique_id": 1, "full_node_name": "/my_container/talker"},
+        {"unique_id": 2, "full_node_name": "/my_container/listener"}
+      ]
+    }
+  ],
+  "total_containers": 1,
+  "total_components": 2
+}
+```
+
+No containers running:
+```json
+{"containers": [], "total_containers": 0, "total_components": 0, "hint": "No component containers found. Start one with: ros2 run rclcpp_components component_container"}
+```
+
+---
+
+## component load `<container>` `<package_name>` `<plugin_name>` [options]
+
+Load a composable node into a running component container.
+
+**ROS 2 CLI equivalent:** `ros2 component load <container> <package> <plugin>`
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--node-name NAME` | `""` | Override the loaded node's name |
+| `--node-namespace NS` | `""` | Override the loaded node's namespace |
+| `--remap RULE [...]` | `[]` | Remap rules (e.g. `/from:=/to`) |
+| `--log-level LEVEL` | `0` | Log level for the loaded node (uint8: 0=unset, 10=DEBUG, 20=INFO, 30=WARN, 40=ERROR, 50=FATAL) |
+| `--timeout SECS` | `5.0` | Service call timeout |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py component load /my_container demo_nodes_cpp demo_nodes_cpp::Talker
+python3 {baseDir}/scripts/ros2_cli.py component load /my_container demo_nodes_cpp demo_nodes_cpp::Talker --node-name my_talker
+```
+
+Output:
+```json
+{
+  "success": true,
+  "container": "/my_container",
+  "package_name": "demo_nodes_cpp",
+  "plugin_name": "demo_nodes_cpp::Talker",
+  "full_node_name": "/my_container/talker",
+  "unique_id": 1
+}
+```
+
+---
+
+## component unload `<container>` `<unique_id>` [options]
+
+Unload a composable node from a component container by its unique ID (from `component load` or `component list`).
+
+**ROS 2 CLI equivalent:** `ros2 component unload <container> <unique_id>`
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--timeout SECS` | `5.0` | Service call timeout |
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py component unload /my_container 1
+```
+
+Output:
+```json
+{"success": true, "container": "/my_container", "unique_id": 1}
+```
+
+---
+
+## component standalone `<package_name>` `<plugin_name>` [options]
+
+Run a composable node in its own standalone container. Starts a fresh `rclcpp_components/component_container` in a tmux session and immediately loads the specified plugin into it. The container node is named `standalone_<plugin_class>` (derived from the plugin name, e.g. `demo_nodes_cpp::Talker` → `/standalone_talker`).
+
+**ROS 2 CLI equivalent:** `ros2 component standalone <package> <plugin>`
+
+**Requires:** tmux, rclcpp_components, composition_interfaces
+
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--container-type TYPE` | `component_container` | Container executable (`component_container`, `component_container_mt`, `component_container_isolated`) |
+| `--node-name NAME` | `""` | Override the loaded node's name |
+| `--node-namespace NS` | `""` | Override the loaded node's namespace |
+| `--remap RULE [...]` | `[]` | Remap rules (e.g. `/from:=/to`) |
+| `--log-level LEVEL` | `0` | Log level for the loaded node (uint8: 0=unset, 10=DEBUG, 20=INFO, 30=WARN, 40=ERROR, 50=FATAL) |
+| `--timeout SECS` | `10.0` | Total timeout for container start + component load |
+
+> **Optional output key:** `warning` is present when a local workspace is detected but not yet built — the command still proceeds.
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py component standalone demo_nodes_cpp demo_nodes_cpp::Talker
+```
+
+**Output (success):**
+```json
+{
+  "success": true,
+  "session": "comp_demo_nodes_cpp_standalone_talker",
+  "container": "/standalone_talker",
+  "container_type": "component_container",
+  "package_name": "demo_nodes_cpp",
+  "plugin_name": "demo_nodes_cpp::Talker",
+  "full_node_name": "/talker",
+  "unique_id": 1,
+  "status": "running"
+}
+```
+
+> **Note:** `full_node_name` is returned verbatim from the `LoadNode` service. With `component_container` (default) the node runs in the global namespace (e.g. `/talker`). With `component_container_isolated` it is namespaced under the container (e.g. `/standalone_talker/talker`).
+
+**Output (session already exists):**
+```json
+{
+  "error": "Session 'comp_demo_nodes_cpp_standalone_talker' already exists",
+  "suggestion": "Use 'component kill comp_demo_nodes_cpp_standalone_talker' to kill it first",
+  "session": "comp_demo_nodes_cpp_standalone_talker"
+}
+```
+
+The session can be killed with `component kill <session>` when the container is no longer needed.
+
+---
+
+## component kill `<session>`
+
+Kill a standalone component container session. Terminates the tmux session and removes its metadata entry. Only accepts sessions with the `comp_` prefix.
+
+**No live ROS 2 graph required.**
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py component kill comp_demo_nodes_cpp_standalone_talker
+```
+
+**Output (success):**
+```json
+{
+  "success": true,
+  "session": "comp_demo_nodes_cpp_standalone_talker",
+  "message": "Session 'comp_demo_nodes_cpp_standalone_talker' killed"
+}
+```
+
+**Output (wrong session type):**
+```json
+{
+  "error": "Session 'run_my_node' is not a comp session",
+  "hint": "Comp sessions start with 'comp_'"
+}
+```
+
+**Output (session not found):**
+```json
+{
+  "error": "Session 'comp_demo_nodes_cpp_standalone_talker' does not exist",
+  "available_sessions": []
+}
+```
+
+---
+
+## daemon status
+
+Check whether the ROS 2 daemon is running.
+
+**No live ROS 2 graph required.** Reads the domain ID from `ROS_DOMAIN_ID` (default 0). Queries the `ros2cli` Python API first; falls back to PID file discovery in `~/.ros/` if `ros2cli` is not available.
+
+**ROS 2 CLI equivalent:** `ros2 daemon status`
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py daemon status
+```
+
+Output (running):
+```json
+{"status": "running", "domain_id": 0, "pid": 12345}
+```
+
+Output (not running):
+```json
+{"status": "not_running", "domain_id": 0}
+```
+
+---
+
+## daemon start
+
+Start the ROS 2 daemon if it is not already running.
+
+**No live ROS 2 graph required.** Uses `ros2cli.daemon.spawn_daemon()`. Idempotent: returns `already_running` immediately if the daemon is already up.
+
+**ROS 2 CLI equivalent:** `ros2 daemon start`
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py daemon start
+```
+
+Output (started):
+```json
+{"status": "started", "domain_id": 0, "pid": 12345}
+```
+
+Output (already running):
+```json
+{"status": "already_running", "domain_id": 0, "pid": 12345}
+```
+
+Output (ros2cli unavailable):
+```json
+{
+  "error": "ros2cli Python package not available",
+  "hint": "Install ros2cli or run 'ros2 daemon start' in a shell",
+  "domain_id": 0
+}
+```
+
+---
+
+## daemon stop
+
+Stop the ROS 2 daemon.
+
+**No live ROS 2 graph required.** Uses `ros2cli.daemon.shutdown_daemon()` if available; falls back to `SIGTERM` via PID file. Idempotent: returns `not_running` immediately if the daemon is already stopped.
+
+**ROS 2 CLI equivalent:** `ros2 daemon stop`
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py daemon stop
+```
+
+Output (stopped):
+```json
+{"status": "stopped", "domain_id": 0}
+```
+
+Output (not running):
+```json
+{"status": "not_running", "domain_id": 0}
+```
+
+Output (stop signal sent, daemon still exiting):
+```json
+{
+  "status": "stop_requested",
+  "domain_id": 0,
+  "note": "Daemon may take a moment to exit",
+  "pid": 12345
+}
+```
+
+---
+
+## Command Quick Reference
+
+### 1. Explore a Robot System
+
+```bash
+python3 {baseDir}/scripts/ros2_cli.py version
+python3 {baseDir}/scripts/ros2_cli.py topics list
+python3 {baseDir}/scripts/ros2_cli.py nodes list
+python3 {baseDir}/scripts/ros2_cli.py services list
+python3 {baseDir}/scripts/ros2_cli.py actions list
+
+# Discover installed packages and what they provide
+python3 {baseDir}/scripts/ros2_cli.py pkg list
+python3 {baseDir}/scripts/ros2_cli.py pkg prefix turtlesim
+python3 {baseDir}/scripts/ros2_cli.py pkg executables turtlesim
+python3 {baseDir}/scripts/ros2_cli.py pkg xml turtlesim
+
+# Find a topic by type, then inspect it
+python3 {baseDir}/scripts/ros2_cli.py topics find geometry_msgs/msg/Twist
+python3 {baseDir}/scripts/ros2_cli.py topics find geometry_msgs/msg/TwistStamped
+# → get the discovered topic name, then:
+python3 {baseDir}/scripts/ros2_cli.py topics type <discovered_topic>
+python3 {baseDir}/scripts/ros2_cli.py interface proto <confirmed_type>
+```
+
+### 2. Move a Robot
+
+**Emergency stop:**
+```bash
+python3 {baseDir}/scripts/ros2_cli.py estop
+```
+
+### 3. Read Sensor Data
+
+**Always use auto-discovery first** to find the correct sensor topics.
+
+```bash
+# Step 1: Discover sensor topics by message type
+python3 {baseDir}/scripts/ros2_cli.py topics find sensor_msgs/msg/LaserScan
+python3 {baseDir}/scripts/ros2_cli.py topics find nav_msgs/msg/Odometry
+python3 {baseDir}/scripts/ros2_cli.py topics find sensor_msgs/msg/JointState
+# → record each discovered topic name
+
+# Step 2: Subscribe to discovered topics (use the names from Step 1, not hardcoded names)
+python3 {baseDir}/scripts/ros2_cli.py topics subscribe <LASER_TOPIC> --duration 3
+python3 {baseDir}/scripts/ros2_cli.py topics subscribe <ODOM_TOPIC> --duration 10 --max-messages 50
+python3 {baseDir}/scripts/ros2_cli.py topics subscribe <JOINT_STATE_TOPIC> --duration 5
+```
+
+### 4. Use Services
+
+**Always use auto-discovery first** to find available services and their request/response structures.
+
+```bash
+# Step 1: Discover available services
+python3 {baseDir}/scripts/ros2_cli.py services list
+
+# Step 2: Find services by type (optional)
+python3 {baseDir}/scripts/ros2_cli.py services find std_srvs/srv/Empty
+python3 {baseDir}/scripts/ros2_cli.py services find turtlesim/srv/Spawn
+
+# Step 3: Get service request/response structure
+python3 {baseDir}/scripts/ros2_cli.py services details /spawn
+
+# Step 4: Call the service with properly-structured payload
+python3 {baseDir}/scripts/ros2_cli.py services call /spawn \
+  '{"x":3.0,"y":3.0,"theta":0.0,"name":"turtle2"}'
+```
+
+### 5. Actions
+
+**Always use auto-discovery first** to find available actions and their goal/result structures.
+
+```bash
+# Step 1: Discover available actions
+python3 {baseDir}/scripts/ros2_cli.py actions list
+
+# Step 2: Find actions by type (optional)
+python3 {baseDir}/scripts/ros2_cli.py actions find turtlesim/action/RotateAbsolute
+python3 {baseDir}/scripts/ros2_cli.py actions find nav2_msgs/action/NavigateToPose
+
+# Step 3: Get action goal/result structure
+python3 {baseDir}/scripts/ros2_cli.py actions details /turtle1/rotate_absolute
+
+# Step 4: Send goal with properly-structured payload
+python3 {baseDir}/scripts/ros2_cli.py actions send /turtle1/rotate_absolute \
+  '{"theta":1.57}'
+
+# Step 5: Monitor feedback — always echo after sending a goal
+python3 {baseDir}/scripts/ros2_cli.py actions echo /turtle1/rotate_absolute --timeout 30
+```
+
+**After every `actions send`, immediately run `actions echo` on the same action server** to monitor feedback.
+
+### 6. Change Parameters
+
+**Always use auto-discovery first** to list available parameters for a node.
+
+```bash
+# Step 1: Discover nodes
+python3 {baseDir}/scripts/ros2_cli.py nodes list
+
+# Step 2: List parameters for a node
+python3 {baseDir}/scripts/ros2_cli.py params list /turtlesim
+
+# Step 3: Get current parameter value
+python3 {baseDir}/scripts/ros2_cli.py params get /turtlesim:background_r
+
+# Step 4: Set parameter value
+python3 {baseDir}/scripts/ros2_cli.py params set /turtlesim:background_r 255
+
+# Step 5: Read back after set — always verify the change took effect
+python3 {baseDir}/scripts/ros2_cli.py params get /turtlesim:background_r
+```
+
+**After every `params set`, always run `params get` on the same parameter** to confirm the change was accepted.
+
+### 7. Goal-Oriented Commands (publish-until)
+
+For any goal with a sensor-based stop condition — joint angles, temperature limits, proximity, battery level — use `publish-until` with the appropriate monitor topic and condition flag. **Always discover both the command topic and the monitor topic before executing** — never hardcode names.
+
+| User intent | Discover command topic | Discover monitor topic | Condition |
+|-------------|----------------------|----------------------|-----------|
+| Stop near obstacle | `topics find geometry_msgs/Twist` + `TwistStamped` | `topics find sensor_msgs/LaserScan` → field `ranges.0` | `--below 0.5` |
+| Stop at range | same | `topics find sensor_msgs/Range` → field `range` | `--below D` |
+| Stop at temperature | — | `topics find sensor_msgs/Temperature` → field `temperature` | `--above T` |
+| Stop at battery level | — | `topics find sensor_msgs/BatteryState` → field `percentage` | `--below P` |
+| Joint reach angle | `topics find trajectory_msgs/JointTrajectory` or similar | `topics find sensor_msgs/JointState` → field `position.0` | `--equals A` or `--delta D` |
+| Multi-joint distance | same | `topics find sensor_msgs/JointState` → fields `position.0 position.1` | `--euclidean --delta D` |
+
+**`--euclidean`** computes `sqrt(Σ(current_i - start_i)²)` across all `--field` paths. Use it for curved or diagonal paths. **Composite field shorthand**: `--field pose.pose.position` auto-expands to `x, y, z`.
+
+```bash
+# Example: stop when front range sensor reads < 0.5 m
+# Step 1: discover velocity topic
+python3 {baseDir}/scripts/ros2_cli.py topics find geometry_msgs/msg/Twist
+python3 {baseDir}/scripts/ros2_cli.py topics find geometry_msgs/msg/TwistStamped
+
+# Step 2: discover laser scan topic
+python3 {baseDir}/scripts/ros2_cli.py topics find sensor_msgs/msg/LaserScan
+
+# Step 3: execute with discovered names
+python3 {baseDir}/scripts/ros2_cli.py topics publish-until <VEL_TOPIC> \
+  '<payload>' \
+  --monitor <SCAN_TOPIC> --field ranges.0 --below 0.5 --timeout 30
+```
+
+### 8. Topic and Service Discovery
+
+**Never guess topic names.** Any time an operation involves a topic, discover the actual topic name from the live graph first.
+
+### Images and Camera
+
+**Always prefer compressed topics** - use much less bandwidth:
+```bash
+python3 {baseDir}/scripts/ros2_cli.py topics find sensor_msgs/msg/CompressedImage
+python3 {baseDir}/scripts/ros2_cli.py topics find sensor_msgs/msg/Image
+```
+Use `topics capture-image --topic <discovered>` - never `subscribe` for images.
+
+### Velocity Commands (Twist vs TwistStamped)
+
+Check both types to find the topic:
+```bash
+python3 {baseDir}/scripts/ros2_cli.py topics find geometry_msgs/msg/Twist
+python3 {baseDir}/scripts/ros2_cli.py topics find geometry_msgs/msg/TwistStamped
+```
+Then confirm the exact type of the discovered topic:
+```bash
+python3 {baseDir}/scripts/ros2_cli.py topics type <discovered_topic>
+```
+
+---
+
+## Agent Vocabulary: Natural-Language Trigger Words
+
+Maps user intent phrases to the correct ros2-skill command sequence. When a phrase below appears in a user request, use the mapped command — do not ask which command to run.
+
+### Node execution model
+
+| User intent | Correct approach | Notes |
+|---|---|---|
+| "run X", "start node X", "launch X as a node" | `run new <package> <executable>` | Standalone process — node runs in its own OS process |
+| "load component X into container Y", "load X into component container" | `component load <container> <package> <plugin>` | Intra-process component — shares address space with container |
+| "list running containers and components" | `component list` | Shows all containers and their loaded component IDs and names |
+| "unload component X", "remove component with ID N" | `component unload <container> <unique_id>` | Removes a component without killing the container |
+| "run <plugin> standalone", "standalone container for <plugin>", "run <plugin> without an existing container" | `component standalone <package> <plugin>` | Creates its own container + loads in one step; container persists in tmux, kill with `component kill <session>` |
+| "kill standalone", "stop standalone container", "cancel standalone" | `component kill <session>` | Terminates the container's tmux session; get the session name from `component standalone` output or `run list` |
+
+**Key distinction:** `run new` creates a standalone OS process. `component load` inserts a composable node into an already-running container (`rclcpp::ComponentManager`) — lower IPC overhead, same address space. Use `component list` to discover available containers before loading.
+
+---
+
+### Parameter files and YAML config
+
+| User intent | Correct command |
+|---|---|
+| "load params from file", "apply YAML params", "use config file", "load parameters from YAML" | `params load <node> <yaml_file>` |
+| "apply config to node X" | `params load <node> <yaml_file>` |
+| "use `--params-file` in launch" | Pass via `launch new <pkg> <file> --params-file <path>` |
+
+**Pre-load validation (Rule 0 — mandatory):** Before loading any YAML file, run `params list <node>` and compare YAML keys against declared parameters. Any YAML key not matching a declared parameter is silently ignored. Verify each intended key is present before loading.
+
+---
+
+### Bag files
+
+| User intent | Correct command |
+|---|---|
+| "what's in this bag", "bag file info", "how long is the bag", "what topics does the bag have" | `bag info <path>` |
+
+**Note:** `bag info` does not require a live ROS 2 graph — it reads `metadata.yaml` from the bag directory.
+
+---
+
+### Testing
+
+| User intent | Correct command |
+|---|---|
+| "run tests for package X", "test package X", "check if tests pass" | `colcon test --packages-select <pkg>` *(direct CLI — not in ros2-skill)* |
+| "run the test suite", "run all tests" | `colcon test` *(direct CLI)* |
+| "run pytest", "run unit tests" | `python3 -m pytest <path>` *(direct CLI)* |
+| "show test results", "what tests failed" | `colcon test-result --all` *(direct CLI)* |
+
+**Note:** Testing commands operate on the build system, not the live ROS 2 graph — they are outside the scope of `ros2_cli.py`. Use direct CLI commands. These commands do not require a running robot.
+
+---
+
+### Diagnostics: runtime log level
+
+| User intent | Correct command |
+|---|---|
+| "enable debug logging for node X", "set log level to debug", "get more verbose output from X" | `services call <SET_LOGGER_LEVEL_SERVICE> '{"logger_name": "", "level": 10}'` |
+| "reset log level", "disable debug logging" | `services call <SET_LOGGER_LEVEL_SERVICE> '{"logger_name": "", "level": 20}'` |
+
+**Discovery:** Find the service with `services find rcl_interfaces/srv/SetLoggerLevel`. Level values: `10` = DEBUG, `20` = INFO, `30` = WARN, `40` = ERROR. Use `logger_name: ""` for the root logger, or specify the node's logger name to narrow scope.
+
+---
+
+### Daemon and deployment context
+
+| User intent | Correct command |
+|---|---|
+| "check daemon status", "is the ROS daemon running" | `daemon status` |
+| "start the daemon", "restart daemon" | `daemon start` |
+| "stop the daemon" | `daemon stop` |
+| "what domain ID is in use", "check ROS_DOMAIN_ID" | Check env: `echo $ROS_DOMAIN_ID` *(direct shell)* |
+
+**Note:** `ROS_DOMAIN_ID` defaults to `0` and is user-configurable. If the graph looks unexpectedly large (too many unrecognised nodes), a domain collision with another system is likely — check with `echo $ROS_DOMAIN_ID` and verify the expected value with the user.
+
+**Setting `ROS_DOMAIN_ID` — important limitation:** `export ROS_DOMAIN_ID=X` in a subprocess does not propagate to the parent shell. The agent cannot persistently change this value for future `ros2_cli.py` calls — each call inherits the environment it was launched with. To apply a different domain ID for a single command, prefix it: `ROS_DOMAIN_ID=42 python3 {baseDir}/scripts/ros2_cli.py topics list`. For a persistent change, the user must set the variable in their shell before launching the agent.
