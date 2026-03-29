@@ -2,7 +2,7 @@
 
 ## Skill Identity
 - Name: slack-standup
-- Version: 1.
+- Version: 1.0.0
 - License: MIT
 - Category: Productivity / Team Collaboration
 
