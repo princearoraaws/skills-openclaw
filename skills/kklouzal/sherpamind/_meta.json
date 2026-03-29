@@ -3,11 +3,16 @@
   "slug": "sherpamind",
   "displayName": "SherpaMind",
   "latest": {
-    "version": "0.1.6",
-    "publishedAt": 1774123323140,
-    "commit": "https://github.com/openclaw/skills/commit/f5fcb7e1de24936b17e4b3080f7ca09106b3fd07"
+    "version": "0.1.7",
+    "publishedAt": 1774802565455,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.1.6",
+      "publishedAt": 1774123323140,
+      "commit": "https://github.com/openclaw/skills/commit/f5fcb7e1de24936b17e4b3080f7ca09106b3fd07"
+    },
     {
       "version": "0.1.2",
       "publishedAt": 1774119125315,

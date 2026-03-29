@@ -70,29 +70,32 @@ Start with structured commands:
 - `python3 scripts/run.py recent-technician-load`
 - `python3 scripts/run.py account-summary "<account>"`
 - `python3 scripts/run.py technician-summary "<technician>"`
+- `python3 scripts/run.py ticket-summary "<ticket-id|ticket-number|ticket-key>"`
 
 Examples:
 - open-ticket count → `report-status-counts`
 - technician backlog/load → `technician-summary "<technician>"`
 - account snapshot → `account-summary "<account>"`
+- ticket inspection / retrieval-ready context → `ticket-summary "<ticket-id|ticket-number|ticket-key>"`
 
 ### Fuzzy investigation, prior-art lookup, and support-history recall
 
 Use retrieval commands:
 
 - `python3 scripts/run.py search-ticket-docs "<query>"`
+- `python3 scripts/run.py search-ticket-docs "<query>" --account "<account>" --status Open --department "<department>"`
 - `python3 scripts/run.py search-ticket-chunks "<query>"`
-- `python3 scripts/run.py search-ticket-chunks "<query>" --account "<account>"`
-- `python3 scripts/run.py search-ticket-chunks "<query>" --status Open`
-- `python3 scripts/run.py search-ticket-chunks "<query>" --technician "<technician>"`
+- `python3 scripts/run.py search-ticket-chunks "<query>" --account "<account>" --status Open --technician "<technician>"`
+- `python3 scripts/run.py search-ticket-chunks "<query>" --priority High --category "<category>" --class-name "<class>"`
 - `python3 scripts/run.py search-vector-index "<query>"`
 - `python3 scripts/run.py search-vector-index "<query>" --account "<account>" --status Open`
 - `python3 scripts/run.py search-vector-index "<query>" --technician "<technician>" --priority High --category "<category>"`
+- `python3 scripts/run.py search-vector-index "<query>" --department "<department>" --class-name "<class>" --submission-category "<channel>" --resolution-category "<resolution>"`
 
 Default retrieval workflow:
 1. Start with keyword/text search when the issue words are concrete.
 2. Widen to vector search when wording may vary or keyword recall looks thin.
-3. Use account/technician/status/priority/category filters when they materially narrow the search.
+3. Use account/technician/status/priority/category/department/class/submission/resolution filters when they materially narrow the search.
 4. Answer from retrieved evidence instead of jumping to canned conclusions.
 
 ### Quick factual context from generated artifacts
@@ -107,8 +110,10 @@ Read these when a concise derived artifact is enough:
 - `{baseDir}/.SherpaMind/public/docs/runtime/status.md`
 - `{baseDir}/.SherpaMind/public/docs/accounts/index.md`
 - `{baseDir}/.SherpaMind/public/docs/technicians/index.md`
+- `{baseDir}/.SherpaMind/public/docs/tickets/index.md`
 - `{baseDir}/.SherpaMind/public/docs/accounts/*.md`
 - `{baseDir}/.SherpaMind/public/docs/technicians/*.md`
+- `{baseDir}/.SherpaMind/public/docs/tickets/ticket_*.md`
 
 ## Preferred answer flow
 
@@ -176,6 +181,7 @@ Use these for setup/maintenance, not routine user queries:
 - `python3 scripts/run.py workspace-layout`
 - `python3 scripts/run.py doctor`
 - `python3 scripts/run.py backfill-technician-stubs`
+- `python3 scripts/run.py backfill-ticket-entity-stubs`
 - `python3 scripts/run.py bootstrap-audit`
 - `python3 scripts/run.py setup`
 - `python3 scripts/run.py migrate-legacy-state`

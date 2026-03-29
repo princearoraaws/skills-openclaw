@@ -95,7 +95,7 @@ SherpaMind currently covers five major areas:
    - tracks whether the historical cold corpus has completed at least one full pass
    - uses spare hourly API headroom opportunistically to accelerate cold audit/detail deepening before that first full pass completes
    - slows cold re-audit/re-enrichment back down after the first full pass so most budget remains available for hot/warm freshness while still preserving long-tail maintenance
-   - backfills technician stub rows from stable ticket payload names when the standalone technicians endpoint is thinner than real ticket assignee history
+   - backfills account, user, and technician stub rows from stable ticket payload labels when standalone entity endpoints are thinner than real ticket history
    - enriches a bounded priority ticket set through single-ticket detail fetches
    - biases cold-detail enrichment toward under-covered categories/accounts/technicians so historical retrieval depth broadens instead of clustering only around the newest cold tickets
    - stores ticket logs and attachment metadata from detail responses
@@ -103,19 +103,22 @@ SherpaMind currently covers five major areas:
 3. **Retrieval preparation**
    - materializes ticket documents from canonical rows
    - normalizes ticket text into cleaner retrieval-ready summaries
+- keeps action-oriented ticket cues honest by separating explicit follow-up notes from waiting-log fallback notes while still publishing a unified action-cue field for retrieval consumers
    - normalizes account/user/technician labels so retrieval/vector facets prefer human-readable names over raw numeric IDs when ticket payloads provide them
-   - promotes ticket-observed technician labels into canonical stub rows when that is the cleanest stable source available, so technician-facing summaries/filter facets stay readable even when endpoint coverage is thin
-   - carries workflow/state metadata such as subject, user email, stable ticket identifiers (ticket number/key), technician and creator contact context, waiting/age timing signals, recent log types, derived waiting/follow-up cues, derived latest-response and closure cues from ticket logs, next-step hints, derived action-cue text/source (from explicit next steps, follow-up notes, request-completion notes, or waiting-log fallback), class/submission/resolution taxonomy, human-readable department labels plus label-source provenance, contract/confirmation context, account-location and department context, intake-channel/handling flags, request-completion cues, attachment presence, and resolution highlights into derived artifacts
-   - chunks long documents deterministically
+   - promotes ticket-observed account/user/technician labels into canonical stub rows when that is the cleanest stable source available, so entity-facing summaries/filter facets stay readable even when endpoint coverage is thin
+   - carries workflow/state metadata such as subject, user email plus normalized user/creator/technician email domains, stable ticket identifiers (ticket number/key), technician and creator contact context, participant email-domain rollups, waiting/age timing signals, recent log types, log-interaction counts/date summaries (public/internal/waiting/response/resolution), distinct public/internal participant counts, latest/recent participant labels, mixed-visibility activity flags, derived waiting/follow-up cues, derived latest-response and closure cues from ticket logs, next-step hints, derived action-cue text/source (from explicit next steps, follow-up notes, request-completion notes, or waiting-log fallback), class/submission/resolution taxonomy, human-readable department labels plus label-source provenance, contract/confirmation context, account-location and department context, intake-channel/handling flags, request-completion cues, project/scheduled-ticket linkage, effort-tracking signals (estimated/remaining/total hours, total minutes, labor cost, percent complete), attachment presence plus normalized attachment extension/kind/size summaries (including size-known counts and broader kind-family counts), and resolution highlights into derived artifacts
+   - chunks long documents deterministically, with small-tail rebalancing so vector exports do not devolve into metadata-only shard rows
    - supports keyword/text search over docs and chunks
-   - exports metadata-rich embedding-ready chunk payloads
+   - exports metadata-rich embedding-ready chunk payloads, including chunk-order/position metadata for vector sidecars
    - builds and queries a local vector index
 
 4. **Operator and OpenClaw observability**
    - reports dataset counts and freshness
    - reports enrichment coverage and retrieval coverage
+   - surfaces detail-gap pressure across under-covered accounts, categories, and technicians so enrichment breadth can be steered deliberately instead of guessed
    - reports retrieval-metadata readiness across the materialized document layer
-   - reports source-vs-materialized coverage for source-backed metadata so thin fields can be distinguished as upstream absence vs backend promotion drift
+   - reports source-vs-materialized coverage for source-backed metadata so thin fields can be distinguished as upstream absence vs backend promotion drift, with transformed-field hygiene that treats malformed upstream email strings as source-quality issues instead of false promotion gaps
+- reports action-cue provenance so operators can see whether ticket guidance came from literal next-step text, explicit follow-up notes, request-completion notes, or waiting-log fallback
    - reports API usage and hourly budget pressure
    - reports vector index readiness and drift
    - generates public Markdown artifacts for lightweight inspection
@@ -257,12 +260,16 @@ Current public artifact surface includes:
 
 - `index.md`
 - `insight-snapshot.md`
+- `retrieval-readiness.md`
 - `stale-open-tickets.md`
 - `recent-account-activity.md`
 - `recent-technician-load.md`
 - `runtime/status.md`
 - per-account docs under `accounts/`
 - per-technician docs under `technicians/`
+- per-ticket docs under `tickets/` for open and artifact-bearing/enriched tickets, including ticket-level retrieval health, chunk inventory, and vector-readiness cues
+
+Snapshot generation also prunes stale per-account/per-technician/per-ticket Markdown files that no longer match the current dataset-derived entity set, so old fallback-label artifacts do not linger beside newer readable-name docs.
 
 ### Runtime model
 
@@ -343,6 +350,7 @@ python3 scripts/run.py <command> [args...]
 - `python3 scripts/run.py workspace-layout`
 - `python3 scripts/run.py init-db`
 - `python3 scripts/run.py backfill-technician-stubs`
+- `python3 scripts/run.py backfill-ticket-entity-stubs`
 - `python3 scripts/run.py setup`
 - `python3 scripts/run.py configure`
 - `python3 scripts/run.py doctor`
@@ -391,11 +399,14 @@ python3 scripts/run.py <command> [args...]
 - `python3 scripts/run.py recent-technician-load`
 - `python3 scripts/run.py account-summary`
 - `python3 scripts/run.py technician-summary`
+- `python3 scripts/run.py ticket-summary`
 
 ### Search and export
 
 - `python3 scripts/run.py search-ticket-docs <query>`
+- `python3 scripts/run.py search-ticket-docs <query> --account <account> --status Open --department <department>`
 - `python3 scripts/run.py search-ticket-chunks <query>`
+- `python3 scripts/run.py search-ticket-chunks <query> --priority High --category <category> --class-name <class>`
 - `python3 scripts/run.py export-ticket-docs`
 - `python3 scripts/run.py export-ticket-chunks`
 - `python3 scripts/run.py export-embedding-chunks`
@@ -404,6 +415,7 @@ python3 scripts/run.py <command> [args...]
 - `python3 scripts/run.py report-vector-index-status`
 - `python3 scripts/run.py report-retrieval-readiness`
 - `python3 scripts/run.py search-vector-index <query>`
+- `python3 scripts/run.py search-vector-index <query> --department <department> --class-name <class> --submission-category <channel> --resolution-category <resolution>`
 - `python3 scripts/run.py generate-public-snapshot`
 - `python3 scripts/run.py generate-runtime-status`
 
@@ -525,6 +537,7 @@ SherpaMind generates public/runtime artifacts for fast inspection.
 Common outputs include:
 
 - insight snapshot
+- detail-gap pressure tables for under-covered accounts/categories/technicians inside the public insight snapshot
 - stale open tickets
 - recent account activity
 - recent technician load
@@ -549,13 +562,17 @@ Vector and retrieval readiness reporting includes:
 - missing index rows
 - dangling index rows
 - outdated content rows
+- bounded drift samples showing which chunks/documents are currently missing, outdated, or dangling so operators can inspect concrete vector-index repair targets instead of only totals
 - chunk-size quality metrics (avg/min/max, tiny, over-target)
-- filter-facet inventories for accounts, technicians, statuses, priorities, and categories
-- chunk-level and document-level metadata coverage for cleaned subject/issue summary/next-step/action-cue/log-type/resolution/attachment readiness plus class/submission/resolution taxonomy, human-readable department labels, account-location, confirmation, and intake-channel metadata
-- source-vs-materialized coverage for source-backed metadata fields such as support group, contract, location, department key, ticket identifiers, timing flags, and confirmation fields, including whether low coverage reflects upstream absence or backend materialization drift
+- filter-facet inventories for accounts, technicians, statuses, priorities, categories, normalized user/creator/technician/participant email domains, normalized attachment extensions, and attachment kinds
+- chunk-level and document-level metadata coverage for cleaned subject/issue summary/next-step/action-cue/log-type/resolution/attachment readiness plus log-interaction counts/date summaries, participant-count/name visibility metadata, attachment extension/kind/size summaries, size-known coverage, broader attachment kind-family counts, explicit-followup-vs-waiting-log cue splits, class/submission/resolution taxonomy, human-readable department labels, account-location, confirmation, and intake-channel metadata
+- source-vs-materialized coverage for source-backed metadata fields such as support group, contract, location, department key, ticket identifiers, email-domain promotions where the upstream payload actually exposes the underlying email, timing flags, and confirmation fields, including whether low coverage reflects upstream absence or backend materialization drift
 - entity-label quality summaries for account/user/technician/department facets so operators can see readable-vs-identifier-like label ratios and fallback-source pressure before trusting filters heavily
+- retrieval signal pressure summaries for accounts/categories/technicians so operators can see where detail/action/activity/resolution/attachment metadata is still too thin for confident retrieval and steer enrichment breadth deliberately
 - chunk-topology readiness signals such as chunks-per-document and multi-chunk-document ratio so vector-sidecar consumers can reason about chunk fanout cleanly
-- freshness windows for materialized chunks vs ticket update timestamps
+- embedding-ready exports carry chunk-order/position fields (`chunk_start_char`, `chunk_end_char`, `previous_chunk_id`, `next_chunk_id`) plus inferred chunk semantic section cues (`chunk_primary_section`, `chunk_section_labels`, semantic-context booleans) so downstream vector sidecars can reconstruct both nearby context and chunk intent without guessing
+- freshness windows for materialized chunks vs ticket update timestamps, including per-document lag counts, status splits, lag buckets, and top lagging-document samples
+- raw readiness JSON now exposes both detailed machine-facing maps (`source_metadata_coverage`, `freshness`) and operator-oriented rollups (`source_backed_metadata`, `materialization_freshness_lag`) so consumers do not have to reconstruct those views themselves
 
 ## Current limitations and intentionally deferred areas
 

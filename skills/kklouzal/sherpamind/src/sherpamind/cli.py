@@ -52,11 +52,11 @@ from .ingest import (
     sync_warm_closed_tickets,
 )
 from .settings import load_settings, stage_api_key, stage_api_user, stage_connection_settings
-from .summaries import get_account_summary, get_technician_summary
+from .summaries import get_account_summary, get_technician_summary, get_ticket_summary
 from .vector_exports import export_embedding_manifest, export_embedding_ready_chunks, get_retrieval_readiness_summary
 from .vector_index import build_vector_index, get_vector_index_status, search_vector_index
 from .watch import watch_new_tickets
-from .db import backfill_ticket_technician_stubs, initialize_db
+from .db import backfill_ticket_entity_stubs, backfill_ticket_technician_stubs, initialize_db
 
 app = typer.Typer(help="SherpaMind CLI")
 
@@ -99,6 +99,13 @@ def backfill_technician_stubs() -> None:
     settings = load_settings()
     initialize_db(settings.db_path)
     print(json.dumps(backfill_ticket_technician_stubs(settings.db_path), indent=2))
+
+
+@app.command("backfill-ticket-entity-stubs")
+def backfill_ticket_entity_stubs_command() -> None:
+    settings = load_settings()
+    initialize_db(settings.db_path)
+    print(json.dumps(backfill_ticket_entity_stubs(settings.db_path), indent=2))
 
 
 @app.command("workspace-layout")
@@ -589,17 +596,73 @@ def technician_summary(technician_query: str, limit_open: int = 10, limit_recent
     print(json.dumps(get_technician_summary(settings.db_path, technician_query, limit_open=limit_open, limit_recent=limit_recent), indent=2))
 
 
-@app.command("search-ticket-docs")
-def search_docs(query: str, limit: int = 20) -> None:
+@app.command("ticket-summary")
+def ticket_summary(ticket_query: str, limit_logs: int = 10, limit_attachments: int = 10) -> None:
     settings = load_settings()
-    rows = search_ticket_documents(settings.db_path, query=query, limit=limit)
+    print(json.dumps(get_ticket_summary(settings.db_path, ticket_query, limit_logs=limit_logs, limit_attachments=limit_attachments), indent=2))
+
+
+@app.command("search-ticket-docs")
+def search_docs(
+    query: str,
+    limit: int = 20,
+    account: str | None = None,
+    status: str | None = None,
+    technician: str | None = None,
+    priority: str | None = None,
+    category: str | None = None,
+    class_name: str | None = None,
+    submission_category: str | None = None,
+    resolution_category: str | None = None,
+    department: str | None = None,
+) -> None:
+    settings = load_settings()
+    rows = search_ticket_documents(
+        settings.db_path,
+        query=query,
+        limit=limit,
+        account=account,
+        status=status,
+        technician=technician,
+        priority=priority,
+        category=category,
+        class_name=class_name,
+        submission_category=submission_category,
+        resolution_category=resolution_category,
+        department=department,
+    )
     print(json.dumps(rows, indent=2))
 
 
 @app.command("search-ticket-chunks")
-def search_chunks(query: str, limit: int = 20) -> None:
+def search_chunks(
+    query: str,
+    limit: int = 20,
+    account: str | None = None,
+    status: str | None = None,
+    technician: str | None = None,
+    priority: str | None = None,
+    category: str | None = None,
+    class_name: str | None = None,
+    submission_category: str | None = None,
+    resolution_category: str | None = None,
+    department: str | None = None,
+) -> None:
     settings = load_settings()
-    rows = search_ticket_document_chunks(settings.db_path, query=query, limit=limit)
+    rows = search_ticket_document_chunks(
+        settings.db_path,
+        query=query,
+        limit=limit,
+        account=account,
+        status=status,
+        technician=technician,
+        priority=priority,
+        category=category,
+        class_name=class_name,
+        submission_category=submission_category,
+        resolution_category=resolution_category,
+        department=department,
+    )
     print(json.dumps(rows, indent=2))
 
 
@@ -673,6 +736,10 @@ def search_vector_index_cmd(
     technician: str | None = None,
     priority: str | None = None,
     category: str | None = None,
+    class_name: str | None = None,
+    submission_category: str | None = None,
+    resolution_category: str | None = None,
+    department: str | None = None,
 ) -> None:
     settings = load_settings()
     rows = search_vector_index(
@@ -684,6 +751,10 @@ def search_vector_index_cmd(
         technician=technician,
         priority=priority,
         category=category,
+        class_name=class_name,
+        submission_category=submission_category,
+        resolution_category=resolution_category,
+        department=department,
     )
     print(json.dumps(rows, indent=2))
 

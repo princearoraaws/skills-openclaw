@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -9,7 +10,7 @@ from .db import connect, now_iso, replace_ticket_document_chunks, replace_ticket
 from .text_cleanup import normalize_ticket_text, summarize_resolution_from_logs
 
 
-DOCUMENT_MATERIALIZATION_VERSION = 7
+DOCUMENT_MATERIALIZATION_VERSION = 15
 
 
 def _content_hash(text: str) -> str:
@@ -44,6 +45,36 @@ def _join_name_parts(*parts: str | None) -> str | None:
     return joined or None
 
 
+def _extract_email_domain(value: Any) -> str | None:
+    if value is None:
+        return None
+    candidate = str(value).strip().lower()
+    if not candidate or "@" not in candidate:
+        return None
+    domain = candidate.rsplit("@", 1)[-1].strip(" >).,;:'\"")
+    if not domain or "." not in domain:
+        return None
+    return domain
+
+
+def _collect_email_domains(*values: Any) -> list[str]:
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for value in values:
+        if isinstance(value, (list, tuple, set)):
+            for item in value:
+                domain = _extract_email_domain(item)
+                if domain and domain not in seen:
+                    seen.add(domain)
+                    ordered.append(domain)
+            continue
+        domain = _extract_email_domain(value)
+        if domain and domain not in seen:
+            seen.add(domain)
+            ordered.append(domain)
+    return ordered
+
+
 def _coerce_bool(value: Any) -> bool | None:
     if value is None:
         return None
@@ -57,6 +88,44 @@ def _coerce_bool(value: Any) -> bool | None:
     if candidate in {"0", "false", "no", "n", "off", ""}:
         return False
     return bool(candidate)
+
+
+def _present_metric(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, (int, float)):
+        return value != 0
+    candidate = str(value).strip()
+    return bool(candidate) and candidate not in {"0", "0.0", "0.00"}
+
+
+_RESPONSE_LOG_TYPES = {"response", "initial post", "initial log", "log entry"}
+_RESOLUTION_LOG_TYPES = {"closed", "close log"}
+
+
+def _normalize_log_type(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
+def _coerce_int(value: Any) -> int | None:
+    if value in (None, ""):
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    candidate = str(value).strip()
+    if not candidate:
+        return None
+    try:
+        return int(candidate)
+    except ValueError:
+        try:
+            return int(float(candidate))
+        except ValueError:
+            return None
 
 
 def _resolve_account_label(record: dict) -> tuple[str | None, str]:
@@ -132,25 +201,335 @@ def _resolve_department_label(record: dict) -> tuple[str | None, str]:
     return None, "missing"
 
 
-def _chunk_text(text: str, target_chars: int = 1800) -> list[str]:
+_ATTACHMENT_KIND_BY_EXTENSION: dict[str, str] = {
+    "png": "image",
+    "jpg": "image",
+    "jpeg": "image",
+    "gif": "image",
+    "webp": "image",
+    "bmp": "image",
+    "heic": "image",
+    "tif": "image",
+    "tiff": "image",
+    "svg": "image",
+    "pdf": "document",
+    "doc": "document",
+    "docx": "document",
+    "txt": "document",
+    "rtf": "document",
+    "odt": "document",
+    "csv": "spreadsheet",
+    "xls": "spreadsheet",
+    "xlsx": "spreadsheet",
+    "ods": "spreadsheet",
+    "tsv": "spreadsheet",
+    "zip": "archive",
+    "7z": "archive",
+    "rar": "archive",
+    "tar": "archive",
+    "gz": "archive",
+    "tgz": "archive",
+    "bz2": "archive",
+    "xz": "archive",
+    "log": "log",
+    "evt": "log",
+    "evtx": "log",
+    "json": "data",
+    "xml": "data",
+    "yaml": "data",
+    "yml": "data",
+    "sql": "data",
+    "pcap": "data",
+    "mp3": "audio",
+    "wav": "audio",
+    "m4a": "audio",
+    "ogg": "audio",
+    "mp4": "video",
+    "mov": "video",
+    "avi": "video",
+    "mkv": "video",
+    "wmv": "video",
+    "eml": "message",
+    "msg": "message",
+}
+
+
+def _attachment_extension(name: str | None) -> str | None:
+    if not name:
+        return None
+    candidate = str(name).strip().rsplit("/", 1)[-1].rsplit("\\", 1)[-1]
+    if "." not in candidate:
+        return None
+    extension = candidate.rsplit(".", 1)[-1].strip().lower()
+    return extension or None
+
+
+def _attachment_kind(name: str | None) -> str:
+    extension = _attachment_extension(name)
+    if not extension:
+        return "unknown"
+    return _ATTACHMENT_KIND_BY_EXTENSION.get(extension, "other")
+
+
+def _summarize_attachment_metadata(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    names: list[str] = []
+    extensions: list[str] = []
+    kind_counts: dict[str, int] = {}
+    kind_order: list[str] = []
+    total_size_bytes = 0
+    size_count = 0
+
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        name = _first_present(row.get("name"))
+        if name:
+            names.append(name)
+        extension = _attachment_extension(name)
+        if extension:
+            extensions.append(extension)
+        kind = _attachment_kind(name)
+        if kind not in kind_counts:
+            kind_order.append(kind)
+        kind_counts[kind] = kind_counts.get(kind, 0) + 1
+        size = row.get("size")
+        if isinstance(size, (int, float)):
+            total_size_bytes += int(size)
+            size_count += 1
+        elif size not in (None, ""):
+            try:
+                total_size_bytes += int(str(size).strip())
+                size_count += 1
+            except ValueError:
+                pass
+
+    unique_extensions = sorted(set(extensions))
+    attachment_kinds = sorted(kind_counts)
+    return {
+        "attachment_names": names,
+        "attachment_extensions": unique_extensions,
+        "attachment_extensions_csv": ", ".join(unique_extensions) if unique_extensions else None,
+        "attachment_kinds": attachment_kinds,
+        "attachment_kinds_csv": ", ".join(attachment_kinds) if attachment_kinds else None,
+        "attachment_kind_counts": kind_counts,
+        "attachment_kind_primary": (
+            max(kind_order, key=lambda kind: (kind_counts.get(kind, 0), -kind_order.index(kind)))
+            if kind_order else None
+        ),
+        "attachment_total_size_bytes": total_size_bytes if size_count else None,
+        "attachment_size_known_count": size_count,
+        "attachment_image_count": kind_counts.get("image", 0),
+        "attachment_document_count": kind_counts.get("document", 0),
+        "attachment_spreadsheet_count": kind_counts.get("spreadsheet", 0),
+        "attachment_archive_count": kind_counts.get("archive", 0),
+        "attachment_log_count": kind_counts.get("log", 0),
+        "attachment_data_count": kind_counts.get("data", 0),
+        "attachment_audio_count": kind_counts.get("audio", 0),
+        "attachment_video_count": kind_counts.get("video", 0),
+        "attachment_message_count": kind_counts.get("message", 0),
+        "attachment_other_count": kind_counts.get("other", 0),
+        "attachment_unknown_count": kind_counts.get("unknown", 0),
+    }
+
+
+def _split_text_hard(text: str, target_chars: int) -> list[str]:
+    text = text.strip()
+    if not text:
+        return []
+    words = text.split()
+    if not words:
+        return []
+    chunks: list[str] = []
+    current = words[0]
+    for word in words[1:]:
+        candidate = f"{current} {word}"
+        if len(candidate) <= target_chars:
+            current = candidate
+            continue
+        chunks.append(current)
+        current = word
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _split_text_segment(text: str, target_chars: int) -> list[str]:
+    text = text.strip()
+    if not text:
+        return []
     if len(text) <= target_chars:
         return [text]
-    paragraphs = text.split("\n")
+
+    sentence_candidates = [segment.strip() for segment in re.split(r"(?<=[.!?])\s+", text) if segment and segment.strip()]
+    if len(sentence_candidates) <= 1:
+        return _split_text_hard(text, target_chars)
+
     chunks: list[str] = []
+    current = ""
+    for sentence in sentence_candidates:
+        if len(sentence) > target_chars:
+            if current:
+                chunks.append(current)
+                current = ""
+            chunks.extend(_split_text_hard(sentence, target_chars))
+            continue
+        candidate = sentence if not current else f"{current} {sentence}"
+        if len(candidate) <= target_chars:
+            current = candidate
+            continue
+        if current:
+            chunks.append(current)
+        current = sentence
+    if current:
+        chunks.append(current)
+    return chunks
+
+
+def _chunk_segment_length(segments: list[str]) -> int:
+    if not segments:
+        return 0
+    return sum(len(segment) for segment in segments) + (len(segments) - 1)
+
+
+
+def _rebalance_small_chunk_tail(
+    chunk_segments: list[list[str]],
+    *,
+    target_chars: int,
+    min_chunk_chars: int,
+) -> list[list[str]]:
+    if len(chunk_segments) < 2:
+        return chunk_segments
+
+    rebalanced = [list(segments) for segments in chunk_segments if segments]
+    for idx in range(len(rebalanced) - 1, 0, -1):
+        current = rebalanced[idx]
+        previous = rebalanced[idx - 1]
+        if not current or not previous:
+            continue
+        current_len = _chunk_segment_length(current)
+        if current_len >= min_chunk_chars:
+            continue
+
+        while len(previous) > 1 and current_len < min_chunk_chars:
+            candidate_segment = previous[-1]
+            candidate_current = [candidate_segment, *current]
+            candidate_previous = previous[:-1]
+            candidate_current_len = _chunk_segment_length(candidate_current)
+            candidate_previous_len = _chunk_segment_length(candidate_previous)
+            if candidate_current_len > target_chars:
+                break
+            if candidate_previous and candidate_previous_len < min_chunk_chars:
+                break
+            current = candidate_current
+            previous = candidate_previous
+            current_len = candidate_current_len
+
+        if current_len < min_chunk_chars and _chunk_segment_length(previous + current) <= target_chars:
+            rebalanced[idx - 1] = previous + current
+            rebalanced[idx] = []
+            continue
+
+        rebalanced[idx - 1] = previous
+        rebalanced[idx] = current
+
+    return [segments for segments in rebalanced if segments]
+
+
+
+def _rebalance_small_chunk_heads(
+    chunk_segments: list[list[str]],
+    *,
+    target_chars: int,
+    min_chunk_chars: int,
+) -> list[list[str]]:
+    if len(chunk_segments) < 2:
+        return chunk_segments
+
+    rebalanced = [list(segments) for segments in chunk_segments if segments]
+    for idx in range(len(rebalanced) - 1):
+        current = rebalanced[idx]
+        following = rebalanced[idx + 1]
+        if not current or not following:
+            continue
+        current_len = _chunk_segment_length(current)
+        if current_len >= min_chunk_chars:
+            continue
+
+        while len(following) > 1 and current_len < min_chunk_chars:
+            candidate_segment = following[0]
+            candidate_current = [*current, candidate_segment]
+            candidate_following = following[1:]
+            candidate_current_len = _chunk_segment_length(candidate_current)
+            candidate_following_len = _chunk_segment_length(candidate_following)
+            if candidate_current_len > target_chars:
+                break
+            if candidate_following and candidate_following_len < min_chunk_chars:
+                break
+            current = candidate_current
+            following = candidate_following
+            current_len = candidate_current_len
+
+        if current_len < min_chunk_chars and _chunk_segment_length(current + following) <= target_chars:
+            rebalanced[idx] = current + following
+            rebalanced[idx + 1] = []
+            continue
+
+        rebalanced[idx] = current
+        rebalanced[idx + 1] = following
+
+    return [segments for segments in rebalanced if segments]
+
+
+
+def _chunk_text(text: str, target_chars: int = 1800, min_chunk_chars: int = 250) -> list[str]:
+    if len(text) <= target_chars:
+        return [text]
+
+    segments: list[str] = []
+    for paragraph in text.split("\n"):
+        cleaned = paragraph.strip()
+        if not cleaned:
+            continue
+        segments.extend(_split_text_segment(cleaned, target_chars))
+
+    chunk_segments: list[list[str]] = []
     current: list[str] = []
     current_len = 0
-    for para in paragraphs:
-        para_len = len(para) + 1
-        if current and current_len + para_len > target_chars:
-            chunks.append("\n".join(current).strip())
-            current = [para]
-            current_len = para_len
-        else:
-            current.append(para)
-            current_len += para_len
+    for segment in segments:
+        candidate_len = len(segment) if not current else current_len + 1 + len(segment)
+        if current and candidate_len > target_chars:
+            chunk_segments.append(current)
+            current = [segment]
+            current_len = len(segment)
+            continue
+        current.append(segment)
+        current_len = candidate_len
     if current:
-        chunks.append("\n".join(current).strip())
-    return [chunk for chunk in chunks if chunk]
+        chunk_segments.append(current)
+
+    chunk_segments = _rebalance_small_chunk_heads(
+        chunk_segments,
+        target_chars=target_chars,
+        min_chunk_chars=min_chunk_chars,
+    )
+    chunk_segments = _rebalance_small_chunk_tail(
+        chunk_segments,
+        target_chars=target_chars,
+        min_chunk_chars=min_chunk_chars,
+    )
+
+    chunks: list[str] = []
+    for segments_for_chunk in chunk_segments:
+        chunk = "\n".join(segments_for_chunk).strip()
+        if not chunk:
+            continue
+        if chunks and len(chunk) < min_chunk_chars and len(chunks[-1]) + 1 + len(chunk) <= target_chars:
+            chunks[-1] = f"{chunks[-1]}\n{chunk}".strip()
+            continue
+        chunks.append(chunk)
+
+    return chunks
 
 
 def _parse_recent_logs(value: str | None) -> list[dict[str, Any]]:
@@ -169,13 +548,78 @@ def _parse_recent_logs(value: str | None) -> list[dict[str, Any]]:
     return rows
 
 
+def _normalize_log_actor_label(log: dict[str, Any]) -> str | None:
+    for value in (log.get("user_name"), log.get("user_email"), log.get("user_id")):
+        if value is None:
+            continue
+        cleaned = str(value).strip()
+        if cleaned:
+            return cleaned
+    return None
+
+
+def _summarize_recent_log_participants(logs: list[dict[str, Any]]) -> dict[str, Any]:
+    recent_public_actor_labels: list[str] = []
+    recent_internal_actor_labels: list[str] = []
+    seen_public: set[str] = set()
+    seen_internal: set[str] = set()
+    latest_public_actor_label: str | None = None
+    latest_internal_actor_label: str | None = None
+    recent_public_email_domains: list[str] = []
+    recent_internal_email_domains: list[str] = []
+    seen_public_domains: set[str] = set()
+    seen_internal_domains: set[str] = set()
+
+    for log in logs:
+        actor_label = _normalize_log_actor_label(log)
+        actor_domain = _extract_email_domain(log.get("user_email"))
+        is_internal = bool(log.get("is_tech_only"))
+        if not actor_label and not actor_domain:
+            continue
+        actor_key = actor_label.strip().lower() if actor_label else None
+        if is_internal:
+            if actor_label and latest_internal_actor_label is None:
+                latest_internal_actor_label = actor_label
+            if actor_label and actor_key and actor_key not in seen_internal:
+                seen_internal.add(actor_key)
+                recent_internal_actor_labels.append(actor_label)
+            if actor_domain and actor_domain not in seen_internal_domains:
+                seen_internal_domains.add(actor_domain)
+                recent_internal_email_domains.append(actor_domain)
+            continue
+        if actor_label and latest_public_actor_label is None:
+            latest_public_actor_label = actor_label
+        if actor_label and actor_key and actor_key not in seen_public:
+            seen_public.add(actor_key)
+            recent_public_actor_labels.append(actor_label)
+        if actor_domain and actor_domain not in seen_public_domains:
+            seen_public_domains.add(actor_domain)
+            recent_public_email_domains.append(actor_domain)
+
+    participant_email_domains = _collect_email_domains(recent_public_email_domains, recent_internal_email_domains)
+    return {
+        "recent_public_actor_labels": recent_public_actor_labels,
+        "recent_public_actor_labels_csv": ", ".join(recent_public_actor_labels) if recent_public_actor_labels else None,
+        "recent_internal_actor_labels": recent_internal_actor_labels,
+        "recent_internal_actor_labels_csv": ", ".join(recent_internal_actor_labels) if recent_internal_actor_labels else None,
+        "latest_public_actor_label": latest_public_actor_label,
+        "latest_internal_actor_label": latest_internal_actor_label,
+        "recent_public_email_domains": recent_public_email_domains,
+        "recent_public_email_domains_csv": ", ".join(recent_public_email_domains) if recent_public_email_domains else None,
+        "recent_internal_email_domains": recent_internal_email_domains,
+        "recent_internal_email_domains_csv": ", ".join(recent_internal_email_domains) if recent_internal_email_domains else None,
+        "participant_email_domains": participant_email_domains,
+        "participant_email_domains_csv": ", ".join(participant_email_domains) if participant_email_domains else None,
+    }
+
+
 def _derive_recent_log_cues(logs: list[dict[str, Any]]) -> dict[str, Any]:
     waiting_log = None
     response_log = None
     resolution_log = None
     for log in logs:
         cleaned_note = normalize_ticket_text(log.get("plain_note") or log.get("note"))
-        log_type = str(log.get("log_type") or "").strip().lower()
+        log_type = _normalize_log_type(log.get("log_type"))
         log_record = {
             "log_type": log.get("log_type"),
             "record_date": log.get("record_date"),
@@ -183,9 +627,9 @@ def _derive_recent_log_cues(logs: list[dict[str, Any]]) -> dict[str, Any]:
         }
         if waiting_log is None and cleaned_note and (bool(log.get("is_waiting")) or log_type == "waiting on response"):
             waiting_log = log_record
-        if response_log is None and cleaned_note and log_type in {"response", "initial post", "initial log", "log entry"}:
+        if response_log is None and cleaned_note and log_type in _RESPONSE_LOG_TYPES:
             response_log = log_record
-        if resolution_log is None and cleaned_note and log_type in {"closed", "close log"}:
+        if resolution_log is None and cleaned_note and log_type in _RESOLUTION_LOG_TYPES:
             resolution_log = log_record
     return {
         "waiting_log": waiting_log,
@@ -194,20 +638,28 @@ def _derive_recent_log_cues(logs: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
+def _resolve_followup_cue(
+    explicit_followup_note: str | None,
+    waiting_log_note: str | None,
+) -> tuple[str | None, str]:
+    if explicit_followup_note:
+        return explicit_followup_note, "explicit_followup_note"
+    if waiting_log_note:
+        return waiting_log_note, "waiting_log"
+    return None, "missing"
+
+
 def _resolve_action_cue(
     cleaned_next_step: str | None,
-    explicit_followup_note: str | None,
+    cleaned_followup_cue: str | None,
     cleaned_request_completion_note: str | None,
-    waiting_log_note: str | None,
 ) -> tuple[str | None, str]:
     if cleaned_next_step:
         return cleaned_next_step, "next_step"
-    if explicit_followup_note:
-        return explicit_followup_note, "followup_note"
+    if cleaned_followup_cue:
+        return cleaned_followup_cue, "followup_note"
     if cleaned_request_completion_note:
         return cleaned_request_completion_note, "request_completion_note"
-    if waiting_log_note:
-        return waiting_log_note, "waiting_log"
     return None, "missing"
 
 
@@ -281,11 +733,69 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
                COALESCE(json_extract(td.raw_json, '$.tech_type'), json_extract(t.raw_json, '$.tech_type')) AS technician_type,
                COALESCE(json_extract(td.raw_json, '$.days_old_in_minutes'), json_extract(t.raw_json, '$.days_old_in_minutes')) AS days_old_in_minutes,
                COALESCE(json_extract(td.raw_json, '$.waiting_minutes'), json_extract(t.raw_json, '$.waiting_minutes')) AS waiting_minutes,
+               COALESCE(json_extract(td.raw_json, '$.project_id'), json_extract(t.raw_json, '$.project_id')) AS project_id,
+               COALESCE(json_extract(td.raw_json, '$.project_name'), json_extract(t.raw_json, '$.project_name')) AS project_name,
+               COALESCE(json_extract(td.raw_json, '$.scheduled_ticket_id'), json_extract(t.raw_json, '$.scheduled_ticket_id')) AS scheduled_ticket_id,
+               COALESCE(json_extract(td.raw_json, '$.related_tickets_count'), json_extract(t.raw_json, '$.related_tickets_count')) AS related_tickets_count,
+               COALESCE(json_extract(td.raw_json, '$.estimated_time'), json_extract(t.raw_json, '$.estimated_time')) AS estimated_time,
+               COALESCE(json_extract(td.raw_json, '$.remaining_hours'), json_extract(t.raw_json, '$.remaining_hours')) AS remaining_hours,
+               COALESCE(json_extract(td.raw_json, '$.total_hours'), json_extract(t.raw_json, '$.total_hours')) AS total_hours,
+               COALESCE(json_extract(td.raw_json, '$.total_time_in_minutes'), json_extract(t.raw_json, '$.total_time_in_minutes')) AS total_time_in_minutes,
+               COALESCE(json_extract(td.raw_json, '$.labor_cost'), json_extract(t.raw_json, '$.labor_cost')) AS labor_cost,
+               COALESCE(json_extract(td.raw_json, '$.percentage_complete'), json_extract(t.raw_json, '$.percentage_complete')) AS percentage_complete,
                td.sla_response_date,
                td.sla_complete_date,
                td.ticketlogs_count,
                td.timelogs_count,
                td.attachments_count,
+               (SELECT COUNT(*) FROM ticket_logs tl WHERE tl.ticket_id = t.id AND COALESCE(tl.is_tech_only, 0) = 0) AS public_log_count,
+               (SELECT COUNT(*) FROM ticket_logs tl WHERE tl.ticket_id = t.id AND COALESCE(tl.is_tech_only, 0) = 1) AS internal_log_count,
+               (
+                   SELECT COUNT(*)
+                   FROM (
+                       SELECT DISTINCT COALESCE(NULLIF(lower(trim(tl.user_email)), ''), NULLIF(lower(trim(tl.user_name)), ''), NULLIF(trim(tl.user_id), ''), 'log:' || tl.id)
+                       FROM ticket_logs tl
+                       WHERE tl.ticket_id = t.id AND COALESCE(tl.is_tech_only, 0) = 0
+                   ) participant_keys
+               ) AS public_actor_count,
+               (
+                   SELECT COUNT(*)
+                   FROM (
+                       SELECT DISTINCT COALESCE(NULLIF(lower(trim(tl.user_email)), ''), NULLIF(lower(trim(tl.user_name)), ''), NULLIF(trim(tl.user_id), ''), 'log:' || tl.id)
+                       FROM ticket_logs tl
+                       WHERE tl.ticket_id = t.id AND COALESCE(tl.is_tech_only, 0) = 1
+                   ) participant_keys
+               ) AS internal_actor_count,
+               (
+                   SELECT COUNT(*)
+                   FROM (
+                       SELECT DISTINCT COALESCE(NULLIF(lower(trim(tl.user_email)), ''), NULLIF(lower(trim(tl.user_name)), ''), NULLIF(trim(tl.user_id), ''), 'log:' || tl.id)
+                       FROM ticket_logs tl
+                       WHERE tl.ticket_id = t.id
+                   ) participant_keys
+               ) AS total_actor_count,
+               (SELECT COUNT(*) FROM ticket_logs tl WHERE tl.ticket_id = t.id AND (COALESCE(tl.is_waiting, 0) = 1 OR lower(COALESCE(tl.log_type, '')) = 'waiting on response')) AS waiting_log_count,
+               (SELECT COUNT(*) FROM ticket_logs tl WHERE tl.ticket_id = t.id AND lower(COALESCE(tl.log_type, '')) IN ('response', 'initial post', 'initial log', 'log entry')) AS response_log_count,
+               (SELECT COUNT(*) FROM ticket_logs tl WHERE tl.ticket_id = t.id AND lower(COALESCE(tl.log_type, '')) IN ('closed', 'close log')) AS resolution_log_count,
+               (SELECT MAX(tl.record_date) FROM ticket_logs tl WHERE tl.ticket_id = t.id) AS latest_log_date,
+               (SELECT MAX(tl.record_date) FROM ticket_logs tl WHERE tl.ticket_id = t.id AND COALESCE(tl.is_tech_only, 0) = 0) AS latest_public_log_date,
+               (SELECT MAX(tl.record_date) FROM ticket_logs tl WHERE tl.ticket_id = t.id AND COALESCE(tl.is_tech_only, 0) = 1) AS latest_internal_log_date,
+               (
+                   SELECT COALESCE(NULLIF(tl.user_name, ''), NULLIF(tl.user_email, ''), NULLIF(tl.user_id, ''))
+                   FROM ticket_logs tl
+                   WHERE tl.ticket_id = t.id AND COALESCE(tl.is_tech_only, 0) = 0
+                   ORDER BY tl.record_date DESC, tl.id DESC
+                   LIMIT 1
+               ) AS latest_public_actor_label,
+               (
+                   SELECT COALESCE(NULLIF(tl.user_name, ''), NULLIF(tl.user_email, ''), NULLIF(tl.user_id, ''))
+                   FROM ticket_logs tl
+                   WHERE tl.ticket_id = t.id AND COALESCE(tl.is_tech_only, 0) = 1
+                   ORDER BY tl.record_date DESC, tl.id DESC
+                   LIMIT 1
+               ) AS latest_internal_actor_label,
+               (SELECT MAX(tl.record_date) FROM ticket_logs tl WHERE tl.ticket_id = t.id AND (COALESCE(tl.is_waiting, 0) = 1 OR lower(COALESCE(tl.log_type, '')) = 'waiting on response')) AS latest_waiting_log_date,
+               (SELECT MAX(tl.record_date) FROM ticket_logs tl WHERE tl.ticket_id = t.id AND lower(COALESCE(tl.log_type, '')) IN ('closed', 'close log')) AS latest_resolution_log_date,
                (
                    SELECT group_concat(COALESCE(tl.plain_note, tl.note), '\n---\n')
                    FROM (
@@ -366,13 +876,14 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
         cleaned_detail_note = normalize_ticket_text(record.get("detail_note"))
         cleaned_workpad = normalize_ticket_text(record.get("workpad"))
         recent_logs = _parse_recent_logs(record.get("recent_logs_json"))
+        participant_summary = _summarize_recent_log_participants(recent_logs)
         log_cues = _derive_recent_log_cues(recent_logs)
         waiting_log = log_cues["waiting_log"]
         response_log = log_cues["response_log"]
         resolution_log = log_cues["resolution_log"]
         explicit_followup_note = normalize_ticket_text(record.get("followup_note"))
         waiting_log_note = waiting_log["cleaned_note"] if waiting_log else None
-        cleaned_followup_note = normalize_ticket_text(_first_present(explicit_followup_note, waiting_log_note))
+        cleaned_followup_note, followup_note_source = _resolve_followup_cue(explicit_followup_note, waiting_log_note)
         followup_date = _first_present(record.get("followup_date"), waiting_log["record_date"] if waiting_log else None)
         cleaned_request_completion_note = normalize_ticket_text(record.get("request_completion_note"))
         cleaned_recent_logs = normalize_ticket_text(record.get("recent_log_text"))
@@ -393,20 +904,68 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
         cleaned_next_step = normalize_ticket_text(_first_present(record.get("detail_next_step"), record.get("next_step")))
         cleaned_action_cue, action_cue_source = _resolve_action_cue(
             cleaned_next_step,
-            explicit_followup_note,
+            cleaned_followup_note,
             cleaned_request_completion_note,
-            waiting_log_note,
         )
         recent_log_types = _split_csv_values(record.get("recent_log_types"))
         account_label, account_label_source = _resolve_account_label(record)
         user_label, user_label_source = _resolve_user_label(record)
         technician_label, technician_label_source = _resolve_technician_label(record)
         department_label, department_label_source = _resolve_department_label(record)
+        user_email_domain = _extract_email_domain(record.get("user_email"))
+        user_created_email_domain = _extract_email_domain(record.get("user_created_email"))
+        technician_email_domain = _extract_email_domain(record.get("technician_email"))
+        participant_email_domains = _collect_email_domains(
+            participant_summary["participant_email_domains"],
+            record.get("user_email"),
+            record.get("user_created_email"),
+            record.get("technician_email"),
+        )
+        public_participant_email_domains = _collect_email_domains(
+            participant_summary["recent_public_email_domains"],
+            record.get("user_email"),
+            record.get("user_created_email"),
+        )
+        internal_participant_email_domains = _collect_email_domains(
+            participant_summary["recent_internal_email_domains"],
+            record.get("technician_email"),
+        )
         is_waiting_on_response = _coerce_bool(record.get("is_waiting_on_response"))
         is_resolved = _coerce_bool(record.get("is_resolved"))
         is_confirmed = _coerce_bool(record.get("is_confirmed"))
         is_via_email_parser = _coerce_bool(record.get("is_via_email_parser"))
         is_handle_by_callcentre = _coerce_bool(record.get("is_handle_by_callcentre"))
+        has_project_context = bool(record.get("project_id") or record.get("project_name"))
+        has_scheduled_parent = _present_metric(record.get("scheduled_ticket_id"))
+        has_related_tickets = _present_metric(record.get("related_tickets_count"))
+        public_log_count = _coerce_int(record.get("public_log_count"))
+        internal_log_count = _coerce_int(record.get("internal_log_count"))
+        waiting_log_count = _coerce_int(record.get("waiting_log_count"))
+        response_log_count = _coerce_int(record.get("response_log_count"))
+        resolution_log_count = _coerce_int(record.get("resolution_log_count"))
+        public_actor_count = _coerce_int(record.get("public_actor_count"))
+        internal_actor_count = _coerce_int(record.get("internal_actor_count"))
+        total_actor_count = _coerce_int(record.get("total_actor_count"))
+        has_public_logs = bool(public_log_count and public_log_count > 0)
+        has_internal_logs = bool(internal_log_count and internal_log_count > 0)
+        has_waiting_logs = bool(waiting_log_count and waiting_log_count > 0)
+        has_resolution_logs = bool(resolution_log_count and resolution_log_count > 0)
+        has_multi_public_participants = bool(public_actor_count and public_actor_count > 1)
+        has_multi_internal_participants = bool(internal_actor_count and internal_actor_count > 1)
+        has_mixed_visibility_activity = bool(has_public_logs and has_internal_logs)
+        has_named_public_participants = bool(participant_summary["recent_public_actor_labels"])
+        has_named_internal_participants = bool(participant_summary["recent_internal_actor_labels"])
+        has_effort_tracking = any(
+            _present_metric(record.get(field))
+            for field in (
+                "estimated_time",
+                "remaining_hours",
+                "total_hours",
+                "total_time_in_minutes",
+                "labor_cost",
+                "percentage_complete",
+            )
+        )
 
         text_parts = [
             f"Ticket #{record['id']}: {record.get('subject') or '(no subject)'}",
@@ -424,12 +983,26 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
             text_parts.append(f"Ticket number: {record['ticket_number']}")
         if record.get("ticket_key"):
             text_parts.append(f"Ticket key: {record['ticket_key']}")
+        if record.get("user_email"):
+            text_parts.append(f"User email: {record['user_email']}")
+        if user_email_domain:
+            text_parts.append(f"User email domain: {user_email_domain}")
         if record.get("technician_email"):
             text_parts.append(f"Technician email: {record['technician_email']}")
+        if technician_email_domain:
+            text_parts.append(f"Technician email domain: {technician_email_domain}")
         if created_by_name:
             text_parts.append(f"Created by: {created_by_name}")
         if record.get("user_created_email"):
             text_parts.append(f"Created by email: {record['user_created_email']}")
+        if user_created_email_domain:
+            text_parts.append(f"Created by email domain: {user_created_email_domain}")
+        if participant_email_domains:
+            text_parts.append(f"Participant email domains: {', '.join(participant_email_domains)}")
+        if public_participant_email_domains:
+            text_parts.append(f"Public participant email domains: {', '.join(public_participant_email_domains)}")
+        if internal_participant_email_domains:
+            text_parts.append(f"Internal participant email domains: {', '.join(internal_participant_email_domains)}")
         if record.get("user_phone"):
             text_parts.append(f"User phone: {record['user_phone']}")
         if record.get("account_location_name"):
@@ -452,6 +1025,45 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
             text_parts.append(f"SLA completion date: {record['sla_complete_date']}")
         if record.get("ticketlogs_count") is not None:
             text_parts.append(f"Ticket log count: {record['ticketlogs_count']}")
+        if public_log_count is not None:
+            text_parts.append(f"Public log count: {public_log_count}")
+        if internal_log_count is not None:
+            text_parts.append(f"Internal log count: {internal_log_count}")
+        if public_actor_count is not None:
+            text_parts.append(f"Distinct public participant count: {public_actor_count}")
+        if internal_actor_count is not None:
+            text_parts.append(f"Distinct internal participant count: {internal_actor_count}")
+        if total_actor_count is not None:
+            text_parts.append(f"Distinct participant count: {total_actor_count}")
+        if waiting_log_count is not None:
+            text_parts.append(f"Waiting log count: {waiting_log_count}")
+        if response_log_count is not None:
+            text_parts.append(f"Response log count: {response_log_count}")
+        if resolution_log_count is not None:
+            text_parts.append(f"Resolution log count: {resolution_log_count}")
+        if record.get("latest_log_date"):
+            text_parts.append(f"Latest log date: {record['latest_log_date']}")
+        if record.get("latest_public_log_date"):
+            text_parts.append(f"Latest public log date: {record['latest_public_log_date']}")
+        if record.get("latest_internal_log_date"):
+            text_parts.append(f"Latest internal log date: {record['latest_internal_log_date']}")
+        if participant_summary["latest_public_actor_label"]:
+            text_parts.append(f"Latest public participant: {participant_summary['latest_public_actor_label']}")
+        elif record.get("latest_public_actor_label"):
+            text_parts.append(f"Latest public participant: {record['latest_public_actor_label']}")
+        if participant_summary["latest_internal_actor_label"]:
+            text_parts.append(f"Latest internal participant: {participant_summary['latest_internal_actor_label']}")
+        elif record.get("latest_internal_actor_label"):
+            text_parts.append(f"Latest internal participant: {record['latest_internal_actor_label']}")
+        if participant_summary["recent_public_actor_labels_csv"]:
+            text_parts.append(f"Recent public participants: {participant_summary['recent_public_actor_labels_csv']}")
+        if participant_summary["recent_internal_actor_labels_csv"]:
+            text_parts.append(f"Recent internal participants: {participant_summary['recent_internal_actor_labels_csv']}")
+        text_parts.append(f"Mixed visibility activity: {has_mixed_visibility_activity}")
+        if record.get("latest_waiting_log_date"):
+            text_parts.append(f"Latest waiting log date: {record['latest_waiting_log_date']}")
+        if record.get("latest_resolution_log_date"):
+            text_parts.append(f"Latest resolution log date: {record['latest_resolution_log_date']}")
         if record.get("timelogs_count") is not None:
             text_parts.append(f"Time log count: {record['timelogs_count']}")
         if record.get("attachments_count") is not None:
@@ -478,6 +1090,26 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
             text_parts.append(f"Ticket age minutes: {record['days_old_in_minutes']}")
         if record.get("technician_type"):
             text_parts.append(f"Technician type: {record['technician_type']}")
+        if record.get("project_name"):
+            text_parts.append(f"Project: {record['project_name']}")
+        if record.get("project_id"):
+            text_parts.append(f"Project ID: {record['project_id']}")
+        if _present_metric(record.get("scheduled_ticket_id")):
+            text_parts.append(f"Scheduled ticket ID: {record['scheduled_ticket_id']}")
+        if _present_metric(record.get("related_tickets_count")):
+            text_parts.append(f"Related ticket count: {record['related_tickets_count']}")
+        if _present_metric(record.get("estimated_time")):
+            text_parts.append(f"Estimated time: {record['estimated_time']}")
+        if _present_metric(record.get("remaining_hours")):
+            text_parts.append(f"Remaining hours: {record['remaining_hours']}")
+        if _present_metric(record.get("total_hours")):
+            text_parts.append(f"Total hours: {record['total_hours']}")
+        if _present_metric(record.get("total_time_in_minutes")):
+            text_parts.append(f"Total time minutes: {record['total_time_in_minutes']}")
+        if _present_metric(record.get("labor_cost")):
+            text_parts.append(f"Labor cost: {record['labor_cost']}")
+        if _present_metric(record.get("percentage_complete")):
+            text_parts.append(f"Percent complete: {record['percentage_complete']}")
         if cleaned_next_step:
             text_parts.append(f"Next step: {cleaned_next_step}")
         if record.get("next_step_date"):
@@ -519,12 +1151,19 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
                 attachment_metadata = json.loads(record["attachment_metadata_json"]) or []
             except json.JSONDecodeError:
                 attachment_metadata = []
+        attachment_summary = _summarize_attachment_metadata(attachment_metadata)
         if attachment_metadata:
             text_parts.append(
                 "Attachments (metadata only): " + ", ".join(
                     f"{item.get('name')} [{item.get('size')} bytes]" for item in attachment_metadata[:5]
                 )
             )
+        if attachment_summary.get("attachment_kinds_csv"):
+            text_parts.append(f"Attachment kinds: {attachment_summary['attachment_kinds_csv']}")
+        if attachment_summary.get("attachment_extensions_csv"):
+            text_parts.append(f"Attachment extensions: {attachment_summary['attachment_extensions_csv']}")
+        if attachment_summary.get("attachment_total_size_bytes") is not None:
+            text_parts.append(f"Attachment total size bytes: {attachment_summary['attachment_total_size_bytes']}")
 
         text = "\n".join(text_parts)
         docs.append(
@@ -553,10 +1192,29 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
                     "department_label_source": department_label_source,
                     "closed_at": record.get("closed_at"),
                     "ticketlogs_count": record.get("ticketlogs_count"),
+                    "public_log_count": public_log_count,
+                    "internal_log_count": internal_log_count,
+                    "public_actor_count": public_actor_count,
+                    "internal_actor_count": internal_actor_count,
+                    "total_actor_count": total_actor_count,
+                    "waiting_log_count": waiting_log_count,
+                    "response_log_count": response_log_count,
+                    "resolution_log_count": resolution_log_count,
+                    "latest_log_date": record.get("latest_log_date"),
+                    "latest_public_log_date": record.get("latest_public_log_date"),
+                    "latest_internal_log_date": record.get("latest_internal_log_date"),
+                    "latest_public_actor_label": participant_summary["latest_public_actor_label"] or record.get("latest_public_actor_label"),
+                    "latest_internal_actor_label": participant_summary["latest_internal_actor_label"] or record.get("latest_internal_actor_label"),
+                    "recent_public_actor_labels": participant_summary["recent_public_actor_labels"],
+                    "recent_public_actor_labels_csv": participant_summary["recent_public_actor_labels_csv"],
+                    "recent_internal_actor_labels": participant_summary["recent_internal_actor_labels"],
+                    "recent_internal_actor_labels_csv": participant_summary["recent_internal_actor_labels_csv"],
+                    "latest_waiting_log_date": record.get("latest_waiting_log_date"),
+                    "latest_resolution_log_date": record.get("latest_resolution_log_date"),
                     "timelogs_count": record.get("timelogs_count"),
                     "attachments_count": record.get("attachments_count"),
                     "attachments": attachment_metadata,
-                    "attachment_names": [item.get("name") for item in attachment_metadata if item.get("name")],
+                    **attachment_summary,
                     "has_attachments": bool(attachment_metadata),
                     "detail_available": bool(
                         record.get("detail_note")
@@ -584,6 +1242,16 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
                         or created_by_name
                         or record.get("user_created_email")
                         or record.get("technician_type")
+                        or record.get("project_id")
+                        or record.get("project_name")
+                        or _present_metric(record.get("scheduled_ticket_id"))
+                        or _present_metric(record.get("related_tickets_count"))
+                        or _present_metric(record.get("estimated_time"))
+                        or _present_metric(record.get("remaining_hours"))
+                        or _present_metric(record.get("total_hours"))
+                        or _present_metric(record.get("total_time_in_minutes"))
+                        or _present_metric(record.get("labor_cost"))
+                        or _present_metric(record.get("percentage_complete"))
                         or record.get("days_old_in_minutes") not in (None, "")
                         or record.get("waiting_minutes") not in (None, "")
                         or is_via_email_parser is not None
@@ -594,6 +1262,9 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
                     "cleaned_detail_note": cleaned_detail_note[:400] if cleaned_detail_note else None,
                     "cleaned_workpad": cleaned_workpad[:400] if cleaned_workpad else None,
                     "cleaned_followup_note": cleaned_followup_note[:400] if cleaned_followup_note else None,
+                    "cleaned_explicit_followup_note": explicit_followup_note[:400] if explicit_followup_note else None,
+                    "cleaned_waiting_log_note": waiting_log_note[:400] if waiting_log_note else None,
+                    "followup_note_source": followup_note_source,
                     "cleaned_request_completion_note": cleaned_request_completion_note[:400] if cleaned_request_completion_note else None,
                     "cleaned_next_step": cleaned_next_step[:300] if cleaned_next_step else None,
                     "cleaned_action_cue": cleaned_action_cue[:400] if cleaned_action_cue else None,
@@ -610,6 +1281,18 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
                     "recent_log_types_csv": ", ".join(recent_log_types) if recent_log_types else None,
                     "initial_response_present": record.get("initial_response") is not None,
                     "user_email": record.get("user_email"),
+                    "user_email_domain": user_email_domain,
+                    "user_created_email_domain": user_created_email_domain,
+                    "technician_email_domain": technician_email_domain,
+                    "participant_email_domains": participant_email_domains,
+                    "participant_email_domains_csv": ", ".join(participant_email_domains) if participant_email_domains else None,
+                    "participant_email_domain_count": len(participant_email_domains),
+                    "public_participant_email_domains": public_participant_email_domains,
+                    "public_participant_email_domains_csv": ", ".join(public_participant_email_domains) if public_participant_email_domains else None,
+                    "public_participant_email_domain_count": len(public_participant_email_domains),
+                    "internal_participant_email_domains": internal_participant_email_domains,
+                    "internal_participant_email_domains_csv": ", ".join(internal_participant_email_domains) if internal_participant_email_domains else None,
+                    "internal_participant_email_domain_count": len(internal_participant_email_domains),
                     "support_group_name": record.get("support_group_name"),
                     "default_contract_name": record.get("default_contract_name"),
                     "location_name": record.get("location_name"),
@@ -624,6 +1307,29 @@ def build_ticket_documents(db_path: Path, limit: int | None = None) -> list[dict
                     "user_created_name": created_by_name,
                     "user_created_email": record.get("user_created_email"),
                     "technician_type": record.get("technician_type"),
+                    "project_id": record.get("project_id"),
+                    "project_name": record.get("project_name"),
+                    "scheduled_ticket_id": record.get("scheduled_ticket_id"),
+                    "related_tickets_count": record.get("related_tickets_count"),
+                    "estimated_time": record.get("estimated_time"),
+                    "remaining_hours": record.get("remaining_hours"),
+                    "total_hours": record.get("total_hours"),
+                    "total_time_in_minutes": record.get("total_time_in_minutes"),
+                    "labor_cost": record.get("labor_cost"),
+                    "percentage_complete": record.get("percentage_complete"),
+                    "has_project_context": has_project_context,
+                    "has_scheduled_parent": has_scheduled_parent,
+                    "has_related_tickets": has_related_tickets,
+                    "has_effort_tracking": has_effort_tracking,
+                    "has_public_logs": has_public_logs,
+                    "has_internal_logs": has_internal_logs,
+                    "has_multi_public_participants": has_multi_public_participants,
+                    "has_multi_internal_participants": has_multi_internal_participants,
+                    "has_named_public_participants": has_named_public_participants,
+                    "has_named_internal_participants": has_named_internal_participants,
+                    "has_mixed_visibility_activity": has_mixed_visibility_activity,
+                    "has_waiting_logs": has_waiting_logs,
+                    "has_resolution_logs": has_resolution_logs,
                     "days_old_in_minutes": record.get("days_old_in_minutes"),
                     "waiting_minutes": record.get("waiting_minutes"),
                     "confirmed_by_name": record.get("confirmed_by_name"),
