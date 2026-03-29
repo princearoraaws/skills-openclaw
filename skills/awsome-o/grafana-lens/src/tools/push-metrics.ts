@@ -12,8 +12,8 @@
  * alert, share, annotate) work on it automatically.
  */
 
-import { jsonResult, readStringParam, readNumberParam } from "openclaw/plugin-sdk";
-import type { ValidatedGrafanaLensConfig } from "../config.js";
+import { jsonResult, readStringParam, readNumberParam } from "../sdk-compat.js";
+import type { GrafanaClientRegistry } from "../grafana-client-registry.js";
 import { normalizeMetricName, getPromQLName, type CustomMetricsStore, type CustomMetricDataPoint, type MetricType } from "../services/custom-metrics-store.js";
 
 // ── Workflow suggestions ────────────────────────────────────────────
@@ -83,7 +83,7 @@ function buildRegisterWorkflow(normalizedName: string, queryName: string, type: 
 }
 
 export function createPushMetricsToolFactory(
-  _config: ValidatedGrafanaLensConfig,
+  _registry: GrafanaClientRegistry,
   getCustomMetricsStore: () => CustomMetricsStore | null,
 ) {
   return (_ctx: unknown) => ({
