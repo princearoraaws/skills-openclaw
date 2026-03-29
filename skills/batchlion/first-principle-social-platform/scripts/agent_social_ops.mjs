@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SECURITY MANIFEST:
-//   Environment variables accessed: OPENCLAW_ALLOWED_UPLOAD_HOSTS, OPENCLAW_ALLOWED_API_HOSTS
+//   Environment variables accessed: none
 //   External endpoints called: <base-url>/agent/auth/me, <base-url>/posts*, <base-url>/profiles*, <base-url>/uploads/presign, PUT <presigned-url>
 //   Local files read: required session file, optional local avatar file for upload-avatar
 //   Local files written: none
@@ -9,6 +9,7 @@ import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
 const DEFAULT_ALLOWED_API_HOSTS = ["www.first-principle.com.cn", "first-principle.com.cn"];
+const DEFAULT_ALLOWED_UPLOAD_HOST_RULES = ["*.aliyuncs.com", ".first-principle.com.cn"];
 
 function usage() {
   console.log(`OpenClaw First-Principle social ops helper
@@ -65,18 +66,7 @@ function normalizeBaseUrl(raw) {
 }
 
 function parseAllowedApiHosts() {
-  const raw = String(process.env.OPENCLAW_ALLOWED_API_HOSTS || "").trim();
-  const allowed = new Set(DEFAULT_ALLOWED_API_HOSTS);
-  if (!raw) {
-    return allowed;
-  }
-  for (const item of raw.split(",")) {
-    const host = item.trim().toLowerCase();
-    if (host) {
-      allowed.add(host);
-    }
-  }
-  return allowed;
+  return new Set(DEFAULT_ALLOWED_API_HOSTS);
 }
 
 function isLoopbackHost(hostname) {
@@ -122,14 +112,18 @@ function parseMediaJson(raw, fieldName) {
 }
 
 function parseAllowedUploadHosts(args) {
-  const raw = String(args["allowed-upload-hosts"] || process.env.OPENCLAW_ALLOWED_UPLOAD_HOSTS || "").trim();
+  const allowed = new Set(DEFAULT_ALLOWED_UPLOAD_HOST_RULES);
+  const raw = String(args["allowed-upload-hosts"] || "").trim();
   if (!raw) {
-    return [];
+    return [...allowed];
   }
-  return raw
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
+  for (const entry of raw.split(",")) {
+    const rule = entry.trim().toLowerCase();
+    if (rule) {
+      allowed.add(rule);
+    }
+  }
+  return [...allowed];
 }
 
 function matchAllowedHostRule(host, rule) {
@@ -169,7 +163,7 @@ function ensureAllowedUploadHost(baseUrl, putUrl, args) {
   const configured = allowRules.length ? allowRules.join(",") : "<none>";
   throw new Error(
     `Upload host is not allowed: ${uploadHost} (api host: ${apiHost}, allowed rules: ${configured}). ` +
-      `Pass --allowed-upload-hosts or set OPENCLAW_ALLOWED_UPLOAD_HOSTS.`,
+      "Pass --allowed-upload-hosts to extend the default upload allowlist.",
   );
 }
 
@@ -506,7 +500,7 @@ function pickHint(errorMessage, cause) {
     return "Use /uploads/presign first, then PATCH /profiles/me with returned object_path.";
   }
   if (errorMessage.includes("Upload host is not allowed")) {
-    return "Allow the presigned upload host via --allowed-upload-hosts or OPENCLAW_ALLOWED_UPLOAD_HOSTS.";
+    return "Allow the presigned upload host via --allowed-upload-hosts.";
   }
   return "Check request parameters and API reachability.";
 }

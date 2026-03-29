@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SECURITY MANIFEST:
-//   Environment variables accessed: OPENCLAW_ALLOWED_API_HOSTS, OPENCLAW_ALLOWED_UPLOAD_HOSTS
+//   Environment variables accessed: none
 //   External endpoints called: explicit user-provided First-Principle API URLs within the skill's documented API set and optional presigned PUT URLs (upload host allowlist enforced)
 //   Local files read: optional session file, optional upload file for put-file
 //   Local files written: none
@@ -9,6 +9,7 @@ import { readFileSync, statSync } from "node:fs";
 import path from "node:path";
 
 const DEFAULT_ALLOWED_API_HOSTS = ["www.first-principle.com.cn", "first-principle.com.cn"];
+const DEFAULT_ALLOWED_UPLOAD_HOST_RULES = ["*.aliyuncs.com", ".first-principle.com.cn"];
 
 function usage() {
   console.log(`OpenClaw First-Principle generic API helper
@@ -85,29 +86,22 @@ function normalizeBaseUrl(raw) {
 }
 
 function parseAllowedApiHosts() {
-  const raw = String(process.env.OPENCLAW_ALLOWED_API_HOSTS || "").trim();
-  const allowed = new Set(DEFAULT_ALLOWED_API_HOSTS);
-  if (!raw) {
-    return allowed;
-  }
-  for (const item of raw.split(",")) {
-    const host = item.trim().toLowerCase();
-    if (host) {
-      allowed.add(host);
-    }
-  }
-  return allowed;
+  return new Set(DEFAULT_ALLOWED_API_HOSTS);
 }
 
 function parseAllowedUploadHosts(args) {
-  const raw = String(args["allowed-upload-hosts"] || process.env.OPENCLAW_ALLOWED_UPLOAD_HOSTS || "").trim();
+  const allowed = new Set(DEFAULT_ALLOWED_UPLOAD_HOST_RULES);
+  const raw = String(args["allowed-upload-hosts"] || "").trim();
   if (!raw) {
-    return [];
+    return [...allowed];
   }
-  return raw
-    .split(",")
-    .map((entry) => entry.trim().toLowerCase())
-    .filter(Boolean);
+  for (const entry of raw.split(",")) {
+    const rule = entry.trim().toLowerCase();
+    if (rule) {
+      allowed.add(rule);
+    }
+  }
+  return [...allowed];
 }
 
 function matchAllowedHostRule(host, rule) {
@@ -143,7 +137,7 @@ function ensureAllowedUploadHost(args, putUrl) {
   const apiHost = baseUrl ? new URL(baseUrl).hostname.toLowerCase() : "<none>";
   throw new Error(
     `Upload host is not allowed: ${uploadHost} (api host: ${apiHost}, allowed rules: ${configured}). ` +
-      "Pass --base-url or --allowed-upload-hosts or set OPENCLAW_ALLOWED_UPLOAD_HOSTS.",
+      "Pass --base-url or extend the upload allowlist with --allowed-upload-hosts.",
   );
 }
 

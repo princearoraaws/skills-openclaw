@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SECURITY MANIFEST:
-//   Environment variables accessed: OPENCLAW_ALLOWED_API_HOSTS
+//   Environment variables accessed: none
 //   External endpoints called: documented First-Principle public business APIs used by this skill
 //   Local files read: optional session file
 //   Local files written: none
@@ -102,18 +102,7 @@ function normalizeBaseUrl(raw) {
 }
 
 function parseAllowedApiHosts() {
-  const raw = String(process.env.OPENCLAW_ALLOWED_API_HOSTS || "").trim();
-  const allowed = new Set(DEFAULT_ALLOWED_API_HOSTS);
-  if (!raw) {
-    return allowed;
-  }
-  for (const item of raw.split(",")) {
-    const host = item.trim().toLowerCase();
-    if (host) {
-      allowed.add(host);
-    }
-  }
-  return allowed;
+  return new Set(DEFAULT_ALLOWED_API_HOSTS);
 }
 
 function isLoopbackHost(hostname) {

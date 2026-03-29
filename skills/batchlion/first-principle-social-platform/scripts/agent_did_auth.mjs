@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // SECURITY MANIFEST:
-//   Environment variables accessed: SKILLS_ROOT_DIR, OPENCLAW_AGENT_DIR, OPENCLAW_ALLOWED_API_HOSTS
+//   Environment variables accessed: none
 //   External endpoints called: <base-url>/agent/claims/pairing/fetch, <base-url>/agent/claims/finalize, <base-url>/agent/auth/didwba/verify
 //   Local files read: enrollment/identity/session files
 //   Local files written: enrollment state, identity/session files
@@ -17,8 +17,8 @@ const DID_WBA_PATTERN = /^did:wba:([^:]+)(?::(.+))?$/i;
 const DEFAULT_ALLOWED_API_HOSTS = ["www.first-principle.com.cn", "first-principle.com.cn"];
 const SCRIPT_FILE = fileURLToPath(import.meta.url);
 const SCRIPT_DIR = path.dirname(SCRIPT_FILE);
-const SKILLS_ROOT_DIR = resolveSkillsRootDir();
-const DEFAULT_STATE_DIR = path.join(SKILLS_ROOT_DIR, ".first-principle-social-platform");
+const DEFAULT_STATE_ROOT_DIR = path.resolve(SCRIPT_DIR, "../..");
+const DEFAULT_STATE_DIR = path.join(DEFAULT_STATE_ROOT_DIR, ".first-principle-social-platform");
 const DEFAULT_ENROLLMENT_STATE_FILE = path.join(DEFAULT_STATE_DIR, "enrollment.json");
 const DEFAULT_IDENTITY_BASENAME = "identity.json";
 const DEFAULT_PRIVATE_JWK_BASENAME = "private.jwk";
@@ -43,11 +43,8 @@ Notes:
   - claim-first login is the default flow
   - first login builds a local claim_url fragment and saves only non-sensitive enrollment state
   - provide --pairing-secret after human owner completes claim to finalize DID enrollment
-  - optional env OPENCLAW_AGENT_DIR can provide the current agentDir for default path resolution
   - default local state dir: ${DEFAULT_STATE_DIR}
   - default enrollment state file: ${DEFAULT_ENROLLMENT_STATE_FILE}
-  - optional env SKILLS_ROOT_DIR overrides local state defaults
-  - optional env OPENCLAW_ALLOWED_API_HOSTS adds extra trusted API hosts (CSV)
   - backend still enforces domain allowlists server-side
 `);
 }
@@ -79,19 +76,25 @@ function requireArg(args, key) {
   return String(value);
 }
 
+function validateModelIdentityArg(value, key) {
+  const normalized = String(value || "").trim();
+  const normalizedLower = normalized.toLowerCase();
+  const invalidPlaceholders = new Set([
+    "required",
+    "<your_actual_model_provider>",
+    "<your_actual_model_name>",
+  ]);
+  if (!normalized) {
+    throw new Error(`Missing required argument --${key}`);
+  }
+  if (invalidPlaceholders.has(normalizedLower)) {
+    throw new Error(`Invalid --${key}. Please provide the agent's actual ${key.replace(/-/g, " ")}.`);
+  }
+  return normalized;
+}
+
 function parseAllowedApiHosts() {
-  const raw = String(process.env.OPENCLAW_ALLOWED_API_HOSTS || "").trim();
-  const allowed = new Set(DEFAULT_ALLOWED_API_HOSTS);
-  if (!raw) {
-    return allowed;
-  }
-  for (const item of raw.split(",")) {
-    const host = item.trim().toLowerCase();
-    if (host) {
-      allowed.add(host);
-    }
-  }
-  return allowed;
+  return new Set(DEFAULT_ALLOWED_API_HOSTS);
 }
 
 function isLoopbackHost(hostname) {
@@ -132,22 +135,10 @@ function expandHome(inputPath) {
   return inputPath;
 }
 
-function resolveSkillsRootDir() {
-  const fromEnv = String(process.env.SKILLS_ROOT_DIR || "").trim();
-  if (fromEnv) {
-    return path.resolve(expandHome(fromEnv));
-  }
-  return path.resolve(SCRIPT_DIR, "../..");
-}
-
 function resolveCurrentAgentDir(rawPath = "") {
   const fromArgs = String(rawPath || "").trim();
   if (fromArgs) {
     return path.resolve(expandHome(fromArgs));
-  }
-  const fromEnv = String(process.env.OPENCLAW_AGENT_DIR || "").trim();
-  if (fromEnv) {
-    return path.resolve(expandHome(fromEnv));
   }
   return "";
 }
@@ -660,8 +651,8 @@ function buildLocalClaimUrl(baseUrl, params) {
 async function createClaimFirstEnrollment(args) {
   const baseUrl = normalizeBaseUrl(requireArg(args, "base-url"));
   const displayName = args["display-name"] ? String(args["display-name"]).trim() : "";
-  const modelProvider = requireArg(args, "model-provider").trim();
-  const modelName = requireArg(args, "model-name").trim();
+  const modelProvider = validateModelIdentityArg(requireArg(args, "model-provider"), "model-provider");
+  const modelName = validateModelIdentityArg(requireArg(args, "model-name"), "model-name");
   const enrollmentPath = resolveEnrollmentStatePath(args["save-enrollment"]);
   const agentDir = resolveCurrentAgentDir(args["agent-dir"]);
   const claimUrl = buildLocalClaimUrl(baseUrl, {
