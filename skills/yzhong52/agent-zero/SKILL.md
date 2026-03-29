@@ -1,6 +1,6 @@
 ---
 name: agent-zero
-description: Interact with the AgentZero real estate listing tracker (local Rust/Axum backend at http://localhost:8000). Use when asked to add a property listing by URL, refresh an existing listing, or list search profiles/scenarios. AgentZero parses Redfin and REW.ca URLs; Zillow and Realtor.ca are blocked (saves stub only). The Daily Email Scan workflow reads Redfin alert emails via himalaya (IMAP) and opens Gmail in the openclaw browser to extract listing URLs — explicit user consent and himalaya configuration are required before use. After any action, log a summary to agent_zero_logs/YYYY-MM-DD.md in the workspace.
+description: Interact with the AgentZero real estate listing tracker (local Rust/Axum backend at http://localhost:8000). Use when asked to add a property listing by URL, refresh an existing listing, or list search profiles/scenarios. AgentZero parses Redfin and REW.ca URLs; Zillow and Realtor.ca are blocked (saves stub only). When a listing is added via agent-suggest, the backend automatically triages it with Claude (assigns a search profile or skips it) — no manual profile selection needed. The Daily Email Scan workflow reads Redfin alert emails via himalaya (IMAP) and opens Gmail in the openclaw browser to extract listing URLs — explicit user consent and himalaya configuration are required before use. After any action, log a summary to agent_zero_logs/YYYY-MM-DD.md in the workspace.
 metadata:
   openclaw:
     requires:
@@ -19,6 +19,14 @@ metadata:
           url: "http://localhost:5173"
           note: "Vite/TypeScript UI — optional, used for reviewing listings"
     credentials:
+      - name: ANTHROPIC_API_KEY
+        description: >
+          Required for the backend's automatic listing triage. When a listing is added via agent-suggest,
+          the backend calls the Anthropic Claude API (claude-haiku-4-5) to match it against search profiles.
+          Set this environment variable before starting the backend — it will fail to start without it.
+          Obtain your key at https://console.anthropic.com.
+        envVar: ANTHROPIC_API_KEY
+        keychain: false
       - name: himalaya Gmail config
         description: >
           himalaya must be configured with an IMAP/SMTP account pointing to the user's Gmail inbox.
@@ -30,14 +38,30 @@ metadata:
       emailAccess: true
       browserAutomation: true
       note: >
-        The Daily Email Scan workflow reads Redfin alert emails from the user's Gmail inbox via himalaya,
-        opens Gmail in the openclaw browser, clicks listing links, and records email IDs and thread URLs
-        to ~/.openclaw/workspace/agent_zero_logs/. This is intentional — the workflow is explicitly
-        user-triggered (cron or manual) and scoped to Redfin sender emails only (from:redfin.com).
-        No email body text is stored; only listing URLs and envelope metadata (ID, subject) are logged.
+        The Daily Email Scan workflow is explicitly opt-in (user-triggered via cron or manual invocation)
+        and is scoped to Redfin sender emails only (from:redfin.com).
+
+        Email access: himalaya reads envelope metadata only (sender, subject, ID) via IMAP — no email
+        body text is read or stored. The only data logged is the listing URLs extracted from Redfin
+        emails and the processed email IDs (to avoid re-processing).
+
+        Browser automation: the openclaw browser is used exclusively to open Redfin listing URLs
+        (redfin.ca / redfin.com) — it does NOT browse Gmail or any other site. Gmail is only opened
+        briefly to search for and click through to the Redfin listing link; no Gmail session data,
+        cookies, or body content is recorded.
+
+        HTML snapshots (backend/html_snapshots/): these are snapshots of Redfin property listing pages
+        only — not Gmail or any user account pages. They are cached locally by the backend to avoid
+        re-fetching listing data. No session tokens or authentication artifacts are stored in these files.
+
+        Local scripts: scripts/run_backend.sh builds and starts the Rust/Axum backend (cargo build +
+        ./target/release/backend). scripts/run_frontend.sh runs `npm install && npm run dev` for the
+        Vite frontend. Both scripts are included in full in this repository and can be reviewed before
+        execution. They do not make outbound network calls beyond fetching Rust crates (cargo) and
+        npm packages on first build.
     writes:
-      - "~/.openclaw/workspace/agent_zero_logs/YYYY-MM-DD.md"
-      - "~/.openclaw/workspace/agent_zero_logs/processed_emails.json"
+      - "~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/YYYY-MM-DD.md"
+      - "~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/processed_emails.json"
       - "<project>/backend/listings.db"
       - "<project>/backend/html_snapshots/"
       - "/tmp/agent_zero_backend.log"
@@ -63,6 +87,7 @@ Before using this skill, ensure the following are in place:
 | Requirement | Details |
 |---|---|
 | **AgentZero backend** | Must be running at `http://localhost:8000` (Rust/Axum). Start with `./scripts/run_backend.sh` in the project directory. |
+| **ANTHROPIC_API_KEY** | Required for automatic listing triage. Set in your environment before starting the backend. Get your key at console.anthropic.com. |
 | **himalaya** | CLI email client — must be installed (`brew install himalaya` or similar) and configured with your Gmail account via IMAP. Config at `~/.config/himalaya/config.toml`. |
 | **himalaya credentials** | Gmail app password or OAuth token stored in keychain. Required for the Daily Email Scan workflow. |
 | **openclaw browser** | Used by the Daily Email Scan to open Gmail and click listing links. Start with `openclaw browser --browser-profile openclaw start`. |
@@ -73,9 +98,9 @@ Before using this skill, ensure the following are in place:
 The **Daily Email Scan** workflow accesses your Gmail inbox. Specifically it:
 - Reads envelope metadata (subject, sender, ID) of Redfin alert emails via `himalaya envelope list`
 - Opens Gmail in the openclaw browser to click through listing links (no email body text is read or stored)
-- Records processed email IDs and listing URLs in `~/.openclaw/workspace/agent_zero_logs/`
+- Records processed email IDs and listing URLs in `~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/`
 
-This is opt-in: the scan only runs when explicitly triggered (cron or manual) and is scoped to `from:redfin.com` emails only. If you do not want email or browser access, use only the **Add Listing by URL** and **Refresh** workflows, which require no email access.
+The scan only runs when explicitly triggered (cron or manual) and is scoped to `from:redfin.com` emails only. 
 
 ---
 
@@ -83,42 +108,29 @@ This is opt-in: the scan only runs when explicitly triggered (cron or manual) an
 
 | Action | Method | Endpoint | Body / Params |
 |---|---|---|---|
-| List search profiles | GET | `/api/search-profiles` | — |
-| Add listing (AI) | POST | `/api/listings/suggest` | `{"url": "...", "search_profile_id": N}` |
-| Refresh listing | PUT | `/api/listings/:id/refresh` | — |
-| List all listings | GET | `/api/listings` | `?status=...&search_profile_id=N` |
+| Add listing (AI) | POST | `/api/listings/agent-suggest` | `{"url": "..."}` |
+| List all listings | GET | `/api/listings` | `?status=...` |
 | Get single listing | GET | `/api/listings/:id` | — |
 
 Responses are JSON `Property` objects (see field list below).
 
 ## Workflow: Add a Listing by URL
 
-1. **GET** `/api/search-profiles` to fetch all profiles.
-2. Read each profile's `title` + `description`. Pick the best fit based on property type, location, price, and size from the URL or page context.
-3. If no profile fits, log a skip message in the daily notes file and tell the user why. Do NOT add the listing.
-4. **POST** `/api/listings/suggest` with `{"url": "<url>", "search_profile_id": <id>}`.
-5. On `409 CONFLICT` response: the listing already exists. Parse the JSON body for `existing_id` and `existing_title` and report to user.
-6. On success: log a summary to the daily notes file (see Logging section).
+1. **POST** `/api/listings/agent-suggest` with `{"url": "<url>"}`.
+2. On `409 CONFLICT` response: the listing already exists. Parse the JSON body for `existing_id` and `existing_title` and report to user.
+3. On success: the listing is saved as `AgentPending`. The backend agent will further review i.
+4. Log a summary to the daily notes file (see Logging section).
 
-Supported URL sources: `redfin.ca`, `redfin.com`, `rew.ca` (parses fully). `zillow.com`, `realtor.ca` (saves stub only — inform user).
-
-## Workflow: Refresh a Listing
-
-1. If given a listing ID directly, use it. Otherwise **GET** `/api/listings` and find the matching listing by title or address.
-2. **PUT** `/api/listings/:id/refresh` (no body).
-3. Log the result to daily notes.
-
-## Workflow: List Search Profiles
-
-1. **GET** `/api/search-profiles`
-2. Present each profile with `id`, `title`, `description`, and `listing_count`.
-
-## Logging — agent_zero_logs/
+## Logging — agent_zero_claw_logs/
 
 After every action (add, refresh, skip), append a summary to:
+
 ```
-~/.openclaw/workspace/agent_zero_logs/YYYY-MM-DD.md
+~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/YYYY-MM-DD.md
 ```
+
+Here `<WORKSPACE>` is the name of your OpenClaw workspace for the specific agent; it can be `workspace` if it is the default agent; or `workspace` followed by the agent name.
+
 Create the folder and file if they don't exist.
 
 **Format:**
@@ -127,9 +139,8 @@ Create the folder and file if they don't exist.
 - **Email:** https://mail.google.com/mail/u/0/#inbox/<thread_id>
 - **Title:** 7778 Nanaimo St, Vancouver - 6 beds/3.5 baths
 - **URL:** https://www.redfin.ca/...
-- **Profile:** East Van House (id=1)
 - **Price:** $2,198,000
-- **Status:** Pending
+- **Status:** AgentPending (agent review running in background)
 
 ## HH:MM — Skipped listing
 - **Email:** https://mail.google.com/mail/u/0/#inbox/<thread_id>
@@ -138,10 +149,6 @@ Create the folder and file if they don't exist.
 ```
 
 The `thread_id` is the hex ID visible in the Gmail URL after opening the email in the browser.
-
-## Key Property Fields
-
-`id`, `title`, `price`, `street_address`, `city`, `bedrooms`, `bathrooms`, `sqft`, `land_sqft`, `property_tax`, `mortgage_monthly`, `monthly_total`, `status`, `redfin_url`, `rew_url`, `mls_number`, `search_profile_id`
 
 ## Workflow: Daily Email Scan (Cron)
 
@@ -153,13 +160,13 @@ This is the workflow for the scheduled daily cron task.
 
 1. **Notify your user** (via whatever messaging channel is configured): "🏠 AgentZero daily scan starting — checking Redfin emails..."
 
-2. **Write scan-start entry** to `~/.openclaw/workspace/agent_zero_logs/YYYY-MM-DD.md` immediately (create file/folder if needed):
+2. **Write scan-start entry** to `~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/YYYY-MM-DD.md` immediately (create file/folder if needed):
    ```markdown
    ## HH:MM — Scan started
    - Checking Redfin emails...
    ```
 
-3. **Load state file** `~/.openclaw/workspace/agent_zero_logs/processed_emails.json`
+3. **Load state file** `~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/processed_emails.json`
    - If missing, treat as `{"processed_ids": [], "date_counts": {}}`
    - Format: `{"processed_ids": ["57471", ...], "date_counts": {"2026-03-09": 2}}`
    - `processed_ids` are himalaya envelope IDs (sequential integers) — used to avoid re-processing emails already handled in previous scans
@@ -176,7 +183,7 @@ This is the workflow for the scheduled daily cron task.
    - Reason: Daily limit (3) already reached.
    ```
 
-5. **List Redfin emails** via himalaya:
+5. **List emails** via himalaya:
    ```bash
    himalaya envelope list --output json 2>/dev/null
    ```
@@ -213,7 +220,7 @@ This is the workflow for the scheduled daily cron task.
         - Found listing URL: https://www.redfin.ca/...
         - Submitting to AgentZero...
         ```
-      - Submit via **Add Listing** workflow above (auto-select search profile)
+      - Submit via **Add Listing** workflow above (no profile selection needed — agent assigns it)
       - **Append result to log immediately after each listing** (success, skip, or 409)
 
    d. **Mark email as processed:**
@@ -236,10 +243,11 @@ This is the workflow for the scheduled daily cron task.
 
 8. **Notify your user** with summary and a prompt to review new listings in the frontend:
    ```
-   ✅ AgentZero scan complete — processed 2 emails, added 3 listings (1 skipped: no matching profile).
+   ✅ AgentZero scan complete — processed 2 emails, added 3 listings (agent review running in background).
 
-   🏡 New listings are ready to review: http://localhost:5173/inbox
+   🏡 New listings will appear in Review once the agent finishes: http://localhost:5173/inbox
    ```
 
 ### State file location
-`~/.openclaw/workspace/agent_zero_logs/processed_emails.json`
+
+`~/.openclaw/<WORKSPACE>/skills/agent-zero/agent_zero_claw_logs/processed_emails.json`
