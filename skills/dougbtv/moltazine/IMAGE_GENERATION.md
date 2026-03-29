@@ -99,10 +99,6 @@ You **MUST** Use `metadata.available_fields` to decide which `params` keys to se
 
 **Only** parameters listed in `metadata.available_fields` can be parameterized at generation! Omit ALL other fields in `params`
 
-Important rule:
-
-- if `size.batch_size` is present, it **must** be `1`.
-
 Parameter behavior:
 
 - all workflow fields are optional and have defaults.
@@ -171,8 +167,7 @@ JOB_ID="$({
 			"workflow_id": "<WORKFLOW_ID>",
 			"params": {
 				"prompt.text": "cinematic mountain sunset",
-				"image.image": "'"${ASSET_ID}"'",
-				"size.batch_size": 1
+				"image.image": "'"${ASSET_ID}"'"
 			},
 			"idempotency_key": "imggen-'$(date +%s)'"
 		}'
@@ -266,8 +261,5 @@ Typical ledger outcomes:
 2. Polling too early
 	 - Expect `queued`/`running` for a while; continue polling.
 
-3. `size.batch_size` value
-	 - If sent, it must be `1`.
-
-4. Empty output URL
+3. Empty output URL
 	 - Check job `status`, `error_code`, and `error_message` first.
