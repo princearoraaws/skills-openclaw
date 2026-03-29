@@ -1,27 +1,62 @@
 ---
-name: tomoviee-firstlast2video
-description: Generate videos from first and last frame images. Input two images (first frame and last frame) to create 5-second dynamic videos. Supports 720p/1080p, multiple aspect ratios (16:9, 9:16, 4:3, 3:4, 1:1, original), and 46 camera movement types. Use when users request first-last frame video generation, keyframe-to-video animation, or creating videos from two images showing start and end states.
+name: tomoviee-tail-to-video
+description: Generate videos from first and last frame images using Tomoviee First-Last Frame API (`tm_tail2video_b`) via Wondershare OpenAPI gateway (`https://openapi.wondershare.cc`). Requires `app_key` and `app_secret`. Use when users request first-last keyframe interpolation, start-end frame animation, or two-image to 5-second video generation.
 ---
 
-# Tomoviee AI - 首尾帧生视频 (First-Last Frame to Video)
+# Tomoviee AI First-Last Frame to Video
 
 ## Overview
 
-Generate 5-second dynamic videos from two keyframe images (first frame and last frame). The AI model intelligently interpolates motion between the two frames, creating smooth transitions with optional camera movements and text-guided motion control.
+Generate a 5-second video from two keyframe images:
 
-**API**: `tm_tail2video_b`
+- `image`: first frame
+- `image_tail`: last frame
 
-**Key Features**:
-- Input: Two images (first frame + last frame)
-- Output: 5-second video (720p/1080p)
-- Motion control via text prompts (subject + motion + background)
-- 46 camera movement types
-- Physics-based motion simulation (gravity/fluid/collision)
-- Cinematic camera movements (push/pull/pan/tilt/orbit)
+API capability: `tm_tail2video_b`
+
+## Provider and Endpoint Provenance
+
+Use this mapping to verify provenance before using production credentials:
+
+- Vendor portals: `https://www.tomoviee.ai` and `https://www.tomoviee.cn`
+- Runtime API gateway host used by this skill: `https://openapi.wondershare.cc`
+- Create endpoint: `https://openapi.wondershare.cc/v1/open/capacity/application/tm_tail2video_b`
+- Result endpoint: `https://openapi.wondershare.cc/v1/open/pub/task`
+
+This skill sends runtime API requests only to `openapi.wondershare.cc`.
+
+## Credential Handling
+
+- Sensitive credentials required: `app_key` and `app_secret`.
+- Credentials are only used to build `Authorization: Basic <base64(app_key:app_secret)>`.
+- Credentials are kept in process memory only and are not written to disk by this skill.
+- Do not hardcode credentials in source files or commit them to git.
+
+## Required Inputs
+
+- Credentials: `app_key`, `app_secret`
+- Generation inputs: `prompt`, `image`, `image_tail`
+
+## Scope
+
+- This skill only covers `tm_tail2video_b` (first-last frame to video).
+- Output duration is fixed to 5 seconds by API design.
+- This skill does not implement text-to-video, image-to-video, or video continuation APIs.
+
+## Dependencies
+
+- Runtime dependency: `requests>=2.31.0,<3.0.0`
+- Install with: `pip install -r requirements.txt`
 
 ## Quick Start
 
-### Authentication
+### Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+### Authentication helper
 
 ```bash
 python scripts/generate_auth_token.py YOUR_APP_KEY YOUR_APP_SECRET
@@ -41,117 +76,63 @@ client = TomovieeFirstLast2VideoClient("app_key", "app_secret")
 
 ```python
 task_id = client.firstlast_to_video(
-    prompt="角色从头部开始变形，伴随大量白色和灰色烟雾，旋转的沙子，逐渐巧妙变形为老虎",
+    prompt="Scene transitions naturally from first frame to last frame with smooth motion",
     image="https://example.com/first-frame.jpg",
     image_tail="https://example.com/last-frame.jpg",
-    resolution="1080p",
-    aspect_ratio="16:9"
+    resolution="720p",
+    duration=5,
+    aspect_ratio="original",
 )
 
 result = client.poll_until_complete(task_id)
 import json
-video_url = json.loads(result['result'])['video_path'][0]
+video_url = json.loads(result["result"])["video_path"][0]
+print(video_url)
 ```
 
 ### Parameters
 
-- `prompt` (required): Text description (subject + motion + background motion)
-- `image` (required): First frame image URL (<200M, 720P+ recommended, JPG/JPEG/PNG/WEBP)
-- `image_tail` (required): Last frame image URL (<200M, 720P+ recommended, JPG/JPEG/PNG/WEBP)
-- `resolution`: `720p` or `1080p` (default: `720p`)
-- `duration`: Duration in seconds (only `5` supported)
-- `aspect_ratio`: `16:9`, `9:16`, `4:3`, `3:4`, `1:1`, `original` (default: `16:9`)
-- `camera_move_index`: Camera movement type (1-46, optional)
+- `prompt` (required): Motion guidance text.
+- `image` (required): First frame image URL.
+- `image_tail` (required): Last frame image URL.
+- `resolution` (optional): `720p` or `1080p`, default `720p`.
+- `duration` (optional): only `5` is supported.
+- `aspect_ratio` (optional): `16:9`, `9:16`, `4:3`, `3:4`, `1:1`, `original`.
+- `camera_move_index` (optional): camera movement type `1-46`.
+- `callback` (optional): callback URL.
+- `params` (optional): transparent callback parameter.
 
-### Image Requirements
+### Image Constraints
 
-- **Size**: <200M per image
-- **Resolution**: 720P+ recommended (short edge >720px)
-- **Format**: JPG, JPEG, PNG, WEBP
-- **Recommendation**: Input and output aspect ratios should match to avoid cropping
+- File size: each image must be `<200M`
+- Formats: `JPG`, `JPEG`, `PNG`, `WEBP`
+- Recommended resolution: at least 720p source quality
 
 ## Async Workflow
 
-1. **Create task**: Get `task_id` from API call
-2. **Poll for completion**: Use `poll_until_complete(task_id)`
-3. **Extract result**: Parse returned JSON for video URL
+1. Create task and get `task_id`
+2. Poll with `poll_until_complete(task_id)`
+3. Parse video URL from `result`
 
-**Status codes**:
-- 1 = Queued
-- 2 = Processing
-- 3 = Success (ready)
-- 4 = Failed
-- 5 = Cancelled
-- 6 = Timeout
-
-**Generation time**: 1-5 minutes per 5-second video
-
-## Camera Movements
-
-All video APIs support 46 camera movement types via `camera_move_index`:
-- 5 = Tilt up
-- 7 = Push in (dolly in)
-- 8 = Pull out (dolly out)
-- 23 = Timelapse landscape
-- None = Auto-select
-
-See `references/camera_movements.md` for all 46 types.
-
-## Prompt Engineering
-
-### Formula
-
-**提示词 = 主体+运动，背景+运动**
-
-- **主体**: 画面中的人物、动物、物体等主体
-- **运动**: 目标主体希望实现的运动轨迹
-- **背景**: 画面中的背景及其动态变化
-
-### Tips
-
-- Use simple words and sentence structures
-- Describe motion that follows physics laws
-- Avoid descriptions too different from input images (may cause scene cuts)
-- Complex physics motions (ball bouncing, projectile motion) are challenging
-- Don't upload images with picture frames (may cause unwanted camera movements)
-
-### Examples
-
-**Example 1**:
-- **First frame**: Character portrait
-- **Last frame**: Tiger portrait
-- **Prompt**: "角色从头部变形，伴随着大量白色和灰色烟雾和旋转的沙子，逐渐巧妙地变形为老虎"
-- **Translation**: "Character transforms from head, accompanied by lots of white and gray smoke and swirling sand, gradually transforming into a tiger"
-
-**Example 2**:
-- **First frame**: Milk splash starting
-- **Last frame**: Milk splash ending
-- **Prompt**: "这是一种美味的牛奶，在Wirbel制作和搅拌之后，3D效果"
-- **Translation**: "This is delicious milk, after Wirbel making and stirring, 3D effect"
-
-See `references/prompt_guide.md` for detailed guidance.
-
-## Use Cases
-
-- **Short video creation**: Transform static images into dynamic clips
-- **Film pre-visualization**: Storyboard animation and scene previsualization
-- **Advertising effects**: Product animation with keyframe control
-- **Motion design**: Precise control over start and end states
-- **Animation prototyping**: Quick motion tests with keyframe anchoring
+Status codes:
+- `1` queued
+- `2` processing
+- `3` success
+- `4` failed
+- `5` cancelled
+- `6` timeout
 
 ## Resources
 
-### scripts/
-- `tomoviee_firstlast2video_client.py` - First-Last Frame to Video API client
-- `generate_auth_token.py` - Auth token generator
-
-### references/
-- `video_apis.md` - Detailed video API documentation
-- `camera_movements.md` - All 46 camera movement types
-- `prompt_guide.md` - Prompt engineering guide and best practices
+- `scripts/tomoviee_firstlast2video_client.py` - main API client
+- `scripts/generate_auth_token.py` - auth token helper
+- `references/video_apis.md` - API reference and constraints
+- `references/camera_movements.md` - camera movement index reference
+- `references/prompt_guide.md` - prompt writing guidance
 
 ## External Resources
 
-- **Developer Portal**: https://www.tomoviee.ai/developers.html
-- **API Documentation**: https://www.tomoviee.ai/doc/ai-video/first-and-last-frame-to-video.html
-- **Get API Credentials**: Register at developer portal
+- Developer portal (global): `https://www.tomoviee.ai/developers.html`
+- API docs (global): `https://www.tomoviee.ai/doc/ai-video/first-and-last-frame-to-video.html`
+- Developer portal (mainland): `https://www.tomoviee.cn/developers.html`
+- API docs (mainland): `https://www.tomoviee.cn/doc/ai-video/first-and-last-frame-to-video.html`
