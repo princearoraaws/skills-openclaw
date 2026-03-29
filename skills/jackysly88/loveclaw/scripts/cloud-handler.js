@@ -430,7 +430,7 @@ async function handleMessage(userId, message, channel = 'webchat', mediaPath = '
         if (saveErr) return { text: `保存遇到网络问题，请再回复一次「确认」重试` };
         
         // 注册成功后自动注册定时任务（使用正确的飞书 openId）
-        setupCronJobs(channel, userId);
+        setupCronJobs('feishu', userId);
         
         // Clear session
         const phone = session.data.phone;
