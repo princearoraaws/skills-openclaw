@@ -12,6 +12,36 @@ const bazi = require('./bazi');
 const MATCH_THRESHOLD = 70; // 双向匹配阈值
 
 /**
+ * 从独立的年月日时字段构造 bazi 对象
+ * 兼容数据库中 bazi 字段为空的情况
+ */
+function buildBaziObject(profile) {
+  // 如果 bazi 字段已存在且有效，直接返回
+  if (profile.bazi && typeof profile.bazi === 'object' && profile.bazi.yearGan) {
+    return profile.bazi;
+  }
+  // 否则从独立字段构造
+  return {
+    yearGan: profile.baziYearGan || profile.baziYear?.replace(profile.baziYearZhi || '', '') || '',
+    yearZhi: profile.baziYearZhi || profile.baziYear?.slice(-1) || '',
+    monthGan: profile.baziMonthGan || profile.baziMonth?.replace(profile.baziMonthZhi || '', '') || '',
+    monthZhi: profile.baziMonthZhi || profile.baziMonth?.slice(-1) || '',
+    dayGan: profile.baziDayGan || profile.baziDay?.replace(profile.baziDayZhi || '', '') || '',
+    dayZhi: profile.baziDayZhi || profile.baziDay?.slice(-1) || '',
+    hourGan: profile.baziHourGan || profile.baziHour?.replace(profile.baziHourZhi || '', '') || '',
+    hourZhi: profile.baziHourZhi || profile.baziHour?.slice(-1) || '',
+  };
+}
+
+/**
+ * 检查用户是否有有效的八字数据
+ */
+function hasValidBazi(profile) {
+  const b = buildBaziObject(profile);
+  return b.yearGan && b.yearZhi && b.monthGan && b.monthZhi && b.dayGan && b.dayZhi && b.hourGan && b.hourZhi;
+}
+
+/**
  * 计算双向匹配分数（使用 match.js 的算法）
  */
 function calculateMutualScore(baziA, baziB) {
@@ -45,13 +75,13 @@ async function runDailyMatching() {
       continue;
     }
     // 跳过缺少关键信息的用户
-    if (!profile.bazi || !profile.city || !profile.gender || !profile.preferredGender) continue;
+    if (!hasValidBazi(profile) || !profile.city || !profile.gender || !profile.preferredGender) continue;
 
     // 查找最佳同城双向匹配
     const cands = profiles.filter(p => {
       if (matchedSet.has(p.userId)) return false;
       if (p.userId === profile.userId) return false;
-      if (!p.bazi || !p.city) return false;
+      if (!hasValidBazi(p) || !p.city) return false;
       // 同城
       if (p.city !== profile.city) return false;
       // 双向喜欢
@@ -62,9 +92,10 @@ async function runDailyMatching() {
 
     if (!cands.length) continue;
 
-    // 计算每个候选的匹配分数
+    // 计算每个候选的匹配分数（从独立字段构造 bazi 对象）
+    const profileBazi = buildBaziObject(profile);
     const scored = cands.map(c => {
-      const score = calculateMutualScore(profile.bazi, c.bazi);
+      const score = calculateMutualScore(profileBazi, buildBaziObject(c));
       return { candidate: c, ...score };
     }).filter(s => s.isMutual);
 
@@ -126,7 +157,9 @@ async function runEveningReports() {
   try {
     const data = await cloudData.apiRequest('/api/report');
     const matchedUsers = (data.matches || []).filter(m => !m.reported);
+    const noMatchUsers = data.noMatchUsers || [];
 
+    // 发送匹配成功报告
     for (const m of matchedUsers) {
       const target = m.notificationTarget || m.userId;
       if (!m.channel || !target) {
@@ -148,10 +181,27 @@ async function runEveningReports() {
       console.log(`[报告任务] 已发送给 ${m.name}(${m.userId}) -> ${m.partnerName}`);
     }
 
-    if (matchedUsers.length === 0) {
-      console.log('[报告任务] 今日无匹配用户');
+    // 发送未匹配提示
+    for (const u of noMatchUsers) {
+      const target = u.notificationTarget || u.userId;
+      if (!u.channel || !target) {
+        console.log('[报告任务] 跳过（无通知目标）:', u.userId);
+        continue;
+      }
+
+      const noMatchReport = `🌟 今日缘分报告\n\n` +
+        `你好 ${u.name || ''}，爱情龙虾今日未匹配成功～\n\n` +
+        `🍀 命运的齿轮持续转动，期待明日月老的光临！\n\n` +
+        `💡 用户无需重复报名即可享受每日自动匹配`;
+
+      await notifyUser(u.channel, target, noMatchReport);
+      console.log(`[报告任务] 未匹配提示已发送给 ${u.name}(${u.userId})`);
+    }
+
+    if (matchedUsers.length === 0 && noMatchUsers.length === 0) {
+      console.log('[报告任务] 今日无用户');
     } else {
-      console.log(`[报告任务] 已发送 ${matchedUsers.length} 份报告`);
+      console.log(`[报告任务] 已发送 ${matchedUsers.length} 份匹配报告，${noMatchUsers.length} 份未匹配提示`);
     }
   } catch(e) {
     console.error('[报告任务] 失败:', e.message);

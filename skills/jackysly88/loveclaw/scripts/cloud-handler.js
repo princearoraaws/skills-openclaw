@@ -9,6 +9,21 @@ const bazi = require('./bazi');
 const match = require('./match');
 const fs = require('fs');
 const os = require('os');
+const { execSync } = require('child_process');
+
+// ==================== ADMIN WHITELIST ====================
+// 只有在白名单中的 userId 才能执行管理操作
+// 普通用户使用技能时会使用真实的 channel userId（如飞书的 ou_xxx）
+const ADMIN_WHITELIST = [
+  'ou_fe6db6db17060625cf3b5aa309d7d85d',  // 管理员飞书用户ID
+];
+
+/**
+ * 检查 userId 是否为管理员
+ */
+function isAdmin(userId) {
+  return ADMIN_WHITELIST.includes(userId);
+}
 
 // ==================== SESSION MANAGEMENT ====================
 const SESSION_FILE = os.homedir() + '/.openclaw/workspace/skills/loveclaw/sessions.json';
@@ -28,6 +43,57 @@ const UserState = {
   PHOTO: 8,
   CONFIRM: 9,
 };
+
+// ==================== CRON AUTO-SETUP ====================
+
+/**
+ * 检查并自动注册定时任务（幂等操作）
+ * 每次 handler 调用时检查，不存在则注册
+ */
+function setupCronJobs() {
+  try {
+    // 检查现有 cron 任务
+    let cronList = { jobs: [] };
+    try {
+      const output = execSync('openclaw cron list --json', { encoding: 'utf-8' });
+      cronList = JSON.parse(output);
+    } catch (e) {
+      // 如果没有 cron list 输出，继续尝试注册
+      console.log('[CronSetup] 检查现有任务失败，继续注册:', e.message);
+    }
+
+    // 检查每日匹配任务是否存在
+    const hasDailyMatch = cronList.jobs.some(j => j.name === 'LoveClaw-每日匹配');
+    if (!hasDailyMatch) {
+      try {
+        execSync(
+          'openclaw cron add --name "LoveClaw-每日匹配" --cron "50 19 * * *" --tz "Asia/Shanghai" --message "cd ~/.openclaw/workspace/skills/loveclaw/scripts && node cloud-cron.js match" --session isolated',
+          { stdio: 'pipe' }
+        );
+        console.log('[CronSetup] 每日匹配任务已注册');
+      } catch (e) {
+        console.log('[CronSetup] 注册每日匹配任务失败:', e.message);
+      }
+    }
+
+    // 检查晚间报告任务是否存在
+    const hasEveningReport = cronList.jobs.some(j => j.name === 'LoveClaw-晚间报告');
+    if (!hasEveningReport) {
+      try {
+        execSync(
+          'openclaw cron add --name "LoveClaw-晚间报告" --cron "0 20 * * *" --tz "Asia/Shanghai" --message "cd ~/.openclaw/workspace/skills/loveclaw/scripts && node cloud-cron.js report" --session isolated',
+          { stdio: 'pipe' }
+        );
+        console.log('[CronSetup] 晚间报告任务已注册');
+      } catch (e) {
+        console.log('[CronSetup] 注册晚间报告任务失败:', e.message);
+      }
+    }
+  } catch (e) {
+    // 静默失败，不影响正常流程
+    console.log('[CronSetup] 定时任务自动注册失败:', e.message);
+  }
+}
 
 // Load sessions from file
 function loadSessionsFromFile() {
@@ -90,6 +156,17 @@ function getUserSession(userId) {
  * @param {string} mediaPath - Optional local file path for media attachments
  */
 async function handleMessage(userId, message, channel = 'webchat', mediaPath = '') {
+  // 自动注册定时任务（幂等操作）
+  setupCronJobs();
+  
+  // 安全检查：识别测试/自定义 userId，非管理员拒绝
+  // 正常用户通过 channel 传来的 userId 通常是 channel-specific 的 ID（如飞书的 ou_xxx）
+  // 测试用的 userId 通常是自定义的字符串（如 "test-user-xxx"、手机号等）
+  const isSuspiciousUserId = /^(test-|human-|\d{10,}$)/.test(userId);
+  if (isSuspiciousUserId && !isAdmin(userId)) {
+    return { text: '【提示】此操作需要管理员权限。如需帮助，请联系管理员。' };
+  }
+  
   const session = getUserSession(userId);
   
   // Ensure channel is stored in session for notification routing
@@ -112,6 +189,13 @@ async function handleMessage(userId, message, channel = 'webchat', mediaPath = '
         if (!profile) return { text: '你还没有报名，请先发送「启动爱情龙虾技能」' };
         return formatProfile(profile);
       }
+      if (message === '匹配记录') {
+        // 查询匹配历史
+        const phoneOrId = session.data.phone || userId;
+        const profile = await cloudData.getProfile(phoneOrId);
+        if (!profile) return { text: '你还没有报名，请先发送「启动爱情龙虾技能」' };
+        return formatProfile(profile); // formatProfile 已包含匹配历史
+      }
       if (message === '取消报名') {
         const phoneOrId = session.data.phone || userId;
         const profile = await cloudData.getProfile(phoneOrId);
@@ -125,6 +209,13 @@ async function handleMessage(userId, message, channel = 'webchat', mediaPath = '
     }
 
     // ==================== PHONE ====================
+    // 允许在任何非 NONE 状态重新开始
+    if (['启动爱情龙虾技能','爱情龙虾','loveclaw','LoveClaw','/lc','/loveclaw','今日匹配','查看匹配','缘分匹配','八字匹配'].includes(message) && session.state !== UserState.NONE) {
+      session.state = UserState.PHONE;
+      session.data = { channel: session.data.channel };
+      saveSessionsToFile([{ userId, session }]);
+      return { text: '请输入你的手机号（用于登录和匹配通知）' };
+    }
     if (/^1\d{10}$/.test(message) && session.state === UserState.PHONE) {
       const existing = await cloudData.getProfile(message).catch(() => null);
       if (existing) {
@@ -301,7 +392,7 @@ async function handleMessage(userId, message, channel = 'webchat', mediaPath = '
         userSessions.delete(userId);
         userSessions.delete(phone);
         return {
-          text: `报名成功！🎉\n\n已将你的信息纳入匹配队列，每日19:50自动匹配。\n匹配结果将于当晚8点通知你，请保持手机畅通。\n\n回复「我的档案」可查看个人信息`
+          text: `报名成功！🎉\n\n已将你的信息纳入匹配队列，每日19:50自动匹配。\n匹配结果将于当晚8点通知你，请保持手机畅通。\n\n💡 温馨提示：\n- 通过对应 channel 报名，将于每晚20点推送匹配结果到该 channel\n- 通过 OpenClaw 网页对话框报名，可能无法自动推送，可输入「今日匹配」查询匹配情况\n- 输入「匹配记录」可查看历史匹配\n\n回复「我的档案」可查看个人信息`
         };
       } catch (e) {
         return { text: `保存遇到网络问题，请再回复一次「确认」重试` };
