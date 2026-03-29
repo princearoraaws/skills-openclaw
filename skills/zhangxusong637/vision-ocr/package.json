@@ -1,6 +1,6 @@
 {
   "name": "vision-ocr",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "混合多模态 OCR 技能，支持图片/PDF 识别、Markdown 输出和默认发送到飞书。",
   "main": "index.js",
   "scripts": {

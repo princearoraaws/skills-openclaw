@@ -1,7 +1,7 @@
 {
   "name": "vision-ocr",
   "displayName": "Vision OCR - 图片/PDF OCR 转 Markdown",
-  "version": "1.0.0",
+  "version": "1.0.4",
   "description": "识别图片、截图、扫描件和 PDF，输出 Markdown，支持表格/票据提取并默认发送到飞书",
   "keywords": [
     "ocr",

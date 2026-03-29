@@ -69,8 +69,8 @@ const visionOcr = require('/home/node/.openclaw/workspace/skills/vision-ocr');
 
 await visionOcr.run({
   session: {
-    chatId: 'user:ou_92fe3d3130620ca437f9dd36ed71fe48',  // 主会话 ID
-    senderId: 'ou_92fe3d3130620ca437f9dd36ed71fe48',   // 发送者 ID
+    chatId: 'chat_xxx',  // 主会话 ID（运行时自动注入）
+    senderId: 'ou_xxx',   // 发送者 ID（运行时自动注入）
     isGroup: false
   },
   message: {
@@ -173,4 +173,4 @@ node index.js --image /path/to/image.jpg --confirm=true --no-send-to-feishu
 
 ## 版本
 
-当前版本：1.0.0
+当前版本：1.0.4
