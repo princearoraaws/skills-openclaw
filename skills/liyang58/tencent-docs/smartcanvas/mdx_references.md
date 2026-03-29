@@ -1,6 +1,6 @@
 ==============================================================================
 AI INGEST SPECIFICATION
-Version: 2.0.0
+Version: 2.1.0
 ==============================================================================
 本文件定义用于生成与解析 MDX 文档的强制性规范。
 该规范主要面向 AI 生成内容使用，同时兼顾人工可读性。
@@ -18,7 +18,7 @@ AI 在解析本规范时，必须将以下分隔符视为结构标记：
     "------"  表示小节(section)
 
 这些分隔符用于定义本规则文档结构层级， 并非装饰性格式。
-严禁使用将该分隔符应用到 MDX 文档来定义结构(禁止)。
+严禁将该分隔符应用到 MDX 文档来定义结构(禁止)。
 
 ===============================================================================
 第 0 章：总体原则
@@ -34,6 +34,9 @@ Markdown 优先
 行内样式一律使用 Mark(强制)
     所有行内样式必须使用 <Mark>。
     禁止使用 Markdown 的 **bold** / *italic* / ~~strike~~ / __underline__ 等行内样式。
+
+数学公式
+    优先使用 Markdown 的 $math$ / $$math$$ 等数学公式。
 
 未知组件规则(强制)
     AI 只能使用本规范中定义的组件。
@@ -128,46 +131,6 @@ Markdown 优先
 禁止使用任何 CSS 颜色值(例如 #fff、rgb(...)、red 等)。
 颜色表名单会在末尾附录中定义。
 
--------------------------------------------------------------------------------
-readonly 与 id 属性识别规则(强制)
--------------------------------------------------------------------------------
-当通过 smartcanvas.find 或 smartcanvas.read 获取文档内容时，返回的 MDX 中部分块级组件
-可能携带 id 和 readonly 属性。这些属性由系统自动附加，规则如下：
-
-id 属性
-    系统为块级组件附加的唯一标识符，用于 smartcanvas.edit 中作为锚点。
-    AI 不得在创建文档(create_smartcanvas_by_mdx)时自行生成 id 属性。
-    id 仅出现在 smartcanvas.find / smartcanvas.read 返回的内容中。
-
-readonly 属性
-    布尔属性，出现即为 true。
-    当块级组件带有 readonly 属性时，表示该组件及其所有子元素为只读状态。
-    只读组件的 id 不能作为 smartcanvas.edit 的锚点(INSERT_BEFORE / INSERT_AFTER /
-    UPDATE / DELETE 均不可用)。
-    典型的只读场景：Table 及其子元素(TableRow、TableCell 内的 Paragraph 等)。
-
-    示例(系统返回的只读 Table)：
-        <Table id="Ef0I9mn7BIb0daP4fHAqBp" readonly>
-            <TableRow id="cfmkoKuPDCWjVU5LC3Q2au">
-                <TableCell id="QudWbJYU9UXYT8q3enfcFG">
-                    <Paragraph id="aaIeNA5s7JBJfS5SfTCeLo">
-                        <Mark bold>日期</Mark>
-                    </Paragraph>
-                </TableCell>
-            </TableRow>
-        </Table>
-
-    上述内容中，Table 携带了 readonly 属性，因此 Table 本身及其内部的 TableRow、
-    TableCell、Paragraph 的 id 均不可用于 smartcanvas.edit 操作。
-    如需编辑表格相关内容，应选择表格上方或下方的非只读 Block 作为锚点进行
-    INSERT_BEFORE / INSERT_AFTER 操作。
-
-readonly 组件的处理原则(强制)
-    1. 禁止使用只读组件的 id 发起任何 smartcanvas.edit 请求。
-    2. 禁止使用只读组件内部子元素的 id 发起任何 smartcanvas.edit 请求。
-    3. 如需在只读组件附近插入内容，应选择只读组件上方或下方的非只读 Block 作为锚点。
-    4. AI 在创建文档时，禁止在 MDX 中添加 readonly 属性。
-
 ===============================================================================
 第 1 章：页面级属性(Frontmatter)
 ===============================================================================
@@ -195,8 +158,7 @@ readonly 组件的处理原则(强制)
     cover (recommended)
         建议都添加，除非文档内容非常不适合添加。
         表示文档的头图，横幅展示。
-        cover 的值必须为通过 upload_image 工具上传后获取的 image_id。
-        禁止直接使用网络 URL（如 https://... 链接），系统不支持直接渲染外部链接图片。
+        允许图片链接。
     icon (optional)
         必须为单个 emoji 字符,禁止多个 emoji。
         禁止文本或图片 URL。
@@ -237,7 +199,7 @@ readonly 组件的处理原则(强制)
     示例(错误：不应显式写默认值)：
         ---
         title: React 学习路线
-        cover: https://example.cdn.com/images/learn-react-road.png
+        cover: upload_image返回的image_id
         fontFamily: default
         fontSize: default
         spacing: default
@@ -354,8 +316,7 @@ BlockQuote
     </BlockQuote>
 
 限制规则
-    当引用块中只有一个段落时，且无属性设置时，采用 Markdown 的引用语法：
-        > 这是一段引用内容
+    当引用块中只有一个段落时，且无属性设置时，采用 Markdown 的表达方式。
     当引用块中有嵌套或者多个段落时，采用 Mdx 表达。
 
 ------------------------------------------------------------------------------
@@ -511,28 +472,8 @@ Image
 
 限制规则
     图片均采用 Mdx 表达方式，不使用 Markdown 表达。
-    图片地址必须使用 src 属性，严禁使用 imageId、image_id 等非标准属性名。upload_image 返回的 image_id 值也必须设置到 src 属性中（如 <Image src="image_id值" />）。
     align 默认是 center，可不显式设置。
     width 和 height 需要根据原始比例设置，如果获取不到原始比例，只需要设置宽度。不设置的话最大宽度为文档容器宽度。
-
-图片上传规则(强制)
-    MDX 文档应积极使用图片来丰富文档内容和视觉效果。
-    所有图片（包括 frontmatter 的 cover 封面图和正文中的 <Image> 组件）
-    必须通过 upload_image 工具上传后获取 image_id，再将 image_id 设置到对应属性中。
-    禁止在 src 或 cover 中直接使用网络 URL（如 https://... 链接），系统不支持直接渲染外部链接图片。
-
-    图片处理流程：
-        1. 获取图片资源（网络搜索、AI 生成等方式获取图片的 base64 内容）
-        2. 如果图片文件过大导致 upload_image 上传失败，必须先在本地对图片进行压缩
-           （建议压缩到 50KB 以内），然后再重新上传
-        3. 调用 upload_image 工具上传图片 base64 内容，获取 image_id（有效期一天）
-        4. 将 image_id 设置到对应位置：
-           - frontmatter cover：cover: image_id值
-           - 正文 Image 组件：<Image src="image_id值" alt="描述" />
-
-    注意：由于 upload_image 的 image_base64 字段可能非常大（图片越大 Base64 字符串越长），
-    建议通过 Python 脚本等方式直接构造 HTTP 请求调用 MCP 接口，避免 AI 模型逐 token 生成
-    Base64 字符串导致超时或截断。如果上传仍然失败，先压缩图片再重试，严禁回退使用 URL。
 
 ------------------------------------------------------------------------------
 Todo
@@ -675,16 +616,10 @@ Table
     表格
 
 属性
-    id (系统返回时附加，禁止手动设置)
-    readonly (系统返回时附加，禁止手动设置)
+    无
 
 取值规则
-    id (系统附加)
-        字符串，Block 唯一标识
-    readonly (系统附加)
-        布尔属性，出现即为 true
-        当 Table 带有 readonly 时，Table 及其所有子元素(TableRow、TableCell 及
-        其内部内容)均为只读，不可作为 smartcanvas.edit 的锚点
+    无
 
 子元素
     TableRow
@@ -701,22 +636,9 @@ Table
         </TableRow>
     </Table>
 
-    系统返回时可能携带 readonly(只读表格不可编辑)：
-        <Table id="xxx" readonly>
-            <TableRow id="yyy">
-                <TableCell id="zzz">
-                    <Paragraph id="aaa">
-                        cell A1
-                    </Paragraph>
-                </TableCell>
-            </TableRow>
-        </Table>
 
 限制规则
     表格使用 Mdx 表达，禁止使用 Markdown 语法表达。
-    当 Table 带有 readonly 属性时，禁止使用其 id 或其子元素的 id 发起
-    smartcanvas.edit 请求。如需在表格附近操作，应选择表格上方或下方的
-    非只读 Block 作为锚点。
 
 ------------------------------------------------------------------------------
 TableRow
@@ -779,6 +701,33 @@ TableCell
 
 限制规则
     禁止单独使用，仅可作为 TableRow 的子元素来表达单元格容器。
+
+------------------------------------------------------------------------------
+MathBlock
+------------------------------------------------------------------------------
+用途
+    数学公式
+
+属性
+    width (宽度)
+
+取值规则
+    width (optional)
+        数字，单位为像素
+
+子元素
+    只允许唯一一个 mardown math
+
+示例
+    <MathBlock>
+      $$
+      i\hbar\frac{\partial}{\partial t}\Psi(\vec{r},t) = \left[-\frac{\hbar^2}{2m}
+      abla^2 + V(\vec{r},t)\right]\Psi(\vec{r},t)
+      $$
+    </MathBlock>
+
+限制规则
+    如不指定 width 属性，优先使用 Markdown math 表达，不用包 MathBlock。
 
 ==============================================================================
 第 3 章: Inline Components (行内组件)

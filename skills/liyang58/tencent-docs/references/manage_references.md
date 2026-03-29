@@ -10,12 +10,24 @@
 - [文档创建操作](#文档创建操作)
   - [manage.create_file](#managecreate_file)
 - [文档搜索操作](#文档搜索操作)
+- [文档信息查询](#文档信息查询)
+  - [manage.query_file_info](#managequery_file_info)
 - [文档重命名](#文档重命名)
 - [云文档最近浏览列表页查询](#云文档最近浏览列表页查询)
-- [文档权限设置](#文档权限设置)
+- [文档权限管理](#文档权限管理)
+  - [manage.get_privilege](#manageget_privilege)
   - [manage.set_privilege](#manageset_privilege)
+- [文档移动操作](#文档移动操作)
+  - [manage.move_file](#managemove_file)
+  - [manage.move_file_to_space](#managemove_file_to_space)
+- [文档复制操作](#文档复制操作)
+  - [manage.copy_file](#managecopy_file)
+- [文档删除操作](#文档删除操作)
+  - [manage.delete_file](#managedelete_file)
 - [文档导入操作](#文档导入操作)
   - [manage.import_file](#manageimport_file)
+  - [manage.pre_import](#managepre_import)
+  - [manage.async_import](#manageasync_import)
   - [manage.import_progress](#manageimport_progress)
 - [文档导出操作](#文档导出操作)
   - [manage.export_file](#manageexport_file)
@@ -244,6 +256,73 @@
 
 ---
 
+## 文档信息查询
+
+### manage.query_file_info
+
+**功能**：查询在线腾讯文档基础信息，支持查询文档状态、文档创建人、创建时间、最后修改人、最后修改时间、文档 owner 等信息，支持判断是否为文件夹以及是否为空间内文件。
+
+**使用场景**：
+- 查询文档的基本元数据（类型、创建人、修改时间等）
+- 判断某个 file_id 是否属于空间内文件（通过返回的 `space_id` 是否为空判断）
+- 判断某个 file_id 是否为文件夹
+- 在移动文件前查询目标节点的归属（首页 or 空间）
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|-----|------|
+| `file_id` | string | ✅ | 文档ID |
+
+**返回字段**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `file_id` | string | 文档ID |
+| `title` | string | 文档名称 |
+| `url` | string | 文档访问链接 |
+| `type` | string | 文档类型，如 `doc`、`sheet`、`slide`、`smartcanvas`、`smartsheet`、`mind`、`flowchart` 等 |
+| `status` | string | 文档状态 |
+| `create_time` | uint64 | 文档创建时间，Unix 时间戳（秒） |
+| `create_name` | string | 文档创建人名称 |
+| `last_modify_time` | uint64 | 文档最后修改时间，Unix 时间戳（秒） |
+| `last_modify_name` | string | 文档最后修改人名称 |
+| `owner_name` | string | 文档 owner 的名称 |
+| `space_id` | string | 空间ID，为空时表示首页文档，否则返回文档所在的空间ID |
+| `is_folder` | boolean | 是否是文件夹 |
+
+**调用示例**：
+
+```json
+{
+  "file_id": "DtDywXFgYFru"
+}
+```
+
+**返回示例**：
+
+```json
+{
+  "file_id": "DtDywXFgYFru",
+  "title": "项目计划",
+  "url": "https://docs.qq.com/doc/DtDywXFgYFru",
+  "type": "smartcanvas",
+  "status": "normal",
+  "create_time": 1713600000,
+  "create_name": "张三",
+  "last_modify_time": 1713686400,
+  "last_modify_name": "李四",
+  "owner_name": "张三",
+  "space_id": "",
+  "is_folder": false,
+  "trace_id": "trace_xyz"
+}
+```
+
+> **注意**：`space_id` 为空表示该文件在个人首页，不为空则表示该文件在对应空间内。此字段常用于判断移动文件时应调用 `manage.move_file`（首页）还是 `manage.move_file_to_space`（空间）。
+
+---
+
 ## 文档重命名
 
 ### manage.rename_file_title
@@ -347,18 +426,18 @@
 
 ### manage.get_privilege
 
-**功能**：根据文档ID查询文档权限策略。返回当前文档的权限设置，仅支持返回 0（私密文档）、1（部分成员可见）、2（所有人可读）、3（所有人可编辑）四种权限场景，其他权限类型暂不支持。
+**功能**：根据文档ID或空间ID查询文档/空间权限策略。返回当前的权限设置，仅支持返回 0（私密文档）、1（部分成员可见）、2（所有人可读）、3（所有人可编辑）四种权限场景，其他权限类型暂不支持。
 
 **使用场景**：
-- 查看文档当前的权限状态，决定是否需要调整
+- 查看文档或空间当前的权限状态，决定是否需要调整
 - 在设置权限前先查询当前状态，避免重复设置
-- 确认文档分享权限是否符合预期
+- 确认文档/空间分享权限是否符合预期
 
 **请求参数**：
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|-----|------|
-| `file_id` | string | ✅ | 文档ID |
+| `file_id` | string | ✅ | 文档ID 或 空间ID |
 
 **返回字段**：
 
@@ -399,17 +478,18 @@
 
 ### manage.set_privilege
 
-**功能**：根据文档ID设置文档权限。当前仅支持设置文档为所有人可读或所有人可编辑。
+**功能**：根据文档ID或空间ID设置文档/空间权限。当前仅支持设置为所有人可读或所有人可编辑。
 
 **使用场景**：
 - 创建文档后设置为所有人可查看，方便团队成员浏览
 - 设置文档为所有人可编辑，支持多人协作编辑
+- 设置空间的全员访问权限
 
 **请求参数**：
 
 | 参数 | 类型 | 必填 | 说明 |
 |------|------|-----|------|
-| `file_id` | string | ✅ | 文档ID |
+| `file_id` | string | ✅ | 文档ID 或 空间ID |
 | `policy` | uint32 | ✅ | 权限策略，2-所有人可读，3-所有人可编辑 |
 
 **policy 取值说明**：
@@ -442,6 +522,212 @@
 {
   "file_id": "DtDywXFgYFru",
   "policy": 3
+}
+```
+
+**返回示例**：
+
+```json
+{
+  "trace_id": "trace_xyz"
+}
+```
+
+---
+
+## 文档移动操作
+
+### manage.move_file
+
+**功能**：将文件移动到首页指定的文件夹下。
+
+**使用场景**：
+- 将文件移动到首页根目录
+- 将文件移动到首页某个文件夹下
+
+> ⚠️ **注意**：此工具仅适用于**首页**文件夹，若目标位置在空间内，请使用 `manage.move_file_to_space`。
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|-----|------|
+| `file_id` | string | ✅ | 文件ID |
+| `target_folder_id` | string | ✅ | 移动的目标文件夹唯一标识，默认为 `/` 代表首页根目录 |
+
+**调用示例**：
+
+```json
+{
+  "file_id": "doc_abc123",
+  "target_folder_id": "folder_xyz"
+}
+```
+
+**返回示例**：
+
+```json
+{
+  "trace_id": "trace_xyz"
+}
+```
+
+---
+
+### manage.move_file_to_space
+
+**功能**：将文件移动到空间内指定节点下。
+
+**使用场景**：
+- 将首页文件移动到某个知识库空间
+- 将文件移动到空间内的某个文件夹节点下
+
+> ⚠️ **注意**：此工具仅适用于**空间**内的移动，若目标位置在首页，请使用 `manage.move_file`。
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|-----|------|
+| `file_id` | string | ✅ | 文件ID |
+| `space_id` | string | ✅ | 移动的目标空间唯一标识 |
+| `target_parent_id` | string |  | 移动的目标空间节点唯一标识，为空时代表空间根目录 |
+
+**调用示例**：
+
+```json
+{
+  "file_id": "doc_abc123",
+  "space_id": "space_xyz",
+  "target_parent_id": "node_parent_001"
+}
+```
+
+**返回示例**：
+
+```json
+{
+  "trace_id": "trace_xyz"
+}
+```
+
+---
+
+## 文档复制操作
+
+### manage.copy_file
+
+**功能**：为指定文档生成一个副本文档，副本文档的权限为仅我可查看。
+
+**使用场景**：
+- 基于现有文档创建副本，用于修改或备份
+- 将文档复制到指定文件夹下
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|-----|------|
+| `file_id` | string | ✅ | 文档ID |
+| `title` | string |  | 新文档标题，新文档标题长度不能超过36个字符 |
+| `folder_id` | string |  | 新文档所在目录的唯一标识，默认为当前文件所在的文件夹 |
+
+**返回字段**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `id` | string | 副本文档ID |
+| `title` | string | 副本文档名称 |
+| `url` | string | 副本文档链接 |
+
+**调用示例（生成副本到当前目录）**：
+
+```json
+{
+  "file_id": "DtDywXFgYFru"
+}
+```
+
+**调用示例（生成副本到指定目录并重命名）**：
+
+```json
+{
+  "file_id": "DtDywXFgYFru",
+  "title": "项目计划-副本",
+  "folder_id": "folder_abc123"
+}
+```
+
+**返回示例**：
+
+```json
+{
+  "id": "DtDywXFgYFru_copy",
+  "title": "项目计划-副本",
+  "url": "https://docs.qq.com/doc/DtDywXFgYFru_copy",
+  "trace_id": "trace_xyz"
+}
+```
+
+> **注意**：副本文档的权限默认为仅我可查看，如需开放权限请调用 `manage.set_privilege`。
+
+---
+
+## 文档删除操作
+
+### manage.delete_file
+
+**功能**：删除首页列表文件到回收站，或删除空间内的节点文件。
+
+**使用场景**：
+- 删除首页中的源文件、共享文件或浏览记录
+- 删除空间内的节点（支持仅删除当前节点或递归删除所有子节点）
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|-----|------|
+| `file_id` | string | ✅ | 文件ID |
+| `delete_type` | string |  | **仅对首页文件有效**，首页文件所属的列表类型：`origin`-源文件（默认），`recent`-浏览记录 |
+| `remove_type` | string |  | **仅对空间节点有效**，空间节点删除类型：`current`（默认）仅删除当前节点，子节点自动挂载到上级节点；`all` 删除当前节点及其所有子节点（⚠️ 谨慎使用，会递归删除所有子节点） |
+
+**delete_type 取值说明（首页文件）**：
+
+| 值 | 含义 |
+|----|------|
+| `origin` | 源文件（默认） |
+| `recent` | 浏览记录 |
+
+**remove_type 取值说明（空间节点）**：
+
+| 值 | 含义 |
+|----|------|
+| `current` | 仅删除当前节点，子节点自动挂载到上级节点（默认） |
+| `all` | 删除当前节点及其所有子节点（⚠️ 谨慎使用） |
+
+> ⚠️ **注意**：`delete_type` 和 `remove_type` 分别对应不同场景，首页文件使用 `delete_type`，空间节点使用 `remove_type`，两者不可混用。
+
+**调用示例（删除首页源文件）**：
+
+```json
+{
+  "file_id": "doc_abc123",
+  "delete_type": "origin"
+}
+```
+
+**调用示例（删除空间节点，仅删除当前节点）**：
+
+```json
+{
+  "file_id": "node_abc123",
+  "remove_type": "current"
+}
+```
+
+**调用示例（删除空间节点及所有子节点）**：
+
+```json
+{
+  "file_id": "node_abc123",
+  "remove_type": "all"
 }
 ```
 
@@ -502,7 +788,96 @@
 }
 ```
 
-> **注意**：由于 `file_base64` 字段可能非常大（文件越大 Base64 字符串越长），建议通过 Python 脚本等方式直接构造 HTTP 请求调用 MCP 接口，避免 AI 模型逐 token 生成 Base64 字符串导致超时或截断。
+> **注意**：由于 `file_base64` 字段可能非常大（文件越大 Base64 字符串越长），建议使用 `manage.pre_import` + `manage.async_import` 的两步导入方式，避免大文件超出长度限制。
+
+---
+
+### manage.pre_import
+
+**功能**：预导入文档，传入文件名称、文件大小和MD5值，返回COS上传链接和file_key。客户端根据返回的COS上传链接将文件上传后，再调用 `manage.async_import` 触发导入。
+
+**使用场景**：
+- 导入大文件时，避免通过 Base64 传输超出长度限制
+- 需要分步控制导入流程（预导入 → 上传 → 触发导入）
+
+**支持的文件格式**：`xls`、`xlsx`、`csv`、`doc`、`docx`、`txt`、`text`、`ppt`、`pptx`、`pdf`、`xmind`
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|-----|------|
+| `file_name` | string | ✅ | 文件名称（含后缀），如 `report.docx` |
+| `file_size` | integer | ✅ | 文件大小，单位为字节(bytes)，如 `36752` |
+| `file_md5` | string | ✅ | 文件的MD5哈希值，hex编码的32位小写字符串 |
+
+**返回字段**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `upload_url` | string | COS上传链接，客户端需使用HTTP PUT方法将文件二进制内容上传到此URL |
+| `file_key` | string | 文件唯一标识，上传完成后调用 `manage.async_import` 时需传入此值 |
+
+**调用示例**：
+
+```json
+{
+  "file_name": "report.docx",
+  "file_size": 36752,
+  "file_md5": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
+}
+```
+
+**返回示例**：
+
+```json
+{
+  "upload_url": "https://cos.ap-guangzhou.myqcloud.com/import/...",
+  "file_key": "import/abc123def456"
+}
+```
+
+---
+
+### manage.async_import
+
+**功能**：异步导入文档，传入 `file_key`、`file_name`、`file_md5` 触发异步导入，返回 `task_id`。前置条件：需先调用 `manage.pre_import` 获取上传链接和 `file_key`，并将文件上传到COS后再调用此接口。
+
+**使用场景**：
+- 配合 `manage.pre_import` 完成两步导入
+- 大文件导入场景
+
+**请求参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|-----|------|
+| `file_key` | string | ✅ | 文件唯一标识，由 `manage.pre_import` 返回 |
+| `file_name` | string | ✅ | 文件名称（含后缀），需与 `pre_import` 时传入的一致 |
+| `file_md5` | string | ✅ | 文件的MD5哈希值，需与 `pre_import` 时传入的一致 |
+
+**返回字段**：
+
+| 字段 | 类型 | 说明 |
+|------|------|------|
+| `task_id` | string | 导入任务 ID，请使用 `manage.import_progress` 轮询导入进度 |
+
+**调用示例**：
+
+```json
+{
+  "file_key": "import/abc123def456",
+  "file_name": "report.docx",
+  "file_md5": "a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4"
+}
+```
+
+**返回示例**：
+
+```json
+{
+  "task_id": "144115210435508643_e52cf886-5eae-e61c-c828-a0dddb59703d",
+  "trace_id": "trace_xyz"
+}
+```
 
 ---
 
@@ -705,7 +1080,51 @@
  
 ```
 
-### 工作流五：将本地文件导入为云文档
+### 工作流五：将本地文件导入为云文档（推荐：两步导入）
+
+> **推荐方式**：使用 `manage.pre_import` + `manage.async_import` 两步导入，避免大文件 Base64 编码超出长度限制。
+
+```
+步骤 1：使用脚本完成预导入和上传（推荐）
+ → 执行 bash import_file.sh <文件路径>
+ → 脚本自动：计算文件 MD5 和大小 → 调用 manage.pre_import 获取上传链接 → curl 上传文件到 COS
+ → 成功后输出 FILE_KEY、FILE_NAME、FILE_MD5
+
+步骤 2：调用异步导入接口
+ → manage.async_import（传入 file_key、file_name、file_md5）
+ → 返回 task_id
+
+步骤 3：轮询查询导入进度
+ → manage.import_progress（传入 task_id）
+ → 每隔 3-5 秒轮询一次，直到 progress=100 或返回错误
+ → 导入完成后获取 file_id 和 file_url
+```
+
+**手动分步执行（不使用脚本）**：
+```
+步骤 1：计算文件信息
+ → 使用 md5sum/md5 计算文件 MD5
+ → 使用 stat 获取文件大小（字节）
+
+步骤 2：调用预导入接口
+ → manage.pre_import（传入 file_name、file_size、file_md5）
+ → 返回 upload_url 和 file_key
+
+步骤 3：上传文件到 COS
+ → curl -X PUT -H "Content-Type: application/octet-stream" --data-binary "@<文件路径>" "<upload_url>"
+
+步骤 4：触发异步导入
+ → manage.async_import（传入 file_key、file_name、file_md5）
+ → 返回 task_id
+
+步骤 5：轮询查询导入进度
+ → manage.import_progress（传入 task_id）
+ → 每隔 3-5 秒轮询一次，直到 progress=100
+```
+
+### 工作流五（备选）：一步导入（仅适合小文件）
+
+> **注意**：仅适合小文件。大文件建议使用上方的两步导入方式。
 
 ```
 步骤 1：读取本地文件并编码
@@ -723,13 +1142,6 @@
  → 每隔 3-5 秒轮询一次，直到 progress=100 或返回错误
  → 导入完成后获取 file_id 和 file_url
 ```
-
-> **特别说明**：由于 `file_base64` 字段数据量大，建议通过 Python 脚本直接构造 HTTP 请求调用 MCP 接口，
-> 而非由 AI 模型逐 token 生成 Base64 字符串。示例脚本流程：
-> 1. 用 Python 读取文件并计算 md5、base64
-> 2. 构造 JSON-RPC 请求体（method: `tools/call`, tool: `manage.import_file`）
-> 3. POST 到 MCP 端点 `https://docs.qq.com/openapi/mcp`（携带 Authorization 和 Cookie 头）
-> 4. 拿到 task_id 后通过 `manage.import_progress` 查询进度
 
 ### 工作流六：将云文档导出到本地
 
@@ -756,7 +1168,7 @@
 
 ```
 步骤 1：导入本地文件
- → 按工作流五执行导入操作
+ → 按工作流五（推荐两步导入方式）执行导入操作
  → 记录返回的 file_id
 
 步骤 2：导出刚导入的文件
@@ -798,3 +1210,39 @@
  → 如果 policy 不符合预期，调用 manage.set_privilege（传入 file_id 和目标 policy）
  → policy=2 设置所有人可读，policy=3 设置所有人可编辑
 ```
+
+### 工作流十：移动文件
+
+移动文件有两个 tool，根据**目标位置**选择：
+
+| 目标位置 | 使用 tool |
+|---------|----------|
+| 移动到**首页**文件夹 | `manage.move_file` |
+| 移动到**空间**内 | `manage.move_file_to_space` |
+
+**完整步骤：**
+
+```
+步骤 1：判断用户是否指定了目标地址（target_folder_id）
+
+  target_folder_id 为空？
+    → 直接调用 manage.move_file（不传 target_folder_id，移动到首页根目录）
+    → 结束
+
+  target_folder_id 不为空？
+    → 继续步骤 2
+
+步骤 2：查询目标地址信息，判断目标是首页还是空间
+  → manage.query_file_info（传入 target_folder_id）
+  → 获取返回值中的 space_id 字段：
+    - space_id 不为空 → 目标在空间内，走步骤 3（移动到空间）
+    - space_id 为空   → 目标在首页，走步骤 4（移动到首页）
+
+步骤 3：移动到空间
+  → manage.move_file_to_space（传入 file_id、space_id 和 target_parent_id=target_folder_id）
+
+步骤 4：移动到首页
+  → manage.move_file（传入 file_id 和 target_folder_id）
+```
+
+> ⚠️ **注意**：不支持将空间（space）本身移动，仅支持空间内的文件/文件夹节点。

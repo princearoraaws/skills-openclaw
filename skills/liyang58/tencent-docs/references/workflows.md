@@ -112,10 +112,17 @@
 2. 按需调用 manage.* 工具进行文档增删改查、重命名、移动文档：
    - 重命名：manage.rename_file_title
    - 删除文档：manage.delete_file
-   - 移动文档：manage.move_file
+   - 移动文档到首页文件夹：manage.move_file
+   - 移动文档到空间内：manage.move_file_to_space
    - 生成副本：manage.copy_file
    - 设置权限：manage.set_privilege（仅支持所有人可读和所有人可编辑）
 ```
+
+---
+
+## 移动文件
+
+**📖 参考文档：** `manage_references.md` — 工作流十：移动文件
 
 ---
 

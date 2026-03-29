@@ -64,8 +64,11 @@
 | insert_table | 在指定位置插入表格 |
 | insert_comment | 在指定范围插入批注 |
 | replace_image | 替换文档中的图片 |
+| insert_markdown | 在指定位置插入 Markdown 格式内容，引擎自动转换为富文本 |
+| get_images | 获取文档中所有图片的信息，包括图片位置（idx）、图片 URL 或附件 ID，可用于后续 replace_image 操作 |
 | get_last_operable_pos | 获取文档末尾最后一个可操作位置的索引及前面内容 |
 | get_outline | 获取文档大纲结构（标题层级树），包含各标题和正文的可操作起止位置 |
+| resolve_document_structure | 获取文档完整结构树，返回所有块级元素（段落、标题、表格、文本框、代码块等）的层级结构和精确位置，可用于定位表格指定行列、文本框内部等复杂位置 |
 
 ---
 
@@ -367,40 +370,48 @@
 
 ---
 
-## 8. insert_image
+### insert_image
 
-### 功能说明
+#### 功能说明
 在 Word 文档的指定位置插入图片。
 
-### 调用示例
+#### 调用示例
 ```json
 {
+  "file_id": "doc_1234567890",
   "file_url": "https://docs.qq.com/doc/xxxxxxxx",
-  "image_url": "https://example.com/image.png",
+  "content": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==",
   "index": 0,
   "width": 400,
   "height": 300
 }
 ```
 
-### 参数说明
-- `file_url` (string, 推荐): 腾讯文档的文档链接，与 `file_id` 二选一，**推荐优先使用**
+#### 参数说明
 - `file_id` (string, 可选): 文档唯一标识符，与 `file_url` 二选一
-- `image_url` (string, 必填): 图片的 URL 地址
+- `file_url` (string, 可选): 腾讯文档的文档链接，与 `file_id` 二选一
+- `content` (string, 可选): 图片的 base64 内容，与 `image_id` 二选一，**适合图片体积较小的场景，若图片过大导致 base64 内容超出传输限制，请改用 `image_id` 方式**
+- `image_id` (string, 可选): 图片的 image_id，本质是对图片信息加密后的字符串，与 `content` 二选一。**适合图片体积较大、base64 内容超出传输限制的场景**。获取方式：
+  - 通过 `upload_image` MCP 接口上传图片后获取
+  - 通过[腾讯文档开放平台 OpenAPI](https://docs.qq.com/open/developers/?nlc=1#/login) 图片上传接口获取（需先完成 OAuth 授权流程获取 `Access-Token`），示例命令：
+  ```bash
+  curl --location --request POST 'https://docs.qq.com/openapi/resources/v2/images' \
+    --header 'Access-Token: ACCESS_TOKEN' \
+    --header 'Client-Id: CLIENT_ID' \
+    --header 'Open-Id: OPEN_ID' \
+    --form 'image=@"/path/to/your/image.png"'
+  ```
+  上传成功后，取返回结果中的 `imageID` 字段值传入此参数
 - `index` (integer, 必填): 插入位置的索引，从 0 开始
-- `width` (integer, 可选): 图片宽度（像素）
-- `height` (integer, 可选): 图片高度（像素）
-- `addon_source` (string, 可选): 插件来源类型
-- `addon_id` (string, 可选): 插件 ID
-- `anchor_id` (string, 可选): 锚点 ID
-- `extra_data` (string, 可选): 额外数据
+- `width` (integer, 可选): 图片宽度，单位为像素（px），例如 400 表示 400px；不传时使用图床上传返回的宽度
+- `height` (integer, 可选): 图片高度，单位为像素（px），例如 300 表示 300px；不传时使用图床上传返回的高度
 
-### 返回值说明
+#### 返回值说明
 ```json
 {
   "base_version": 1,
   "new_version": 2,
-  "trace_id": "trace_1234567890",
+  "trace_id": "",
   "err_msg": ""
 }
 ```
@@ -504,6 +515,54 @@
 
 ---
 
+## 12. get_images
+
+#### 功能说明
+获取 Word 文档中所有图片的信息，包括每张图片的位置索引（`pos`）、来源类型（URL 图片或附件图片）以及对应的 URL 或附件 ID。通常在调用 `replace_image` 前先调用此接口，获取目标图片的 `pos`（即 `idx`）和 `image_url`/`attachment_id`（即 `old_image_url`/`old_attachment_id`）。
+
+### 调用示例
+```json
+{
+  "file_url": "https://docs.qq.com/doc/xxxxxxxx"
+}
+```
+
+### 参数说明
+- `file_url` (string, 推荐): 腾讯文档的文档链接，与 `file_id` 二选一，**推荐优先使用**
+- `file_id` (string, 可选): 文档唯一标识符，与 `file_url` 二选一
+
+### 返回值说明
+```json
+{
+  "images": [
+    {
+      "source": 1,
+      "pos": 42,
+      "image_url": "https://docimg8.docs.qq.com/image/AgAABsUhABzwC7ScF1dHP4mZWR9jTQ5i.jpeg"
+    },
+    {
+      "source": 2,
+      "pos": 88,
+      "attachment_id": "AgAABsUhABzwC7ScF1dHP4mZWR9jTQ5i"
+    }
+  ],
+  "version": 1024
+}
+```
+- `images` (array): 文档中所有图片列表，按位置（`pos`）升序排列
+  - `source` (int): 图片来源类型，`1` = URL 图片（`FromLink`），`2` = 附件图片（`FromAttachment`）
+  - `pos` (int64): 图片在文档中的位置索引，即 `replace_image` 接口的 `idx` 参数
+  - `image_url` (string): 当 `source=1` 时有值，图片的内嵌 URL，即 `replace_image` 接口的 `old_image_url` 参数
+  - `attachment_id` (string): 当 `source=2` 时有值，附件图片的 object_key，即 `replace_image` 接口的 `old_attachment_id` 参数
+- `version` (int64): 当前文档版本号
+
+### 推荐使用流程
+1. 调用 `get_images` 获取文档中所有图片信息
+2. 根据返回的 `pos`（作为 `idx`）和 `image_url`/`attachment_id`（作为 `old_image_url`/`old_attachment_id`）定位目标图片
+3. 调用 `replace_image` 传入对应参数完成图片替换
+
+---
+
 ## 12. replace_image
 
 ### 功能说明
@@ -512,23 +571,32 @@
 ### 调用示例
 ```json
 {
+  "file_id": "doc_1234567890",
   "file_url": "https://docs.qq.com/doc/xxxxxxxx",
   "idx": 0,
-  "source": 1,
-  "old_url": "https://example.com/old_image.png",
-  "new_url": "https://example.com/new_image.png"
+  "old_image_url": "https://example.com/old_image.png",
+  "image_id": "eyJVUkwiOiJodHRwczovL2V4YW1wbGUuY29tL25ld19pbWFnZS5wbmcifQ=="
 }
 ```
 
-### 参数说明
-- `file_url` (string, 推荐): 腾讯文档的文档链接，与 `file_id` 二选一，**推荐优先使用**
+#### 参数说明
 - `file_id` (string, 可选): 文档唯一标识符，与 `file_url` 二选一
+- `file_url` (string, 可选): 腾讯文档的文档链接，与 `file_id` 二选一
 - `idx` (integer, 必填): 图片位置索引
-- `source` (integer, 必填): 图片来源类型，0-未知，1-链接来源，2-附件来源
-- `old_url` (string, 可选): 旧图片的 URL，与 `old_id` 二选一
-- `old_id` (string, 可选): 旧图片的 ID，与 `old_url` 二选一
-- `new_url` (string, 可选): 新图片的 URL 地址，与 `content` 二选一
-- `content` (string, 可选): 新图片的 base64 内容，与 `new_url` 二选一
+- `old_image_url` (string, 可选): 旧图片的 URL，与 `old_attachment_id` 二选一，需搭配 `idx` 一起使用
+- `old_attachment_id` (string, 可选): 旧图片的附件 ID，与 `old_image_url` 二选一，需搭配 `idx` 一起使用
+- `image_id` (string, 可选): 新图片的 image_id，本质是对图片信息加密后的字符串，与 `content` 二选一。获取方式：
+  - 通过 `upload_image` MCP 接口上传图片后获取
+  - 通过[腾讯文档开放平台 OpenAPI](https://docs.qq.com/open/developers/?nlc=1#/login) 图片上传接口获取。**注意：调用开放平台接口前，需先完成 OAuth 授权流程获取 `Access-Token`（参考[开放平台登录授权文档](https://docs.qq.com/open/developers/?nlc=1#/login)）**，示例命令：
+  ```bash
+  curl --location --request POST 'https://docs.qq.com/openapi/resources/v2/images' \
+    --header 'Access-Token: ACCESS_TOKEN' \
+    --header 'Client-Id: CLIENT_ID' \
+    --header 'Open-Id: OPEN_ID' \
+    --form 'image=@"/path/to/your/image.png"'
+  ```
+  上传成功后，取返回结果中的 `imageID` 字段值传入此参数。**注意：调用开放平台接口前，需先完成 OAuth 授权流程获取 `Access-Token`；此方式适合图片体积较大、base64 内容超出传输限制的场景**
+- `content` (string, 可选): 新图片的 base64 内容，与 `image_id` 二选一。**适合图片体积较小的场景；若图片过大导致 base64 内容超出限制，请改用 `image_id` 方式**
 
 ### 返回值说明
 ```json
@@ -542,7 +610,50 @@
 
 ---
 
-## 13. get_last_operable_pos
+## 13. insert_markdown
+
+### 功能说明
+在 Word 文档的指定位置插入 Markdown 格式内容。引擎会自动将 Markdown 转换为文档富文本格式，支持标题、列表、表格、链接、加粗/斜体等常见 Markdown 语法。适合需要批量插入富文本内容的场景，比直接调用多个 `insert_text`/`insert_paragraph` 更高效。
+
+### 调用示例
+```json
+{
+  "file_url": "https://docs.qq.com/doc/xxxxxxxx",
+  "index": 0,
+  "markdown": "# 标题\n\n这是一段**加粗**文本。\n\n- 列表项1\n- 列表项2\n\n| 姓名 | 年龄 |\n|------|------|\n| 张三 | 25 |"
+}
+```
+
+### 参数说明
+- `file_url` (string, 推荐): 腾讯文档的文档链接，与 `file_id` 二选一，**推荐优先使用**
+- `file_id` (string, 可选): 文档唯一标识符，与 `file_url` 二选一
+- `index` (integer, 必填): 插入位置的索引，从 0 开始
+- `markdown` (string, 必填): Markdown 格式的文本内容，支持以下语法：
+  - 标题：`# H1`、`## H2`、`### H3` 等
+  - 加粗/斜体：`**加粗**`、`*斜体*`
+  - 链接：`[文本](URL)`
+  - 无序列表：`- 列表项`
+  - 有序列表：`1. 列表项`
+  - 表格：使用 `|` 和 `---` 语法
+  - 代码块：使用反引号包裹
+
+### 返回值说明
+```json
+{
+  "base_version": 1,
+  "new_version": 2,
+  "trace_id": "trace_1234567890",
+  "err_msg": ""
+}
+```
+- `base_version` (int64): 文档的基准版本号
+- `new_version` (int64): 命令执行之后的文档版本
+- `trace_id` (string): 本次调用的链路追踪 ID
+- `err_msg` (string): 失败信息
+
+---
+
+## 14. get_last_operable_pos
 
 ### 功能说明
 获取 Word 文档正文（main story）最后一个可操作位置的索引，以及该位置前面最多 10 个字符的内容。在需要向文档末尾追加内容时，可先调用此接口获取末尾可操作位置，再使用 `insert_text`/`insert_image` 等接口在该位置插入内容。
@@ -572,7 +683,7 @@
 
 ---
 
-## 14. get_outline
+## 15. get_outline
 
 ### 功能说明
 获取 Word 文档的完整大纲结构（树形），返回文档标题、各级标题及其下正文的可操作位置范围。可用于：
@@ -650,12 +761,163 @@
 
 ---
 
+## 16. resolve_document_structure
+
+### 功能说明
+获取 Word 文档的完整结构树（DOC），返回 main story 下所有块级元素的层级结构和位置信息。与 `get_outline` 只返回标题层级不同，此接口返回**所有**块级元素，包括：
+- **Paragraph**：普通文本段落
+- **Heading**：标题段落（含级别）
+- **Table**：表格（含每行每列的起止位置）
+- **TextBox**：文本框（含内部段落的起止位置）
+- **CodeBlock**：代码块（含内部段落的起止位置）
+
+适用场景：
+- 需要在**表格指定行列**插入或修改文本（通过 `table_rows[row].cells[col].end_index` 定位单元格末尾）
+- 需要在**文本框内部**插入内容（通过 `children` 中的段落位置定位）
+- 需要了解文档完整布局后再决定操作位置
+- 需要精确获取某个段落、代码块的起止范围
+
+### 调用示例
+```json
+{
+  "file_url": "https://docs.qq.com/doc/xxxxxxxx"
+}
+```
+
+### 参数说明
+- `file_url` (string, 推荐): 腾讯文档的文档链接，与 `file_id` 二选一，**推荐优先使用**
+- `file_id` (string, 可选): 文档唯一标识符，与 `file_url` 二选一
+- `include_heading` (bool, 可选): 是否将标题也作为独立节点列出，默认 false（标题单独归类为 Heading 类型，不计入普通段落序号）
+
+### 返回值说明
+```json
+{
+  "nodes": [
+    {
+      "type": "Heading",
+      "start_index": 0,
+      "end_index": 6,
+      "text_preview": "文档标题",
+      "heading_level": 1,
+      "logical_index": 1,
+      "table_rows": [],
+      "children": []
+    },
+    {
+      "type": "Paragraph",
+      "start_index": 7,
+      "end_index": 20,
+      "text_preview": "这是第一段正文内容",
+      "heading_level": 0,
+      "logical_index": 2,
+      "table_rows": [],
+      "children": []
+    },
+    {
+      "type": "Table",
+      "start_index": 21,
+      "end_index": 60,
+      "text_preview": "",
+      "heading_level": 0,
+      "logical_index": 3,
+      "table_rows": [
+        {
+          "row": 1,
+          "cells": [
+            { "row": 1, "col": 1, "start_index": 22, "end_index": 30, "text_preview": "单元格内容" },
+            { "row": 1, "col": 2, "start_index": 31, "end_index": 38, "text_preview": "" }
+          ]
+        },
+        {
+          "row": 2,
+          "cells": [
+            { "row": 2, "col": 1, "start_index": 40, "end_index": 48, "text_preview": "" },
+            { "row": 2, "col": 2, "start_index": 49, "end_index": 57, "text_preview": "" }
+          ]
+        }
+      ],
+      "children": []
+    },
+    {
+      "type": "TextBox",
+      "start_index": 61,
+      "end_index": 80,
+      "text_preview": "文本框内容",
+      "heading_level": 0,
+      "logical_index": 4,
+      "table_rows": [],
+      "children": [
+        {
+          "type": "Paragraph",
+          "start_index": 62,
+          "end_index": 79,
+          "text_preview": "文本框内容",
+          "heading_level": 0,
+          "logical_index": 1,
+          "table_rows": [],
+          "children": []
+        }
+      ]
+    },
+    {
+      "type": "CodeBlock",
+      "start_index": 81,
+      "end_index": 110,
+      "text_preview": "console.log('hello')",
+      "heading_level": 0,
+      "logical_index": 5,
+      "table_rows": [],
+      "children": [
+        {
+          "type": "Paragraph",
+          "start_index": 82,
+          "end_index": 109,
+          "text_preview": "console.log('hello')",
+          "heading_level": 0,
+          "logical_index": 1,
+          "table_rows": [],
+          "children": []
+        }
+      ]
+    }
+  ],
+  "version": 5,
+  "total_paragraphs": 3,
+  "total_headings": 1,
+  "total_tables": 1
+}
+```
+
+- `nodes` (array): 顶层块级节点列表（main story 直接子节点），按文档顺序排列，每个节点包含：
+  - `type` (string): 节点类型，取值：`Paragraph`、`Heading`、`Table`、`TextBox`、`CodeBlock`、`HighlightBlock`
+  - `start_index` (uint32): 节点起始位置（inclusive）
+  - `end_index` (uint32): 节点结束位置（在此处插入可追加到节点末尾）
+  - `text_preview` (string): 文本预览，最多 50 字符，仅 Paragraph/Heading 有值
+  - `heading_level` (int32): 标题级别 1-9，仅 Heading 类型有值，其余为 0
+  - `logical_index` (int32): 在同级中的逻辑序号（从 1 开始）
+  - `table_rows` (array): 仅 Table 类型有值，包含行列结构：
+    - `row` (int32): 行号（从 1 开始）
+    - `cells` (array): 该行所有单元格：
+      - `row` (int32): 行号（从 1 开始）
+      - `col` (int32): 列号（从 1 开始）
+      - `start_index` (uint32): 单元格起始位置
+      - `end_index` (uint32): 单元格结束位置（在此处插入可追加到单元格末尾）
+      - `text_preview` (string): 单元格文本预览，最多 30 字符
+  - `children` (array): 子节点列表，TextBox/CodeBlock 内部的段落等
+- `version` (int64): 当前文档版本号
+- `total_paragraphs` (int32): 正文段落总数（不含标题）
+- `total_headings` (int32): 标题总数
+- `total_tables` (int32): 表格总数
+
+---
+
 ## 典型工作流示例
 
 ### 编辑已有 Word 文档
 
 ```
 1. 调用 get_outline 获取文档大纲结构，了解文档的标题层级和各区域的可操作位置
+   （如需精确定位表格行列、文本框内部等，改用 resolve_document_structure）
 2. 根据大纲定位目标区域，或调用 find 查找具体文本位置
 3. 按需调用工具进行编辑：
    - 插入文本：insert_text
@@ -670,6 +932,7 @@
    - 插入表格：insert_table
    - 插入批注：insert_comment
    - 获取文档大纲：get_outline
+   - 获取完整结构树：resolve_document_structure
 ```
 
 ### 查找并替换文本（精确替换）
@@ -720,6 +983,24 @@
 4. 确认位置后，调用 insert_text / insert_paragraph 等工具在对应位置插入内容
 ```
 
+### 在表格指定行列插入文本
+
+```
+1. 调用 resolve_document_structure 获取文档完整结构树
+2. 在返回的 nodes 中找到目标 Table 节点
+3. 通过 table_rows[row-1].cells[col-1].end_index 获取目标单元格的末尾位置
+4. 调用 insert_text，将 index 设为该 end_index，即可在指定单元格末尾插入文本
+```
+
+### 在文本框内部插入内容
+
+```
+1. 调用 resolve_document_structure 获取文档完整结构树
+2. 在返回的 nodes 中找到目标 TextBox 节点
+3. 通过 children 中的段落节点获取内部精确位置
+4. 调用 insert_text / insert_paragraph 在对应位置插入内容
+```
+
 ### 为文本添加批注
 
 ```
@@ -730,7 +1011,9 @@
 ### 替换文档中的图片
 
 ```
-1. 调用 replace_image 传入旧图片的 URL 或 ID，以及新图片的 URL 或 base64 内容
+1. 调用 get_images 获取文档中所有图片信息，包括图片位置（pos/idx）和 URL/ID
+2. 根据返回的 pos（作为 idx）和 url/id（作为 old_url/old_id）定位目标图片
+3. 调用 replace_image 传入对应参数完成图片替换
 ```
 
 ---
@@ -746,5 +1029,6 @@
 - `get_last_operable_pos` 返回的 `position` 即为文档末尾可安全插入内容的位置
 - `get_outline` 返回树形大纲结构，每个节点的 `content_start`/`content_end` 表示该标题下正文区域的可操作范围，可直接用作 `insert_text` 等工具的 `index` 参数
 - **「在文档开头插入」需明确位置**：用户要求在文档开头插入内容时，应先通过 `get_outline` 获取大纲，区分「文档标题前」（`HEADING_LEVEL_TITLE` 的 `title_start`）和「正文开头」（`HEADING_LEVEL_TITLE` 的 `content_start`），并向用户确认具体插入位置
+- `resolve_document_structure` 返回所有块级元素的完整结构树，`table_rows[row].cells[col].end_index` 即为对应单元格末尾可插入位置；TextBox/CodeBlock 的内部段落通过 `children` 字段获取；`logical_index` 表示节点在同级中的顺序（从 1 开始）
 - `insert_comment` 的 `range` 必须在文档有效范围内，建议先用 `find` 获取精确范围
-- `replace_image` 需要通过 `old_url` 或 `old_id` 定位旧图片，新图片通过 `new_url` 或 `content`（base64）指定
+- `replace_image` 需要通过 `old_image_url` 或 `old_attachment_id` 定位旧图片，新图片通过 `image_id` 或 `content`（base64）指定
