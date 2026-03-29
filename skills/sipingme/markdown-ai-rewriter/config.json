@@ -1,18 +1,18 @@
 {
   "skill": {
     "name": "markdown-ai-rewriter",
-    "version": "0.1.0",
+    "version": "0.3.2",
     "enabled": true,
     "autoInvoke": true
   },
   "commands": {
     "rewrite": {
-      "script": "./scripts/rewrite.sh",
+      "script": "./scripts/rewrite.js",
       "args": ["rewrite"],
       "description": "重写 Markdown 文件"
     },
     "check-quota": {
-      "script": "./scripts/rewrite.sh",
+      "script": "./scripts/rewrite.js",
       "args": ["check-quota"],
       "description": "检查剩余配额"
     }
@@ -23,12 +23,22 @@
     ],
     "optional": [
       "OPENAI_API_KEY",
-      "ANTHROPIC_API_KEY"
+      "ANTHROPIC_API_KEY",
+      "AZURE_OPENAI_API_KEY",
+      "AZURE_OPENAI_ENDPOINT",
+      "GEMINI_API_KEY",
+      "DEEPSEEK_API_KEY",
+      "OPENROUTER_API_KEY",
+      "QWEN_API_KEY",
+      "GLM_API_KEY",
+      "DOUBAO_API_KEY",
+      "WENXIN_API_KEY",
+      "MINIMAX_API_KEY"
     ]
   },
   "dependencies": {
     "npm": [
-      "markdown-ai-rewriter@^0.1.0"
+      "markdown-ai-rewriter@^0.3.0"
     ]
   },
   "permissions": {
@@ -37,7 +47,20 @@
       "write": ["~/.markdown-ai-rewriter/"]
     },
     "network": {
-      "domains": ["api.openai.com", "api.anthropic.com"]
+      "domains": [
+        "api.openai.com",
+        "api.anthropic.com",
+        "*.openai.azure.com",
+        "generativelanguage.googleapis.com",
+        "api.deepseek.com",
+        "openrouter.ai",
+        "dashscope.aliyuncs.com",
+        "open.bigmodel.cn",
+        "ark.cn-beijing.volces.com",
+        "qianfan.baidubce.com",
+        "api.minimax.io",
+        "api.minimaxi.com"
+      ]
     }
   }
 }

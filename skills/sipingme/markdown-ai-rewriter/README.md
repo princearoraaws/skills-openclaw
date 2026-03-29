@@ -1,6 +1,14 @@
 # Markdown AI Rewriter Skill
 
-面向 **Claw Hub** 等环境的 Skill 封装，底层使用 npm 包 **[markdown-ai-rewriter](https://www.npmjs.com/package/markdown-ai-rewriter)**（当前对齐 **v0.2.2**）：在 **尽量保留标题、代码块、表格、图片等结构** 的前提下，对 Markdown 正文做润色、降重或换表述。
+面向 **Claw Hub** 等环境的 Skill 封装，底层使用 npm 包 **[markdown-ai-rewriter](https://www.npmjs.com/package/markdown-ai-rewriter)**（当前对齐 **v0.3.0**）：在 **尽量保留标题、代码块、表格、图片等结构** 的前提下，对 Markdown 正文做润色、降重或换表述。
+
+## 为什么用这个 Skill
+
+- **结构保真优先**：不是“整篇丢给模型”，而是围绕 Markdown 结构做改写，减少标题错位、代码块损坏、表格变形。
+- **长文可控**：默认章节模式，支持并发与分级标题切分，速度、成本、稳定性更可控。
+- **连贯文风可选**：支持全文模式，适合短文/叙事类内容一次性改写。
+- **模型覆盖广**：OpenAI、Anthropic、Azure OpenAI、Gemini、DeepSeek、OpenRouter、Qwen、GLM、豆包、文心、MiniMax。
+- **可直接集成流水线**：命令行与脚本友好，适合接在抓取、清洗、发布流程中。
 
 - **npm 包源码与发版**：[github.com/sipingme/markdown-ai-rewriter](https://github.com/sipingme/markdown-ai-rewriter)  
 - **本 Skill 文档**（模式、参数、排错）：请读本仓库 **[SKILL.md](./SKILL.md)**
@@ -30,10 +38,16 @@ git clone https://github.com/sipingme/markdown-ai-rewriter.git
 | 维度 | 说明 |
 |------|------|
 | **改写模式** | **`section`（章节，默认）**：按标题分章并行；**`full`（全文）**：整篇一次，语气更连贯。已移除旧的「按段落块」模式。 |
-| **模型提供商** | **OpenAI**、**Anthropic**、**MiniMax**（MiniMax 使用 OpenAI 兼容 HTTP，需安装 `openai` 包）。 |
+| **模型提供商** | **OpenAI**、**Anthropic**、**Azure OpenAI**、**Gemini**、**DeepSeek**、**OpenRouter**、**Qwen**、**GLM**、**豆包**、**文心**、**MiniMax**。 |
 | **风格** | `casual` / `formal` / `technical` / `creative` / `custom`（`custom` 常配合自定义 `--prompt`）。 |
 | **结构** | 解析与重组逻辑尽量保留版式；全文模式下对图片有占位符保护机制（详见包文档）。 |
 | **并发** | 章节模式下 **`--concurrency`（`-c`）** 控制并行请求数。 |
+
+## 3 步上手
+
+1. 安装 CLI：`npm install -g markdown-ai-rewriter`
+2. 配置你要用的 Provider API Key（例如 `OPENAI_API_KEY` / `DEEPSEEK_API_KEY`）
+3. 运行命令：`md-rewrite rewrite -i input.md -o output.md -p openai`
 
 ---
 
@@ -46,7 +60,15 @@ git clone https://github.com/sipingme/markdown-ai-rewriter.git
 |------|----------|
 | OpenAI | `OPENAI_API_KEY` |
 | Anthropic | `ANTHROPIC_API_KEY` |
-| MiniMax | `MINIMAX_API_KEY`（可选 `MINIMAX_BASE_URL`，默认多为国际区 `https://api.minimax.io/v1`） |
+| Azure OpenAI | `AZURE_OPENAI_API_KEY`（可选 `AZURE_OPENAI_ENDPOINT`） |
+| Gemini | `GEMINI_API_KEY` |
+| DeepSeek | `DEEPSEEK_API_KEY` |
+| OpenRouter | `OPENROUTER_API_KEY` |
+| Qwen | `QWEN_API_KEY` |
+| GLM | `GLM_API_KEY` |
+| 豆包 | `DOUBAO_API_KEY` |
+| 文心 | `WENXIN_API_KEY` |
+| MiniMax | `MINIMAX_API_KEY`（可选 `MINIMAX_BASE_URL`，默认 `https://api.minimaxi.com/v1`） |
 
 在 **Claw Hub** 中配置一次后，各 Skill 可共享同一环境变量。
 
@@ -85,6 +107,15 @@ markdown-ai-rewrite rewrite -i input.md -o out.md -p openai --section-level 2
 # MiniMax
 export MINIMAX_API_KEY="..."
 markdown-ai-rewrite rewrite -i input.md -o out.md -p minimax -m MiniMax-M2.1 -s casual
+
+# DeepSeek
+export DEEPSEEK_API_KEY="..."
+markdown-ai-rewrite rewrite -i input.md -o out.md -p deepseek
+
+# Azure OpenAI
+export AZURE_OPENAI_API_KEY="..."
+export AZURE_OPENAI_ENDPOINT="https://your-resource.openai.azure.com"
+markdown-ai-rewrite rewrite -i input.md -o out.md -p azure-openai -m gpt-4o-mini
 ```
 
 更多参数（`-t`、`--max-tokens`、`--preserve-length`、`-c`、`--minimax-base-url` 等）见 **`markdown-ai-rewrite rewrite --help`** 与 [SKILL.md](./SKILL.md)。
