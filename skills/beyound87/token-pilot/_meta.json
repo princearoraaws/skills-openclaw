@@ -3,9 +3,15 @@
   "slug": "token-pilot",
   "displayName": "Token Pilot",
   "latest": {
-    "version": "1.4.0",
-    "publishedAt": 1772963851462,
-    "commit": "https://github.com/openclaw/skills/commit/60f9ff130b1cc61bfbe41e33df323fef20ba9d0e"
+    "version": "2.0.2",
+    "publishedAt": 1774752142995,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.4.0",
+      "publishedAt": 1772963851462,
+      "commit": "https://github.com/openclaw/skills/commit/60f9ff130b1cc61bfbe41e33df323fef20ba9d0e"
+    }
+  ]
 }

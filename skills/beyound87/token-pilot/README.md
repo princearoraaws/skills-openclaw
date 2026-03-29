@@ -1,124 +1,123 @@
-# Token Pilot
+# token-pilot
 
-OpenClaw Agent 自动省 Token 技能。纯 Node.js，跨平台，零依赖。
+## 这是什么
+`token-pilot` 是一个用于降低 OpenClaw 日常 token 消耗的优化技能。
 
-## 5 分钟快速优化
+它的核心不是"替你自动改一切配置",而是提供三类能力:
+1. **会话内自动生效的行为规则**
+2. **对相关技能的协同节流建议**
+3. **用于审计和优化的脚本**
 
-### 第 1 步：安装
+## 当前准确定位
+提供三类能力:
+1. **会话内自动生效的行为规则**
+2. **对相关技能的协同节流建议**
+3. **用于审计和优化的脚本**
 
+## 核心能力
+
+### 1. 自动生效规则
+会话加载后,自动遵循以下方向:
+- 先小读再全读
+- 压缩长工具输出
+- 简答问题尽量短答
+- 不重复读取同一文件
+- 合并独立工具调用
+- 小改优先 `edit`
+- 按角色重量控制工具使用范围
+
+### 2. 角色感知型工具经济
+基于自身 `SOUL.md` 内容判定当前角色是:
+- 重型角色
+- 中型角色
+- 轻型角色
+
+再决定默认工具使用强度。
+
+### 3. 技能协同建议
+#### 与 `coding-lead`
+- 大上下文写磁盘 context 文件
+- ACP prompt 只放最小必要头部
+
+#### 与 `smart-agent-memory`
+- 先查历史,后做调查
+- 解决后及时记录 lesson / fact,减少重复探索
+
+#### 与多 agent 团队结构
+- 轻任务使用轻上下文
+- 模板和职责说明尽量放到 references,不塞进主 prompt
+- 如果检测到共享 inbox / dashboard / product manifest / role SOUL 等结构,先读最小协调文件,再读任务文件
+
+## 初始化
+本技能**无需初始化**。
+安装后,在后续会话里加载技能即可按规则生效。
+
+## 使用方法
+
+### 1. 作为行为规则直接使用
+如果技能已加载,规则会自动生效,不需要额外命令。
+
+### 2. 使用审计脚本
 ```bash
-clawhub install token-pilot
+node {baseDir}/scripts/audit.js --all
+node {baseDir}/scripts/audit.js --config
+node {baseDir}/scripts/audit.js --synergy
+```
+适合检查当前工作区、配置与技能协同情况。
+
+### 3. 使用优化脚本
+```bash
+node {baseDir}/scripts/optimize.js
+node {baseDir}/scripts/optimize.js --apply
+node {baseDir}/scripts/optimize.js --cron
+node {baseDir}/scripts/optimize.js --agents
+node {baseDir}/scripts/optimize.js --template
 ```
 
-### 第 2 步：扫描当前状态
-
+### 4. 生成技能目录索引
 ```bash
-node ~/.openclaw/skills/token-pilot/scripts/optimize.js
+node {baseDir}/scripts/catalog.js [--output path]
 ```
 
-脚本会自动扫描你的**所有 workspace**、cron 任务、agent 配置，输出每项的优化建议和预估节省量。
+## 配置说明
+本技能本身没有独立配置文件,但 README 层面的推荐配置应以**"建议"**而不是**"自动已启用"**理解。
 
-### 第 3 步：一键清理（安全）
+### 推荐的 openclaw.json 方向
+- `bootstrapMaxChars`
+- `bootstrapTotalMaxChars`
+- `compaction.memoryFlush`
+- `contextPruning`
+- `heartbeat`
 
-```bash
-node ~/.openclaw/skills/token-pilot/scripts/optimize.js --apply
-```
+这些只是**建议你审计并手动合并**,不是 token-pilot 自动替你写入。
 
-自动执行：
-- 把 workspace 根目录的 .js/.txt/.log/.cmd 等临时文件移到 `scripts/` 子目录
-- 删除已完成 bootstrap 后遗留的 BOOTSTRAP.md
+### 工具白名单建议
+可按角色配置 `tools.allow`,但应结合实际工具集,不要把 README 写成对所有环境都完全适用的固定结论。
 
-**只做安全操作，不改配置文件，不改 SOUL.md。**
+## 适用场景
+- 工作区太大、read 过多
+- cron 太多、上下文太重
+- 多 agent 团队 token 消耗偏高
+- 单 agent 长会话上下文膨胀
+- 编码任务 prompt 过胖
+- 经常重复调查同一问题
 
-### 第 4 步：替换臃肿的 AGENTS.md（最大收益！）
+## 不适用 / 边界
+- 不替代具体业务技能
+- 不直接保证固定节省比例
+- 不自动重写你的全部配置
+- 不应把 README 里的推荐项当作已经落地的事实
 
-```bash
-node ~/.openclaw/skills/token-pilot/scripts/optimize.js --template
-```
+## 相关文件
+- `SKILL.md`
+- `scripts/audit.js`
+- `scripts/optimize.js`
+- `scripts/catalog.js`
+- `references/workspace-patterns.md`
+- `references/cron-optimization.md`
 
-会输出一个 ~300 token 的精简版 AGENTS.md 模板。复制后替换你的 `~/.openclaw/workspace/AGENTS.md`。
-
-默认 AGENTS.md 约 2000 tok，替换后**每次会话省 ~1700 tok**。
-
-### 第 5 步：按建议手动调整（如适用）
-
-**有 cron 任务？**
-```bash
-node ~/.openclaw/skills/token-pilot/scripts/optimize.js --cron
-```
-会告诉你哪些 job 该加 `lightContext`、哪些该用便宜模型、哪些 prompt 太长。
-
-**有多个 agent？**
-```bash
-node ~/.openclaw/skills/token-pilot/scripts/optimize.js --agents
-```
-会建议 main agent 用最好模型，团队 agent 降到中档。
-
-**查配置是否到位？**
-```bash
-node ~/.openclaw/skills/token-pilot/scripts/audit.js --config
-```
-5 项评分：bootstrapMaxChars、bootstrapTotalMaxChars、heartbeat interval、activeHours、compaction。
-
-### 第 6 步：完成
-
-装好后 **6 条行为规则自动生效**，Agent 会在交互中自动：
-- 先 peek 再全读（省读取量）
-- 压缩工具返回结果（省输出）
-- 简短回答简单问题
-- 不重复读已读文件
-- 批量发起独立工具调用
-- 用 edit 代替 write
-
-无需额外配置，无需记住任何命令。
-
----
-
-## 预期效果
-
-| 场景 | 节省 |
-|------|------|
-| 首次优化（替换 AGENTS.md + 清理） | **~2000-5000 tok/session** |
-| 6 条运行时规则 | **15-30% 运行时 token** |
-| cron 模型分层（如有） | **cron 费用 -70~90%** |
-| agent 模型分层（如有多 agent） | **交互费用 -70~80%** |
-| lightContext（如有轻量 cron） | **每 job 省 2000-5000 tok** |
-
-## 插件协同（自动检测，没装也不影响）
-
-装了以下技能会自动获得额外优化，没装则用内置兜底：
-
-- **qmd** → 搜索代替盲读文件
-- **smart-agent-memory** → 查历史避免重复调查
-- **coding-lead** → ACP 磁盘上下文省 90%
-- **multi-search-engine** → 精准搜索引擎选择
-
-检测协同状态：
-```bash
-node ~/.openclaw/skills/token-pilot/scripts/audit.js --synergy
-```
-
-## 全部命令
-
-```bash
-SKILL=~/.openclaw/skills/token-pilot
-
-# 优化
-node $SKILL/scripts/optimize.js               # 全扫描 + 建议
-node $SKILL/scripts/optimize.js --apply       # 安全自动清理
-node $SKILL/scripts/optimize.js --template    # 精简 AGENTS.md 模板
-node $SKILL/scripts/optimize.js --cron        # cron 优化
-node $SKILL/scripts/optimize.js --agents      # agent 模型分层
-
-# 审计
-node $SKILL/scripts/audit.js --all            # 全量审计
-node $SKILL/scripts/audit.js --config         # 配置评分
-node $SKILL/scripts/audit.js --synergy        # 插件协同
-
-# 目录
-node $SKILL/scripts/catalog.js                # 生成技能索引
-```
-
-Windows 用户把 `~` 替换为 `%USERPROFILE%`，或用绝对路径。
-
-所有命令自动发现 `~/.openclaw/` 下全部 `workspace-*` 目录，新增 workspace 零配置覆盖。
+## 最近一次修改（中文）
+- **v1.2.0 / 2026-03-29**
+- 多 agent 团队检测改为识别多 agent 协作结构特征（shared inbox/dashboard/manifest/role SOUL），去除 team-builder 唯一来源绑定
+- 补充"单 agent 长会话上下文膨胀"为适用场景
+- 将配置项定位为建议，而非自动落地事实
