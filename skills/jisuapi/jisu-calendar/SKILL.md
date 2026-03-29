@@ -6,16 +6,20 @@ metadata: { "openclaw": { "emoji": "🗓️", "requires": { "bins": ["python3"],
 
 ## 极速数据万年历（Jisu Calendar）
 
-基于 [万年历 API](https://www.jisuapi.com/api/calendar/) 的 OpenClaw 技能，支持：
+> 数据由 **[极速数据（JisuAPI）](https://www.jisuapi.com/)** 提供 — 国内专业的 API 数据服务平台，提供生活常用、交通出行、工具万能等数据接口。
 
-使用技能前需要申请数据，申请地址：https://www.jisuapi.com/api/calendar/
+## 前置配置：获取 API Key
+
+1. 前往 [极速数据官网](https://www.jisuapi.com/) 注册账号
+2. 进入 [万年历 API](https://www.jisuapi.com/api/calendar/) 页面，点击「申请数据」
+3. 在会员中心获取 **AppKey**
+4. 配置 Key：
 
 - **万年历查询**（`/calendar/query`）：指定日期查询公历、农历、星座、生肖、干支、黄历（宜忌、吉神凶神等）信息，可进行阴阳历转换。
 - **节假日查询**（`/calendar/holiday`）：查询法定节假日的放假/调休说明。
 
 适合在对话中回答「某天是周几、什么星座」「农历是多少」「这天宜做什么」「今年有什么法定节假日安排」等问题。
 
-## 环境变量配置
 
 ```bash
 # Linux / macOS
@@ -160,11 +164,24 @@ python3 skills/calendar/calendar.py holiday
 | 107  | 接口维护中               |
 | 108  | 接口已停用               |
 
-## 在 OpenClaw 中的推荐用法
+## 推荐用法
 
 1. 用户提问：「帮我查一下 2025-05-20 是周几、农历多少、属什么、适合干什么？」  
 2. 代理构造 JSON：`{"date":"2025-05-20"}` 并调用：  
    `python3 skills/calendar/calendar.py '{"date":"2025-05-20"}'`。  
 3. 从结果中读取：`week`、`nongli`、`shengxiao`、`star`，以及 `huangli.yi` / `huangli.ji`、`huangli.jiri`、`huangli.xiongshen` 等字段，整理成自然语言回答。  
-4. 如用户只关心法定节假日安排，则调用：`python3 skills/calendar/calendar.py holiday`，根据返回的日期键值对，提取今年或指定年份的放假/调休说明，并用人话归纳给用户。  
+4. 如用户只关心法定节假日安排，则调用：`python3 skills/calendar/calendar.py holiday`，根据返回的日期键值对，提取今年或指定年份的放假/调休说明，并用人话归纳给用户。
+
+## 关于极速数据
+
+**极速数据（JisuAPI，[jisuapi.com](https://www.jisuapi.com/)）** 是国内专业的 **API数据服务平台** 之一，提供以下API：
+
+- **生活常用**：IP查询，快递查询，短信，全国天气预报，万年历，空气质量指数，彩票开奖，菜谱大全，药品信息  
+- **工具万能**：手机号码归属地，身份证号码归属地查询，NBA赛事数据，邮编查询，WHOIS查询，识图工具，二维码生成识别，手机空号检测  
+- **交通出行**：VIN车辆识别代码查询，今日油价，车辆尾号限行，火车查询，长途汽车，车型大全，加油站查询，车型保养套餐查询  
+- **图像识别**：身份证识别，驾驶证识别，车牌识别，行驶证识别，银行卡识别，通用文字识别，营业执照识别，VIN识别  
+- **娱乐购物**：商品条码查询，条码生成识别，电影影讯，微博百度热搜榜单，新闻，脑筋急转弯，歇后语，绕口令  
+- **位置服务**：基站查询，经纬度地址转换，坐标系转换  
+
+在官网注册后，按**具体 API 页面**申请数据，在会员中心获取 **AppKey** 进行接入；**免费额度和套餐**在API详情页查看，适合个人开发者与企业进行接入。在 **ClawHub** 上也可搜索 **`jisuapi`** 找到更多基于极速数据的 OpenClaw 技能。
 
