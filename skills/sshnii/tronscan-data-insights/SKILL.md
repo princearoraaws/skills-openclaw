@@ -42,14 +42,14 @@ metadata:
 
 ## Use Cases
 
-1. **New Accounts**: Use `getDailyNewAccounts` for daily new addresses (newAddressSeen), as an activity proxy—not precise DAU.
-2. **Daily Transaction Count**: Use `getTransactionStatistics` and `getTriggerStatistic` for tx and contract call volume.
-3. **Transaction Type Distribution**: Use `getTransactionStatistics` and `getTransferStatistics` for type/segment distribution.
-4. **Hot Tokens**: Use `getHotSearch` for trending tokens with price and activity.
-5. **Hot Contracts**: Use `getHotSearch` and `getTriggerStatistic` or `getTop10` for hot contracts.
-6. **Top Accounts by Tx Count**: Use `getTop10` with appropriate category (e.g. by tx count).
-7. **Top Account by Staked TRX**: Use `getTop10` or account list sorted by frozen/stake (category as per API).
-
+1. **New accounts**: Use `getDailyNewAccounts` for daily new addresses (newAddressSeen).
+2. **Active accounts**: Use `getActiveStatistic` for daily active addresses.
+3. **Daily transaction count**: Use `getTransactionStatistics` and `getTriggerStatistic` for tx and contract call volume.
+4. **Transaction type distribution**: Use `getTransactionStatistics` and `getTransferStatistics` for type/segment distribution.
+5. **Hot tokens**: Use `getHotSearch` for trending tokens with price and activity.
+6. **Hot contracts**: Use `getHotSearch` and `getTriggerStatistic` or `getTop10` for hot contracts.
+7. **Top accounts by tx count**: Use `getTop10` with appropriate category (e.g. by tx count).
+8. **Top account by staked TRX**: Use `getTop10` or account list sorted by frozen/stake (category as per API).
 
 ## MCP Server
 
@@ -62,7 +62,7 @@ metadata:
 - **API**: `getDailyNewAccounts` — Get daily new account data (default last 15 days, max 2000 days)
 - **Data source**: Returns `newAddressSeen` (daily new addresses). This is an activity proxy, not precise DAU.
 - **Use when**: User asks for "new accounts", "daily new addresses", or "new accounts per day".
-- **If user asks for DAU**: First declare that "this API returns daily new addresses, not precise DAU; it can be used as a reference but must not be presented as exact DAU".
+- **If user asks for DAU / daily active**: First declare that "this API returns daily new addresses, not precise DAU; it can be used as a reference but must not be presented as exact DAU".
 - **Input**: Optional start/end or day count.
 - **Response**: Daily new account series.
 
@@ -113,7 +113,7 @@ metadata:
 ### getTriggerAmountStatistic
 
 - **API**: `getTriggerAmountStatistic` — Get contract call volume distribution by date
-- **Use when**: User asks for "contract call distribution" by date.
+- **Use when**: User asks for "contract call distribution by date".
 - **Response**: Contract call volume distribution by date.
 
 ### getContractCallerStatisticOverview
@@ -124,7 +124,7 @@ metadata:
 
 ### getActiveStatistic
 
-- **API**: `getActiveStatistic` — Get active account count per day/week/month on the TRON blockchain
+- **API**: `getActiveStatistic` — Get active account data on the TRON blockchain by day/week/month
 - **Use when**: User asks for "active accounts", "daily active users", "DAU", "WAU", "MAU", or "active address count".
 - **Input**: `type` (required: DAY | WEEK | MONTH), `startTimestamp` (required: milliseconds).
 - **Response**: Active account dataset for the selected time granularity.
@@ -205,6 +205,6 @@ Check time range parameters; some APIs have default limits (e.g. getDailyNewAcco
 
 ## Notes
 
-- `getDailyNewAccounts` returns `newAddressSeen` (daily new addresses)—an activity proxy, not precise DAU. When user asks for DAU, the model must first declare that this is a new-address metric and must not be presented as exact DAU.
+- `getDailyNewAccounts` returns `newAddressSeen` (daily new addresses)—an activity proxy, not precise DAU. When the user asks for DAU / daily active, you must first declare that this is a new-address metric and must not be presented as exact DAU.
 - Top accounts by "staked TRX" use `getTop10` with the appropriate category (see TronScan API list for category values).
-- For a single dashboard of "what’s happening", combine: `getHomepageData` + `getCurrentTps` + `getHotSearch` + `getTop10` + `getTransactionStatistics`.
+- For a single dashboard of "what's happening", combine: `getHomepageData` + `getCurrentTps` + `getHotSearch` + `getTop10` + `getTransactionStatistics`.
