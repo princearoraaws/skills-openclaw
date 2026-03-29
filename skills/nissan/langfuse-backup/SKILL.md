@@ -1,25 +1,22 @@
 ---
-version: 1.0.1
 name: langfuse-backup
-description: "Docker volume backup and restore for self-hosted Langfuse. Use when: backing up a self-hosted Langfuse instance, restoring Langfuse after a crash or migration, setting up daily cron backups for Langfuse postgres/clickhouse/minio/redis volumes. Backs up postgres (traces, scores), minio (blobs), with optional clickhouse and redis. Includes restore script with validation and 14-day retention pruning."
+version: 1.0.2
 metadata:
-  {
-      "openclaw": {
-            "emoji": "\ud83d\udcbe",
-            "requires": {
-                  "bins": [
-                        "docker"
-                  ],
-                  "env": []
-            },
-            "primaryEnv": null,
-            "network": {
-                  "outbound": false,
-                  "reason": "Backs up local Langfuse Docker volumes. No external network calls."
-            }
-      }
-}
+  openclaw:
+    emoji: "💾"
+    requires:
+      bins: ["docker"]
+      env: []
+    network:
+      outbound: false
+      reason: "Backs up local Docker volumes only. No data is sent to remote servers."
+    security_notes: "All operations are local Docker volume copies. No data leaves the local machine. Backup files are stored in a local directory specified by the user."
+description: "Docker volume backup and restore for self-hosted Langfuse. Use when: backing up a self-hosted Langfuse instance, restoring Langfuse after a crash or migration, setting up daily cron backups for Langfuse postgres/clickhouse/minio/redis volumes. Backs up postgres (traces, scores), minio (blobs), with optional clickhouse and redis. Includes restore script with validation and 14-day retention pruning."
 ---
+**Last used:** 2026-03-24
+**Memory references:** 2
+**Status:** Active
+
 
 # langfuse-backup
 
