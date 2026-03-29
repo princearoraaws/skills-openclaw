@@ -17,7 +17,9 @@ description: >
   creating subnets, managing L1 validators, adding validators with BLS keys, querying node info,
   trading perpetual futures on dYdX v4 (100+ markets), searching for perp markets across venues,
   querying CoinGecko market data, searching Polymarket markets and order books,
-  staking/unstaking sAVAX via Benqi, depositing/withdrawing from EIP-4626 vaults (yoUSD, Morpho, Aave, etc).
+  buying or selling Polymarket outcome shares on Polygon,
+  staking/unstaking sAVAX via Benqi, depositing/withdrawing from EIP-4626 vaults (yoUSD, Morpho, Aave, etc),
+  and resolving known Avalanche/Base DeFi contracts with canonical chain routing or interoperable-address inputs.
   Don't use when: managing ENS (use moltbook scripts).
   Network: yes (EVM RPCs via Routescan + public fallbacks, dYdX Cosmos chain). Cost: gas fees per transaction.
 metadata:
@@ -80,7 +82,7 @@ metadata:
 
 # Evalanche — Multi-EVM Agent Wallet
 
-Headless wallet SDK with ERC-8004 identity, x402 payments, Li.Fi cross-chain liquidity (bridging + DEX aggregation + DeFi Composer), Gas.zip gas funding, dYdX v4 perpetuals, CoinGecko market intelligence, Polymarket market discovery, contract interaction helpers (approve-and-call + UUPS upgrade), and DeFi operations (liquid staking + EIP-4626 vaults). Works on 21+ EVM chains. 91 MCP tools. Works as CLI or MCP server.
+Headless wallet SDK with ERC-8004 identity, x402 payments, Li.Fi cross-chain liquidity (bridging + DEX aggregation + DeFi Composer), Gas.zip gas funding, dYdX v4 perpetuals, CoinGecko market intelligence, Polymarket market discovery and execution, contract interaction helpers (approve-and-call + UUPS upgrade), and DeFi operations (liquid staking + EIP-4626 vaults). Works on 21+ EVM chains. Works as CLI or MCP server.
 
 **Source:** https://github.com/iJaack/evalanche
 **License:** MIT
@@ -187,6 +189,26 @@ AVALANCHE_NETWORK=base evalanche-mcp
 | `arena_token_info` | Get token info (fees, curve params) by address |
 | `arena_buy_cost` | Calculate $ARENA cost for a given buy amount (read-only) |
 
+### Polymarket (Polygon)
+| Tool | Description |
+|------|-------------|
+| `pm_search` | Search active Polymarket markets by keyword |
+| `pm_market` | Get market details and outcome tokens by condition ID |
+| `pm_positions` | Get Polymarket positions for a wallet |
+| `pm_orderbook` | Get the order book for an outcome token |
+| `pm_balances` | Get normalized collateral and outcome-token balances |
+| `pm_order` | Get venue-truth order status and reconciliation |
+| `pm_cancel_order` | Cancel an open Polymarket order |
+| `pm_open_orders` | List open Polymarket orders |
+| `pm_trades` | List recent Polymarket venue trades |
+| `pm_approve` | Approve collateral spending for Polymarket on Polygon |
+| `pm_preflight` | Run deterministic buy/sell/limit-sell preflight checks |
+| `pm_buy` | Buy YES/NO shares with market or limit orders |
+| `pm_sell` | Slippage-protected immediate YES/NO sell toward a target USDC proceeds amount |
+| `pm_limit_sell` | Post or take a YES/NO limit sell depending on `postOnly` |
+| `pm_reconcile` | Reconcile balances, positions, orders, and trades against venue truth |
+| `pm_redeem` | Reserved for winning-share redemption; not implemented yet |
+
 ### Contract Interaction Helpers (v0.9.0)
 | Tool | Description |
 |------|-------------|
@@ -216,6 +238,8 @@ AVALANCHE_NETWORK=base evalanche-mcp
 | `lifi_get_connections` | Discover possible transfer paths between chains |
 | `lifi_compose` | Cross-chain DeFi Composer (bridge + deposit into Morpho/Aave/Pendle/Lido/etc in one tx) |
 
+`lifi_swap` and `lifi_compose` return execution envelopes with `request`, `submission`, `verification`, and `warnings`.
+
 ### Platform CLI (requires `platform-cli` binary — `go install github.com/ava-labs/platform-cli@latest`)
 | Tool | Description |
 |------|-------------|
@@ -242,6 +266,16 @@ AVALANCHE_NETWORK=base evalanche-mcp
 | `dydx_cancel_order` | Cancel an open order |
 | `dydx_close_position` | Close position with reduce-only market order |
 | `dydx_get_orders` | List orders (optionally filter by status) |
+| `hyperliquid_get_markets` | List Hyperliquid perpetual markets |
+| `hyperliquid_get_account_state` | Get Hyperliquid account summary |
+| `hyperliquid_get_positions` | Get Hyperliquid open positions |
+| `hyperliquid_place_market_order` | Place Hyperliquid market order |
+| `hyperliquid_place_limit_order` | Place Hyperliquid limit order |
+| `hyperliquid_cancel_order` | Cancel Hyperliquid order |
+| `hyperliquid_close_position` | Close Hyperliquid position |
+| `hyperliquid_get_order` | Get Hyperliquid order status |
+| `hyperliquid_get_orders` | List Hyperliquid open orders |
+| `hyperliquid_get_trades` | List Hyperliquid recent fills |
 | `find_perp_market` | Search for a market across all connected perp venues |
 
 ## Programmatic Usage
@@ -372,10 +406,26 @@ await staking.sAvaxStake('10', 50);  // 50bps slippage
 const YOUSD = '0x0000000f2eb9f69274678c76222b35eec7588a65';
 const baseAgent = new Evalanche({ privateKey: '0x...', network: 'base' });
 const { vaults: baseVaults } = baseAgent.defi();
-await baseVaults.deposit(YOUSD, '1000', 'base');   // approve + deposit
-await baseVaults.withdraw(YOUSD, '998', 'base');    // redeem shares
+const info = await baseVaults.vaultInfo(YOUSD);
+// { assetDecimals: 6, shareDecimals: 18, ... }
+await baseVaults.deposit(YOUSD, '1000');   // approve + deposit
+await baseVaults.withdraw(YOUSD, '998');   // redeem shares
 ```
 
 **MCP tools (defi):**
 `savax_stake_quote`, `savax_stake`, `savax_unstake_quote`, `savax_unstake`,
 `vault_info`, `vault_deposit_quote`, `vault_deposit`, `vault_withdraw_quote`, `vault_withdraw`
+
+Known DeFi routing behavior:
+- yoUSD auto-routes to Base
+- sAVAX auto-routes to Avalanche
+- explicit wrong-chain overrides fail clearly before contract reads
+- interoperable address inputs like `0x...@base` are accepted for address-based DeFi tools
+
+### Live Smoke Checklist
+
+Use [docs/live-smoke-checklist.md](/Users/jaack/Desktop/Github/evalanche/docs/live-smoke-checklist.md) as the release-certification runbook for:
+- Polymarket tiny write + reconciliation
+- Hyperliquid tiny trade + order verification
+- LI.FI tiny swap/bridge execution + tx verification
+- sAVAX / EIP-4626 tiny round-trip + balance/share verification
