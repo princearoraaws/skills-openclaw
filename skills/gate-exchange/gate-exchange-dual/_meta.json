@@ -3,9 +3,15 @@
   "slug": "gate-exchange-dual",
   "displayName": "Gate Exchange Dual",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1773403906785,
-    "commit": "https://github.com/openclaw/skills/commit/ede1cc31d40ed26942b16a158a893ffab9f947b0"
+    "version": "1.0.1",
+    "publishedAt": 1774617468224,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1773403906785,
+      "commit": "https://github.com/openclaw/skills/commit/ede1cc31d40ed26942b16a158a893ffab9f947b0"
+    }
+  ]
 }
