@@ -1,13 +1,18 @@
 {
   "owner": "ai4mse",
   "slug": "flyclaw",
-  "displayName": "FlyClaw",
+  "displayName": "FlyClaw (Flight N-in-1 Search Zero Login)",
   "latest": {
-    "version": "0.3.3",
-    "publishedAt": 1773291410965,
-    "commit": "https://github.com/openclaw/skills/commit/40522509da7a2b5fc1afbbeecdbbb3b7f31aeb2f"
+    "version": "0.4.1",
+    "publishedAt": 1774616795797,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.3.3",
+      "publishedAt": 1773291410965,
+      "commit": "https://github.com/openclaw/skills/commit/40522509da7a2b5fc1afbbeecdbbb3b7f31aeb2f"
+    },
     {
       "version": "0.3.1",
       "publishedAt": 1773042039980,
