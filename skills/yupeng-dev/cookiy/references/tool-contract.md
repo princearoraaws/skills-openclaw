@@ -150,26 +150,27 @@ When any tool returns status_code 402:
    `cookiy_billing_cash_checkout`, then confirm with `cookiy_balance_get`.
 7. NEVER recalculate or restate prices from raw quote fields.
 
-### Experience bonus rules
+### Cash credit rules
 
-- New users may receive an `experience_bonus` allocation visible in
-  `cookiy_balance_get`.
-- Experience bonus is deducted at real product prices.
-- Experience bonus covers eligible actions such as:
+- New OAuth users may receive signup cash credit in the same wallet shown
+  by `cookiy_balance_get`.
+- Cash credit is deducted at real product prices.
+- Cash credit covers eligible actions such as:
   - Discussion guide generation (`cookiy_study_create`)
   - AI-to-AI interview generation (`cookiy_simulated_interview_generate`)
   - Report access when retrieving the share link
     (`cookiy_report_share_link_get`)
-- Experience bonus does NOT cover:
-  - Recruitment of real participants (`cookiy_recruit_create`)
-  - Recruitment requires paid credit or cash credit.
-- `cookiy_balance_get` may also show `experience_bonus`. Eligible MCP
-  actions use that bonus before purchased credits, so paid product
-  counters may stay unchanged even when an action succeeded.
+- Recruitment of real participants (`cookiy_recruit_create`) may also use
+  available cash credit from the same wallet.
+- `cookiy_balance_get` does not expose a separate `experience_bonus`
+  field anymore. Historical usage rows may still fold legacy bonus usage
+  into cash-credit display values.
+- Eligible MCP actions use product-specific paid credits before cash
+  credit, so paid counters decrease first when both are available.
 - If a covered operation fails before task dispatch, the credit is
   refunded automatically.
-- Use `cookiy_balance_get` to check current experience bonus, cash
-  credit, and per-product paid counters.
+- Use `cookiy_balance_get` to check current cash credit and per-product
+  paid counters.
 
 ### Balance display rules
 
@@ -232,6 +233,19 @@ For async operations, poll at reasonable intervals:
 - `cookiy_report_status`: every 10-30 seconds (reports take longer)
 - `cookiy_recruit_status`: every 30-60 seconds (recruitment is slow)
 
+
+## Report PREVIEW vs READY (MCP behavior)
+
+- **PREVIEW** — Viewable early snapshot; may not include every interview
+  completed afterward until the pipeline updates. Users judge freshness from
+  the opened page.
+- **READY** — Final (non-preview) report; usually after the study's **configured
+  completed-interview / analysis completion target** is met and generation
+  finishes. Do not tell users that PREVIEW "becomes final as soon as any new
+  interview exists" without reference to that bar.
+- Share links must come **only** from `cookiy_report_share_link_get` (`share_url`),
+  never self-constructed URLs.
+
 ## Quantitative survey tools (optional)
 
 When the API operator has configured quantitative survey integration,
@@ -244,7 +258,18 @@ discussion guides or qualitative reports.
 | `cookiy_quant_survey_list` | Discover survey IDs and titles |
 | `cookiy_quant_survey_create` | Create a structured questionnaire |
 | `cookiy_quant_survey_detail` | Public respondent URLs and optional structure; `include_structure=false` for link-only; `structure_presentation` = `markdown`, `json`, or `both` |
+| `cookiy_quant_survey_patch` | Non-destructive questionnaire edits: wording, requiredness, relevance, and quota-shell fields only |
+| `cookiy_quant_survey_report` | Default summary/report entrypoint after responses arrive; optional raw JSON/CSV preview |
 | `cookiy_quant_survey_results` | Raw JSON/CSV response payloads (`results_preview`, optional `results_json` when format is JSON) |
+| `cookiy_quant_survey_stats` | Legacy lightweight stats view kept for compatibility |
+
+Recommended workflow:
+
+1. Create a new questionnaire with `cookiy_quant_survey_create`, or discover an existing one with `cookiy_quant_survey_list`.
+2. Call `cookiy_quant_survey_detail` to get `survey_public_url`, activation state, and exact group/question ids.
+3. If the questionnaire needs edits, call `cookiy_quant_survey_patch`.
+4. After responses arrive, call `cookiy_quant_survey_report` for the default analysis path.
+5. Only call `cookiy_quant_survey_results` when raw row-level payloads are explicitly needed.
 
 If the server returns 503 with a setup hint, quantitative tools are not
 configured for that deployment.
@@ -255,3 +280,6 @@ configured for that deployment.
   preview-only output.
 - Do not promise background monitoring unless a real automation layer
   actually exists outside the MCP call you are making right now.
+- When questionnaire recruitment is involved, say Cookiy is recruiting.
+  Do not name downstream recruitment suppliers or the underlying
+  questionnaire engine.
