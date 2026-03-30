@@ -4,6 +4,7 @@ import base64
 import json
 import pathlib
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -23,6 +24,8 @@ def main() -> None:
     parser.add_argument("--api-key", help="NanoPhoto API key. Defaults to NANOPHOTO_API_KEY env var.")
     parser.add_argument("--locale", default="en", help="Output locale (default: en)")
     parser.add_argument("--timeout", type=int, default=1800, help="Request timeout in seconds (default: 1800)")
+    parser.add_argument("--retries", type=int, default=3, help="Retry attempts for transient failures like 524/5xx (default: 3)")
+    parser.add_argument("--retry-delay", type=float, default=3.0, help="Initial retry delay in seconds; doubles after each attempt (default: 3.0)")
     args = parser.parse_args()
 
     api_key = args.api_key or __import__("os").environ.get("NANOPHOTO_API_KEY")
@@ -56,18 +59,37 @@ def main() -> None:
         headers={
             "Content-Type": "application/json",
             "Authorization": f"Bearer {api_key}",
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+            "Accept": "text/plain, */*",
+            "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+            "Origin": "https://nanophoto.ai",
+            "Referer": "https://nanophoto.ai/",
         },
         method="POST",
     )
 
-    try:
-        with urllib.request.urlopen(request, timeout=args.timeout) as response:
-            sys.stdout.write(response.read().decode("utf-8", "replace"))
-    except urllib.error.HTTPError as exc:
-        error_body = exc.read().decode("utf-8", "replace")
-        fail(f"HTTP {exc.code}: {error_body}")
-    except urllib.error.URLError as exc:
-        fail(f"Request failed: {exc}")
+    delay = args.retry_delay
+    for attempt in range(1, args.retries + 1):
+        try:
+            with urllib.request.urlopen(request, timeout=args.timeout) as response:
+                sys.stdout.write(response.read().decode("utf-8", "replace"))
+                return
+        except urllib.error.HTTPError as exc:
+            error_body = exc.read().decode("utf-8", "replace")
+            transient = exc.code in {408, 409, 423, 429, 500, 502, 503, 504, 524}
+            if transient and attempt < args.retries:
+                print(f"Attempt {attempt}/{args.retries} failed with HTTP {exc.code}; retrying in {delay:.1f}s...", file=sys.stderr)
+                time.sleep(delay)
+                delay *= 2
+                continue
+            fail(f"HTTP {exc.code}: {error_body}")
+        except urllib.error.URLError as exc:
+            if attempt < args.retries:
+                print(f"Attempt {attempt}/{args.retries} failed with network error: {exc}; retrying in {delay:.1f}s...", file=sys.stderr)
+                time.sleep(delay)
+                delay *= 2
+                continue
+            fail(f"Request failed: {exc}")
 
 
 if __name__ == "__main__":
