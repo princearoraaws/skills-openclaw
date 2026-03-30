@@ -1,0 +1,11 @@
+{
+  "owner": "djc00p",
+  "slug": "freqtrade-strategy-dev",
+  "displayName": "Freqtrade Strategy Dev",
+  "latest": {
+    "version": "1.0.3",
+    "publishedAt": 1774390485681,
+    "commit": null
+  },
+  "history": []
+}
