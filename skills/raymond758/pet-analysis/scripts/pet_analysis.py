@@ -22,145 +22,18 @@ from .skill import skill
 
 from skills.smyx_common.scripts.util import RequestUtil
 
-# 从config导入常量
-SUPPORTED_FORMATS = ConstantEnum.SUPPORTED_FORMATS
-MAX_FILE_SIZE_MB = ConstantEnum.MAX_FILE_SIZE_MB
-
-
-def validate_file(file_path):
-    """验证输入文件是否合法"""
-    if not os.path.exists(file_path):
-        raise FileNotFoundError(f"文件不存在: {file_path}")
-
-    if not os.access(file_path, os.R_OK):
-        raise PermissionError(f"文件没有读权限: {file_path}")
-
-    ext = os.path.splitext(file_path)[1].lower()[1:]
-    if ext not in SUPPORTED_FORMATS:
-        raise ValueError(f"不支持的文件格式，支持的格式: {', '.join(SUPPORTED_FORMATS)}")
-
-    file_size_mb = os.path.getsize(file_path) / (1024 * 1024)
-    if file_size_mb > MAX_FILE_SIZE_MB:
-        raise ValueError(f"文件过大，最大支持 {MAX_FILE_SIZE_MB}MB，当前文件大小: {file_size_mb:.1f}MB")
-
-    return True
-
 
 def analyze_video(input_path=None, url=None, pet_type=None, api_url=None, api_key=None, output_level=None):
-    """调用API分析宠物视频"""
-    if not input_path and not url:
-        raise ValueError("必须提供本地视频路径(--input)或网络视频URL(--url)")
-
-    # 设置宠物类型参数
     if pet_type:
-        ConstantEnum.DEFAULT_PET_TYPE = pet_type
+        ConstantEnum.DEFAULT__PET_TYPE = pet_type
 
-    try:
-        input_path = input_path or url
-        return skill.get_output_analysis(input_path)
-
-    except requests.exceptions.RequestException as e:
-        traceback.print_stack()
-        raise Exception(f"API请求失败: {str(e)}")
+    input_path = input_path or url
+    return skill.get_output_analysis(input_path)
 
 
 def show_analyze_list(open_id, start_time=None, end_time=None):
-    # if not open_id:
-    #     raise ValueError("必须提供本用户的OpenId/UserId")
-
-    try:
-        output_content = skill.get_output_analysis_list()
-        return output_content
-
-    except requests.exceptions.RequestException as e:
-        traceback.print_stack()
-        raise Exception(f"API请求失败: {str(e)}")
-
-
-def get_analysis_export_url(request_id=None):
-    """调用API分析视频"""
-    if not request_id:
-        return ""
-    return ApiEnum.DETAIL_EXPORT_URL + request_id
-
-
-def format_result(result, output_level="standard", pet_type="other"):
-    """格式化输出结果"""
-    pet_type_map = {
-        "cat": "猫",
-        "dog": "狗",
-        "bird": "鸟",
-        "other": "其他"
-    }
-    pet_type_cn = pet_type_map.get(pet_type, pet_type)
-
-    if output_level == "json":
-        result_id = None
-        if result is not None:
-            result_json = result
-            result_id = result_json.get('id', {})
-            result_json = json.dumps(result_json.get('petHealthResponse', {}), ensure_ascii=False, indent=2)
-        else:
-            return "⚠️ 暂无分析结果"
-        return f"""
-📊 宠安卫士健康分析结构化结果
-{result_json}
-""", result_id
-    elif output_level == "basic":
-        # 精简输出
-        data = result.get('data', {})
-        diagnosis = data.get('diagnosis', {})
-        return f"""
-📊 宠安卫士健康报告
-{'=' * 40}
-宠物类型: {pet_type_cn}
-整体健康状况: {diagnosis.get('overall_health', '未知')}
-主要问题: {', '.join([f'{k}: {v}' for k, v in diagnosis.get('key_issues', {}).items() if v != '正常'])}
-健康提示: {data.get('health_warnings', ['无特殊警示'])[0] if data.get('health_warnings') else '无特殊警示'}
-        """
-    elif output_level == "standard":
-        # 标准输出
-        data = result.get('data', {})
-        diagnosis = data.get('diagnosis', {})
-        pet_detection = data.get('pet_detection', {})
-
-        hair_analysis = "\n".join([f"  {k}: {v}" for k, v in diagnosis.get('hair_condition', {}).items()])
-        body_analysis = "\n".join([f"  {k}: {v}" for k, v in diagnosis.get('body_condition', {}).items()])
-        face_analysis = "\n".join([f"  {k}: {v}" for k, v in diagnosis.get('face_condition', {}).items()])
-        warnings = "\n".join([f"  ⚠️  {item}" for item in data.get('health_warnings', [])])
-        suggestions = "\n".join([f"  💡 {item}" for item in data.get('care_suggestions', [])])
-
-        return f"""
-📊 宠安卫士健康报告
-{'=' * 50}
-⏰ 分析时间: {data.get('analysis_time', '未知')}
-🐾 宠物类型: {pet_type_cn}
-🎯 宠物检测: {pet_detection.get('status', '未知')} (置信度: {pet_detection.get('quality_score', 0)}分)
-
-🔍 诊断结果:
-  整体健康评分: {diagnosis.get('health_score', '未知')}
-  整体状况: {diagnosis.get('overall_health', '未知')}
-
-  毛发状况:
-{hair_analysis}
-
-  身体特征:
-{body_analysis}
-
-  面部特征:
-{face_analysis}
-
-⚠️ 潜在疾病预警:
-{warnings}
-
-💡 健康养护建议:
-{suggestions}
-{'=' * 50}
-> 注：本报告仅供健康参考，不能替代专业兽医诊断。
-        """
-    else:
-        # 完整输出（JSON格式）
-        return json.dumps(result, ensure_ascii=False, indent=2)
+    output_content = skill.get_output_analysis_list()
+    return output_content
 
 
 def main():

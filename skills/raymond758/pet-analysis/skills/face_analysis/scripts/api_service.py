@@ -4,9 +4,7 @@ import os
 import sys
 
 from .config import ApiEnum, ConstantEnum
-
 from skills.smyx_common.scripts.api_service import ApiService as ApiServiceBase
-from skills.smyx_common.scripts.util import RequestUtil
 
 
 class ApiService(ApiServiceBase):
@@ -15,7 +13,9 @@ class ApiService(ApiServiceBase):
         super().__init__()
         self.analysis_url = ApiEnum.ANALYSIS_URL
 
-    def analysis_result(self, *args, **argss):
+    def analysis_result(self, scene_code=ConstantEnum.DEFAULT__SCENE_CODE, *args, **argss):
+        params = argss.setdefault("params", {})
+        scene_code and params.setdefault("sceneCode", scene_code)
         return self.http_post(ApiEnum.ANALYSIS_RESULT_URL, *args, **argss)
 
     def analysis(self, scene_code=ConstantEnum.DEFAULT__SCENE_CODE, *args, **argss):
@@ -23,14 +23,13 @@ class ApiService(ApiServiceBase):
         options = {
             "dataAsParams": True
         }
-        # params.setdefault("scene", scene_code)
-        # 添加宠物类型参数
-        if ConstantEnum.DEFAULT__PET_TYPE:
-            params.setdefault("petType", ConstantEnum.DEFAULT__PET_TYPE)
+        scene_code and params.setdefault("sceneCode", scene_code)
+        params.setdefault("appCategory", ConstantEnum.DEFAULT__APP_CATEGORY)
         return self.http_post(self.analysis_url, options=options, *args, **argss)
 
     def page(self, pageNum=None, pageSize=None, *args, **argss):
         data = argss.setdefault("data", {})
+        ConstantEnum.DEFAULT__SCENE_CODE and data.setdefault("sceneCode", ConstantEnum.DEFAULT__SCENE_CODE)
         data.setdefault("orderBy", {
             "fieldName": "createTime",
             "isAsc": False
