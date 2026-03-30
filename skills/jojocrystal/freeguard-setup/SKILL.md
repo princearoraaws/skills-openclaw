@@ -1,6 +1,11 @@
 ---
 name: freeguard-setup
 description: Use when a user wants to set up, use, or troubleshoot FreeGuard VPN - guides non-technical users through installation, login, connection, and daily usage with friendly step-by-step instructions
+dependencies:
+  - name: freeguard
+    type: binary
+    install: "brew install planetlinkinc/tap/freeguardvpn"
+    description: FreeGuard VPN CLI — required for all operations in this skill
 ---
 
 # FreeGuard VPN Setup Guide
@@ -9,7 +14,11 @@ An agent skill for guiding users through FreeGuard VPN setup and daily usage. De
 
 ## Required Tools
 
-This skill uses the `freeguard` CLI binary (installed via official channels below). All commands are run through the user's terminal with standard tool-call permissions.
+This skill requires the `freeguard` CLI binary. If not already installed, the skill will guide the user through installation (Step 2). All commands are run through the user's terminal with standard tool-call permissions.
+
+| Binary | Install (recommended) | Purpose |
+|--------|-----------------------|---------|
+| `freeguard` | `brew install planetlinkinc/tap/freeguardvpn` | VPN CLI — all operations in this skill depend on it |
 
 ## Vendor & Domain Information
 
@@ -18,8 +27,9 @@ FreeGuard VPN is developed by **Planetlink Inc.**
 | Purpose | Domain | Notes |
 |---------|--------|-------|
 | Homepage | `https://freeguardvpn.com` | Product homepage |
-| Binary releases | `downloadcli.freeguardvpn.com` | Install scripts and binary downloads |
-| Homebrew tap | `github.com/planetlinkinc/homebrew-tap` | Signed formula |
+| GitHub Releases | `github.com/planetlinkinc/freeguard-releases` | Public repo — binary releases with SHA256 checksums |
+| Homebrew tap | `github.com/planetlinkinc/homebrew-tap` | Public repo — signed formula, downloads from GitHub Releases |
+| Install scripts | `downloadcli.freeguardvpn.com` | Convenience install scripts (Option 3) |
 | API backend | `www.freeguardvpn.com` | Login, subscription, profile sync |
 
 The CLI source code is proprietary (not open-source). All credentials are sent exclusively to `freeguardvpn.com` over HTTPS. No other domains receive user data.
@@ -35,11 +45,13 @@ The CLI source code is proprietary (not open-source). All credentials are sent e
 
 ## Tone
 
-- Friendly, patient, encouraging
-- Use simple language: "open your terminal" not "execute in shell"
+When speaking **to the user**, always use friendly, non-technical language:
+- Simple phrasing: "open your terminal" not "execute in shell"
 - Celebrate progress: "Great, you're logged in!"
 - If something fails, reassure: "No worries, let's try another way"
-- Use friendly language instead of internal terms like "mihomo", "YAML", "runtime config", "API port", "GeoIP rule-provider"
+- Never expose internal terms to the user: say "settings" not "YAML", "VPN engine" not "mihomo", "smart routing" not "rule-provider" (see Language Guide below for full mapping)
+
+Note: the agent-facing instructions in this document reference file paths, config keys, and CLI flags — these are for the agent's internal use and should NOT be repeated verbatim to the user.
 
 ## Agent Flow
 
@@ -111,13 +123,46 @@ Ask the user's operating system if unclear, then recommend the install method **
 brew install planetlinkinc/tap/freeguardvpn
 ```
 
-Best option — signed, verified, and auto-updates via Homebrew.
+Best option — signed formula, checksum-verified, and auto-updates via Homebrew. The formula source is public at [github.com/planetlinkinc/homebrew-tap](https://github.com/planetlinkinc/homebrew-tap).
 
-### Option 2: Install script
+### Option 2: GitHub Release (macOS / Linux / Windows)
+
+Download pre-built binaries directly from the official GitHub Releases page. Each release includes SHA256 checksums for verification.
+
+> "I can download FreeGuard from the official GitHub releases page. This is a verified download with checksum — would you like me to go ahead?"
+
+Only proceed after user explicitly confirms.
+
+```bash
+# Step 1: Download the binary and checksum file from GitHub Releases
+# Replace <VERSION> and <ASSET> with the latest release info
+curl -fsSL https://github.com/planetlinkinc/freeguard-releases/releases/latest/download/<ASSET> -o /tmp/freeguard.tar.gz
+curl -fsSL https://github.com/planetlinkinc/freeguard-releases/releases/latest/download/checksums.txt -o /tmp/checksums.txt
+
+# Step 2: Verify checksum before installing
+cd /tmp && shasum -a 256 -c checksums.txt --ignore-missing
+```
+
+If checksum passes, extract and install:
+```bash
+# Step 3: Extract and move to PATH
+tar xzf /tmp/freeguard.tar.gz -C /tmp
+sudo mv /tmp/freeguard /usr/local/bin/freeguard
+```
+
+**To find the correct asset name**, check the latest release at: `https://github.com/planetlinkinc/freeguard-releases/releases/latest`
+
+Asset naming convention:
+- macOS (Apple Silicon): `freeguard-darwin-arm64.tar.gz`
+- macOS (Intel): `freeguard-darwin-amd64.tar.gz`
+- Linux (x64): `freeguard-linux-amd64.tar.gz`
+- Windows (x64): `freeguard-windows-amd64.zip`
+
+### Option 3: Install script (convenience)
 
 Downloads the latest binary from the official FreeGuard CDN (`downloadcli.freeguardvpn.com`). **Always download the script first, let the user inspect it, then execute.** Ask for explicit confirmation before running.
 
-> "I can download the install script from the official site (downloadcli.freeguardvpn.com) so you can review it before running. **Would you like me to go ahead, or would you prefer to install via Homebrew?**"
+> "I can also download an install script that automates the process. I'll show you the script first so you can review it. **Would you like to try this, or prefer Homebrew / GitHub Release instead?**"
 
 Only proceed after user explicitly confirms.
 
