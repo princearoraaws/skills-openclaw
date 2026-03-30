@@ -17,30 +17,16 @@
  *   ultrawide  1024×432  (21:9)   — Ultrawide monitor
  *   ipad       768×1024  (3:4)    — iPad / tablet
  *
- * Token resolved from: NETA_TOKEN env → ~/.openclaw/workspace/.env → clawhouse .env
  */
-
-import { readFileSync } from 'node:fs';
-import { homedir }      from 'node:os';
-import { resolve }      from 'node:path';
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-const BASE = 'https://api.talesofai.cn';
+const BASE = 'https://api.talesofai.com';
 
 function getToken() {
-  if (process.env.NETA_TOKEN) return process.env.NETA_TOKEN;
-  const envFiles = [
-    resolve(homedir(), '.openclaw/workspace/.env'),
-    resolve(homedir(), 'developer/clawhouse/.env'),
-  ];
-  for (const p of envFiles) {
-    try {
-      const m = readFileSync(p, 'utf8').match(/NETA_TOKEN=(.+)/);
-      if (m) return m[1].trim();
-    } catch { /* try next */ }
-  }
-  throw new Error('API token not found. Add it to ~/.openclaw/workspace/.env');
+  const idx = process.argv.indexOf('--token');
+  if (idx !== -1 && process.argv[idx + 1]) return process.argv[idx + 1];
+  throw new Error('Token required. Pass via: --token YOUR_TOKEN');
 }
 
 const HEADERS = {
