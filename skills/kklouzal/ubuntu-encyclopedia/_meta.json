@@ -3,11 +3,16 @@
   "slug": "ubuntu-encyclopedia",
   "displayName": "Ubuntu Encyclopedia",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1774191791917,
-    "commit": "https://github.com/openclaw/skills/commit/8c348115b1f41b1a4c324bca7c9a80c8001e44ab"
+    "version": "1.0.5",
+    "publishedAt": 1774653729323,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1774191791917,
+      "commit": "https://github.com/openclaw/skills/commit/8c348115b1f41b1a4c324bca7c9a80c8001e44ab"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1774123599385,

@@ -1,6 +1,16 @@
 ---
 name: ubuntu-encyclopedia
-description: Ubuntu documentation-first workflow for Ubuntu-specific questions, maintenance, updates, upgrades, package management, system administration, service troubleshooting, networking, storage, logs, release behavior, and diagnostics. Use whenever Ubuntu, apt, apt-get, dpkg, snap, systemd, systemctl, journalctl, Netplan, NetworkManager, release upgrade, package repair, repository/key issues, service failures, boot issues, mounts, fstab, permissions, users/groups, or Ubuntu-specific troubleshooting/maintenance is mentioned, implied, or required. Do not use for generic shell work that is not materially Ubuntu-specific. Also use before answering Ubuntu-specific questions and before performing non-trivial Ubuntu maintenance or troubleshooting work.
+description: >-
+  Ubuntu documentation-first workflow for Ubuntu-specific questions,
+  maintenance, updates, upgrades, package management, system administration,
+  service troubleshooting, networking, storage, logs, release behavior, and
+  diagnostics. Use when the request materially depends on Ubuntu or
+  Ubuntu-specific tooling/behavior such as Ubuntu release behavior,
+  `apt`/`apt-get`/`dpkg`/`snap`, `systemd`/`systemctl`/`journalctl`, Netplan,
+  NetworkManager, package repair, repository/key issues, service failures,
+  boot issues, mounts/`fstab`, permissions, users/groups, or non-trivial
+  Ubuntu maintenance/troubleshooting. Do not use for generic shell, git,
+  Python, Docker, or Linux questions unless Ubuntu-specific semantics matter.
 metadata: {"openclaw":{"emoji":"🟠","homepage":"https://manpages.ubuntu.com/manpages/","os":["linux"]}}
 ---
 
@@ -10,12 +20,14 @@ metadata: {"openclaw":{"emoji":"🟠","homepage":"https://manpages.ubuntu.com/ma
 
 Use a docs-first workflow for Ubuntu-specific work. Prefer Ubuntu manpages at `https://manpages.ubuntu.com/manpages/` for command and utility behavior, use official Ubuntu documentation when the task is broader than a manpage, consult cached local copies under `.Ubuntu-Encyclopedia/` before re-fetching, and record useful authoritative excerpts plus environment-specific operational learnings so future work gets faster and safer.
 
+This skill is for the **Ubuntu distro/admin layer**. It should trigger for Ubuntu-specific package, service, networking, storage, and release-behavior questions — not for generic Linux/shell/dev tooling questions that merely happen to be asked from an Ubuntu machine.
+
 ## Workflow
 
 1. **Classify the task**
    - Decide whether the task is an Ubuntu-specific question, maintenance task, troubleshooting task, command-planning task, upgrade/update task, or live admin task.
    - Use this skill when the task materially depends on Ubuntu-specific behavior, Ubuntu administration knowledge, Ubuntu package/service behavior, or command semantics that should be verified from manpages or official Ubuntu docs.
-   - Do not use this skill for generic shell work that just happens to run on Ubuntu when Ubuntu-specific semantics do not matter.
+   - Do not use this skill for generic shell work, generic Docker/git/Python work, or generic Linux questions that merely happen to be on Ubuntu when Ubuntu-specific semantics do not matter.
 
 2. **Check local cache first**
    - Use `.Ubuntu-Encyclopedia/` as the local knowledge/cache root.
@@ -97,6 +109,12 @@ Use `scripts/init_workspace.py` to create or repair the expected directory struc
 - Environment-wide deployment/access info → `.Ubuntu-Encyclopedia/inventory/*.md`
 - Cached manpages → `.Ubuntu-Encyclopedia/manpages/manpages.ubuntu.com/...`
 - Cached official docs → `.Ubuntu-Encyclopedia/docs/...`
+
+## Secrets / Sensitive Data
+
+- Do not store plaintext credentials, API keys, session tokens, private URLs, recovery codes, or other secrets in the encyclopedia notes/inventory tree.
+- If a note needs to mention access details, keep it high-level and redact or omit secret material.
+- Treat these workspace notes as operational memory, not as a secrets vault.
 
 ## Resources
 
