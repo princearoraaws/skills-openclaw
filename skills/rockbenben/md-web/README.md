@@ -1,6 +1,6 @@
 # MD Web
 
-Upload Markdown files to an S3-compatible storage bucket and render them as web pages via Docsify. Designed for AI agents to share long text, code projects, etc., without flooding the conversation.
+Turn any content into a web page with a shareable URL. Uploads Markdown to an S3-compatible storage bucket, rendered by Docsify.
 
 [中文文档](README.zh.md)
 
@@ -8,7 +8,7 @@ Upload Markdown files to an S3-compatible storage bucket and render them as web 
 
 1. Install the skill: `clawhub install md-web`
 2. On first use, the AI will guide you through bucket configuration
-3. After that, tell the AI "show this as a web page" whenever you want to share content as a link
+3. After that, tell the AI "share as a link" whenever you want to publish content as a web page
 
 ## Bucket Setup
 
@@ -52,16 +52,17 @@ On first use, the AI will ask for these fields:
 
 > **Tip**: R2.dev URLs have rate limits. For production use, bind a custom domain to your bucket and use that as `public_url`.
 
-The AI will automatically save these to `config.json`. No repeat setup needed.
+The AI will automatically save these to `~/.md-web/config.json`. No repeat setup needed.
 
 ## Usage
 
 Uploaded content is **publicly accessible** via the generated URL. The skill only runs when you explicitly ask for it:
 
 ```text
-show README.md as a web page
+show as a web page
+publish this online
 /md-web path/to/file.md
-generate a shareable file for this content
+share as a link
 ```
 
 The AI returns a link — click to view the rendered document in your browser.
@@ -71,10 +72,9 @@ The AI returns a link — click to view the rendered document in your browser.
 ## File Structure
 
 ```yaml
-md-web/
+md-web/                     # Skill directory (managed by ClawHub, may be replaced on upgrade)
 ├── SKILL.md              # AI instruction file
 ├── upload.js             # Upload script (pure Node.js, zero dependencies)
-├── config.json           # Bucket config (created by AI on first use, gitignored)
 ├── README.md             # This document
 ├── README.zh.md          # Chinese documentation
 └── docsify-server/       # Docsify server files (auto-deployed on first upload)
@@ -85,6 +85,10 @@ md-web/
         ├── docsify.min.js
         ├── vue.css
         └── ...
+
+~/.md-web/                  # User data directory (preserved across upgrades)
+├── config.json           # Bucket credentials & settings (created on first use)
+└── .deployed             # Deploy fingerprint (tracks server deployment state)
 ```
 
 ## Other S3-Compatible Services
