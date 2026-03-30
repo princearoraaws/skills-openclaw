@@ -1,13 +1,18 @@
 {
   "owner": "sealawyer2026",
   "slug": "zhang-data-privacy",
-  "displayName": "九章data-privacy专家V1.1.0",
+  "displayName": "九章数据隐私专家 V1.4.0",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1774251239778,
-    "commit": "https://github.com/openclaw/skills/commit/baeb3bbc1fa44fbbfe0f3e4f3fe3e2b6d1401cd0"
+    "version": "1.4.0",
+    "publishedAt": 1774502183810,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1774251239778,
+      "commit": "https://github.com/openclaw/skills/commit/baeb3bbc1fa44fbbfe0f3e4f3fe3e2b6d1401cd0"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1773913028567,
