@@ -1,5 +1,5 @@
 {
-  "_comment": "Lucid configuration — all features can be enabled/disabled per preference. Defaults are tuned for most users.",
+  "_comment": "Lucid configuration — all features can be enabled/disabled per preference. Defaults are conservative (off).",
   "trends": {
     "enabled": true,
     "recurringIssues": {
@@ -19,26 +19,31 @@
   "autoApply": {
     "enabled": false,
     "categories": {
-      "versionNumbers": false,
-      "staleCronIds": false,
-      "servicePortDeletions": false,
-      "newProjectEntries": false,
-      "infrastructureFacts": false,
-      "lessonsLearned": false,
-      "modelStrategy": false,
-      "closedOpenLoops": false,
-      "staleProjectStatus": false
+      "versionNumbers": true,
+      "staleCronIds": true,
+      "servicePortDeletions": true,
+      "newProjectEntries": true,
+      "infrastructureFacts": true,
+      "lessonsLearned": true,
+      "modelStrategy": true,
+      "closedOpenLoops": true,
+      "staleProjectStatus": true
     },
-    "_note": "Auto-apply is opt-in. Set enabled: true to activate."
+    "_note": "Auto-apply is opt-in. Set enabled: true to activate. Categories control what gets auto-applied when enabled."
   },
   "review": {
     "maxLinesPerSection": 50,
     "confidenceThreshold": "high",
     "requireMultipleDays": true
   },
+  "_comment_topic": "Set this to your notification target, e.g. telegram:-1234567890:topic:5. Leave null to use main chat.",
   "notifications": {
     "announceOnDelivery": false,
-    "channel": "",
-    "topic": ""
+    "channel": null,
+    "topic": null
+  },
+  "aggressiveCleanup": {
+    "enabled": false,
+    "_comment": "When enabled, Lucid auto-removes resolved Open Loops, closed Blockers, and confirmed-stale entries from MEMORY.md instead of just flagging them. Removals are git-committed for easy rollback. Default: off."
   }
 }

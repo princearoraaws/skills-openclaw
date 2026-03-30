@@ -2,26 +2,27 @@
 
 > *Your AI sleeps. Lucid dreams.*
 
-**Lucid keeps your AI's memory clean.** Every night, it reads what happened, checks what your AI already knows, and tells you what's outdated, missing, or forgotten.
+Lucid keeps your AI's memory clean. Every night, it reads what happened, checks what your AI already knows, and tells you what's outdated, missing, or forgotten.
 
 No database. No embeddings. No dependencies. Just a prompt, a cron job, and markdown files.
 
 ## The Problem
 
-AI agents forget. Between sessions, context is lost. Long-term memory files (`MEMORY.md`) get stale. Todos slip through the cracks. Nobody notices until it's too late.
+AI agents forget. Between sessions, context is lost. `MEMORY.md` gets stale. Todos slip through the cracks. Nobody notices until it's too late.
 
-**Lucid fixes this automatically.** While you sleep, it:
+Lucid fixes this automatically. While you sleep, it:
 
 - 🔍 Finds facts worth remembering that aren't saved yet
 - ⏳ Spots todos and decisions that were never resolved
-- 🚧 Flags problems that keep coming back day after day
+- 🚧 Flags problems that keep coming back
 - 🔄 Tracks when your opinions or plans changed
 - 🗑️ Catches outdated entries in your memory files
-- 📎 Suggests merging duplicate entries
+- 📈 Detects recurring issues, stale projects, and repeated mistakes over 14 days
+- 🧹 Optionally removes resolved items automatically (v0.6.0+)
 
-You wake up to a short report. You approve what's useful, reject what's not. Done.
+You wake up to a short report. Approve what's useful, reject what's not. Done.
 
-## How it works
+## How It Works
 
 ```
 Daily Notes (7 days)     MEMORY.md + USER.md
@@ -49,13 +50,9 @@ Daily Notes (7 days)     MEMORY.md + USER.md
 
 ### With OpenClaw
 
-1. Create the output directory:
 ```bash
 mkdir -p memory/review
-```
 
-2. Add the nightly cron:
-```bash
 openclaw cron add \
   --name "lucid" \
   --cron "0 3 * * *" \
@@ -67,153 +64,122 @@ openclaw cron add \
   --message "$(cat prompts/nightly-review.md)"
 ```
 
-3. Check results in the morning:
+Check results in the morning:
 ```bash
 cat memory/review/YYYY-MM-DD.md
 ```
 
-4. Tell your agent what to accept or reject. It handles the rest.
+Tell your agent what to accept or reject. It handles the rest.
+
+### Optional: Pre-flight Flush (Recommended)
+
+Add a cron at 02:45 Vienna time using `prompts/pre-flight-flush.md` as the message. This ensures your daily memory file is up-to-date before Lucid runs at 03:00, even if you forgot to manually flush your session.
+
+Cron schedule: `45 2 * * *` tz: Europe/Vienna
 
 ### Without OpenClaw
 
-Lucid is just a prompt. Copy `prompts/nightly-review.md`, give it to any LLM that can read and write files, and run it on a schedule. That's it.
+Lucid is just a prompt. Copy `prompts/nightly-review.md`, give it to any LLM that can read and write files, and run it on a schedule.
 
-## What you need
+## What You Need
 
 ```
 your-workspace/
 ├── MEMORY.md              # Your AI's long-term memory
 ├── USER.md                # User profile (optional but helpful)
-├── memory/
-│   ├── 2026-03-15.md      # Daily notes (Lucid reads last 7 days)
-│   ├── 2026-03-16.md
-│   └── review/            # Lucid writes here
-│       ├── 2026-03-17.md  # The review (human-readable)
-│       ├── state.json     # Suggestion tracker (machine-readable)
-│       └── .last-success  # Health check timestamp
+└── memory/
+    ├── 2026-03-15.md      # Daily notes (Lucid reads last 7 days)
+    ├── 2026-03-16.md
+    └── review/            # Lucid writes here
+        ├── 2026-03-17.md  # The review
+        ├── state.json     # Suggestion tracker
+        └── .last-success  # Health check timestamp
 ```
 
-### What Lucid does NOT need
+No vector database, no embeddings, no SQLite, no external APIs, no runtime dependencies.
 
-- ❌ No vector database
-- ❌ No embeddings — your existing memory search (if any) stays separate
-- ❌ No SQLite or any database
-- ❌ No external APIs beyond the LLM call
-- ❌ No Python, no Node packages, no runtime dependencies
+## Features
 
-## Suggestion Tracking
+### Suggestion Tracking
 
-Every suggestion gets tracked in `state.json` so you don't see the same thing twice:
+Every suggestion gets tracked in `state.json`:
 
-- **pending** → New, waiting for your review
-- **accepted** → Done, applied to memory
-- **rejected** → Gone, won't come back
+- **pending** → Waiting for your review
+- **accepted** → Applied to memory
+- **rejected** → Won't come back
 - **deferred** → Come back in 14 days
 
-## Configuration (lucid.config.json)
+### Auto-Apply (opt-in)
 
-All features are configurable via `config/lucid.config.json`. This file is created automatically when you install the skill. Defaults are conservative — opt into more powerful features as you get comfortable.
+Automatically apply high-confidence changes without review. Enable in `config/lucid.config.json`:
 
 ```json
-{
-  "trends": {
-    "enabled": true,
-    "recurringIssues": { "enabled": true, "lookbackDays": 14, "minOccurrences": 3 },
-    "staleProjects": { "enabled": true, "staleAfterDays": 30 },
-    "escalatedPatterns": { "enabled": true, "minOccurrences": 3 }
-  },
-  "autoApply": {
-    "enabled": false,
-    "categories": {
-      "versionNumbers": false,
-      "staleCronIds": false,
-      "newProjectEntries": false,
-      "infrastructureFacts": false,
-      "lessonsLearned": false,
-      "modelStrategy": false,
-      "closedOpenLoops": false,
-      "staleProjectStatus": false
-    }
-  },
-  "review": {
-    "maxLinesPerSection": 50,
-    "confidenceThreshold": "high",
-    "requireMultipleDays": true
-  }
-}
+"autoApply": { "enabled": true }
 ```
 
-**Trend Detection** (`trends.*`) — enabled by default. Scans 14 days of daily notes for recurring problems, stale projects, and repeated mistakes. Disable any detector individually or set `trends.enabled: false` to turn off completely.
+Configure categories in `config/auto-apply.md`:
+- Version numbers, new project entries, infrastructure facts, lessons learned, closed open loops, stale project status
 
-**Auto-Apply** (`autoApply.*`) — **disabled by default**. When enabled, Lucid commits high-confidence changes to `MEMORY.md` automatically without waiting for your review. Enable individual categories as you trust the results. All auto-applied changes are git-committed and revertable.
+Never auto-applied (hardcoded): belief updates, key decisions, family/personal facts, anything medium/low confidence.
 
-**Review settings** (`review.*`) — controls how conservative Lucid is. `requireMultipleDays: true` means a fact must appear on 2+ separate days before being suggested.
+All auto-applied changes are git-committed with a `dreamer: auto-apply —` prefix. Undo with `git revert`.
 
----
+### Aggressive Cleanup (v0.6.0, opt-in)
 
-## Auto-Apply Categories
+Go beyond flagging — actually **remove** resolved entries from memory. Enable in `config/lucid.config.json`:
 
-Lucid can automatically apply high-confidence changes without requiring your review. This is opt-in and configurable.
-
-**Edit `config/auto-apply.md`** to control which categories are auto-applied:
-
-```
-config/auto-apply.md
-├── ✅ Enabled categories (edit freely)
-│   ├── Version numbers
-│   ├── New project entries (2+ days mentioned)
-│   ├── Infrastructure facts (cron IDs, ports, paths)
-│   ├── Lessons Learned (factual only)
-│   ├── Closed Open Loops
-│   └── Stale project status
-└── ❌ Never auto-applied (hardcoded)
-    ├── Belief updates / opinions
-    ├── Key decisions
-    ├── Family/personal facts
-    └── Anything with medium or low confidence
+```json
+"aggressiveCleanup": { "enabled": true }
 ```
 
-**Conservative setup?** Remove all enabled categories — Lucid still generates suggestions but never applies them.
+Removes resolved Open Loops, closed Blockers, and confirmed-stale entries — but only with **high confidence** and explicit closure evidence from the last 7 days.
 
-**Aggressive setup?** Keep all categories — just watch for false positives early on.
+Each removal is a **separate git commit** listed in the review under `## 🗑️ Removed (Auto-Cleanup)` with the commit hash. Undo: `git revert <hash>`.
 
-All auto-applied changes are git-committed with a `dreamer: auto-apply —` prefix so you can always `git revert` them.
+### Trend Detection (v0.5.0)
 
-## Safety Rules
+Analyzes patterns across the last 14 days:
 
-Lucid is conservative by design:
+- **🔁 Recurring Issues** — same problem on 3+ days
+- **🕸️ Stale Projects** — in MEMORY.md but not mentioned for 30+ days
+- **⚠️ Escalated Patterns** — same mistake in 3+ daily notes
+
+Standalone usage:
+```bash
+python3 scripts/trend_detection.py \
+  --workspace /path/to/workspace \
+  --days 14 \
+  --stale-days 30 \
+  --state memory/review/state.json
+```
+
+## Safety
 
 - Only suggests new facts if mentioned on **2+ separate days**
-- Only flags stale entries if the newer info **clearly** replaces the old
-- Designed to avoid suggesting passwords, API keys, tokens, or temporary debug info in memory updates
-- ⚠️ The skill reads all workspace markdown files. Do not run on a workspace containing unencrypted API keys or secrets in plain markdown files.
-- Every suggestion includes a source link to the original daily note
-- Auto-apply only triggers on **high confidence** — medium/low always require human review
+- Only flags stale entries with **clear** evidence
+- Never suggests passwords, API keys, tokens, or temp debug info
+- Auto-apply/cleanup only on **high confidence**
+- Every change is git-committed and revertable
+- ⚠️ Don't run on workspaces with unencrypted secrets in markdown files
 
 ## Inspiration
 
-Built on ideas from:
-- **[Honcho.dev](https://honcho.dev)** — Background "dreaming" over stored conversations
-- **[Gigabrain](https://github.com/legendaryvibecoder/gigabrain)** — World model with entities, beliefs, and a suggestion ledger
-- **[Nuggets](https://github.com/NeoVertex1/nuggets)** — Promotion of frequently recalled facts to permanent memory
-
-Lucid takes the best concepts from each and implements them with zero infrastructure — just a prompt, a cron, and markdown.
+- [Honcho.dev](https://honcho.dev) — Background "dreaming" over conversations
+- [Gigabrain](https://github.com/legendaryvibecoder/gigabrain) — World model with beliefs and suggestion ledger
+- [Nuggets](https://github.com/NeoVertex1/nuggets) — Fact promotion to permanent memory
 
 ## Roadmap
 
-- [x] V1 — Nightly review, state ledger, human approval
-- [x] V1 — Automatic delivery via announce (Telegram/Discord/etc.)
-- [x] V1.5 — Auto-apply for high-confidence, low-risk suggestions (git-backed, revertable)
-- [x] V1.5 — Configurable auto-apply categories via `config/auto-apply.md`
-- [x] V1.5 — Stricter confidence gate: medium/low never auto-applied
-- [x] V0.4.0 — Trend Detection: recurring issues, stale projects, escalated patterns
-- [x] V0.4.0 — Configurable via `config/lucid.config.json` (all features toggleable)
-- [ ] V2 — Embedding-based dedup for similar suggestions
-- [ ] V2 — Auto-promotion (facts referenced N times → suggest for memory)
-- [ ] V2 — Weekly consolidation
-- [ ] V3 — Publish as OpenClaw skill on ClawHub
-
-For technical details, see [ARCHITECTURE.md](ARCHITECTURE.md).
+- [x] Nightly review, state ledger, human approval
+- [x] Automatic delivery via announce
+- [x] Auto-apply with configurable categories (git-backed)
+- [x] Trend Detection (recurring issues, stale projects, escalated patterns)
+- [x] Aggressive Cleanup (opt-in, git-backed rollback)
+- [ ] Sectioned memory (`memory/sections/*.md` with selective loading)
+- [ ] Session debrief (lightweight end-of-day capture)
+- [ ] Contradiction detection (memory vs daily notes)
+- [ ] Embedding-based dedup
+- [ ] Weekly consolidation
 
 ## License
 

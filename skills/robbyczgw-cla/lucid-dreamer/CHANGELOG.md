@@ -4,30 +4,81 @@ All notable changes to Lucid will be documented in this file.
 
 Format based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [Unreleased] — "Sharper Dreams"
+
+### Planned
+- **Memory Section Split**: MEMORY.md → `memory/sections/*.md` via `scripts/migrate_memory.py`. Selective loading, reduced context bloat.
+
+## [0.6.5] - 2026-03-30
+
+### Added
+- **Pre-flight flush prompt** (`prompts/pre-flight-flush.md`): Optional cron at 02:45 Vienna time that appends today's session context to the daily memory file before Lucid runs at 03:00. Ensures Lucid always reads fresh data even when the main session wasn't manually flushed. Use `append` mode — never overwrites existing content.
+
+- **Memory Index**: Auto-generated `memory/index.md` manifest with section descriptions and last-updated timestamps.
+- **Memory Index**: Auto-generated `memory/index.md` manifest with section descriptions and last-updated timestamps.
+- **Session Debrief** (`prompts/session-debrief.md`): Lightweight end-of-day quick-capture prompt (target: <2 min, <5k tokens).
+- **Contradiction Detection**: Step 6b in nightly review — compares memory vs daily notes, classifies as factual vs judgment.
+- **Memory Loading Guidance** (`prompts/memory-loading-guidance.md`): Instructions for selective section loading.
+
+### Attribution (for planned features)
+Architecture inspired by [ByteRover](https://github.com/openclaw/openclaw/pull/50848)'s Context Engine approach — hierarchical memory tree, after-turn learning, contradiction detection. Lucid adapts these as a zero-dependency skill.
+
+## [0.6.5] - 2026-03-30
+
+### Fixed
+- Version bump (previous version already published)
+
+## [0.6.4] - 2026-03-29
+
+### Changed
+- **README rewrite:** Cleaner structure, removed bloat, sectioned memory moved to Roadmap, no more false claims about unreleased features. Honest about what's shipped vs planned.
+
+## [0.6.3] - 2026-03-29
+
+### Fixed
+- **README honesty:** Sectioned Memory architecture section now clearly marked as "Planned / upcoming" instead of implying it's released. Features exist as experimental scripts but are not part of the default workflow.
+
+## [0.6.2] - 2026-03-29
+
+### Fixed
+- Removed fake Telegram token from example review file
+
+## [0.6.1] - 2026-03-29
+
+### Fixed
+- **Config defaults now match documentation:** `autoApply.enabled`, `aggressiveCleanup.enabled`, and `announceOnDelivery` all default to `false` in shipped config. Previously shipped as `true`, contradicting README/SKILL.md claims of "opt-in, default off."
+- Removed hardcoded notification channel from default config
+
+## [0.6.0] - 2026-03-29
+
+### Added
+- **Aggressive Cleanup** (opt-in): When enabled via `aggressiveCleanup.enabled` in config, Lucid auto-removes resolved Open Loops, closed Blockers, and confirmed-stale entries from MEMORY.md. Each removal is a separate git commit for easy rollback. Removed items are listed in the review file under `## 🗑️ Removed (Auto-Cleanup)` with git hashes. Default: off.
+
+### Changed
+- `prompts/nightly-review.md`: New Step 7a for aggressive cleanup workflow
+- `config/auto-apply.md`: Added aggressive cleanup section with criteria and rollback docs
+
+## [0.5.0] — 2026-03-27
+
+### Fixed
+- Portability fixes: removed hardcoded workspace paths, fixed config loading in `trend_detection.py` to look relative to script dir first, fixed loop bug where `args.days` (could be None) was used instead of resolved `days` variable, cleared hardcoded telegram topic from default config
 
 ## [0.4.0] — 2026-03-25
 
 ### Added
 - **Trend Detection** module (`scripts/trend_detection.py`) — analyzes patterns across 14 days of daily notes:
-  - **Recurring Issues** — flags topics/problems appearing on 3+ separate days
+  - **Recurring Issues** — flags topics/problems appearing on 3+ separate days (e.g., "backup failed", "tailscale down")
   - **Stale Project Detection** — finds projects in MEMORY.md not mentioned in any daily note for 30+ days
   - **Escalated Patterns** — detects the same lesson/mistake appearing in 3+ daily notes (repeated mistakes not yet fixed)
-- **Configurable features** via `config/lucid.config.json` — enable/disable trends, auto-apply categories, review thresholds, and notifications
 - New `## Trends` section in nightly review output (`memory/review/YYYY-MM-DD.md`)
 - Trend history tracking in `state.json` under `trends` key (accumulates across runs, keeps last 30 entries)
 - Nightly review prompt updated with Step 7b to invoke trend detection script
 - Example review and state files updated with trend output samples
 
-### Fixed
-- fix: autoApply now correctly defaults to false in shipped config (matches README)
-- **Security: hardcoded commit messages** — git commit commands in nightly-review.md now use date-only messages (`dreamer: auto-apply $(date +%Y-%m-%d)`) instead of interpolating user-controlled content, preventing potential injection
-
 ### Technical Details
 - Standalone Python script with no external dependencies (stdlib only)
 - Uses difflib SequenceMatcher for fuzzy clustering of similar issues/lessons
 - Configurable via CLI flags: `--days`, `--stale-days`, `--min-recurrence`
-- All trend settings also configurable via `lucid.config.json`
 
 ## [0.3.0] — 2026-03-21
 

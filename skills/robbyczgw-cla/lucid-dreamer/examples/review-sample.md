@@ -2,64 +2,64 @@
 
 ## Candidate Updates
 
-### 1. Nova Agent — New Infrastructure (high confidence)
-- **Add to Projects section:** `nova-node` container (Tailscale `100.99.99.35`) running Nova agent with GPT-5.4 via Codex OAuth, systemd service `nova-gateway.service`, chat automation enabled, local memory store configured
-- **Source:** `memory/2026-03-15.md` (Nova Agent Setup) + `memory/2026-03-13.md` (initial install)
-- **Context:** Replaces legacyBot (deleted 2026-03-13), MiniBot vs Nova decision pending as of 2026-03-15
+### 1. Atlas Agent — New Infrastructure (high confidence)
+- **Add to Projects section:** `atlas-node` VM (Tailscale `10.0.0.42`) running Atlas agent with GPT-5.4 via OAuth, systemd service `atlas-gateway.service`, lightweight vector memory enabled
+- **Source:** `memory/2026-03-15.md` (Atlas Agent Setup) + `memory/2026-03-13.md` (initial install)
+- **Context:** Replaces `old-orbit` (retired 2026-03-13), `Pilot` vs `Atlas` decision still pending as of 2026-03-15
 
-### 2. nova-webchat Project (medium confidence)
-- **Add to Projects section:** `nova-webchat` — Next.js 15 + FastAPI mock backend, repo `example-org/nova-webchat`, deployed on nova-node ports 8444/8445 (currently disabled), **no real Nova agent connected yet**
-- **Source:** `memory/2026-03-16.md` (nova-webchat Projekt section)
+### 2. atlas-webchat Project (medium confidence)
+- **Add to Projects section:** `atlas-webchat` — Next.js 15 + FastAPI mock backend, repo `alexchen-labs/atlas-webchat`, deployed on atlas-node ports 8444/8445 (currently disabled), **no real Atlas agent connected yet**
+- **Source:** `memory/2026-03-16.md` (atlas-webchat project section)
 
 ### 3. Morning Briefing Model — Pending Change (medium confidence)
-- **Update Model Strategy table:** `Morning Briefing` row — currently shows Kimi, but 2026-03-14 benchmarks found Sonnet wins. Pending user decision.
-- **Source:** `memory/2026-03-14.md` (~"Morning Briefing Modell" section)
+- **Update Model Strategy table:** `Morning Briefing` row — currently shows Kimi, but 2026-03-14 benchmarks found Sonnet wins. Pending Alex decision.
+- **Source:** `memory/2026-03-14.md` (~"Morning Briefing Model" section)
 
 ### 4. Backup System Overhaul (high confidence)
-- **Update MEMORY.md:** Add note that backup script was rewritten 2026-03-15 to use native `openclaw backup create`. Old separate backup approach replaced.
+- **Update MEMORY.md:** Add note that `scripts/backup-remote.sh` was rewritten 2026-03-15 to use native `openclaw backup create`. Old split-workspace + separate-config approach replaced.
 - **Source:** `memory/2026-03-15.md` (Backup System section)
 
-### 5. smart-search Skills Version Mismatch (medium confidence)
-- **MEMORY.md Published Skills table** shows `smart-search 2.7.2` but notes show it was bumped to 2.9.0 (2026-03-12) and the plugin to 1.2.2 (2026-03-11). Table is stale.
-- **Source:** `memory/2026-03-12.md` (smart-search v2.9.0) + `memory/2026-03-11.md` (plugin v1.2.2)
+### 5. web-search-plus Skill Version Mismatch (medium confidence)
+- **MEMORY.md Published Skills table** shows `web-search-plus 2.7.2` but notes show it was bumped to 2.9.0 (2026-03-12) and the plugin to 1.2.2 (2026-03-11). Table is stale.
+- **Source:** `memory/2026-03-12.md` (web-search-plus v2.9.0) + `memory/2026-03-11.md` (plugin v1.2.2)
 
-### 6. Search config follow-up (low confidence)
-- **Lessons Learned / Operational:** search configuration is still incomplete and has been noted as a follow-up since 2026-03-12. Worth adding as a formal TODO or note.
-- **Source:** `memory/2026-03-12.md` (smart-search v2.9.0 section, end)
+### 6. QUERY_API_KEY TODO (low confidence)
+- **Lessons Learned / Operational:** `QUERY_API_KEY` still missing from `skills/web-search-plus/config.json` — noted as TODO since 2026-03-12. Worth adding as a formal TODO or note.
+- **Source:** `memory/2026-03-12.md` (web-search-plus v2.9.0 section, end)
 
 ---
 
 ## Open Loops
 
-### 1. MiniBot vs Nova Decision
-- **Started:** 2026-03-15 — Plan was "test Nova this week → if stable, shut down MiniBot"
-- **Missing:** No closure signal. MiniBot still running (6€/mo). Nova tested on 2026-03-15/16 but decision not final.
-- **Source:** `memory/2026-03-15.md` ("Decision: MiniBot vs Nova")
+### 1. Pilot vs Atlas Decision
+- **Started:** 2026-03-15 — Plan was "test Atlas this week → if stable, shut down Pilot"
+- **Missing:** No closure signal. Pilot still running (6€/mo). Atlas tested on 2026-03-15/16 but decision not final.
+- **Source:** `memory/2026-03-15.md` ("Decision: Pilot vs Atlas")
 
-### 2. nova-webchat — Real Agent Integration
-- **Started:** 2026-03-16 — Mock backend only, no real Nova agent connected
-- **Missing:** Actual integration + UI polish ("sloppy" per user)
+### 2. atlas-webchat — Real Agent Integration
+- **Started:** 2026-03-16 — Mock backend only, no real Atlas agent connected
+- **Missing:** Actual integration + UI polish ("still rough" per Alex)
 - **Source:** `memory/2026-03-16.md` ("Next Steps")
 
 ### 3. Skill Selection — Life OS / GitClaw / others
 - **Started:** 2026-03-12 brainstorm → carried through 2026-03-15/16
 - **Missing:** No decision made after 4+ days of discussion
-- **Source:** `memory/2026-03-16.md` (Skill-Ideen section) + `memory/2026-03-15.md` (Opus top 3)
+- **Source:** `memory/2026-03-16.md` (Skill Ideas section) + `memory/2026-03-15.md` (Top 3 section)
 
 ### 4. X/Twitter Login on browser-node
-- **Started:** 2026-03-14 — Manual login via noVNC needed, bot-detection blocks automated
+- **Started:** 2026-03-14 — Manual login via noVNC needed, bot detection blocks automated flow
 - **Missing:** Still not logged in as of 2026-03-15
 - **Source:** `memory/2026-03-15.md` + `memory/2026-03-14.md`
 
-### 5. awesome-tools PR #3156
-- **Started:** 2026-03-13 — Submitted, waiting on merge after review (2026-03-14)
+### 5. awesome-mcp-servers PR #3156
+- **Started:** 2026-03-13 — Submitted, waiting on merge after AAA score (2026-03-14)
 - **Missing:** No confirmation of merge
-- **Source:** `memory/2026-03-14.md` (smart-search section)
+- **Source:** `memory/2026-03-14.md` (web-search-plus-mcp section)
 
 ### 6. Morning Briefing Model Switch (Kimi → Sonnet)
 - **Started:** 2026-03-14 — Sonnet identified as winner but not yet changed
 - **Missing:** Config update never happened; explicit decision pending
-- **Source:** `memory/2026-03-14.md` (Morning Briefing Modell section)
+- **Source:** `memory/2026-03-14.md` (Morning Briefing Model section)
 
 ### 7. agent-chronicle 0.6.2 → ClawHub publish
 - **Started:** 2026-03-10 (Open TODOs) — local ahead of ClawHub 0.6.0
@@ -71,10 +71,10 @@
 - **Missing:** Never resolved despite appearing in every TODO list
 - **Source:** `memory/2026-03-10.md` through `memory/2026-03-12.md`
 
-### 9. Acme Corp Follow-up (Alex / Sam)
-- **Started:** 2026-03-09 email sent, reminder cron set for 2026-03-16 09:00
+### 9. Partner Follow-up (Jamie / Casey)
+- **Started:** 2026-03-09 email sent, reminder cron set for 2026-03-16 09:00 Vienna
 - **Missing:** As of 2026-03-15, no reply yet. Today (2026-03-16) is the follow-up date — status unknown.
-- **Source:** `memory/2026-03-14.md` + `memory/2026-03-15.md` (MEMORY.md Acme Corp section)
+- **Source:** `memory/2026-03-14.md` + `memory/2026-03-15.md`
 
 ### 10. Gigabrain Fork Decision
 - **Started:** 2026-03-12 — "Tomorrow decide if we start"
@@ -85,15 +85,15 @@
 
 ## Blockers
 
-### 1. nova-webchat UI quality ("sloppy")
-- User explicitly noted the UI is still "sloppy" after two code passes (Opus + Codex)
+### 1. atlas-webchat UI quality ("still rough")
+- Alex explicitly noted the UI is still rough after two code passes
 - Mentioned on 2026-03-16 with no resolution in same session
 - **Source:** `memory/2026-03-16.md`
 
 ### 2. Persistent low-priority TODOs (personas, agent-chronicle)
-- `personas --force update to 2.2.6` and `publish agent-chronicle 0.6.2` appear in every single daily note from 2026-03-10 through 2026-03-16 (7 days) — never acted on
+- `personas --force update to 2.2.6` and `publish agent-chronicle 0.6.2` appear repeatedly from 2026-03-10 through 2026-03-16 — never acted on
 - Both are trivial 5-minute tasks that keep getting deprioritized
-- **Source:** `memory/2026-03-10.md`, `2026-03-12.md`, `memory/2026-03-14.md`, `memory/2026-03-15.md`
+- **Source:** `memory/2026-03-10.md`, `2026-03-12.md`, `2026-03-14.md`, `2026-03-15.md`
 
 ---
 
@@ -101,21 +101,21 @@
 
 ### 1. Browser Tool Default Changed
 - **Previously (2026-03-11):** `browser` tool used `profile: "browserless"` as explicit default
-- **Now (2026-03-14+):** `browser-node` (dedicated LXC container) is the new default — no profile parameter needed
+- **Now (2026-03-14+):** `browser-node` is the new default — no profile parameter needed
 - AGENTS.md was updated; MEMORY.md references are consistent with this
 - **Source:** `memory/2026-03-14.md` (Infrastructure Notes) + `memory/2026-03-11.md`
 
-### 2. Legacy Server — Deleted
-- **Previously:** Multiple references to `100.99.99.25` / `legacy.tailnet.ts.net` as experimental servers
-- **Now:** Deleted 2026-03-13 — no active server at that IP
+### 2. Old Orbit Server — Deleted
+- **Previously:** Multiple references to `10.0.0.43` / `orbit.tail12345.ts.net` / `oldorbit.tail12345.ts.net` as experimental servers
+- **Now:** Deleted by Alex 2026-03-13 — no active server at that IP
 - MEMORY.md appears clean of these references already
-- **Source:** `memory/2026-03-13.md` (end: "Legacy Server — DELETED")
+- **Source:** `memory/2026-03-13.md` (end: "Old Orbit — deleted")
 
-### 3. ExternalAgent — Evaluation Aborted
-- **Previously (2026-03-10/15):** External agent platform being tested, credits received
-- **Now (2026-03-15):** Uninstalled, connection problems, decided not for us
-- MEMORY.md doesn't mention it at all — no update needed
-- **Source:** `memory/2026-03-15.md` (ExternalAgent section)
+### 3. Vendor Trial — Evaluation Stopped
+- **Previously (2026-03-10/15):** External agent vendor being tested, credits received
+- **Now (2026-03-15):** Uninstalled after repeated disconnect issues, decided not a fit
+- MEMORY.md doesn't mention it — no update needed
+- **Source:** `memory/2026-03-15.md` (Vendor Trial section)
 
 ---
 
@@ -124,19 +124,19 @@
 ### 1. MEMORY.md Model Strategy Table — Morning Briefing
 - Table shows `Morning Briefing → Kimi`
 - 2026-03-14 benchmarks clearly show Sonnet wins Morning Briefing
-- However: decision to switch is explicitly "TODO/pending" → confidence medium (don't change until user decides)
+- However: decision to switch is explicitly pending → confidence medium (don't change until Alex decides)
 - **Source:** MEMORY.md "Model Strategy" section vs `memory/2026-03-14.md`
 
 ### 2. MEMORY.md Published Skills Table — Versions
-- `smart-search 2.7.2` is stale → actually 2.9.0 (since 2026-03-12)
-- `smart-search-plugin 1.0.1` stale → actually 1.2.2 (since 2026-03-11)
+- `web-search-plus 2.7.2` is stale → actually 2.9.0 (since 2026-03-12)
+- `web-search-plus-plugin 1.0.1` stale → actually 1.2.2 (since 2026-03-11)
 - These are high-confidence staleness findings
 - **Source:** `memory/2026-03-12.md` + `memory/2026-03-11.md`
 
-### 3. Acme Corp Reminder Cron — One-shot, likely fired
-- MEMORY.md still shows: "Reminder Cron: set for 2026-03-16 09:00 (ID: `b40d8516`)"
-- Today is 2026-03-16 — this cron has already fired (or was due to). Should be removed from MEMORY.md once Acme Corp loop closes.
-- **Source:** MEMORY.md Acme Corp section + `memory/2026-03-14.md`
+### 3. Partner Reminder Cron — One-shot, likely fired
+- MEMORY.md still shows: "Reminder Cron: set for 2026-03-16 09:00 Vienna (ID: `demo-cron-1234`)"
+- Today is 2026-03-16 — this cron has already fired (or was due to). Should be removed from MEMORY.md once the follow-up loop closes.
+- **Source:** MEMORY.md Partner Follow-up section + `memory/2026-03-14.md`
 
 ---
 
@@ -162,13 +162,13 @@ _No escalated patterns detected._
 
 ## Duplicate/Merge Suggestions
 
-### 1. Nova Agent — Scattered Across Notes
-- Nova setup info appears across 2026-03-13, 2026-03-15 daily notes
-- No single coherent MEMORY.md entry exists yet for `nova-node` container
-- Suggest adding a consolidated "MiniBot / Nova" section to MEMORY.md (similar to existing MiniBot section)
+### 1. Atlas Agent — Scattered Across Notes
+- Atlas setup info appears across 2026-03-13 and 2026-03-15 daily notes
+- No single coherent MEMORY.md entry exists yet for `atlas-node`
+- Suggest adding a consolidated "Pilot / Atlas" section to MEMORY.md
 - **Source:** `memory/2026-03-13.md` + `memory/2026-03-15.md`
 
-### 2. MiniBot section in MEMORY.md — Merge with Nova when decided
-- Current MiniBot section is standalone; once MiniBot vs Nova decision is made, these should be consolidated
+### 2. Pilot section in MEMORY.md — Merge with Atlas when decided
+- Current Pilot section is standalone; once the Pilot vs Atlas decision is made, these should be consolidated
 - Low urgency until decision is final
-- **Source:** MEMORY.md "MiniBot" section
+- **Source:** MEMORY.md "Pilot" section
