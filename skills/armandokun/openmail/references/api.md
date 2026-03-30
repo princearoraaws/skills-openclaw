@@ -137,7 +137,13 @@ Response:
 GET /inboxes/{id}/threads
 ```
 
-Query parameters: `limit` (default 50, max 100), `offset` (default 0).
+Query parameters:
+
+| Parameter | Type | Default | Description |
+|---|---|---|---|
+| `is_read` | `true` \| `false` | — | Filter by read status. `false` = unread only. |
+| `limit` | integer | 50 | Max results (max 100) |
+| `offset` | integer | 0 | Pagination offset |
 
 Response:
 ```json
@@ -146,6 +152,7 @@ Response:
     {
       "id": "...",
       "subject": "Re: Your request",
+      "isRead": false,
       "lastMessageAt": "2026-03-20T14:32:00Z",
       "createdAt": "2026-03-20T12:00:00Z",
       "messageCount": 3
@@ -155,12 +162,29 @@ Response:
 }
 ```
 
+### Update thread
+```
+PATCH /threads/{id}
+```
+
+Body:
+```json
+{
+  "is_read": true
+}
+```
+
+Mark a thread as read or unread. New inbound threads start as unread
+(`isRead: false`). Sending a reply auto-marks the thread as read.
+
+Returns `{ "ok": true }`.
+
 ### Get thread messages
 ```
 GET /threads/{id}/messages
 ```
 
-Returns `threadId`, `subject`, and a `data` array of messages sorted
+Returns `threadId`, `subject`, `isRead`, and a `data` array of messages sorted
 oldest-first. Same message schema as list messages.
 
 ---
