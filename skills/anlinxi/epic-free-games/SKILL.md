@@ -193,6 +193,96 @@ agent-browser --session epic click "ref=e55"  # 点击元素
 agent-browser --session epic close  # 关闭浏览器
 ```
 
+## 领取流程中的常见问题 (2026-03-27 更新)
+
+### 1. 获取按钮不在可视区域
+
+**问题描述**：游戏页面的"获取"按钮可能不在首屏可视区域内，需要向下滚动才能看到。
+
+**解决方案**：
+```bash
+# 先滚动页面，再查找获取按钮
+agent-browser --session epic scroll down 300
+agent-browser --session epic snapshot -i --json
+# 查找 "获取" 按钮的 ref 值，然后点击
+agent-browser --session epic click "ref=e50"
+```
+
+**最佳实践**：每次打开游戏页面后，先截图确认"获取"按钮是否可见，如不可见则滚动页面。
+
+### 2. 登录状态未持久化
+
+**问题描述**：每次运行都需要重新登录，因为登录状态没有保存到文件。
+
+**解决方案**：
+```bash
+# 登录成功后，保存登录状态到文件
+agent-browser --session epic state save "epic_auth.json"
+
+# 下次运行时加载登录状态
+agent-browser --session epic state load "epic_auth.json"
+```
+
+### 3. Cloudflare 验证拦截
+
+**问题描述**：默认的自动化浏览器会被 Cloudflare 检测并拦截。
+
+**解决方案**：使用 `--args` 参数禁用自动化检测标志：
+```bash
+agent-browser --session epic --headed \
+  --args "--disable-blink-features=AutomationControlled" \
+  open "https://store.epicgames.com/zh-CN/free-games"
+```
+
+### 4. 结账弹窗处理
+
+**问题描述**：点击"获取"按钮后会弹出结账窗口，需要勾选协议复选框。
+
+**解决方案**：
+```bash
+# 等待结账弹窗出现
+agent-browser --session epic wait 3000
+# 勾选协议复选框（checkbox 类型元素）
+agent-browser --session epic check "ref=e134"
+# 点击"下订单"按钮
+agent-browser --session epic click "ref=e132"
+```
+
+### 完整领取流程示例
+
+```bash
+# 1. 打开浏览器（带反自动化检测）
+agent-browser --session epic --headed \
+  --args "--disable-blink-features=AutomationControlled" \
+  open "https://store.epicgames.com/zh-CN/free-games"
+
+# 2. 等待页面加载
+agent-browser --session epic wait 3000
+
+# 3. 截图确认页面状态
+agent-browser --session epic screenshot
+
+# 4. 获取游戏链接
+agent-browser --session epic eval "document.querySelector('a[href*=\"游戏名\"]')?.href"
+
+# 5. 打开游戏页面
+agent-browser --session epic open "游戏链接"
+
+# 6. 滚动到获取按钮位置
+agent-browser --session epic scroll down 300
+
+# 7. 点击获取按钮
+agent-browser --session epic click "ref=获取按钮ref"
+
+# 8. 处理结账弹窗
+agent-browser --session epic wait 3000
+agent-browser --session epic check "协议复选框ref"
+agent-browser --session epic click "下订单按钮ref"
+
+# 9. 保存登录状态
+agent-browser --session epic state save "epic_auth.json"
+```
+
 ## License / 许可证
 
 MIT License - Use at your own risk / 使用风险自负
