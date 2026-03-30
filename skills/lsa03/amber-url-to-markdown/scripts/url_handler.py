@@ -22,6 +22,7 @@ class LinkType(Enum):
     CSDN = "csdn"  # CSDN
     GITHUB = "github"  # GitHub
     MEDIUM = "medium"  # Medium
+    DOUBAO = "doubao"  # 豆包
     GENERAL = "general"  # 通用网页
     UNKNOWN = "unknown"  # 未知类型
 
@@ -202,6 +203,45 @@ class URLHandler:
             },
             wait_time=3,
             needs_js=True
+        ))
+        
+        # 豆包 - 使用 Playwright 方案（需要完整 Headers + JS 渲染）
+        self.register_config(LinkConfig(
+            link_type=LinkType.DOUBAO,
+            name="Doubao Thread",
+            domain="doubao.com",
+            content_selectors=[
+                "[class*='message']",  # 豆包消息容器（优先级最高）
+                ".thread-content",
+                ".conversation-content",
+                "[class*='content']",
+                ".markdown-body",
+                "body"  # 最后使用 body 作为后备
+            ],
+            title_selectors=[
+                "meta[property='og:title']",
+                ".thread-title",
+                "title",
+                "h1"
+            ],
+            image_selectors=["img"],
+            headers={
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                "Referer": "https://www.doubao.com/",
+                "Sec-Fetch-Dest": "document",
+                "Sec-Fetch-Mode": "navigate",
+                "Sec-Fetch-Site": "none",
+            },
+            wait_time=5,
+            needs_js=True,  # 需要 JS 渲染
+            extra_config={
+                "anti_detection": True,
+                "scroll_delay": 1.5,
+                "random_mouse_move": False,
+                "viewport_delay": 3
+            }
         ))
         
         # 通用网页

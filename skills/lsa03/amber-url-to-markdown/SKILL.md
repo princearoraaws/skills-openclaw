@@ -1,9 +1,6 @@
 ---
 name: Amber_Url_to_Markdown
-description: 智能 URL 转 Markdown 工具。**支持自动触发 Hook**，当用户发送 URL 链接时自动抓取内容并转换为 Markdown 格式，支持图片下载到本地。
-author: 小文
-license: MIT
-tags: url-parser,markdown,web-scraper,wechat,content-extraction,zhihu,juejin,github,auto-trigger,hook
+description: 智能 URL 转 Markdown 工具（V4.0 可扩展架构）。**支持自动触发 Hook**，当用户发送 URL 链接时自动抓取内容并转换为 Markdown 格式。采用可扩展的分类处理架构，支持豆包、微信公众号、知乎、掘金等网站。
 ---
 
 # Amber Url to Markdown

@@ -43,28 +43,124 @@ def extract_special_elements(html: str) -> Tuple[str, List[Tuple[str, str]], Lis
     
     def replace_code(match):
         code = match.group(1)
+        # 解码 HTML 实体
+        from html import unescape
+        code = unescape(code)
+        # 移除开头的换行符
+        code = code.lstrip('\n')
+        # 尝试修复丢失的换行符（针对豆包等网站）
+        if '\n' not in code and len(code) > 100:
+            # 如果代码很长但没有换行，尝试在关键字后添加换行
+            keywords = ['import ', 'from ', 'def ', 'class ', 'if ', 'else:', 'with ', 'for ', 'while ', 'try:', 'except', 'return ']
+            for kw in keywords:
+                code = code.replace(kw, '\n' + kw)
         code_key = f"__CODE_{len(code_blocks)}__"
         code_blocks.append((code_key, code))
         return code_key
     
     html = code_pattern.sub(replace_code, html)
     
-    # 2. 提取 LaTeX 公式（$...$ / $$...$$）
-    latex_patterns = [
-        (r"\$\$(.*?)\$\$", "BLOCK"),   # 块级公式
-        (r"\$(.*?)\$", "INLINE"),      # 行内公式
-    ]
-    
-    for pattern, typ in latex_patterns:
-        def replace_latex(match, typ=typ):
-            latex = match.group(1)
-            latex_key = f"__LATEX_{len(latex_blocks)}__"
-            latex_blocks.append((latex_key, latex, typ))
-            return latex_key
-        
-        html = re.sub(pattern, replace_latex, html, flags=re.DOTALL)
+    # 2. 提取 LaTeX 公式（$...$ / $$...$$）- 暂不启用
+    # latex_patterns = [...]
     
     return html, code_blocks, latex_blocks
+
+
+def clean_code_syntax_highlighting(html: str) -> str:
+    """
+    清理代码块中的语法高亮 HTML 标签
+    
+    Args:
+        html: HTML 文本
+    
+    Returns:
+        str: 清理后的 HTML
+    """
+    from bs4 import BeautifulSoup
+    
+    soup = BeautifulSoup(html, 'html.parser')
+    
+    # 查找所有 <code> 标签
+    for code_tag in soup.find_all('code'):
+        # 获取纯文本内容
+        text_content = code_tag.get_text()
+        # 创建新的文本节点替换原内容
+        code_tag.clear()
+        code_tag.string = text_content
+    
+    return str(soup)
+
+
+def fix_code_blocks_in_markdown(markdown_text: str) -> str:
+    """
+    修复 Markdown 中的代码块格式（添加换行）
+    
+    Args:
+        markdown_text: Markdown 文本
+    
+    Returns:
+        str: 修复后的 Markdown
+    """
+    def fix_code_block(match):
+        lang = match.group(1) or ''
+        code = match.group(2)
+        
+        # 清理 HTML 标签
+        code = clean_html_tags(code)
+        
+        # 如果代码块没有换行且长度较长，尝试添加换行
+        if '\n' not in code and len(code) > 80:
+            # 在关键字后添加换行
+            lines = []
+            current_line = ""
+            
+            # 简单的分词逻辑
+            i = 0
+            while i < len(code):
+                # 检查是否是字符串
+                if code[i] in '"\'':
+                    quote_char = code[i]
+                    current_line += code[i]
+                    i += 1
+                    while i < len(code) and code[i] != quote_char:
+                        current_line += code[i]
+                        i += 1
+                    if i < len(code):
+                        current_line += code[i]
+                        i += 1
+                # 检查是否是注释
+                elif code[i:i+1] == '#':
+                    while i < len(code) and code[i] != '\n':
+                        current_line += code[i]
+                        i += 1
+                # 检查是否是关键字
+                elif code[i:i+6] in ['import', 'return', 'def ', 'class', 'with ', 'from ']:
+                    if current_line.strip():
+                        lines.append(current_line.strip())
+                        current_line = ""
+                    while i < len(code) and code[i] not in ['\n', ')', ':']:
+                        current_line += code[i]
+                        i += 1
+                # 检查是否是左括号
+                elif code[i] in '({[':
+                    current_line += code[i]
+                    i += 1
+                    # 添加换行使括号内容更易读
+                    if current_line.count('(') - current_line.count(')') > 0:
+                        lines.append(current_line.strip())
+                        current_line = "    "  # 缩进
+                else:
+                    current_line += code[i]
+                    i += 1
+            
+            if current_line.strip():
+                lines.append(current_line.strip())
+            
+            code = '\n'.join(lines)
+        
+        return f"```{lang}\n{code}\n```"
+    
+    return re.sub(r'```(\w*)\n(.*?)```', fix_code_block, markdown_text, flags=re.DOTALL)
 
 
 def restore_special_elements(
@@ -295,6 +391,10 @@ def html_to_markdown(
     html = clean_html(html)
     
     # 3. 转换为 Markdown
+    # 先清理代码块中的语法高亮标签
+    html = clean_code_syntax_highlighting(html)
+    
+    # 注意：代码块需要特殊处理，先提取再还原，避免换行符丢失
     markdown_text = md(
         html,
         heading_style=heading_style,      # 标题用 #
@@ -306,23 +406,64 @@ def html_to_markdown(
         escape_underscores=cfg.ESCAPE_UNDERSCORES,  # 禁用下划线转义
         escape_misc=cfg.ESCAPE_MISC,      # 禁用其他字符转义
         code_language=code_language,      # 代码块默认语言
-        newline_style="SPACES",           # 使用空格作为换行
+        newline_style="BACKSLASH",        # 代码块外使用反斜杠换行
     )
+    
+    # 修复代码块：将代码块内的反斜杠换行恢复为真实换行
+    def fix_code_block(match):
+        lang = match.group(1) or ''
+        code = match.group(2)
+        # 移除代码块内的反斜杠换行符
+        code = code.replace('\\\n', '\n')
+        # 移除每行末尾的多余空格
+        code_lines = [line.rstrip() for line in code.splitlines()]
+        code = '\n'.join(code_lines)
+        return f"```{lang}\n{code}\n```"
+    
+    markdown_text = re.sub(r'```(\w*)\n(.*?)```', fix_code_block, markdown_text, flags=re.DOTALL)
     
     # 4. 还原特殊元素
     if code_blocks or latex_blocks:
         markdown_text = restore_special_elements(markdown_text, code_blocks, latex_blocks)
+    else:
+        # 如果没有特殊元素，尝试从 markdown 中提取并修复代码块
+        markdown_text = fix_code_blocks_in_markdown(markdown_text)
     
     # 5. 后处理
     # 移除空的代码块行
     markdown_text = re.sub(r'```\s*\n\s*```', '', markdown_text)
     
-    # 移除多余空行（保留最多 2 个连续空行）
+    # 移除多余空行（保留最多 2 个连续空行，但代码块内不处理）
+    # 先保护代码块
+    code_blocks_temp = []
+    def protect_code(match):
+        code_blocks_temp.append(match.group(0))
+        return f"__CODE_BLOCK_{len(code_blocks_temp)-1}__"
+    
+    markdown_text = re.sub(r'```[\s\S]*?```', protect_code, markdown_text)
+    
+    # 处理空行
     markdown_text = re.sub(r'\n{4,}', '\n\n', markdown_text)
     
-    # 清理每行首尾空格
-    lines = [line.rstrip() for line in markdown_text.splitlines() if line.rstrip()]
-    markdown_text = '\n\n'.join(lines)
+    # 还原代码块
+    for i, code_block in enumerate(code_blocks_temp):
+        markdown_text = markdown_text.replace(f"__CODE_BLOCK_{i}__", code_block)
+    
+    # 清理每行首尾空格（但保留空行和代码块内容）
+    final_lines = []
+    in_code_block = False
+    for line in markdown_text.splitlines():
+        if line.strip().startswith('```'):
+            in_code_block = not in_code_block
+            final_lines.append(line)
+        elif in_code_block:
+            # 代码块内保留原始格式
+            final_lines.append(line)
+        else:
+            # 代码块外清理空格
+            final_lines.append(line.rstrip())
+    
+    markdown_text = '\n'.join(final_lines)
     
     return markdown_text
 

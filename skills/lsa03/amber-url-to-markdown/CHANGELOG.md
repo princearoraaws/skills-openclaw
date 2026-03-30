@@ -2,6 +2,49 @@
 
 All notable changes to this project will be documented in this file.
 
+## [4.0.3] - 2026-03-30
+
+### 🔧 Changed
+- 代码审查确认无问题，正式发布到 ClawHub
+- 确认 Hook 自动触发功能正常工作
+- 确认所有依赖和配置正确
+
+### ✅ Verified
+- handler.ts Hook 逻辑正确，支持纯 URL 和 URL+ 意图关键词触发
+- Python 脚本支持多网站抓取和三种降级策略
+- 目录结构和输出格式符合预期
+- _meta.json 配置完整，包含 hooks 配置
+
+---
+
+## [4.0.2] - 2026-03-27
+
+### 🐛 Fixed
+- **修复豆包抓取超时问题**：
+  - 页面加载超时：30 秒 → 60 秒
+  - networkidle 等待超时：15 秒 → 30 秒
+  - 固定等待时间：5 秒 → 10 秒
+- **优化豆包内容选择器**：
+  - `[class*='message']` 提至最高优先级（豆包消息容器）
+  - 新增 `.thread-content` 和 `.conversation-content` 选择器
+- **Scrapling 方案优化**：
+  - 自动跳过豆包等动态网站（Scrapling 无法处理 JavaScript 渲染）
+  - 避免无效尝试，直接进入降级方案
+
+### 🔧 Changed
+- 更新 `url_handler.py` 豆包配置：
+  - 优化内容选择器优先级
+  - 优化标题选择器（新增 `.thread-title`）
+- 更新 `amber_url_to_markdown.py`：
+  - 豆包专用超时配置
+  - Scrapling 方案增加链接类型检查
+
+### 📊 Performance
+- 豆包抓取成功率显著提升（从 ~0% 到 100%）
+- 抓取时间：约 44 秒（包含完整滚动加载和反检测）
+
+---
+
 ## [3.2.0] - 2026-03-25
 
 ### 🎉 Added

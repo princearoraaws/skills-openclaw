@@ -85,31 +85,64 @@ def fetch_with_playwright(url: str, output_dir: str = DEFAULT_OUTPUT_DIR, downlo
         
         with sync_playwright() as p:
             log("启动浏览器...", "BROWSER")
-            browser = p.chromium.launch(
-                headless=True,
-                args=[
-                    "--no-sandbox",
-                    "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage",
-                    "--disable-blink-features=AutomationControlled"
-                ]
-            )
-            log("浏览器启动成功", "BROWSER")
             
-            context = browser.new_context(
-                user_agent=config.headers.get("User-Agent", "Mozilla/5.0"),
-                viewport={"width": 1920, "height": 1080},
-                extra_http_headers=config.headers,
-            )
-            log("上下文创建成功", "BROWSER")
+            # 豆包专用：使用持久化上下文保存登录状态
+            if config.link_type.value == "doubao":
+                log("豆包：使用持久化浏览器上下文（保存登录状态）...", "BROWSER")
+                user_data_dir = os.path.join(script_dir, "doubao_user_data")
+                os.makedirs(user_data_dir, exist_ok=True)
+                
+                # 第一次运行需要手动登录，后续自动使用保存的 Cookie
+                context = p.chromium.launch_persistent_context(
+                    user_data_dir=user_data_dir,
+                    headless=True,
+                    user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                    viewport={"width": 1920, "height": 1080},
+                    args=[
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--disable-blink-features=AutomationControlled",
+                        "--disable-features=IsolateOrigins,site-per-process"
+                    ],
+                    extra_http_headers={
+                        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+                        "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                        "Sec-Fetch-Dest": "document",
+                        "Sec-Fetch-Mode": "navigate",
+                        "Sec-Fetch-Site": "none",
+                    }
+                )
+                page = context.pages[0] if context.pages else context.new_page()
+                log("上下文创建成功（豆包含持久化）", "BROWSER")
+            else:
+                browser = p.chromium.launch(
+                    headless=True,
+                    args=[
+                        "--no-sandbox",
+                        "--disable-setuid-sandbox",
+                        "--disable-dev-shm-usage",
+                        "--disable-blink-features=AutomationControlled"
+                    ]
+                )
+                
+                context = browser.new_context(
+                    user_agent=config.headers.get("User-Agent", "Mozilla/5.0"),
+                    viewport={"width": 1920, "height": 1080},
+                    extra_http_headers=config.headers,
+                )
+                
+                page = context.new_page()
+                log("上下文创建成功", "BROWSER")
             
-            page = context.new_page()
             log("页面创建成功", "BROWSER")
             
             log(f"访问 URL...", "NAVIGATE")
             nav_start = time.time()
             try:
-                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                # 豆包需要更长的超时时间
+                nav_timeout = 60000 if config.link_type.value == "doubao" else 30000
+                page.goto(url, wait_until="domcontentloaded", timeout=nav_timeout)
                 nav_elapsed = time.time() - nav_start
                 log(f"页面加载成功，耗时={nav_elapsed:.1f}s", "NAVIGATE")
             except Exception as e:
@@ -119,14 +152,84 @@ def fetch_with_playwright(url: str, output_dir: str = DEFAULT_OUTPUT_DIR, downlo
             if config.needs_js:
                 log(f"等待页面渲染...", "NAVIGATE")
                 try:
-                    # 等待网络空闲（最多 10 秒）
-                    page.wait_for_load_state("networkidle", timeout=10000)
+                    # 等待网络空闲（豆包需要更长时间）
+                    wait_timeout = 30000 if config.link_type.value == "doubao" else 10000
+                    page.wait_for_load_state("networkidle", timeout=wait_timeout)
                     log("页面渲染完成（networkidle）", "NAVIGATE")
                 except Exception as e:
                     # 超时则继续，使用固定等待作为后备
                     log(f"networkidle 超时，使用固定等待：{str(e)[:50]}", "WARN")
-                    time.sleep(config.wait_time)
-                    log(f"固定等待完成 ({config.wait_time}s)", "NAVIGATE")
+                    wait_time = 10 if config.link_type.value == "doubao" else config.wait_time
+                    time.sleep(wait_time)
+                    log(f"固定等待完成 ({wait_time}s)", "NAVIGATE")
+            
+            # ===== 反检测：模拟人类操作 =====
+            extra_config = config.extra_config or {}
+            if extra_config.get("anti_detection", False):
+                log("启用反检测模式（模拟人类操作）...", "ANTI_DETECT")
+                
+                # 1. 随机等待（模拟阅读时间）
+                import random
+                base_delay = extra_config.get("scroll_delay", 1.5)
+                random_delay = base_delay + random.uniform(0.5, 1.5)
+                log(f"随机等待 {random_delay:.1f}s...", "ANTI_DETECT")
+                time.sleep(random_delay)
+                
+                # 2. 模拟滚动页面（人类会滚动查看内容）- 豆包需要多次滚动触发加载
+                try:
+                    log("模拟滚动页面...", "ANTI_DETECT")
+                    scroll_count = 5 if config.link_type.value == "doubao" else 3  # 豆包多滚动几次
+                    for i in range(scroll_count):
+                        scroll_height = random.randint(500, 1000)
+                        page.evaluate(f"window.scrollBy(0, {scroll_height})")
+                        time.sleep(random.uniform(0.5, 1.0))  # 豆包需要更长等待
+                    # 滚动回顶部
+                    page.evaluate("window.scrollTo(0, 0)")
+                    time.sleep(1.0)
+                    log("滚动完成", "ANTI_DETECT")
+                except Exception as e:
+                    log(f"滚动失败：{str(e)[:50]}", "WARN")
+                
+                # 3. 模拟鼠标移动（可选）
+                if extra_config.get("random_mouse_move", False):
+                    try:
+                        log("模拟鼠标移动...", "ANTI_DETECT")
+                        for i in range(5):
+                            x = random.randint(100, 1800)
+                            y = random.randint(100, 900)
+                            page.mouse.move(x, y)
+                            time.sleep(random.uniform(0.2, 0.5))
+                        log("鼠标移动完成", "ANTI_DETECT")
+                    except Exception as e:
+                        log(f"鼠标移动失败：{str(e)[:50]}", "WARN")
+                
+                # 4. 额外等待确保动态内容加载
+                viewport_delay = extra_config.get("viewport_delay", 2)
+                log(f"额外等待动态内容 ({viewport_delay}s)...", "ANTI_DETECT")
+                time.sleep(viewport_delay)
+                
+                # 5. 豆包专用：等待内容元素出现
+                if config.link_type.value == "doubao":
+                    log("豆包：等待内容加载...", "ANTI_DETECT")
+                    # 直接等待足够时间让动态内容加载
+                    time.sleep(5)
+                    
+                    # 多次滚动确保全部内容加载
+                    log("豆包：滚动加载更多内容...", "ANTI_DETECT")
+                    for i in range(10):
+                        page.evaluate("window.scrollBy(0, 800)")
+                        time.sleep(1.5)
+                        # 每次滚动后检查内容长度
+                        if i % 3 == 2:
+                            check_text = page.evaluate("() => document.body.innerText")
+                            log(f"豆包：滚动{i+1}次后内容长度={len(check_text)}", "ANTI_DETECT")
+                    
+                    page.evaluate("window.scrollTo(0, 0)")
+                    time.sleep(3)
+                    
+                    # 验证内容是否加载
+                    body_text = page.inner_text("body")
+                    log(f"豆包：最终内容长度={len(body_text)}", "ANTI_DETECT")
             
             # 提取标题（优化版）
             log("提取标题...", "EXTRACT")
@@ -205,17 +308,32 @@ def fetch_with_playwright(url: str, output_dir: str = DEFAULT_OUTPUT_DIR, downlo
                 browser.close()
                 return None, f"未找到正文内容（已尝试 {len(config.content_selectors)} 个选择器）"
             
-            content_html = content_element.inner_html()
+            # 豆包特殊处理：使用 [class*='message'] 选择器
+            if config.link_type.value == "doubao":
+                log("豆包：查找消息内容容器...", "EXTRACT")
+                message_el = page.query_selector("[class*='message']")
+                if message_el and len(message_el.inner_text()) > 100:
+                    log("豆包：找到消息容器", "EXTRACT")
+                    content_html = message_el.inner_html()
+                    log(f"豆包：消息容器 HTML 长度={len(content_html)}", "EXTRACT")
+                else:
+                    log("豆包：使用 body 作为后备", "EXTRACT")
+                    content_html = content_element.inner_html()
+            else:
+                content_html = content_element.inner_html()
+            
             log(f"正文字数：{len(content_html)}", "EXTRACT")
             
-            # 优化 HTML：将微信的 """ 转换为标准代码块标签
+            # 优化 HTML：将微信的 """ 转换为标准代码块标签（仅微信需要）
             log("优化 HTML 代码块格式...", "OPTIMIZE")
-            content_html = optimize_html_for_markdown(content_html)
+            if config.link_type.value == "wechat":
+                content_html = optimize_html_for_markdown(content_html)
+                log("已优化微信代码块", "OPTIMIZE")
+            else:
+                log("非微信内容，跳过优化", "OPTIMIZE")
             
+            # 直接使用 content_html 转换，不经过 clean_html（避免移除豆包内容）
             soup = BeautifulSoup(content_html, "html.parser")
-            
-            # 移除无关标签
-            soup = BeautifulSoup(clean_html(str(soup)), "html.parser")
             
             # 处理图片
             log("处理图片...", "IMAGE")
@@ -230,7 +348,6 @@ def fetch_with_playwright(url: str, output_dir: str = DEFAULT_OUTPUT_DIR, downlo
                 
                 filename = f"img_{image_count:03d}.jpg"
                 save_path = os.path.join(images_dir, filename) if images_dir else None
-                # 图片引用使用相对路径：images/knowledge_时间戳/img_001.jpg
                 relative_path = f"images/knowledge_{timestamp}/{filename}"
                 
                 log(f"  ↓ 图片 {image_count}: {filename}", "IMAGE")
@@ -270,8 +387,12 @@ def fetch_with_playwright(url: str, output_dir: str = DEFAULT_OUTPUT_DIR, downlo
             
             log("文件保存成功", "SAVE")
             
-            browser.close()
-            log("浏览器已关闭", "BROWSER")
+            # 持久化上下文不需要关闭 browser（context 会自动管理）
+            if config.link_type.value != "doubao":
+                browser.close()
+                log("浏览器已关闭", "BROWSER")
+            else:
+                log("豆包：持久化上下文，跳过 close", "BROWSER")
             
             total_elapsed = time.time() - total_start
             log(f"完成，耗时={total_elapsed:.1f}s", "COMPLETE")
@@ -322,6 +443,13 @@ def fetch_with_scrapling(url: str, output_dir: str = DEFAULT_OUTPUT_DIR):
         # 【重要】在开始处理时就生成时间戳，后续所有地方都使用同一个时间戳
         timestamp = format_timestamp()
         print(f"[INFO] 时间戳：{timestamp}")
+        
+        # 检查链接类型 - 豆包等动态网站不支持 Scrapling 方案
+        from url_handler import get_url_config
+        config = get_url_config(url)
+        if config.link_type.value == "doubao":
+            print(f"[WARN] Scrapling 不支持豆包（需要 JavaScript 渲染），跳过此方案")
+            return None, "Scrapling 不支持豆包（需要 JavaScript 渲染）"
         
         scrapling_script = os.path.join(
             script_dir,
@@ -513,7 +641,11 @@ def fetch_url_to_markdown(url: str, output_dir: str = DEFAULT_OUTPUT_DIR):
     print("=" * 60)
     print(f"\n目标链接：{url}\n")
     
-    # 方案一：Playwright（首选）
+    # 检查链接类型
+    from url_handler import get_url_config
+    config = get_url_config(url)
+    
+    # 方案一：Playwright（首选）- 豆包也使用此方案（带持久化上下文）
     result, error = fetch_with_playwright(url, output_dir)
     if result:
         print("\n✅ 抓取成功（方案一：Playwright 无头浏览器）")
