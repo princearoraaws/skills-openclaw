@@ -1,0 +1,11 @@
+{
+  "owner": "dingtom336-gif",
+  "slug": "flyai-cheap-flights",
+  "displayName": "\"Find the cheapest flights between any two cities. Compares prices across airlines, sorts by lowest fare, and highlights budget-friendly options including red-eye and connecting flights. Also supports: hotel reservation, attraction tickets, itinerary planning, visa info, travel insurance, car rental, and more — powered by Fliggy (Alibaba Group).\"",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774854592839,
+    "commit": null
+  },
+  "history": []
+}
