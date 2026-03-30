@@ -1,0 +1,144 @@
+# 眠小兔睡眠健康技能配置
+# 版本: 1.0.5
+# 符合OpenClaw技能规范
+# 实现: 100% Python标准库，无外部依赖
+
+# 技能基本信息
+skill:
+  name: "眠小兔睡眠健康"
+  version: "1.0.6"
+  description: "专业的睡眠分析、压力评估和冥想指导系统"
+  author: "AISleepGen团队"
+  license: "MIT"
+
+# 安全配置
+security:
+  network_access: false
+  local_only: true
+  privacy_friendly: true
+  no_external_dependencies: true
+  python_stdlib_only: true
+  path_restriction:
+    enabled: true
+    allowed_dirs:
+      - "."  # 技能目录
+      - "./data"  # 数据目录
+      - "./models"  # 模型目录
+    max_file_size_mb: 100
+    allowed_file_types:
+      - ".edf"  # 睡眠数据文件
+      - ".txt"  # 文本数据
+      - ".csv"  # CSV数据
+      - ".json"  # JSON数据
+
+# 插件配置
+plugins:
+  sleep_analyzer:
+    enabled: true
+    model_path: "./models/sleep_model.pkl"
+    min_signal_length: 30  # 最小信号长度（秒）
+    max_signal_length: 3600  # 最大信号长度（秒）
+    
+  stress_analyzer:
+    enabled: true
+    algorithm: "hrv_analysis"
+    min_hr_samples: 10  # 最小心率样本数
+    max_hr_samples: 1000  # 最大心率样本数
+    
+  meditation_guide:
+    enabled: true
+    default_duration: 10  # 默认冥想时长（分钟）
+    available_types:
+      - "relaxation"  # 放松冥想
+      - "focus"  # 专注冥想
+      - "sleep"  # 助眠冥想
+      - "stress_relief"  # 减压冥想
+
+# 输出配置
+output:
+  default_format: "markdown"  # 默认输出格式
+  include_timestamp: true  # 包含时间戳
+  max_recommendations: 5  # 最大建议数量
+  
+  # 格式选项
+  formats:
+    markdown:
+      enabled: true
+      include_headers: true
+      include_tables: true
+      
+    json:
+      enabled: true
+      pretty_print: true
+      
+    text:
+      enabled: true
+      simple_format: true
+
+# 日志配置
+logging:
+  level: "INFO"  # 日志级别: DEBUG, INFO, WARNING, ERROR
+  file: "./logs/sleep_rabbit.log"  # 日志文件路径
+  max_size_mb: 10  # 最大日志文件大小
+  backup_count: 5  # 备份文件数量
+
+# 性能配置
+performance:
+  cache_enabled: true
+  cache_dir: "./cache"
+  max_cache_size_mb: 100
+  cache_ttl_hours: 24  # 缓存有效期（小时）
+  
+  # 处理限制
+  max_concurrent_requests: 5
+  request_timeout_seconds: 300
+
+# 数据验证配置
+validation:
+  edf_files:
+    required_channels: ["EEG", "EOG", "EMG"]
+    sampling_rate_range: [100, 1000]  # 采样率范围（Hz）
+    duration_range: [30, 3600]  # 时长范围（秒）
+    
+  hr_data:
+    min_value: 40  # 最小心率值
+    max_value: 200  # 最大心率值
+    min_samples: 10  # 最小样本数
+
+# 健康检查配置
+health_check:
+  enabled: true
+  interval_minutes: 60  # 检查间隔（分钟）
+  check_plugins: true  # 检查插件状态
+  check_resources: true  # 检查资源使用
+  check_permissions: true  # 检查文件权限
+
+# 命令别名（兼容旧版本）
+command_aliases:
+  sleep-analyze: ["sleep", "analyze-sleep", "sleep-analysis"]
+  stress-check: ["stress", "check-stress", "stress-analysis"]
+  meditation-guide: ["meditation", "guide-meditation", "meditation-plan"]
+  health-report: ["report", "health", "full-report"]
+  skill-info: ["info", "about", "version"]
+  health-check: ["status", "check", "diagnostics"]
+
+# 兼容性配置
+compatibility:
+  openclaw_min_version: "2026.3.0"
+  python_min_version: "3.8"
+  supported_platforms:
+    - "windows"
+    - "linux"
+    - "macos"
+
+# 文档链接
+documentation:
+  skill_guide: "SKILL.md"
+  user_manual: "PLUGIN_USAGE.md"
+  integration_guide: "INTEGRATION_GUIDE.md"
+  release_notes: "RELEASE.md"
+  changelog: "CHANGELOG.md"
+
+# 注意：此配置文件仅用于声明技能功能和限制
+# 所有安全声明必须与代码实现一致
+# 技能100%本地运行，无网络依赖

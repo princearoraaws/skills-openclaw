@@ -3,11 +3,16 @@
   "slug": "sleep-rabbit-plugin",
   "displayName": "sleep-rabbit-plugin",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1774182138417,
-    "commit": "https://github.com/openclaw/skills/commit/270a2a46ca037fc0c88c8b81cbbb0cff72ac08b5"
+    "version": "1.0.6",
+    "publishedAt": 1774790474311,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1774182138417,
+      "commit": "https://github.com/openclaw/skills/commit/270a2a46ca037fc0c88c8b81cbbb0cff72ac08b5"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1773800434320,

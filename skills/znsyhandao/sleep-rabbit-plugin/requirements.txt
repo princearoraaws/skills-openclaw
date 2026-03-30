@@ -1,0 +1,85 @@
+# 眠小兔睡眠健康技能依赖说明
+
+## 智能依赖管理
+此技能采用智能依赖管理，根据用户环境提供最佳功能体验。
+
+## 依赖级别
+
+### 1. 🟢 基础级别 (必需)
+- **Python 3.8+ 标准库**
+- 无需安装任何额外依赖
+- 提供基础功能：文件验证、基础评估、冥想指导
+
+### 2. 🟡 高级级别 (推荐)
+安装以下库可获得完整EDF分析功能：
+```bash
+pip install mne numpy scipy
+```
+
+**包含库**:
+- `mne>=1.11.0` - EDF睡眠数据分析
+- `numpy>=2.0.0` - 数值计算
+- `scipy>=1.10.0` - 科学计算
+
+### 3. 🔵 完整级别 (专业)
+完整的AISleepGen项目环境，包含：
+- 所有高级插件
+- 个性化算法
+- 专业级分析工具
+
+## 安装指导
+
+### 基础用户 (无需安装)
+```bash
+# 无需任何安装，开箱即用
+```
+
+### 进阶用户 (推荐安装)
+```bash
+# 安装科学计算库
+pip install mne numpy scipy
+
+# 使用国内镜像加速
+pip install mne numpy scipy -i https://pypi.tuna.tsinghua.edu.cn/simple
+```
+
+### 专业用户 (完整环境)
+```bash
+# 克隆AISleepGen项目
+git clone https://github.com/aisleepgen/aisleepgen.git
+
+# 安装所有依赖
+cd aisleepgen
+pip install -r requirements.txt
+```
+
+## 验证安装
+
+### 检查当前环境
+```bash
+# 运行技能的环境检查
+python skill.py --version
+```
+
+### 检查MNE是否安装
+```bash
+python -c "import mne; print(f'MNE版本: {mne.__version__}')"
+```
+
+## 注意事项
+
+1. **无需强制安装** - 技能在基础模式下完全可用
+2. **渐进增强** - 可随时安装依赖获得更多功能
+3. **智能检测** - 技能自动检测环境并提供最佳功能
+4. **详细指导** - 缺少依赖时会提供详细安装指导
+
+## 技术支持
+
+如有安装问题，可使用以下命令获取帮助：
+```bash
+# 检查环境状态
+/env-status
+
+# 获取安装指导
+/install-deps
+```

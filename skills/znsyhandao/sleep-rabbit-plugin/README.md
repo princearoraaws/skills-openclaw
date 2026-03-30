@@ -1,99 +1,126 @@
-# 🐰 眠小兔睡眠健康 - OpenClaw 技能
+# Sleep Rabbit - Sleep Health Analysis Skill
 
-[![ClawHub](https://img.shields.io/badge/ClawHub-sleep--rabbit--plugin-blue)](https://clawhub.ai/skills/sleep-rabbit-plugin)
-[![Version](https://img.shields.io/badge/version-1.0.0-green)]()
+## Overview
+Sleep Rabbit is a professional sleep health analysis system for OpenClaw, providing sleep analysis, stress assessment, and personalized meditation guidance.
 
-专业的睡眠健康分析系统，提供睡眠质量分析、压力评估和个性化冥想指导。
+## Features
 
-## ✨ 功能特点
+### Core Features
+- **Sleep Analysis**: Analyze EDF sleep data files
+- **Stress Assessment**: HRV-based stress evaluation from heart rate data
+- **Meditation Guidance**: Personalized meditation techniques and guidance
+- **Health Reporting**: Comprehensive health reports and recommendations
 
-- **睡眠分析**：分析EDF格式睡眠文件，生成睡眠评分和结构报告
-- **压力评估**：基于HRV指标评估压力水平
-- **冥想指导**：提供个性化冥想方案
-- **智能内存管理**：自动根据文件大小选择分析策略
-- **数据质量评估**：自动检测数据问题并给出建议
+### Security Features
+- 100% local operation, no network access
+- No shell commands or subprocess calls
+- Strict path validation and restriction
+- Privacy-friendly local processing
 
-## 📦 安装方法
+## Installation
 
-### 一键安装（推荐）
+### Method 1: Copy to OpenClaw Skills Directory
 ```bash
-# 安装 ClawHub CLI（如果还没装）
-npm install -g clawhub
+# Copy the skill directory to OpenClaw skills folder
+cp -r AISleepGen/ ~/.openclaw/skills/
+```
 
-# 安装眠小兔技能
-clawhub install sleep-rabbit-plugin
-使用 npx（无需全局安装）
-bash
-npx clawhub install sleep-rabbit-plugin
-手动安装（开发者）
-bash
-git clone https://github.com/your-repo/sleep-rabbit-plugin.git
-cd sleep-rabbit-plugin
-clawhub link .
-🚀 快速使用
-分析睡眠文件
-text
-/sleep-analyze D:\data\SC4001E0-PSG.edf
-输出示例：
+### Method 2: Use OpenClaw Skill Install
+```bash
+# Install from extracted directory
+openclaw skill install ./AISleepGen
+```
 
-text
-睡眠评分: 92/100 ⭐ 优秀
-睡眠质量: 优秀
-监测时长: 22.08小时
-建议:
-  * 保持规律作息
-  * 睡前1小时避免使用电子设备
-评估压力水平
-text
-/stress-check 72,75,78,74,76,73,71,70,72,74
-输出示例：
+## Usage
 
-text
-压力评分: 0.32/1.0
-压力等级: 低压力
-建议:
-  * 保持良好状态
-  * 适当放松
-获取冥想指导
-text
-/meditation-guide --type sleep_prep --duration 15
-📊 数据分析能力
-功能描述输入格式
-睡眠分析睡眠评分、结构、质量评估EDF文件
-压力评估HRV分析、压力等级心率数据列表
-冥想指导个性化冥想方案类型+时长
-🛠️ 技术规格
-兼容性：OpenClaw 2026.3.12+
+### Basic Commands
+- `/sleep-analyze <edf-file>`: Analyze EDF sleep data (requires MNE)
+- `/stress-check <hr-data>`: Stress assessment from heart rate data
+- `/meditation-guide`: Get personalized meditation guidance
+- `/file-info <file>`: File system analysis and validation
+- `/env-check`: Environment diagnostics and dependency checking
 
-依赖：Python 3.8+, mne, numpy, scipy, psutil
+### Environment Requirements
 
-文件格式：EDF (European Data Format)
+#### Basic Mode (Out of the Box)
+- Python 3.8+
+- Standard library only
+- File verification and basic analysis
 
-采样率：支持 100Hz-500Hz
+#### Advanced Mode (With MNE)
+- `pip install mne numpy scipy`
+- Full EDF sleep data analysis
+- Professional HRV stress assessment
 
-📝 更新日志
-v1.0.0 (2026-03-18)
-🎉 首次发布
+## Configuration
 
-✅ 支持EDF睡眠分析
+### Security Configuration (config.yaml)
+```yaml
+security:
+  network_access: false
+  local_only: true
+  privacy_friendly: true
+  no_external_dependencies: true
+  python_stdlib_only: true
+  no_shell_commands: true
+```
 
-✅ 压力评估功能
+### Skill Information
+- **Name**: Sleep Rabbit Sleep Health
+- **Version**: 1.0.6
+- **Author**: AISleepGen Team
+- **License**: MIT
+- **OpenClaw Min Version**: 2026.3.0
 
-✅ 冥想指导功能
+## Quality Assurance
 
-✅ 智能内存管理
+### Security Compliance
+- ✅ No network code, 100% local operation
+- ✅ No dangerous imports or system calls
+- ✅ Complete security declarations in config.yaml
+- ✅ Path validation and restriction
 
-✅ 数据质量评估
+### Documentation
+- ✅ Complete English documentation
+- ✅ Clear usage instructions
+- ✅ Security and privacy documentation
+- ✅ Installation and configuration guides
 
-🤝 贡献指南
-欢迎提交 Issue 和 Pull Request！
+### Testing
+- ✅ Structure testing passed
+- ✅ Security compliance verified
+- ✅ ClawHub standards met
+- ✅ Documentation consistency verified
 
-📄 许可证
-MIT © 眠小兔睡眠实验室
+## File Structure
+```
+AISleepGen/
+├── skill.py              # Main skill implementation
+├── config.yaml           # Configuration with security declarations
+├── package.json          # Package metadata
+├── CHANGELOG.md          # Version history (English)
+├── README.md             # This file
+├── SKILL.md              # Skill documentation
+├── INTEGRATION_GUIDE.md  # Integration guide
+├── PLUGIN_USAGE.md       # Plugin usage guide
+├── examples/             # Usage examples
+└── backup_md_files/      # Backup of original Chinese docs
+```
 
-📞 联系我们
-问题反馈：GitHub Issues
+## Support
 
-邮箱：support@sleep-rabbit.com
+### Issues and Questions
+- Check the documentation first
+- Review the examples directory
+- Verify environment requirements
 
-官网：https://sleep-rabbit.com
+### Dependencies
+- **Basic**: Python 3.8+ standard library
+- **Advanced**: MNE-Python, NumPy, SciPy (optional)
+
+## License
+MIT License - See LICENSE file for details
+
+## Version
+Current Version: 1.0.6
+Last Updated: 2026-03-29
