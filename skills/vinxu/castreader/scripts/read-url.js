@@ -26,7 +26,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { execFileSync } = require('child_process');
 
-const API_URL = process.env.CASTREADER_API_URL || 'http://api.castreader.ai:8123';
+const API_URL = process.env.CASTREADER_API_URL || 'https://api.castreader.ai';
 const API_KEY = process.env.CASTREADER_API_KEY || '';
 const VOICE = process.env.CASTREADER_VOICE || 'af_heart';
 const SPEED = parseFloat(process.env.CASTREADER_SPEED || '1.5');

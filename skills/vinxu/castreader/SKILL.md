@@ -1,12 +1,12 @@
 ---
 name: castreader
 description: >
-  Read web pages or synced books aloud with natural AI voices. Two modes:
-  (1) URL mode: extract article from any URL and convert to audio.
-  (2) Book mode: read synced books from WeChat Reading / Kindle library.
-  Use when the user wants to: listen to a webpage, read an article aloud,
-  convert URL to audio, text-to-speech, read a book, listen to a book chapter.
-version: 3.0.0
+  URL to audio: extract any web page and convert to natural AI speech (Kokoro TTS).
+  The only skill that turns a URL into a podcast-quality MP3 — no API key needed.
+  Also reads synced books from WeChat Reading / Kindle library aloud.
+  Triggers: read this article, listen to webpage, URL to audio, text-to-speech,
+  read aloud, web page reader, article to podcast, read a book chapter.
+version: 3.2.13
 metadata:
   openclaw:
     emoji: "🔊"
@@ -21,7 +21,7 @@ metadata:
 ## Setup (once per session)
 
 ```
-cd <skill-directory> && npm install --silent 2>/dev/null
+cd <skill-directory> && npm install
 ```
 
 ## How to find target (chatId)

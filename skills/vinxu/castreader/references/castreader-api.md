@@ -5,7 +5,7 @@
 ### Endpoint
 `POST {baseUrl}/api/captioned_speech_partly`
 
-Default baseUrl: `http://api.castreader.ai:8123`
+Default baseUrl: `https://api.castreader.ai`
 
 ### Request Body
 ```json

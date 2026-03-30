@@ -30,7 +30,7 @@ async function extract(url) {
 
   const browser = await puppeteer.launch({
     headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    args: [],
   });
 
   try {

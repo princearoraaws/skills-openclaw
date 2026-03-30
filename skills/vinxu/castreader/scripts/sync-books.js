@@ -35,7 +35,7 @@ const os = require('os');
 const LIBRARY_ROOT = path.join(os.homedir(), 'castreader-library');
 const BOOKS_DIR = path.join(LIBRARY_ROOT, 'books');
 
-const API_URL = process.env.CASTREADER_API_URL || 'http://api.castreader.ai:8123';
+const API_URL = process.env.CASTREADER_API_URL || 'https://api.castreader.ai';
 const API_KEY = process.env.CASTREADER_API_KEY || '';
 const VOICE = process.env.CASTREADER_VOICE || 'af_heart';
 const SPEED = parseFloat(process.env.CASTREADER_SPEED || '1.5');
