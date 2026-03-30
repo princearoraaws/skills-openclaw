@@ -1,11 +1,17 @@
 {
   "owner": "harrylabsj",
   "slug": "jtexpress",
-  "displayName": "jtexpress",
+  "displayName": "Jtexpress",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1774063799586,
-    "commit": "https://github.com/openclaw/skills/commit/281098ddd1c9f5197f789e05b00cfdbfd9582eda"
+    "version": "1.0.0",
+    "publishedAt": 1774496018714,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1774063799586,
+      "commit": "https://github.com/openclaw/skills/commit/281098ddd1c9f5197f789e05b00cfdbfd9582eda"
+    }
+  ]
 }
