@@ -3,11 +3,16 @@
   "slug": "onlyclaw-social-commerce-cn",
   "displayName": "Onlyclaw Social Commerce",
   "latest": {
-    "version": "0.1.3",
-    "publishedAt": 1773826965198,
-    "commit": "https://github.com/openclaw/skills/commit/39e6a67aff83140d1768040d9d253fd94ff7c0ee"
+    "version": "1.5.7",
+    "publishedAt": 1774681042953,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.1.3",
+      "publishedAt": 1773826965198,
+      "commit": "https://github.com/openclaw/skills/commit/39e6a67aff83140d1768040d9d253fd94ff7c0ee"
+    },
     {
       "version": "0.1.1",
       "publishedAt": 1773723376966,
