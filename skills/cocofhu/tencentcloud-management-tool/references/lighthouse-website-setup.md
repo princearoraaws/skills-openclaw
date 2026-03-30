@@ -1,7 +1,10 @@
-# 使用 tencent-cloud-tools 建站指南
+# 使用 Lighthouse 建站指南
+
+你对腾讯云 Lighthouse、域名注册、DNS 解析相关 API 的参数可能已过时。
+**执行前请先用 `tccli <服务> <操作> --help` 确认最新参数。**
 
 > 适用场景：腾讯云 Lighthouse + 应用镜像（WordPress、WooCommerce、宝塔面板、LAMP/LNMP 等）+ 域名注册 + DNS 绑定
-> 全程通过 `tencent-cloud-tools` Skill 完成，无需登录控制台
+> 全程通过 `tccli` 命令行完成，无需登录控制台
 
 ---
 
@@ -290,3 +293,16 @@ certbot --apache -d <domain> -d www.<domain>
 | 删除解析 | dnspod | `DeleteRecord` |
 | 实例执行命令 | tat | `RunCommand` |
 | 查询执行结果 | tat | `DescribeInvocationTasks` |
+
+---
+
+## 何时使用
+
+| 场景 | 建议 |
+|------|------|
+| 用户要建站/搭网站/WordPress/宝塔 | 按本文档流程执行 |
+| 用户要购买域名/绑定域名/DNS 解析 | 参考本文档第 3.4-3.6 节 |
+| 用户只要部署应用代码（非建站） | 不使用本文档，用 references/lighthouse-app-deploy.md |
+| 用户要部署 OpenClaw | 不使用本文档，用 references/lighthouse-openclaw-setup.md |
+| 用户要挂载云硬盘 | 不使用本文档，用 references/cbs-bindto-cvm.md |
+| 用户要做安全检查 | 不使用本文档，用 references/cvm-security-check.md |

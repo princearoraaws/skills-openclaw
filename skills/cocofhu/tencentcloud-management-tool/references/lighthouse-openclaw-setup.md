@@ -1,5 +1,8 @@
 # 在腾讯云 Lighthouse 上部署 OpenClaw（clawdbot 镜像）
 
+你对腾讯云 Lighthouse 实例创建、镜像查询、密码重置相关 API 的参数可能已过时。
+**执行前请先用 `tccli lighthouse <操作> --help` 确认最新参数。**
+
 > 通过 tccli 命令行在腾讯云轻量应用服务器（Lighthouse）上创建 OpenClaw 实例的完整流程。
 
 ---
@@ -137,3 +140,15 @@ tccli lighthouse RenewInstances --region <region> --InstanceIds '["<instance-id>
 2. **高危操作**：Stop/Terminate 等操作建议先用 `--dry-run` 预演
 3. **密码修改**：首次 SSH 登录后立即修改 root 密码
 4. **续费提醒**：注意实例到期时间，提前续费或设置自动续费
+
+---
+
+## 何时使用
+
+| 场景 | 建议 |
+|------|------|
+| 用户要部署 OpenClaw / clawdbot | 按本文档完整流程执行 |
+| 用户要在 Lighthouse 上部署其他应用 | 不使用本文档，用 references/lighthouse-app-deploy.md |
+| 用户要建站（WordPress/宝塔） | 不使用本文档，用 references/lighthouse-website-setup.md |
+| 用户要管理已有 Lighthouse 实例 | 参考本文档"常用运维命令"部分 |
+| 用户要挂载云硬盘到实例 | 不使用本文档，用 references/cbs-bindto-cvm.md |
