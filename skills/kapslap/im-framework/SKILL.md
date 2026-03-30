@@ -1,5 +1,6 @@
 ---
 name: im-framework
+version: "1.5"
 description: |
   Reference, explain, and apply the Immanent Metaphysics (IM) framework by Forrest Landry.
   Uses a structured ontology of 767 entities as an index into the live source text at mflb.com.
@@ -14,33 +15,78 @@ description: |
 Source: **https://mflb.com/8192** — Forrest Landry's whitebook. This is the canonical text.
 The ontology in `references/graph.jsonl` is an index into it. Always fetch the source URL and quote exactly.
 
+## Reference Files
+
+All files are in `references/` (relative to this skill directory):
+
+| File | Contents |
+|------|----------|
+| `graph.jsonl` | 767 entities — Concepts, Axioms, Theorems, Aphorisms, Implications + relations |
+| `whitebook-map.jsonl` | 73-entry structural map of whitebook chapters/sections with URLs |
+| `schema.yaml` | Type definitions and relation types |
+| `section-anchors.json` | Anchor-level URL map for fine-grained source links |
+
 ## Workflow
 
-1. **Search the ontology** — find the relevant entity in `graph.jsonl`
-2. **Get the URL** — use the `location` field
+1. **Search the graph** — find the relevant entity in `references/graph.jsonl`
+2. **Get the URL** — use the `location` field from the entity's properties
 3. **Fetch the source** — `web_fetch(location_url)` to get exact text
 4. **Quote verbatim** — cite with URL
 
-```bash
-# Search by concept name
-grep -i '"name": "symmetry"' references/graph.jsonl
+## Graph Query Examples
 
-# Search by keyword across definitions
-python3 -c "
+```bash
+# Set path relative to skill dir (resolve from dirname of SKILL.md)
+GRAPH="$(dirname $(realpath ~/Tillerman/Eitan/skills/im-framework/SKILL.md))/references/graph.jsonl"
+
+# Search by concept name
+grep -i '"name": "symmetry"' "$GRAPH"
+
+# Search by keyword across names and definitions
+python3 << 'EOF'
 import json
-for line in open('references/graph.jsonl'):
+GRAPH = "/Users/Jared/Tillerman/Eitan/skills/im-framework/references/graph.jsonl"
+TERM = "symmetry"  # change this
+for line in open(GRAPH):
     d = json.loads(line)
+    if d.get('op') != 'put':
+        continue
     e = d.get('entity', {})
     p = e.get('properties', {})
     name = p.get('name', p.get('word', p.get('text', '')))
     defn = p.get('definition', '')
     loc = p.get('location', '')
-    if 'TERM' in (name + defn).lower():
-        print(f\"{e['type']}: {name}\")
-        print(f\"  URL: {loc}\")
-        print(f\"  Def: {defn[:200]}\")
+    if TERM.lower() in (name + defn).lower():
+        print(f"{e['type']}: {name}")
+        print(f"  URL: {loc}")
+        print(f"  Def: {defn[:300]}")
         print()
-"
+EOF
+
+# List all entity types and counts
+python3 << 'EOF'
+import json
+from collections import Counter
+GRAPH = "/Users/Jared/Tillerman/Eitan/skills/im-framework/references/graph.jsonl"
+types = Counter()
+for line in open(GRAPH):
+    d = json.loads(line)
+    if d.get('op') == 'put':
+        types[d['entity']['type']] += 1
+print(types)
+EOF
+
+# Search section anchors for a chapter
+python3 << 'EOF'
+import json
+ANCHORS = "/Users/Jared/Tillerman/Eitan/skills/im-framework/references/section-anchors.json"
+anchors = json.load(open(ANCHORS))
+# anchors is a dict of {anchor_id: {title, url, ...}}
+TERM = "ethics"
+for k, v in anchors.items():
+    if TERM.lower() in str(v).lower():
+        print(k, "->", v.get('url', ''), "|", v.get('title', ''))
+EOF
 ```
 
 ## Quoting Rules (MANDATORY)

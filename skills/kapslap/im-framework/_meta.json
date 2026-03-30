@@ -1,13 +1,18 @@
 {
   "owner": "kapslap",
   "slug": "im-framework",
-  "displayName": "Im Framework",
+  "displayName": "IM Framework",
   "latest": {
-    "version": "1.4.0",
-    "publishedAt": 1774400503601,
-    "commit": "https://github.com/openclaw/skills/commit/c371357104e37bb43a845f0ecc5c029dd849c287"
+    "version": "1.5.0",
+    "publishedAt": 1774895631961,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.4.0",
+      "publishedAt": 1774400503601,
+      "commit": "https://github.com/openclaw/skills/commit/c371357104e37bb43a845f0ecc5c029dd849c287"
+    },
     {
       "version": "1.2.0",
       "publishedAt": 1774399365948,
