@@ -3,11 +3,16 @@
   "slug": "english-word-coach",
   "displayName": "English Word Coach",
   "latest": {
-    "version": "1.1.0",
-    "publishedAt": 1774190985126,
-    "commit": "https://github.com/openclaw/skills/commit/9d0c0d1d7389d6d1efbdd8c4d37f81296f6dd158"
+    "version": "1.2.0",
+    "publishedAt": 1774828382310,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.1.0",
+      "publishedAt": 1774190985126,
+      "commit": "https://github.com/openclaw/skills/commit/9d0c0d1d7389d6d1efbdd8c4d37f81296f6dd158"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1774062528157,
