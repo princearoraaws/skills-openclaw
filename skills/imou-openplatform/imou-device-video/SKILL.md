@@ -1,28 +1,39 @@
 ---
 name: imou-device-video
 description: >
-  Imou/乐橙设备视频与录像。支持按设备通道获取实时预览 HLS 流地址（供 OpenClaw 下载、播放、录制）；
-  获取本地录像或云录像片段信息；按时间区间获取云录像/本地录像 HLS 回放地址。
-  Use for real-time live HLS, local/cloud record clips, and record playback HLS for Imou devices.
-  Use when: 乐橙实时预览、直播地址、HLS流、本地录像片段、云录像片段、录像回放、openclaw 播放/录制/下载.
+  imou / Imou / 乐橙 / lechange 设备视频与录像技能。支持实时预览 live HLS、本地/云录像片段查询、录像回放 HLS。
+  Imou/Lechange device video skill for live HLS, local/cloud record clips, and playback HLS.
+  Use when: imou live hls, Imou playback hls, lechange video stream, 乐橙 实时预览, 乐橙 录像回放, 乐橙 云录像片段.
 metadata:
-  {
-    "openclaw":
-      {
-        "emoji": "📹",
-        "requires": { "env": ["IMOU_APP_ID", "IMOU_APP_SECRET"], "pip": ["requests"] },
-        "primaryEnv": "IMOU_APP_ID",
-        "install":
-          [
-            { "id": "python-requests", "kind": "pip", "package": "requests", "label": "Install requests" }
-          ]
-      }
-  }
+  openclaw:
+    emoji: "📹"
+    requires:
+      env: ["IMOU_APP_ID", "IMOU_APP_SECRET", "IMOU_BASE_URL"]
+      pip: ["requests"]
+    primaryEnv: "IMOU_APP_ID"
+    install:
+      - id: "python-requests"
+        kind: "pip"
+        package: "requests"
+        label: "Install requests"
 ---
 
-# Imou Device Video
+# Imou Device Video（乐橙设备视频）
 
 Get device live HLS URL, local/cloud record clips, and record playback HLS URL by device channel. For OpenClaw download, play, and record.
+
+## Search Aliases
+
+- imou
+- Imou
+- 乐橙
+- lechange
+- easy4ip
+- imou-device-video
+- 乐橙直播
+- 乐橙回放
+- 乐橙云录像
+- 乐橙本地录像
 
 ## Quick Start
 
