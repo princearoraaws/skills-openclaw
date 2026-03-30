@@ -30,7 +30,7 @@ CREATE SCHEMA memory;
 GO
 
 CREATE TABLE memory.Memories (
-    id          INT IDENTITY(1,1) PRIMARY KEY,
+    id          UNIQUEIDENTIFIER PRIMARY KEY DEFAULT newid(),
     category    NVARCHAR(100)  NOT NULL,
     key         NVARCHAR(255)  NOT NULL,
     content     NVARCHAR(MAX)  NOT NULL,
@@ -42,7 +42,7 @@ CREATE TABLE memory.Memories (
 );
 
 CREATE TABLE memory.TaskQueue (
-    id          INT IDENTITY(1,1) PRIMARY KEY,
+    id          UNIQUEIDENTIFIER PRIMARY KEY DEFAULT newid(),
     agent       NVARCHAR(100)  NOT NULL,
     task_type   NVARCHAR(100)  NOT NULL,
     payload     NVARCHAR(MAX)  DEFAULT '',
@@ -58,7 +58,7 @@ CREATE TABLE memory.TaskQueue (
 );
 
 CREATE TABLE memory.ActivityLog (
-    id          INT IDENTITY(1,1) PRIMARY KEY,
+    id          UNIQUEIDENTIFIER PRIMARY KEY DEFAULT newid(),
     event_type  NVARCHAR(100)  NOT NULL,
     agent       NVARCHAR(100)  DEFAULT '',
     description NVARCHAR(MAX)  DEFAULT '',
@@ -68,7 +68,7 @@ CREATE TABLE memory.ActivityLog (
 );
 
 CREATE TABLE memory.Sessions (
-    id          INT IDENTITY(1,1) PRIMARY KEY,
+    id          UNIQUEIDENTIFIER PRIMARY KEY DEFAULT newid(),
     session_key NVARCHAR(255)  NOT NULL,
     agent       NVARCHAR(100)  DEFAULT '',
     status      NVARCHAR(50)   DEFAULT 'active',
@@ -78,7 +78,7 @@ CREATE TABLE memory.Sessions (
 );
 
 CREATE TABLE memory.KnowledgeIndex (
-    id          INT IDENTITY(1,1) PRIMARY KEY,
+    id          UNIQUEIDENTIFIER PRIMARY KEY DEFAULT newid(),
     domain      NVARCHAR(100)  NOT NULL,
     key         NVARCHAR(255)  NOT NULL,
     content     NVARCHAR(MAX)  NOT NULL,
@@ -88,7 +88,7 @@ CREATE TABLE memory.KnowledgeIndex (
 );
 
 CREATE TABLE memory.Todos (
-    id          INT IDENTITY(1,1) PRIMARY KEY,
+    id          UNIQUEIDENTIFIER PRIMARY KEY DEFAULT newid(),
     title       NVARCHAR(500)  NOT NULL,
     description NVARCHAR(MAX)  DEFAULT '',
     priority    INT            DEFAULT 3,
@@ -103,21 +103,27 @@ GO
 
 ## Step 2: Configure .env
 
+Backend configuration uses a simple naming pattern. Add these to your `.env`:
+
 ```env
 # Local SQL Server
-SQL_SERVER=10.0.0.110
-SQL_PORT=1433
-SQL_DATABASE=YourDatabase
-SQL_USER=your_user
-SQL_PASSWORD=your_password
+SQL_local_server=10.0.0.110
+SQL_local_port=1433
+SQL_local_database=YourDatabase
+SQL_local_user=your_user
+SQL_local_password=your_password
 
 # Cloud SQL Server (Azure / site4now / etc.)
-SQL_CLOUD_SERVER=yourserver.database.windows.net
-SQL_CLOUD_PORT=1433
-SQL_CLOUD_DATABASE=your_cloud_db
-SQL_CLOUD_USER=your_cloud_user
-SQL_CLOUD_PASSWORD=your_cloud_password
+SQL_cloud_server=yourserver.database.windows.net
+SQL_cloud_port=1433
+SQL_cloud_database=your_cloud_db
+SQL_cloud_user=your_cloud_user
+SQL_cloud_password=your_cloud_password
+
+# Add more backends using the same pattern: SQL_<backend>_server, SQL_<backend>_database, etc.
 ```
+
+See [clawbot-sql-connector README](https://github.com/VeXHarbinger/clawbot-sql-connector#env-setup) for more details on backend naming.
 
 ## Step 3: Install
 

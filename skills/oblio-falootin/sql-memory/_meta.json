@@ -1,13 +1,18 @@
 {
   "owner": "oblio-falootin",
   "slug": "sql-memory",
-  "displayName": "Sql Memory",
+  "displayName": "SQL Memory",
   "latest": {
-    "version": "2.1.0-alpha",
-    "publishedAt": 1774124076703,
-    "commit": "https://github.com/openclaw/skills/commit/91f8e546f27a97f0e45fd1b44784f3728c701e39"
+    "version": "2.1.0",
+    "publishedAt": 1774509631573,
+    "commit": null
   },
   "history": [
+    {
+      "version": "2.1.0-alpha",
+      "publishedAt": 1774124076703,
+      "commit": "https://github.com/openclaw/skills/commit/91f8e546f27a97f0e45fd1b44784f3728c701e39"
+    },
     {
       "version": "2.0.1",
       "publishedAt": 1773995151370,
