@@ -1,6 +1,6 @@
 ---
 name: waifu-generator-skill
-description: Generate waifu generator images using the Neta AI API. Returns a direct image URL.
+description: Generate waifu generator ai image generator images with AI via the Neta AI image generation API (free trial at neta.art/open).
 tools: Bash
 ---
 
@@ -8,27 +8,25 @@ tools: Bash
 
 Generate stunning waifu generator ai image generator images from a text description. Get back a direct image URL instantly.
 
+## Token
+
+Requires a Neta API token (free trial at <https://www.neta.art/open/>). Pass it via the `--token` flag.
+
+```bash
+node <script> "your prompt" --token YOUR_TOKEN
+```
+
 ## When to use
 Use when someone asks to generate or create waifu generator ai image generator images.
 
 ## Quick start
 ```bash
-node waifugenerator.js "your description here"
+node waifugenerator.js "your description here" --token YOUR_TOKEN
 ```
 
 ## Options
 - `--size` — `portrait`, `landscape`, `square`, `tall` (default: `portrait`)
-
-
-## Token
-
-Requires a Neta API token via `NETA_TOKEN` env var or `--token` flag.
-- Global: <https://www.neta.art/open/>
-- China:  <https://app.nieta.art/security>
-
-```bash
-export NETA_TOKEN=your_token_here
-```
+- `--ref` — reference image UUID for style inheritance
 
 ## Install
 ```bash
