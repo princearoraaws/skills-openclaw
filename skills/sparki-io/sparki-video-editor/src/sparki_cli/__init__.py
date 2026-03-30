@@ -1,3 +1,3 @@
-"""Sparki CLI — OpenClaw skill for AI video editing."""
+"""Sparki CLI — OpenClaw SKILL for AI video editor."""
 
-__version__ = "1.0.0"
+__version__ = "1.0.8"

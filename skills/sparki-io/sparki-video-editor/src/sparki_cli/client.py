@@ -86,6 +86,42 @@ class SparkiClient:
                                headers=self._headers)
             return resp.json()
 
+    async def create_emulate_project(
+        self,
+        source_object_keys: list[str],
+        reference_object_key: str | None = None,
+        reference_url: str | None = None,
+        user_input: str = "",
+        aspect_ratio: str = "9:16",
+    ) -> dict[str, Any]:
+        ref: dict[str, Any] = {"idx": 0, "media_type": "video"}
+        if reference_object_key:
+            ref["s3_object_key"] = reference_object_key
+        elif reference_url:
+            ref["video_url"] = reference_url
+
+        sources = [{"idx": i, "s3_object_key": key, "media_type": "video"}
+                   for i, key in enumerate(source_object_keys)]
+
+        body: dict[str, Any] = {
+            "reference_resource": [ref],
+            "resources": sources,
+            "user_input": user_input,
+            "send_after_create": True,
+            "generation_preferences": {"aspect_ratio": aspect_ratio},
+        }
+        async with httpx.AsyncClient() as c:
+            resp = await c.post(self._url("/api/v1/emulate/projects/"),
+                                headers=self._headers, json=body)
+            return resp.json()
+
+    async def get_emulate_project_status(self, task_id: str) -> dict[str, Any]:
+        async with httpx.AsyncClient() as c:
+            resp = await c.get(
+                self._url(f"/api/v1/emulate/projects/task/{task_id}"),
+                headers=self._headers)
+            return resp.json()
+
     async def download_result(self, url: str, output_path: Path) -> int:
         async with httpx.AsyncClient(timeout=600, follow_redirects=True) as c:
             async with c.stream("GET", url) as resp:

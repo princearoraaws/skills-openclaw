@@ -30,12 +30,12 @@ app = typer.Typer(add_completion=False)
 
 
 def get_config_dir() -> Path:
-    """Return the config directory path. Extracted for test monkeypatching."""
+    """Return the config directory path."""
     return DEFAULT_CONFIG_DIR
 
 
 def _load_config() -> Config:
-    """Load configuration using the (possibly monkeypatched) config dir."""
+    """Load configuration from the config directory."""
     return Config(config_dir=get_config_dir())
 
 
@@ -81,6 +81,22 @@ def _load_history() -> list[dict]:
     return []
 
 
+def _lookup_mode(task_id: str) -> str | None:
+    """Look up the edit mode for a task_id from local history."""
+    for entry in _load_history():
+        if entry.get("task_id") == task_id:
+            return entry.get("mode")
+    return None
+
+
+async def _get_status_by_mode(client, task_id: str) -> dict:
+    """Call the correct status endpoint based on the project's mode."""
+    mode = _lookup_mode(task_id)
+    if mode == EditMode.STYLE_CLONE:
+        return await client.get_emulate_project_status(task_id)
+    return await client.get_project_status(task_id)
+
+
 def _save_project(task_id: str, mode: str = "", style: str = "") -> None:
     """Track a project ID locally for history lookups."""
     from datetime import datetime, timezone
@@ -118,6 +134,44 @@ def _run_async(coro_fn):
         asyncio.run(coro_fn())
     except (httpx.HTTPError, httpx.StreamError) as e:
         print_error("NETWORK_ERROR", str(e))
+
+
+async def _upload_and_poll_asset(
+    client: SparkiClient,
+    file_path: Path,
+    label: str = "",
+) -> str | None:
+    """Upload a file and poll until processed. Returns object_key or None on failure."""
+    import time
+
+    display = label or file_path.name
+    log(f"Uploading {display}...")
+    resp = await client.upload_asset(file_path)
+    if resp.get("code") != 200:
+        print_error("UPLOAD_FAILED", resp.get("message"))
+        return None
+    object_key = resp["data"]["object_key"]
+
+    log(f"Waiting for processing: {object_key}")
+    start = time.monotonic()
+    while True:
+        if time.monotonic() - start >= DEFAULT_ASSET_POLL_TIMEOUT:
+            print_error("RENDER_TIMEOUT", "Asset processing timed out")
+            return None
+        try:
+            status_resp = await client.get_asset_status(object_key)
+        except httpx.HTTPError as exc:
+            log(f"Asset status check failed ({exc}), retrying...")
+            await asyncio.sleep(DEFAULT_ASSET_POLL_INTERVAL)
+            continue
+        asset_status = (status_resp.get("data", {}).get("status")
+                        if status_resp.get("data") else None)
+        if asset_status == 1:
+            return object_key
+        if asset_status == -2:
+            print_error("UPLOAD_FAILED", f"Asset processing failed: {object_key}")
+            return None
+        await asyncio.sleep(DEFAULT_ASSET_POLL_INTERVAL)
 
 
 @app.command()
@@ -206,22 +260,42 @@ def assets(
 @app.command()
 def edit(
     object_key: Annotated[list[str], typer.Option("--object-key", help="Asset object key(s) to edit")],
-    mode: Annotated[str, typer.Option("--mode", help="Edit mode: style-guided, prompt-driven")],
+    mode: Annotated[str, typer.Option("--mode", help="Edit mode: style-guided, prompt-driven, style-clone")],
     style: Annotated[Optional[str], typer.Option("--style", help="Style for style-guided mode (e.g. vlog/daily)")] = None,
-    prompt: Annotated[Optional[str], typer.Option("--prompt", help="Text prompt for prompt-driven mode")] = None,
+    prompt: Annotated[Optional[str], typer.Option("--prompt", help="Text prompt for prompt-driven or style-clone mode")] = None,
     aspect_ratio: Annotated[str, typer.Option("--aspect-ratio", help="Output aspect ratio")] = "9:16",
     duration_range: Annotated[Optional[str], typer.Option("--duration-range", help="Duration range (e.g. 30s~60s)")] = None,
+    reference_url: Annotated[Optional[str], typer.Option("--reference-url", help="Reference video URL (TikTok, Instagram, X, Facebook)")] = None,
+    reference_file: Annotated[Optional[Path], typer.Option("--reference-file", help="Local reference video file")] = None,
+    reference_tg: Annotated[bool, typer.Option("--reference-tg", help="Get Telegram upload link for reference video")] = False,
 ) -> None:
     """Create a new edit project for uploaded assets."""
 
     auth = _require_auth()
     if auth is None:
         return
-    _, client = auth
+    cfg, client = auth
 
     if duration_range and duration_range not in VALID_DURATION_RANGES:
         print_error("INVALID_MODE", f"Invalid duration range: {duration_range}")
         return
+
+    # Cross-mode validation
+    ref_count = sum([bool(reference_url), bool(reference_file), reference_tg])
+    if mode == EditMode.STYLE_CLONE:
+        if ref_count != 1:
+            print_error("INVALID_REFERENCE")
+            return
+        if style:
+            print_error("INVALID_MODE", "--style is not used with style-clone mode")
+            return
+        if duration_range:
+            print_error("INVALID_MODE", "--duration-range is not supported for style-clone mode")
+            return
+    else:
+        if ref_count > 0:
+            print_error("INVALID_MODE", "--reference-* options are only for style-clone mode")
+            return
 
     if mode == EditMode.STYLE_GUIDED:
         if not style or not validate_style(style):
@@ -238,10 +312,57 @@ def edit(
         tags = []
         agent_type = None
         user_input = prompt
+    elif mode == EditMode.STYLE_CLONE:
+        user_input = prompt or ""
+
+        # --reference-tg: return upload link, no project created
+        if reference_tg:
+            print_success({
+                "action": "upload_reference_via_telegram",
+                "upload_tg": cfg.upload_tg,
+                "message": "Please ask the user to upload their reference video via the Telegram Mini App.",
+            })
+            return
+
+        async def _run_clone() -> None:
+            ref_key = None
+            ref_url = None
+
+            if reference_file:
+                validated = _validate_files([reference_file])
+                if validated is None:
+                    return
+                ref_key = await _upload_and_poll_asset(
+                    client, reference_file,
+                    label=f"reference video: {reference_file.name}",
+                )
+                if ref_key is None:
+                    return
+            elif reference_url:
+                ref_url = reference_url
+
+            resp = await client.create_emulate_project(
+                source_object_keys=object_key,
+                reference_object_key=ref_key,
+                reference_url=ref_url,
+                user_input=user_input,
+                aspect_ratio=aspect_ratio,
+            )
+            if resp.get("code") != 200:
+                print_error("NETWORK_ERROR", resp.get("message"))
+                return
+            data = resp["data"]
+            task_id = data.get("task_id", data.get("taskId", ""))
+            _save_project(task_id, mode=mode, style="")
+            print_success(data)
+
+        _run_async(_run_clone)
+        return
     else:
         print_error("INVALID_MODE")
         return
 
+    # Existing style-guided / prompt-driven flow (unchanged)
     async def _run() -> None:
         resp = await client.create_project(
             object_keys=object_key,
@@ -274,7 +395,7 @@ def status(
     _, client = auth
 
     async def _run() -> None:
-        resp = await client.get_project_status(task_id)
+        resp = await _get_status_by_mode(client, task_id)
         if resp.get("code") != 200:
             print_error("TASK_NOT_FOUND", resp.get("message"))
             return
@@ -296,7 +417,7 @@ def download(
     cfg, client = auth
 
     async def _run() -> None:
-        resp = await client.get_project_status(task_id)
+        resp = await _get_status_by_mode(client, task_id)
         if resp.get("code") != 200:
             print_error("TASK_NOT_FOUND", resp.get("message"))
             return
@@ -346,7 +467,7 @@ def history(
         projects = []
         for entry in entries:
             tid = entry["task_id"]
-            resp = await client.get_project_status(tid)
+            resp = await _get_status_by_mode(client, tid)
             if resp.get("code") == 200:
                 projects.append(resp["data"])
 
@@ -362,7 +483,7 @@ def history(
 @app.command()
 def run(
     file: Annotated[list[Path], typer.Option("--file", help="Video file(s) to upload and edit")],
-    mode: Annotated[str, typer.Option("--mode", help="Edit mode: style-guided, prompt-driven")],
+    mode: Annotated[str, typer.Option("--mode", help="Edit mode: style-guided, prompt-driven, style-clone")],
     style: Annotated[Optional[str], typer.Option("--style", help="Style for style-guided mode")] = None,
     prompt: Annotated[Optional[str], typer.Option("--prompt", help="Text prompt for prompt-driven mode")] = None,
     aspect_ratio: Annotated[str, typer.Option("--aspect-ratio", help="Output aspect ratio")] = "9:16",
@@ -370,6 +491,9 @@ def run(
     output: Annotated[Optional[Path], typer.Option("--output", help="Output file path")] = None,
     poll_interval: Annotated[int, typer.Option("--poll-interval", help="Seconds between project status polls")] = DEFAULT_PROJECT_POLL_INTERVAL,
     timeout: Annotated[int, typer.Option("--timeout", help="Max seconds to wait for completion")] = DEFAULT_PROJECT_POLL_TIMEOUT,
+    reference_url: Annotated[Optional[str], typer.Option("--reference-url", help="Reference video URL (TikTok, Instagram, X, Facebook)")] = None,
+    reference_file: Annotated[Optional[Path], typer.Option("--reference-file", help="Local reference video file")] = None,
+    reference_tg: Annotated[bool, typer.Option("--reference-tg", help="Not available in run")] = False,
 ) -> None:
     """End-to-end workflow: upload -> edit -> poll -> download."""
 
@@ -377,6 +501,26 @@ def run(
     if auth is None:
         return
     cfg, client = auth
+
+    # Cross-mode validation
+    ref_count = sum([bool(reference_url), bool(reference_file), reference_tg])
+    if mode == EditMode.STYLE_CLONE:
+        if reference_tg:
+            print_error("INVALID_MODE", "--reference-tg is not available in run command")
+            return
+        if ref_count != 1:
+            print_error("INVALID_REFERENCE")
+            return
+        if style:
+            print_error("INVALID_MODE", "--style is not used with style-clone mode")
+            return
+        if duration_range:
+            print_error("INVALID_MODE", "--duration-range is not supported for style-clone mode")
+            return
+    else:
+        if ref_count > 0:
+            print_error("INVALID_MODE", "--reference-* options are only for style-clone mode")
+            return
 
     # Validate duration range
     if duration_range and duration_range not in VALID_DURATION_RANGES:
@@ -399,6 +543,8 @@ def run(
         tags = []
         agent_type = None
         user_input = prompt
+    elif mode == EditMode.STYLE_CLONE:
+        user_input = prompt or ""
     else:
         print_error("INVALID_MODE")
         return
@@ -407,40 +553,107 @@ def run(
     if validated is None:
         return
 
+    if reference_file:
+        ref_validated = _validate_files([reference_file])
+        if ref_validated is None:
+            return
+
+    if mode == EditMode.STYLE_CLONE:
+        async def _run_clone() -> None:
+            import time
+
+            # Step 1: Upload source files
+            object_keys = []
+            for f in validated:
+                key = await _upload_and_poll_asset(client, f, label=f"source video: {f.name}")
+                if key is None:
+                    return
+                object_keys.append(key)
+
+            # Step 2: Handle reference video
+            ref_key = None
+            ref_url = None
+            if reference_file:
+                ref_key = await _upload_and_poll_asset(
+                    client, reference_file, label=f"reference video: {reference_file.name}")
+                if ref_key is None:
+                    return
+            elif reference_url:
+                ref_url = reference_url
+
+            # Step 3: Create emulate project
+            log("Creating style-clone project...")
+            proj_resp = await client.create_emulate_project(
+                source_object_keys=object_keys,
+                reference_object_key=ref_key,
+                reference_url=ref_url,
+                user_input=user_input,
+                aspect_ratio=aspect_ratio,
+            )
+            if proj_resp.get("code") != 200:
+                print_error("NETWORK_ERROR", proj_resp.get("message"))
+                return
+            data = proj_resp["data"]
+            task_id = data.get("task_id", data.get("taskId", ""))
+            _save_project(task_id, mode=mode, style="")
+
+            # Step 4: Poll for completion
+            proj_start = time.monotonic()
+            while True:
+                elapsed = time.monotonic() - proj_start
+                if elapsed >= timeout:
+                    print_error("RENDER_TIMEOUT")
+                    return
+                try:
+                    status_resp = await client.get_emulate_project_status(task_id)
+                except httpx.HTTPError as exc:
+                    log(f"Project status check failed ({exc}), retrying...")
+                    await asyncio.sleep(poll_interval)
+                    continue
+                if status_resp.get("code") != 200:
+                    print_error("TASK_NOT_FOUND", status_resp.get("message"))
+                    return
+                proj_data = status_resp["data"]
+                task_status = proj_data.get("status", "")
+                log(f"Project {task_id} status: {task_status}")
+                if task_status.upper() == "COMPLETED":
+                    break
+                if task_status.upper() in ("FAILED", "CANCEL"):
+                    print_error("NETWORK_ERROR", f"Project failed: {task_id}")
+                    return
+                await asyncio.sleep(poll_interval)
+
+            # Step 5: Download result
+            result_url = _extract_result_url(proj_data)
+            if not result_url:
+                print_error("NETWORK_ERROR", "No result URL available")
+                return
+            out_path = output or cfg.default_output_dir / f"{task_id}.mp4"
+            file_size = await client.download_result(result_url, out_path)
+            delivery_hint = ("telegram_direct" if file_size <= TELEGRAM_FILE_SIZE_LIMIT
+                             else "link_only")
+            print_success({
+                "task_id": task_id,
+                "status": task_status,
+                "file_path": str(out_path),
+                "file_size": file_size,
+                "result_url": result_url,
+                "delivery_hint": delivery_hint,
+            })
+
+        _run_async(_run_clone)
+        return
+
     async def _run() -> None:
         import time
 
         # Step 1: Upload all files
         object_keys = []
         for f in validated:
-            log(f"Uploading {f.name}...")
-            resp = await client.upload_asset(f)
-            if resp.get("code") != 200:
-                print_error("UPLOAD_FAILED", resp.get("message"))
+            key = await _upload_and_poll_asset(client, f)
+            if key is None:
                 return
-            object_key = resp["data"]["object_key"]
-
-            # Poll for asset processing
-            log(f"Waiting for processing: {object_key}")
-            asset_start = time.monotonic()
-            while True:
-                if time.monotonic() - asset_start >= DEFAULT_ASSET_POLL_TIMEOUT:
-                    print_error("RENDER_TIMEOUT", "Asset processing timed out")
-                    return
-                try:
-                    status_resp = await client.get_asset_status(object_key)
-                except httpx.HTTPError as exc:
-                    log(f"Asset status check failed ({exc}), retrying...")
-                    await asyncio.sleep(DEFAULT_ASSET_POLL_INTERVAL)
-                    continue
-                asset_status = status_resp.get("data", {}).get("status") if status_resp.get("data") else None
-                if asset_status == 1:
-                    break
-                if asset_status == -2:
-                    print_error("UPLOAD_FAILED", f"Asset processing failed: {object_key}")
-                    return
-                await asyncio.sleep(DEFAULT_ASSET_POLL_INTERVAL)
-            object_keys.append(object_key)
+            object_keys.append(key)
 
         # Step 2: Create project
         log("Creating edit project...")

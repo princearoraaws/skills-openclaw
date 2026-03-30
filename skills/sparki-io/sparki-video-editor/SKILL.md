@@ -1,12 +1,7 @@
 ---
 name: sparki-video-editor
-description: >
-  AI-powered video editing — turn raw footage into polished vlogs,
-  highlight reels, TikTok/Shorts/Reels, montages, and more.
-  Control the editing flow through Telegram chat, or let your ClawBot
-  handle it automatically. Pick a style and let Sparki handle the rest,
-  or describe what you want in your own words.
-version: 1.0.0
+description: AI video editor for creators. Transform raw footage into polished vlogs, talking-head videos, or social media content (TikTok/Shorts/Reels). Control the workflow through chat or fully automate it via ClawBot. From cloning a reference style to natural language editing, simply describe your vision and let Sparki handle the rest.
+version: 1.0.8
 metadata:
   clawdbot:
     requires:
@@ -17,7 +12,7 @@ metadata:
         command: "uv sync"
         cwd: "."
     primaryEnv: SPARKI_API_KEY
-    emoji: "\U0001F3AC"
+    emoji: "🎬"
     homepage: https://sparki.io
     os: [darwin, linux]
     always: false
@@ -57,6 +52,7 @@ sparki setup --api-key $SPARKI_API_KEY
 > I can edit your videos in two ways:
 > 1. **Style-Guided** — pick a style and I'll handle the rest
 > 2. **Prompt-Driven** — tell me what you want in your own words
+> 3. **Style-Clone** — provide a reference video and I’ll clone its style
 >
 > Available styles:
 > 🎬 Vlog: daily · energetic-sports · chill-vibe · upbeat-energy · funny-commentary
@@ -65,11 +61,9 @@ sparki setup --api-key $SPARKI_API_KEY
 > 🗣 Talking Head: tutorial · podcast-interview · product-review · reaction-commentary
 > ✂️ long-to-short · 💬 ai-caption · 🔲 video-resizer
 >
-> To get started, send me your video:
+> To get started, provide me your video:
 > 1. **Local file** — tell me the file path (OpenClaw environment)
 > 2. **Mini App upload** — tap the link below to upload your video
->
-> What would you like to create?"
 
 **Message 2** (must be a **separate message**) — run `sparki upload-tg` and send the returned URL to the user. This must be its own message so the link is easy to tap in Telegram.
 
@@ -102,9 +96,17 @@ When the user provides a video file or reports that upload is complete, but has 
 
 > "How would you like to edit this video?
 > 1. **Style-Guided** — pick a style from the list above
-> 2. **Prompt-Driven** — tell me what you want in your own words"
+> 2. **Prompt-Driven** — tell me what you want in your own words
+> 3. **Style-Clone** — provide a reference video and I'll clone its style"
 
-Wait for the user to explicitly select a style or provide a prompt before running `sparki edit` or `sparki run`.
+Wait for the user to explicitly select a style, provide a prompt, or choose style-clone before running `sparki edit` or `sparki run`.
+
+If the user selects **Style-Clone**, ask how they want to provide the reference video:
+
+> "How would you like to provide the reference video?
+> 1. **Video link** — paste a link from TikTok, Instagram, X, or Facebook
+> 2. **Upload via Telegram** — upload through the Mini App
+> 3. **Local file** — provide a file path"
 
 ## Step 4: Determine What the User Wants
 
@@ -117,6 +119,9 @@ Wait for the user to explicitly select a style or provide a prompt before runnin
 | Wants to see past projects | Run `sparki history` |
 | Wants to download a result | Run `sparki download --task-id <id>` |
 | Asks what Sparki can do | Show the style list from **Style Reference** |
+| Style-Clone + provides video link | Use `--reference-url` → **Quick Start** (Mode A) or **Other Commands** (Mode B) |
+| Style-Clone + wants Telegram upload | Run `sparki edit --mode style-clone --reference-tg --object-key <key>` → send upload link to user → wait for upload confirmation → continue editing |
+| Style-Clone + local reference file | Use `--reference-file` → **Quick Start** (Mode A) or **Other Commands** (Mode B) |
 
 ## Quick Start — `sparki run`
 
@@ -138,6 +143,22 @@ sparki run \
   --prompt "Cut a 60s highlight reel with energetic transitions" \
   --aspect-ratio 9:16 \
   --output ~/output/highlights.mp4
+
+# Style-Clone with reference URL
+sparki run \
+  --file /path/to/video.mp4 \
+  --mode style-clone \
+  --reference-url "https://www.tiktok.com/@user/video/123" \
+  --aspect-ratio 9:16 \
+  --output ~/output/cloned.mp4
+
+# Style-Clone with local reference file
+sparki run \
+  --file /path/to/video.mp4 \
+  --mode style-clone \
+  --reference-file /path/to/reference.mp4 \
+  --aspect-ratio 9:16 \
+  --output ~/output/cloned.mp4
 ```
 
 **Parameters:**
@@ -145,11 +166,13 @@ sparki run \
 | Parameter | Required | Description |
 |---|---|---|
 | `--file` | Yes | Video file path (mp4/mov, max 3GB). Repeat for multiple files (up to 10) |
-| `--mode` | Yes | `style-guided` or `prompt-driven` |
+| `--mode` | Yes | `style-guided`, `prompt-driven`, or `style-clone` |
 | `--style` | If style-guided | Style from the reference below (e.g. `vlog/daily`) |
 | `--prompt` | If prompt-driven | Natural language description of what you want |
 | `--aspect-ratio` | No | `9:16` (default, vertical), `1:1` (square), `16:9` (landscape) |
 | `--duration-range` | No | Target duration: `<30s`, `30s~60s`, `60s~90s`, `>90s`, `custom` |
+| `--reference-url` | If style-clone | Reference video URL (TikTok, Instagram, X, Facebook) |
+| `--reference-file` | If style-clone | Local reference video file path |
 | `--output` | No | Output file path (default: `~/.openclaw/workspace/sparki/videos/<task_id>.mp4`) |
 | `--poll-interval` | No | Seconds between status checks (default: 30) |
 | `--timeout` | No | Max wait seconds (default: 3600) |
@@ -251,7 +274,27 @@ sparki edit \
   --mode style-guided \
   --style montage/highlight-reel \
   --aspect-ratio 9:16
+
+# Style-Clone with reference URL
+sparki edit \
+  --object-key assets/98/abc123.mp4 \
+  --mode style-clone \
+  --reference-url "https://www.tiktok.com/@user/video/123"
+
+# Style-Clone: get Telegram upload link for reference video
+sparki edit \
+  --object-key assets/98/abc123.mp4 \
+  --mode style-clone \
+  --reference-tg
 ```
+
+When using `--reference-tg`, the command returns an upload link (no project is created yet). Send the upload link to the user and ask them to upload their reference video via the Telegram Mini App. Once the user confirms the upload is complete, proceed with `sparki edit --mode style-clone --reference-url <url>` or `--reference-file` to create the project.
+
+**`edit`-only parameters (not available in `run`):**
+
+| Parameter | Required | Description |
+|---|---|---|
+| `--reference-tg` | If style-clone | Get Telegram upload link for reference video |
 
 Returns a `task_id` for tracking with `sparki status`.
 
@@ -262,6 +305,8 @@ sparki status --task-id <task_id>
 ```
 
 Status lifecycle: `INIT` → `CHAT` → `PLAN` → `QUEUED` → `EXECUTOR` → `COMPLETED` / `FAILED`
+
+> **Note:** Style-clone projects use a shorter lifecycle: `INIT` → `EXECUTOR` → `COMPLETED` / `FAILED` / `CANCEL` (no `CHAT`/`PLAN`/`QUEUED` stages).
 
 ### `sparki download` — Download completed result
 
@@ -298,7 +343,8 @@ All commands return structured JSON. On error:
 | `CONCURRENT_LIMIT` | "Too many projects running. Let me check..." → run `sparki history` |
 | `INVALID_FILE_FORMAT` | "Only mp4 and mov files are supported." |
 | `INVALID_STYLE` | "Unknown style." → show the Style Reference above |
-| `INVALID_MODE` | "Unknown mode." → suggest style-guided or prompt-driven |
+| `INVALID_MODE` | "Unknown mode." → suggest style-guided, prompt-driven, or style-clone |
+| `INVALID_REFERENCE` | "A reference video is required for style-clone mode. Provide a URL, local file, or upload via Telegram." |
 | `UPLOAD_FAILED` | "Upload failed. Check your connection and try again." |
 | `RENDER_TIMEOUT` | "Processing timed out. Try a shorter clip or increase timeout." |
 | `TASK_NOT_FOUND` | "Project not found. Run `sparki history` to see recent projects." |
@@ -321,3 +367,6 @@ When the user wants prompt-driven but needs help, suggest:
 - Processing time: typically 5–20 minutes
 - Result URLs expire after 24 hours — download promptly
 - For long videos (30+ min): use `--timeout 7200`
+
+## Support
+If you encounter any issues or have feature requests, please contact us at support@sparki.io

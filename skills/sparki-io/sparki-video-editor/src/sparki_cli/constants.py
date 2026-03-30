@@ -6,6 +6,7 @@ from enum import StrEnum
 class EditMode(StrEnum):
     STYLE_GUIDED = "style-guided"
     PROMPT_DRIVEN = "prompt-driven"
+    STYLE_CLONE = "style-clone"
 
 
 STYLE_CATALOG: dict[str, dict[str | None, dict]] = {
@@ -118,7 +119,11 @@ ERROR_CODES: dict[str, dict[str, str]] = {
     },
     "INVALID_MODE": {
         "message": "Unknown edit mode",
-        "action": "Choose from: style-guided, prompt-driven",
+        "action": "Choose from: style-guided, prompt-driven, style-clone",
+    },
+    "INVALID_REFERENCE": {
+        "message": "Reference video required for style-clone mode",
+        "action": "Provide --reference-url, --reference-file, or --reference-tg",
     },
     "UPLOAD_FAILED": {
         "message": "Upload failed",
