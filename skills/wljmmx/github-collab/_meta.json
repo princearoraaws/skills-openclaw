@@ -3,11 +3,16 @@
   "slug": "github-collab",
   "displayName": "Github Collab",
   "latest": {
-    "version": "0.1.3",
-    "publishedAt": 1774236588673,
-    "commit": "https://github.com/openclaw/skills/commit/9c75b13f088e982de788cc4e9d0b6a8d13b68ca6"
+    "version": "0.1.4",
+    "publishedAt": 1774841319503,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.1.3",
+      "publishedAt": 1774236588673,
+      "commit": "https://github.com/openclaw/skills/commit/9c75b13f088e982de788cc4e9d0b6a8d13b68ca6"
+    },
     {
       "version": "0.1.1",
       "publishedAt": 1774015634420,
