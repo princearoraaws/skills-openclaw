@@ -6,7 +6,11 @@ OpenClaw 原生内容提取技能：把 URL / 文档转成干净 Markdown。
 
 它做一件事：**识别输入来源，走最稳的抓取通道，输出可读 Markdown。**
 
-适用场景：
+这版是**可执行版**，保留了路由和执行骨架：
+- `scripts/extract_router.py`：判定来源并生成路由计划
+- `scripts/extract.py`：把路由计划整理成可执行 extraction spec
+
+## 适用场景
 - 公众号文章整理
 - 飞书文档 / 知识库导出
 - YouTube 字幕 / 转录整理

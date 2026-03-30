@@ -29,6 +29,7 @@ class ExtractionSpec:
     summary_contract: List[str]
     output_contract: List[str]
     execution_layers: List[str]
+    runbook: List[str]
 
 
 def default_save_path(plan: RoutePlan, title: str | None = None) -> str:
@@ -48,6 +49,11 @@ def build_spec(url: str, title: str | None = None) -> ExtractionSpec:
             "browser: extract title/author/date/body/images",
             "markdown: write frontmatter +正文",
         ]
+        runbook = [
+            "1. 打开页面并等待正文容器稳定",
+            "2. 读取标题、作者、时间、正文、图片",
+            f"3. 保存到 {save_path}",
+        ]
     elif plan.handler == "feishu":
         exec_layers = [
             "feishu: resolve doc/wiki token",
@@ -55,11 +61,21 @@ def build_spec(url: str, title: str | None = None) -> ExtractionSpec:
             "markdown: map blocks to headings/lists/code/todo/table",
             "markdown: write metadata +正文",
         ]
+        runbook = [
+            "1. 解析 doc / docx / wiki 类型",
+            "2. 读取 block 结构并保持层级",
+            f"3. 保存到 {save_path}",
+        ]
     elif plan.handler == "transcript":
         exec_layers = [
             "transcript: fetch captions / transcript",
             "markdown: normalize transcript",
             "markdown: write metadata +正文",
+        ]
+        runbook = [
+            "1. 读取字幕/转录文本",
+            "2. 归一化成 Markdown",
+            f"3. 保存到 {save_path}",
         ]
     else:
         exec_layers = [
@@ -68,6 +84,13 @@ def build_spec(url: str, title: str | None = None) -> ExtractionSpec:
             "web: fallback to web_fetch",
             "browser: last fallback",
             "markdown: write metadata +正文",
+        ]
+        runbook = [
+            "1. 先走 r.jina.ai 去噪抽取",
+            "2. 失败后走 defuddle.md",
+            "3. 再失败走 web_fetch",
+            "4. 仍失败才切 browser fallback",
+            f"5. 保存到 {save_path}",
         ]
 
     return ExtractionSpec(
@@ -87,6 +110,7 @@ def build_spec(url: str, title: str | None = None) -> ExtractionSpec:
             "keep images/tables/code blocks when possible",
         ],
         execution_layers=exec_layers,
+        runbook=runbook,
     )
 
 
@@ -110,6 +134,9 @@ def spec_to_markdown(spec: ExtractionSpec) -> str:
     lines.append("")
     lines.append("### Fallback Chain")
     lines.extend([f"- {x}" for x in p.fallback_chain])
+    lines.append("")
+    lines.append("### Runbook")
+    lines.extend([f"- {x}" for x in spec.runbook])
     return "\n".join(lines)
 
 
