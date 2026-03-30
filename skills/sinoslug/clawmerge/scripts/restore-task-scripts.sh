@@ -61,11 +61,11 @@ if [ -d "$BACKUP_DIR/02-external-scripts" ]; then
             echo -e "  ${GREEN}✓ Restored to ~/scripts/${NC}"
         fi
         
-        # 恢复到 /opt/scripts/
+        # 恢复到用户目录（不再使用 /opt/）
         if [ -d "$BACKUP_DIR/02-external-scripts/opt-scripts" ]; then
-            sudo mkdir -p /opt/scripts 2>/dev/null || true
-            sudo cp -r "$BACKUP_DIR/02-external-scripts/opt-scripts/"* /opt/scripts/ 2>/dev/null || true
-            echo -e "  ${GREEN}✓ Restored to /opt/scripts/${NC}"
+            mkdir -p ~/scripts
+            cp -r "$BACKUP_DIR/02-external-scripts/opt-scripts/"* ~/scripts/ 2>/dev/null || true
+            echo -e "  ${GREEN}✓ Restored to ~/scripts/${NC}"
         fi
         
         # 设置执行权限

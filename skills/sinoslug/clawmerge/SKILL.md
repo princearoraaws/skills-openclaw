@@ -1,6 +1,6 @@
 ---
 name: clawmerge
-version: 3.0.3
+version: 3.0.8
 description: OpenClaw workspace backup and restore tool with merge mode.
 Unique features: Merge restore, Cron backup, Session backup
 ---

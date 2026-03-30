@@ -19,7 +19,6 @@ show_usage() {
     echo "  backup              Create a backup of workspace"
     echo "  list                List available backups"
     echo "  restore <file>     Restore from a backup file"
-    echo "  serve               Start HTTP server to share backup"
     echo "  merge <dir>         Merge another workspace directory"
     echo ""
 }
@@ -63,13 +62,6 @@ cmd_restore() {
     echo -e "${GREEN}Restore complete!${NC}"
 }
 
-cmd_serve() {
-    cd "$WORKSPACE_DIR"
-    echo "Starting HTTP server on port 8000..."
-    echo "Access from another device: http://<YOUR-IP>:8000"
-    python3 -m http.server 8000
-}
-
 cmd_merge() {
     if [ -z "$2" ]; then
         echo "Usage: $0 merge <source-workspace-dir>"
@@ -97,7 +89,7 @@ cmd_merge() {
         cat "$SOURCE_DIR/TOOLS.md" >> "$WORKSPACE_DIR/TOOLS.md"
     fi
     
-    #提示用户手动合并
+    # 提示用户手动合并
     echo ""
     echo -e "${YELLOW}Manual merge needed for:${NC}"
     echo "  - MEMORY.md (use vimdiff)"
@@ -116,9 +108,6 @@ case "$1" in
         ;;
     restore)
         cmd_restore "$@"
-        ;;
-    serve)
-        cmd_serve "$@"
         ;;
     merge)
         cmd_merge "$@"

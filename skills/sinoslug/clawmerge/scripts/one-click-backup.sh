@@ -1,7 +1,13 @@
 #!/bin/bash
 #
-# One-Click Backup for OpenClaw Workspace v2.2.2
+# One-Click Backup for OpenClaw Workspace v3.0.8
 # Usage: ./one-click-backup.sh [output_dir] [--dry-run] [--list] [--with-sessions]
+#
+# Improvements in v3.0.8:
+# - FIXED: tar --exclude flag applies to all paths including explicit adds, fixed by conditional EXCLUDE_ITEMS
+#
+# Improvements in v3.0.7:
+# - Attempted fix for --with-sessions bug (but the fix was wrong)
 #
 # Improvements in v2.2.2:
 # - FIXED: --with-sessions now correctly includes session records
@@ -90,7 +96,7 @@ if [ "$LIST_MODE" = true ]; then
 fi
 
 echo -e "${GREEN}========================================${NC}"
-echo -e "${GREEN}  OpenClaw Workspace Backup v2.2${NC}"
+echo -e "${GREEN}  OpenClaw Workspace Backup v3.0.8${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
 
@@ -211,8 +217,8 @@ echo -e "${YELLOW}[4/6] Creating backup archive...${NC}"
 
 cd "$WORKSPACE_DIR"
 
-# v2.6.0: Backup ALL files except excluded items
-# This makes the backup work for any user's workspace, regardless of what files they have
+# v3.0.8: Build EXCLUDE_ITEMS conditionally based on WITH_SESSIONS
+# When WITH_SESSIONS=true, .backup-sessions must NOT be in the exclude list
 EXCLUDE_ITEMS=(
     "*.tar.gz"          # Old backups
     ".git"              # Git history
@@ -223,22 +229,20 @@ EXCLUDE_ITEMS=(
     ".DS_Store"         # macOS metadata
     "__pycache__"       # Python cache
     "node_modules"      # NPM dependencies
-    ".backup-sessions"  # Temp session backup (handled separately)
     "cron-tasks-*.json" # Temp cron export (handled separately)
     "system-crontab-*.txt" # Temp cron export (handled separately)
 )
+
+# Only exclude .backup-sessions when NOT including sessions
+if [ "$WITH_SESSIONS" != true ]; then
+    EXCLUDE_ITEMS+=(".backup-sessions")
+fi
 
 # Build tar exclude options
 TAR_EXCLUDES=""
 for exc in "${EXCLUDE_ITEMS[@]}"; do
     TAR_EXCLUDES="$TAR_EXCLUDES --exclude=$exc"
 done
-
-# Add session backup if requested
-if [ "$WITH_SESSIONS" = true ] && [ -d "$WORKSPACE_DIR/.backup-sessions" ]; then
-    # Sessions will be included automatically (not in exclude list)
-    echo -e "  ${GREEN}✓ Session records will be included${NC}"
-fi
 
 if [ "$DRY_RUN" = true ]; then
     echo -e "${BLUE}━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━${NC}"
@@ -279,6 +283,9 @@ fi
 # Create archive - backup ALL files except excluded items
 echo -e "${CYAN}  Backing up all files (except ${#EXCLUDE_ITEMS[@]} exclude patterns)...${NC}"
 tar -czvf "$BACKUP_FILE" $TAR_EXCLUDES -C "$WORKSPACE_DIR" . 2>&1 | tail -10
+if [ "$WITH_SESSIONS" = true ]; then
+    echo -e "  ${GREEN}✓ Session records included${NC}"
+fi
 
 # Verify backup
 if tar -tzf "$BACKUP_FILE" | grep -q "MEMORY.md"; then
