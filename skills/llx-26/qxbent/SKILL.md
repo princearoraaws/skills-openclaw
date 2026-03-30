@@ -2,6 +2,7 @@
 name: qxbent
 description: 启信宝企业信息查询工具，提供企业工商信息、股东信息、主要人员、变更记录等查询功能。支持通过企业名称查询，返回标准化的企业数据。
 license: MIT
+metadata: { "openclaw": { "requires": { "env": ["QXBENT_API_TOKEN"], "bins": ["node", "npm"] }, "install": [ { "id": "npm-deps", "kind": "node", "package": "axios", "label": "Install Node.js dependencies" } ] } }
 ---
 # 启信宝企业信息查询
 
@@ -27,11 +28,11 @@ license: MIT
 
 ### 2. 配置 Token
 
-**推荐方式：环境变量**
+**⚠️ 安全提示**：Token 是敏感凭证，请妥善保管。**必须使用环境变量配置**，不要在对话中提供 token。
 
 设置环境变量 `QXBENT_API_TOKEN`：
 
-Windows 永久配置：
+**Windows 永久配置：**
 1. 按 `Win + R`，输入 `sysdm.cpl`，按回车
 2. 点击"高级" → "环境变量"
 3. 在"用户变量"中点击"新建"
@@ -40,7 +41,7 @@ Windows 永久配置：
 6. 点击"确定"保存
 7. 重启 AI 应用
 
-Mac/Linux 永久配置：
+**Mac/Linux 永久配置：**
 ```bash
 # 如果使用 bash
 echo 'export QXBENT_API_TOKEN="your_token_here"' >> ~/.bashrc
@@ -51,15 +52,7 @@ echo 'export QXBENT_API_TOKEN="your_token_here"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-**临时方式：告诉 AI**
-
-在对话中直接告诉 AI：
-
-```
-我的启信宝 API Token 是 ent_xxx_xxx，请记住并在使用 qxbent 时自动使用这个 token
-```
-
-**注意**：这种方式仅在当前对话有效，下次对话需要重新告知。
+配置成功后，AI 会自动从环境变量中读取 token，无需在对话中提供。
 
 ### 3. 使用示例
 
@@ -98,6 +91,15 @@ source ~/.zshrc
 
 - `Bash(node:*)`: 允许执行 Node.js/TypeScript 代码
 - `Read`: 允许读取接口文档
+
+## 运行时要求
+
+**Bins**
+- `node` (Node.js >= 16.x)
+- `npm`
+
+**Env**
+- `QXBENT_API_TOKEN` (必需) - 启信宝 API 访问凭证
 
 ## 初始化
 
@@ -152,5 +154,14 @@ AI 助手会在必要时自动检测并执行此命令。
 4. AI 使用完整企业名称重新查询
 
 ## 注意事项
+
+### 安全性
+
+- ⚠️ **Token 安全**：API Token 是敏感凭证，切勿在对话中提供或分享给他人
+- ✅ **推荐配置**：必须通过环境变量 `QXBENT_API_TOKEN` 配置，该变量仅存储在本地系统
+- 🔒 **访问范围**：Token 仅用于访问 `https://external-api.qixin.com/skill/ent/public` API 端点
+- 📊 **权限控制**：建议向 API 提供商申请权限受限的 token（如限制每日配额）
+
+### 使用条款
 
 本 Skill 仅供学习和研究使用，请勿用于商业用途。使用时请遵守启信宝 API 的使用条款和访问限制。

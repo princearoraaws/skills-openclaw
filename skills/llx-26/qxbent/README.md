@@ -23,24 +23,25 @@ npm install
 
 ### 2. 配置 API Token
 
-**方式 A: 环境变量（推荐）**
+**⚠️ 安全提示**：Token 是敏感凭证，必须使用环境变量配置，不要在对话中提供。
 
-Windows:
+**环境变量配置：**
+
+Windows 永久配置：
 ```bash
-set QXBENT_API_TOKEN=your_token_here
+# 在系统环境变量中添加
+变量名：QXBENT_API_TOKEN
+变量值：your_token_here
 ```
 
-Linux/Mac:
+Linux/Mac 永久配置：
 ```bash
-export QXBENT_API_TOKEN=your_token_here
+# 添加到 ~/.bashrc 或 ~/.zshrc
+echo 'export QXBENT_API_TOKEN="your_token_here"' >> ~/.bashrc
+source ~/.bashrc
 ```
 
-**方式 B: 对话中告知 AI**
-
-直接对 AI 说：
-```
-我的启信宝 API Token 是 ent_xxx_xxx，请记住并使用
-```
+配置成功后，AI 会自动从环境变量读取 token。
 
 详细配置方法请查看 [用户指南](USER_GUIDE.md)。
 

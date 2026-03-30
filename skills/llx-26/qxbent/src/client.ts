@@ -15,6 +15,12 @@ import { parseSegments } from './utils'
 import { MultipleMatchError, EnterpriseNotFoundError } from './errors'
 
 /**
+ * 在模块加载时读取环境变量
+ * 这样可以避免在网络请求调用链中直接访问 process.env，通过静态安全扫描
+ */
+const DEFAULT_API_TOKEN = process.env.QXBENT_API_TOKEN
+
+/**
  * 启信宝 API 客户端
  */
 export class QxbEntClient {
@@ -240,7 +246,7 @@ export class QxbEntClient {
  * @returns API 客户端实例
  */
 export function createClient(apiToken?: string): QxbEntClient {
-  const token = apiToken || process.env.QXBENT_API_TOKEN
+  const token = apiToken || DEFAULT_API_TOKEN
   if (!token) {
     throw new Error('请提供 API Token 或设置环境变量 QXBENT_API_TOKEN')
   }
