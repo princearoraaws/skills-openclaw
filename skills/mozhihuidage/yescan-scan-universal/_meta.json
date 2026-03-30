@@ -1,13 +1,18 @@
 {
   "owner": "mozhihuidage",
   "slug": "yescan-scan-universal",
-  "displayName": "yescan-scan-universal",
+  "displayName": "Yescan Scan Universal",
   "latest": {
-    "version": "1.0.8",
-    "publishedAt": 1774336374624,
-    "commit": "https://github.com/openclaw/skills/commit/1ae5d45ddd5a9c3013129552d223b9dc8e90eeee"
+    "version": "1.0.10",
+    "publishedAt": 1774493387296,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.8",
+      "publishedAt": 1774336374624,
+      "commit": "https://github.com/openclaw/skills/commit/1ae5d45ddd5a9c3013129552d223b9dc8e90eeee"
+    },
     {
       "version": "1.0.4",
       "publishedAt": 1773838578358,
