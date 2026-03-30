@@ -1,9 +1,10 @@
-# Google Dorks Extended Reference Library
+# Precision Web Search — Extended Query Library
 
 Filtered and categorized from: Sundowndev, clarketm/stevenswafford, TUXCMD
-Excluded: SQLi, LFI, RFI, XSS, parameter fuzzing, CMS exploits, warez, dead platforms
-Purpose: OSINT investigations — identity, corporate intel, document discovery,
-video/podcast/conference appearances, court/legislative recordings, recon
+Excluded: SQLi, LFI, RFI, XSS, parameter fuzzing, CMS exploits, warez, dead platforms,
+credential harvesting, device targeting, breach/paste discovery
+Purpose: Research, journalism, due diligence, document discovery, public records,
+professional verification, academic work, corporate research
 
 ---
 
@@ -93,8 +94,6 @@ video/podcast/conference appearances, court/legislative recordings, recon
 
 ### Creator & Portfolio Platforms
 "FirstName LastName" site:patreon.com
-"FirstName LastName" site:onlyfans.com
-"FirstName LastName" site:fansly.com
 "FirstName LastName" site:ko-fi.com
 "FirstName LastName" site:buymeacoffee.com
 "FirstName LastName" site:deviantart.com
@@ -141,10 +140,6 @@ video/podcast/conference appearances, court/legislative recordings, recon
 "username" site:hinge.co
 "username" site:bumble.com
 "username" site:tinder.com
-"username" site:seeking.com
-"username" site:fetlife.com
-"username" site:kink.com
-"email@domain.com" site:pof.com
 "FirstName LastName" inurl:profile (site:pof.com OR site:okcupid.com OR site:match.com)
 
 ### Link Aggregators & Identity Hubs
@@ -164,7 +159,6 @@ video/podcast/conference appearances, court/legislative recordings, recon
 "FirstName LastName" site:vimeo.com
 "FirstName LastName" site:rumble.com
 "FirstName LastName" site:odysee.com
-"FirstName LastName" site:bitchute.com
 "FirstName LastName" site:dailymotion.com
 "FirstName LastName" (interview OR appearance OR speech OR talk) site:youtube.com
 "FirstName LastName" inurl:watch site:youtube.com
@@ -221,13 +215,10 @@ video/podcast/conference appearances, court/legislative recordings, recon
 "FirstName LastName" (plaintiff OR defendant OR petitioner OR respondent)
 "FirstName LastName" (lawsuit OR litigation OR settlement OR judgment OR lien)
 "FirstName LastName" (arrested OR charged OR indicted OR convicted OR sentenced)
-"FirstName LastName" site:vinelink.com
 "FirstName LastName" (criminal OR civil OR bankruptcy OR probate OR divorce) filetype:pdf
 "Company Name" site:courtlistener.com
 "Company Name" (lawsuit OR suit OR complaint OR class action)
 "FirstName LastName" (restraining order OR protective order OR TRO)
-"FirstName LastName" site:mugshots.com
-"FirstName LastName" site:bop.gov/inmateloc
 
 ### Court Hearing Recordings
 "FirstName LastName" (trial OR hearing OR proceeding OR deposition) site:youtube.com
@@ -336,7 +327,6 @@ intitle:"index of" (pdf OR xls OR doc OR csv) "subject name"
 "@domain.com" "FirstName LastName"
 "@domain.com" filetype:pdf
 "@domain.com" filetype:xlsx OR filetype:csv
-"@domain.com" site:pastebin.com
 intext:"@domain.com" inurl:contact OR inurl:staff OR inurl:team
 "FirstName LastName" "email" -site:linkedin.com filetype:pdf
 "@gmail.com" "FirstName LastName" filetype:pdf
@@ -347,96 +337,39 @@ intext:"mailto:" "FirstName LastName" site:domain.com
 
 ---
 
-## SECTION 8 — BREACH, PASTE & LEAK SITES
-"email@domain.com" site:haveibeenpwned.com
-"email@domain.com" site:pastebin.com
-"email@domain.com" site:ghostbin.com
-"email@domain.com" site:rentry.co
-"username" site:pastebin.com (password OR leak OR breach OR dump)
-"domain.com" (leak OR breach OR dump OR password) filetype:txt
-"@domain.com" (paste OR leak OR breach)
-"FirstName LastName" site:pastebin.com
-site:pastebin.com "domain.com" intext:password
-site:ghostbin.com "domain.com"
-"username" site:dehashed.com
+## SECTION 8 — OWN DOMAIN SECURITY AUDIT
 
----
-
-## SECTION 9 — EXPOSED CREDENTIALS & SENSITIVE FILES
-
-For legitimate recon against a target domain.
+Use these queries against your own domain only to identify
+unintentionally exposed files in public search indexes.
 
 ### Config & Environment Files
-site:domain.com filetype:env
-site:domain.com filetype:cfg OR filetype:conf
-site:domain.com filetype:ini
-site:domain.com inurl:config
-intitle:"index of" ".env" site:domain.com
-intext:"DB_PASSWORD" filetype:env
-intext:"DB_USER" filetype:env
-filetype:conf inurl:proftpd
-ext:ini Version= password
+site:yourdomain.com filetype:env
+site:yourdomain.com filetype:cfg OR filetype:conf
+site:yourdomain.com filetype:ini
+site:yourdomain.com inurl:config
+intitle:"index of" ".env" site:yourdomain.com
 
 ### Backup & Log Files
-site:domain.com filetype:log
-site:domain.com filetype:bak OR filetype:backup
-site:domain.com inurl:backup
-intitle:"index of" ".log" site:domain.com
-"admin account info" filetype:log
-filetype:log inurl:"password.log"
-filetype:log username putty
+site:yourdomain.com filetype:log
+site:yourdomain.com filetype:bak OR filetype:backup
+site:yourdomain.com inurl:backup
+intitle:"index of" ".log" site:yourdomain.com
 
-### Database & SQL Files
-site:domain.com filetype:sql
-"#mysql dump" filetype:sql
-filetype:sql "insert into" (pass OR passwd OR password)
-filetype:sql "IDENTIFIED BY"
-filetype:sql password
-intext:"phpMyAdmin MySQL-Dump" filetype:txt
+### Database Files
+site:yourdomain.com filetype:sql
 intext:"phpMyAdmin" "running on" inurl:"main.php"
-ext:mdb inurl:*.mdb inurl:fpdb
 
-### Credential Files
-"Index of /" +passwd site:domain.com
-"Index of /" +password.txt site:domain.com
-"Index of /backup" site:domain.com
-intitle:"index of" htpasswd site:domain.com
-intitle:"index of" master.passwd site:domain.com
-intitle:"index of" pwd.db site:domain.com
-filetype:dat "password.dat"
-filetype:pass pass intext:userid
-filetype:pem intext:private
-filetype:reg reg +intext:"defaultusername" +intext:"defaultpassword"
-filetype:xls username password email
-filetype:csv inurl:password
-login: * password= * filetype:xls
-ext:inc "pwd=" "UID="
+### Exposed Keys & Certificates
+site:yourdomain.com ext:pem
+site:yourdomain.com ext:key
 
-### Admin & Control Panels
-site:domain.com inurl:admin
-site:domain.com inurl:login
-site:domain.com inurl:portal
-site:domain.com inurl:dashboard
-site:domain.com inurl:cpanel
-site:domain.com inurl:phpmyadmin
-intitle:"phpMyAdmin" inurl:main.php
-"Index of" inurl:phpmyadmin
-inurl:admin inurl:userlist
-intitle:"index of" intext:connect.inc
-intitle:"index of" mysql.conf OR mysql_config
-
-### Exposed Keys & Certs
-site:domain.com ext:pem
-site:domain.com ext:key
-filetype:pem intext:private
-intitle:"index of" id_rsa OR id_dsa
-ext:ppk (putty OR ssh)
-intext:"BEGIN RSA PRIVATE KEY" filetype:txt
-intext:"BEGIN OPENSSH PRIVATE KEY"
+### Sensitive Documents
+intext:"not for distribution" OR "confidential" filetype:pdf site:yourdomain.com
+intext:"Index of /backup" site:yourdomain.com
 
 ---
 
-## SECTION 10 — CACHED & ARCHIVED CONTENT
+## SECTION 9 — CACHED & ARCHIVED CONTENT
 cache:url.com (Track 2 only)
 "FirstName LastName" site:web.archive.org
 "username" site:web.archive.org
@@ -448,7 +381,7 @@ related:domain.com (Track 2 only)
 
 ---
 
-## SECTION 11 — PHONE & ADDRESS
+## SECTION 10 — PHONE & ADDRESS
 "555-555-5555" (name OR address OR owner OR carrier)
 "FirstName LastName" site:whitepages.com (phone OR address)
 "FirstName LastName" site:411.com
@@ -459,52 +392,22 @@ related:domain.com (Track 2 only)
 
 ---
 
-## SECTION 12 — CAMERA & SURVEILLANCE (Signals Fallback Only)
+## SECTION 11 — PUBLIC WEBCAM & LIVE FEEDS
 
-### Live Camera Interfaces
-intitle:"Live View / - AXIS" inurl:/view/view.shtml
-inurl:/view.shtml intitle:"Live View"
-inurl:ViewerFrame?Mode=
-inurl:videostream.cgi
-inurl:/mjpg/video.mjpg
-intitle:"Live NetSnap Cam-Server feed"
-inurl:"MultiCameraFrame?Mode="
-intitle:"WJ-NT104 Main Page"
-inurl:LvAppl intitle:liveapplet
-intitle:"snc-rz30 home"
-"Active Webcam Page" inurl:8080
-inurl:CgiStart?page=Single
-intitle:"Network Camera NetworkCamera"
-intitle:"netcam" intitle:home inurl:view
-intitle:"MOBOTIX M1" intext:"Open Menu"
-intitle:"Veo Observer XT"
-inurl:"ViewerFrame?Mode=Motion"
-intitle:"MJPEG Streaming Server"
-intitle:"i-Catcher Console - Web Monitor"
-intitle:"Toshiba Network Camera" user login
-intitle:"WVC80N" "Linksys" inurl:main.cgi
-intitle:"Axis 2.x" OR intitle:"Axis 200" OR intitle:"Axis 2100"
-inurl:axis-cgi/jpg
-intitle:"my webcamXP server!" inurl:":8080"
-inurl:webcam inurl:view
-intitle:"webcam" inurl:view
-
-### Public Camera Aggregators
+Publicly listed broadcast feeds for research, journalism, or event monitoring.
 site:earthcam.com "city name"
 site:webcamtaxi.com "city name"
 site:skylinewebcams.com "city name"
-site:insecam.org "city name"
 "live webcam" "city name" inurl:view
 "city name" (webcam OR livecam OR "live cam" OR "live feed") -youtube
 
 ---
 
-## SECTION 13 — ADVANCED COMBINATION SWEEPS
+## SECTION 12 — ADVANCED COMBINATION SWEEPS
 
 ### Identity Sweep
 "FirstName LastName" (site:twitter.com OR site:x.com OR site:instagram.com OR site:facebook.com OR site:tiktok.com OR site:linkedin.com)
 "username" (site:reddit.com OR site:github.com OR site:twitter.com OR site:instagram.com)
-"email@domain.com" (site:pastebin.com OR site:ghostbin.com OR site:rentry.co OR site:dehashed.com)
 
 ### Video & Media Sweep
 "FirstName LastName" (site:youtube.com OR site:vimeo.com OR site:c-span.org OR site:ted.com)
@@ -518,9 +421,8 @@ site:insecam.org "city name"
 
 ### Document Sweep
 "FirstName LastName" (filetype:pdf OR filetype:doc OR filetype:xls) (resume OR bio OR profile OR contract)
-site:domain.com ext:(pdf | xls | csv | doc | txt | sql | env | log | bak)
+site:domain.com ext:(pdf | xls | csv | doc | txt)
 
-### Corporate Exposure Sweep
-site:domain.com (inurl:admin OR inurl:login OR inurl:backup OR inurl:config OR inurl:phpmyadmin)
-site:domain.com (filetype:log OR filetype:sql OR filetype:env OR filetype:bak OR filetype:cfg)
-"Company Name" (breach OR leak OR hack OR exposed) (filetype:pdf OR site:sec.gov OR site:courtlistener.com)
+### Own Domain Audit Sweep
+site:yourdomain.com (inurl:backup OR inurl:config)
+site:yourdomain.com (filetype:log OR filetype:sql OR filetype:env OR filetype:bak OR filetype:cfg)
