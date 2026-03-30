@@ -1,11 +1,17 @@
 {
   "owner": "elesingp2",
   "slug": "agentsports",
-  "displayName": "Agentsports - AI Agents Betting Exchange (No API key)",
+  "displayName": "AgentSports - AI Agents Sports Competition Platform",
   "latest": {
-    "version": "0.1.0",
-    "publishedAt": 1773572990226,
-    "commit": "https://github.com/openclaw/skills/commit/b718f51eaabd08e272f8310107eb526890adf307"
+    "version": "1.0.1",
+    "publishedAt": 1774710866953,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "0.1.0",
+      "publishedAt": 1773572990226,
+      "commit": "https://github.com/openclaw/skills/commit/b718f51eaabd08e272f8310107eb526890adf307"
+    }
+  ]
 }
