@@ -65,11 +65,61 @@ def cmd_key(api_base):
         sys.exit(1)
 
 
+def _resolve_tribe_id(t):
+    if t is None:
+        return None
+    s = str(t).strip()
+    if not s:
+        return None
+    m = {
+        "1": 1,
+        "2": 2,
+        "3": 3,
+        "human": 1,
+        "empire": 2,
+        "eagle": 3,
+        "人类联邦": 1,
+        "人类联盟": 1,
+        "旭日帝国": 2,
+        "鹰之神界": 3,
+    }
+    low = s.lower()
+    if low in m:
+        return m[low]
+    if s in m:
+        return m[s]
+    if s.isdigit():
+        v = int(s)
+        return v if v in (1, 2, 3) else None
+    return None
+
+
 def _parse_tribe_id(t):
-    if t is None or t == "":
+    if t is None or str(t).strip() == "":
         return 1
-    m = {"1": 1, "2": 2, "3": 3, "human": 1, "empire": 2, "eagle": 3}
-    return m.get(str(t).strip().lower(), int(t) if str(t).isdigit() else 1)
+    r = _resolve_tribe_id(t)
+    return r if r is not None else 1
+
+
+def _prompt_tribe_interactive():
+    if not sys.stdin.isatty():
+        print("Non-interactive: pass tribe as last arg, e.g. register <user> <pass> 1")
+        print("  1=Human Federation  2=Empire  3=Eagle")
+        sys.exit(1)
+    print("")
+    print("Choose tribe (1 / 2 / 3 or name):")
+    print("  1 — Human Federation")
+    print("  2 — Empire of the Rising Sun")
+    print("  3 — Eagle's Realm")
+    while True:
+        try:
+            line = input("> ").strip()
+        except EOFError:
+            sys.exit(1)
+        tid = _resolve_tribe_id(line)
+        if tid is not None:
+            return tid
+        print("Invalid. Enter 1, 2, 3 or full tribe name.")
 
 
 def cmd_register(api_base, username, password, tribe_id=None):
@@ -80,6 +130,25 @@ def cmd_register(api_base, username, password, tribe_id=None):
         if r.get("ok") and r.get("token"):
             print(json.dumps(r, ensure_ascii=False, indent=2))
             print("\nRegistered. Put token in OpenClaw 2037 API Key config.")
+        else:
+            print(json.dumps(r, ensure_ascii=False))
+            sys.exit(1)
+    except urllib.error.HTTPError as e:
+        print(f"HTTP {e.code}: {e.read().decode('utf-8', errors='replace')}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Request failed: {e}")
+        sys.exit(1)
+
+
+def cmd_recover(api_base, username, password):
+    """POST /auth/recover-key — recover API key (skill token) with username/password when no SK-key"""
+    url = f"{api_base}/auth/recover-key"
+    try:
+        r = http_post(url, {"username": username, "password": password, "skill_id": "2037"})
+        if r.get("ok") and r.get("token"):
+            print(json.dumps(r, ensure_ascii=False, indent=2))
+            print("\nKey recovered. Put token in OpenClaw 2037 API Key config.")
         else:
             print(json.dumps(r, ensure_ascii=False))
             sys.exit(1)
@@ -194,6 +263,24 @@ def cmd_sync(api_base):
         sys.exit(1)
 
 
+def cmd_bootstrap(api_base):
+    try:
+        from cache import bootstrap as cache_bootstrap
+        data = cache_bootstrap(api_base=api_base)
+        keys = list(data.keys()) if isinstance(data, dict) else []
+        print("Wrote session_cache.json")
+        print(f"  keys: {', '.join(keys[:15])}{'...' if len(keys) > 15 else ''}")
+    except Exception as e:
+        print(f"Bootstrap failed: {e}")
+        sys.exit(1)
+
+
+def cmd_show(focus=None):
+    from cache import show_cache
+
+    sys.exit(show_cache(focus))
+
+
 def main():
     args = sys.argv[1:]
     api_base_override = None
@@ -205,8 +292,12 @@ def main():
             args = args[1:]
 
     if len(args) < 1:
-        print("Usage: 2037.py [--api-base URL] key | newkey | register <user> <pwd> [tribe_id] | login <user> <pwd> | apply <user> <pwd> <key> [tribe_id] | sync")
-        print("  tribe_id: 1=Human 2=Empire 3=Eagle, default 1")
+        print("Usage: 2037.py [--api-base URL] key | ... | sync | bootstrap | show [focus]")
+        print("  recover: username+password to recover API key (skill token) without SK-key")
+        print("  sync: USERINFO+CITYLIST only; bootstrap: full session JSON → session_cache.json")
+        print("  show: print local session_cache (no HTTP); focus: city build troops task queue hero goods")
+        print("  Also: build_ops.py, march_ops.py, chat_ops.py (require token)")
+        print("  register: optional tribe on same line, or interactive prompt if omitted (TTY only)")
         sys.exit(1)
 
     api_base = load_config(api_base_override=api_base_override)
@@ -214,27 +305,41 @@ def main():
 
     if cmd == "sync":
         cmd_sync(api_base)
+    elif cmd == "show":
+        focus = args[1] if len(args) > 1 else None
+        cmd_show(focus)
+    elif cmd == "bootstrap":
+        cmd_bootstrap(api_base)
     elif cmd == "newkey":
         cmd_newkey(api_base)
     elif cmd == "key":
         cmd_key(api_base)
     elif cmd == "register":
-        if len(args) < 4:
-            print("Usage: 2037.py register <username> <password> [tribe_id]")
+        if len(args) < 3:
+            print("Usage: 2037.py register <username> <password> [tribe]")
             sys.exit(1)
-        tribe_id = args[4] if len(args) > 4 else None
-        cmd_register(api_base, args[2], args[3], tribe_id)
+        u, pw = args[1], args[2]
+        if len(args) >= 4:
+            tribe_token = args[3]
+        else:
+            tribe_token = _prompt_tribe_interactive()
+        cmd_register(api_base, u, pw, tribe_token)
+    elif cmd == "recover":
+        if len(args) < 3:
+            print("Usage: 2037.py recover <username> <password>")
+            sys.exit(1)
+        cmd_recover(api_base, args[1], args[2])
     elif cmd == "login":
-        if len(args) < 4:
+        if len(args) < 3:
             print("Usage: 2037.py login <username> <password>")
             sys.exit(1)
-        cmd_login(api_base, args[2], args[3])
+        cmd_login(api_base, args[1], args[2])
     elif cmd == "apply":
-        if len(args) < 5:
-            print("Usage: 2037.py apply <username> <password> <key> [tribe_id]")
+        if len(args) < 4:
+            print("Usage: 2037.py apply <username> <password> <key> [tribe]")
             sys.exit(1)
-        tribe_id = args[5] if len(args) > 5 else None
-        cmd_apply(api_base, args[2], args[3], args[4], tribe_id=tribe_id)
+        tribe_id = args[4] if len(args) > 4 else None
+        cmd_apply(api_base, args[1], args[2], args[3], tribe_id=tribe_id)
     else:
         print(f"Unknown command: {cmd}")
         sys.exit(1)
