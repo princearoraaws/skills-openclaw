@@ -14,8 +14,8 @@ fi
 FLAG_FILE="/tmp/agent-stop-${SESSION_ID}.flag"
 
 if [ -f "$FLAG_FILE" ]; then
-    # 读取标志文件中的时间戳
-    FLAG_TIMESTAMP=$(grep -o '"timestamp"[[:space:]]*:[[:space:]]*[0-9]*' "$FLAG_FILE" | grep -o '[0-9]*' | head -1)
+    # 读取标志文件中的时间戳（使用 ERE 支持 [[:space:]]* 量词）
+    FLAG_TIMESTAMP=$(grep -Eo '"timestamp"[[:space:]]*:[[:space:]]*[0-9]*' "$FLAG_FILE" | grep -o '[0-9]*' | head -1)
     
     if [ -n "$FLAG_TIMESTAMP" ]; then
         CURRENT_TIME=$(date +%s000)

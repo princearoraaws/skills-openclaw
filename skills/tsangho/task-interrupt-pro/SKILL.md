@@ -6,7 +6,7 @@ description: >-
   "停止我的任务", "中断猫经理", "解救猫经理", "agent任务卡住", 
   "进程无响应", "子任务卡死"。
   注意：不支持 /stop（系统级abort命令，会直接终止agent本身）！
-version: 1.0.0
+version: 1.0.4
 metadata:
   openclaw:
     emoji: "🛑"
@@ -262,6 +262,23 @@ kill -9 {PID}
 ---
 
 ## Changelog
+
+### 1.0.4 (2026-03-28) - 安全+逻辑双修复版
+**来源**: 大哥Gemini审核 + 猫经理自检
+
+#### 修复内容
+| Bug | 文件 | 严重性 | 说明 |
+|-----|------|--------|------|
+| validate_process返回值错误 | handle-stop.sh | 🔴 高 | cmdline不匹配时返回0，调用方误判为成功并执行kill。改为返回2，跳过kill |
+| FLAG_FILE符号链接攻击 | handle-stop.sh | 🔴 高 | 创建flag文件前未检查符号链接，攻击者可覆盖任意文件。添加symlink检查 |
+| REASON JSON注入 | handle-stop.sh | 🟡 中 | REASON写入JSON未转义。添加sed转义 |
+
+#### 变更详情
+| 场景 | 旧行为(v1.0.3) | 新行为(v1.0.4) |
+|------|---------------|---------------|
+| 进程cmdline不含SESSION_ID | 返回0→调用方继续kill | 返回2→跳过kill |
+| FLAG_FILE已是符号链接 | 可能覆盖任意文件 | 安全拒绝+退出 |
+| REASON含特殊字符 | JSON结构破坏 | 转义后安全写入 |
 
 ### 1.0.3 (2026-03-19) - 体验优化版
 **命令行校验优化**：豆包建议，将"拒绝kill"改为"警告+跳过kill"。

@@ -1,6 +1,6 @@
 #!/bin/bash
 # handle-stop.sh - 主Agent处理停止指令的核心脚本
-# 版本: 1.0.2
+# 版本: 1.0.4
 # 功能: 创建stop flag + 读取PID文件 + kill进程 + 清理
 # 安全: SESSION_ID格式校验 + PID文件校验 + 进程归属验证 + 审计日志
 # 跨平台: Linux + macOS (仅使用POSIX兼容调用)
@@ -11,6 +11,8 @@ set -euo pipefail
 
 SESSION_ID="${1:-}"
 REASON="${2:-user_request}"
+# 防止 JSON 注入：转义 REASON 中的特殊字符
+REASON_ESCAPED=$(printf '%s' "$REASON" | sed 's/\\/\\\\/g; s/"/\\"/g; s/`/\\`/g; s/\$/\\$/g')
 CURRENT_USER=$(whoami)
 AUDIT_LOG="/tmp/agent-interrupt-audit.log"
 FLAG_DIR="/tmp"
@@ -138,11 +140,11 @@ validate_process() {
         echo "[STOP] ⚠️ 可能原因: bash -c变量展开场景或进程已自行退出"
         echo "[STOP] ⚠️ flag机制已创建，依赖优雅退出，跳过kill（兜底保障）"
         echo "[STOP] 📝 进程命令行: $cmdline"
-        audit_log "WARN_SKIP_KILL" "$pid" "Cmdline mismatch, flag-based exit preferred"
+        audit_log "WARN_SKIP_KILL" "$pid" "Cmdline mismatch - skipping kill"
         # 跳过kill，依赖flag机制优雅退出
         rm -f "${PID_FILE}"
         audit_log "CLEANUP_SKIP_KILL" "$pid" "PID file cleaned"
-        return 0
+        return 2  # 返回2表示"跳过kill"，不同于返回1"验证失败"
     fi
 
     echo "[STOP] 进程验证通过: PID=$pid CMD='$cmdline'"
@@ -170,11 +172,19 @@ echo "[STOP] 审计日志: ${AUDIT_LOG}"
 echo ""
 echo "[STOP] 步骤1: 创建停止标志..."
 audit_log "CREATE_FLAG" "N/A" "Creating stop flag"
+
+# 安全检查：拒绝符号链接（防止覆盖任意文件攻击）
+if [ -L "${FLAG_FILE}" ]; then
+    echo "[STOP] 安全拒绝: FLAG_FILE是符号链接: ${FLAG_FILE}"
+    audit_log "REJECTED" "N/A" "Symlink FLAG_FILE rejected"
+    exit 1
+fi
+
 cat > "${FLAG_FILE}" << EOF
 {
   "sessionId": "${SESSION_ID}",
   "timestamp": $(date +%s%3N),
-  "reason": "${REASON}",
+  "reason": "${REASON_ESCAPED}",
   "signal": "SIGINT",
   "createdBy": "${CURRENT_USER}",
   "version": "1.0.2"
