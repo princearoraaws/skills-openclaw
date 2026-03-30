@@ -1,0 +1,11 @@
+{
+  "owner": "seastaradmin",
+  "slug": "openclaw-gateway-manager",
+  "displayName": "Openclaw Gateway Manager",
+  "latest": {
+    "version": "1.0.3",
+    "publishedAt": 1774211840063,
+    "commit": null
+  },
+  "history": []
+}
