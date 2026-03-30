@@ -1,12 +1,12 @@
 ---
 name: moodle-connector
-description: "Moodle REST API client, batch downloader, and MCP server for Claude Code integration"
-metadata: { "author": "Jabir Iliyas Suraj-Deen", "license": "MIT", "homepage": "https://github.com/Jabir-Srj/moodle-connector", "repository": "https://github.com/Jabir-Srj/moodle-connector.git", "tags": ["moodle", "education", "lms", "api", "batch-download", "mcp", "claude-code"] }
+description: "Moodle REST API client, batch downloader, and MCP server for Claude Code integration. SSO-enabled with support for Azure AD, Google, and SAML."
+metadata: { "author": "Jabir Iliyas Suraj-Deen", "license": "MIT", "homepage": "https://github.com/Jabir-Srj/moodle-connector", "repository": "https://github.com/Jabir-Srj/moodle-connector.git", "tags": ["moodle", "education", "lms", "api", "batch-download", "mcp", "claude-code", "sso", "azure-ad", "oauth", "saml"] }
 ---
 
 # Moodle Connector
 
-**Full-featured Moodle REST API client with batch downloading and MCP protocol support for Claude Code and OpenCode.**
+**Enterprise-ready Moodle REST API client with SSO authentication, batch downloading, and MCP protocol support for Claude Code and OpenCode.**
 
 ## Features
 
@@ -15,10 +15,18 @@ metadata: { "author": "Jabir Iliyas Suraj-Deen", "license": "MIT", "homepage": "
 - Fetch materials, deadlines, announcements
 - Download files with aggressive caching
 
+**🆕 Enterprise SSO Support (v2.0.0)**
+- **Azure AD / Entra ID** — Full OAuth2 integration
+- **Google OAuth** — Google Workspace and personal accounts
+- **SAML** — Generic SAML provider support
+- Mobile Launch Flow — Seamless SSO for mobile apps
+- Token rotation and automatic refresh
+
 **Multiple Integration Modes**
 - **CLI:** `python moodle_connector.py courses`
 - **Python Library:** `from moodle_connector import MoodleConnector`
 - **MCP Protocol:** Native integration with Claude Code, OpenCode
+- **Headless Mode** — Tampermonkey helper for CI/CD and automation
 
 **Generic Batch Downloader**
 - JSON-driven configuration (zero code modification)
@@ -30,6 +38,7 @@ metadata: { "author": "Jabir Iliyas Suraj-Deen", "license": "MIT", "homepage": "
 - Token management built-in
 - No secrets in git history
 - MIT licensed
+- Safe for headless environments (CI/CD compatible)
 
 ## Installation
 
@@ -59,6 +68,55 @@ python moodle_connector.py assignments    # View assignments
 python moodle_connector.py materials --course-id 44864
 python moodle_connector.py download "https://mytimes.taylors.edu.my/..." --output myfile.pdf
 python moodle_connector.py summary        # Full markdown export
+```
+
+## 🆕 SSO Authentication (v2.0.0)
+
+### Azure AD / Entra ID
+
+```bash
+# Set environment variables
+export MOODLE_SSO_PROVIDER="azure"
+export MOODLE_SSO_TENANT_ID="your-tenant-id"
+export MOODLE_SSO_CLIENT_ID="your-client-id"
+export MOODLE_SSO_CLIENT_SECRET="your-client-secret"
+
+# Run with SSO
+python moodle_connector.py courses
+# Browser opens automatically for login
+```
+
+### Google OAuth
+
+```bash
+export MOODLE_SSO_PROVIDER="google"
+export MOODLE_SSO_CLIENT_ID="your-client-id.apps.googleusercontent.com"
+export MOODLE_SSO_CLIENT_SECRET="your-client-secret"
+
+python moodle_connector.py courses
+```
+
+### SAML Provider
+
+```bash
+export MOODLE_SSO_PROVIDER="saml"
+export MOODLE_SSO_IDP_URL="https://your-idp.example.com"
+export MOODLE_SSO_ENTITY_ID="your-moodle-entity-id"
+
+python moodle_connector.py courses
+```
+
+### Headless/CI-CD Deployment
+
+Use Tampermonkey helper script for automated workflows:
+
+```bash
+export MOODLE_HEADLESS=true
+export MOODLE_SSO_PROVIDER="azure"
+# Token is saved to config.json automatically
+
+# Run in CI/CD
+python moodle_connector.py summary > report.md
 ```
 
 ### 3. Use Python Library
@@ -225,33 +283,13 @@ Contributions welcome! Please:
 ---
 
 **GitHub:** https://github.com/Jabir-Srj/moodle-connector
-**Release:** v1.0.0 (March 17, 2026)
- `python moodle_connector.py login` for manual token retrieval.
+**Release:** v2.0.0 (March 30, 2026)
 
-### File download stuck
-Check network. Increase timeout in code or clear cache: `rm -rf cache/`
+## What's New in v2.0.0
 
-## License
-
-MIT — See LICENSE file for details. You are free to use, modify, and distribute this software.
-
-## Contributing
-
-Contributions welcome! Please:
-1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request
-4. Agree to license your work under MIT
-
-## Author
-
-**Jabir Iliyas Suraj-Deen**
-- GitHub: https://github.com/Jabir-Srj
-- Email: jabirsrj8@protonmail.com
-- Taylor's University, Kuala Lumpur, Malaysia
-
----
-
-**GitHub:** https://github.com/Jabir-Srj/moodle-connector
-**Release:** v1.0.0 (March 17, 2026)
-** v1.0.0 (March 17, 2026)
+✨ **Enterprise SSO Support**
+- Azure AD, Google OAuth, and SAML authentication
+- Mobile Launch Flow integration
+- Headless deployment with Tampermonkey support
+- Bilingual documentation (English & Spanish)
+- Enhanced security with token rotation
