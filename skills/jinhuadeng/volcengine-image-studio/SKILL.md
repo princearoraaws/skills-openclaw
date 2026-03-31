@@ -1,11 +1,24 @@
 ---
 name: volcengine-image-studio
-description: Practical image generation workflow for Volcengine/ARK-compatible APIs. Use when users need poster creation, text-to-image, reference-image generation, local image upload, multi-image runs, or automatic result downloads.
+description: Practical image generation workflow for Volcengine/ARK-compatible APIs. Use when users need poster creation, text-to-image, reference-image generation, local image upload, multi-image runs, or automatic result downloads. 中文：适合火山引擎 / ARK 兼容接口的实战图片生成；适用于海报生成、文生图、参考图生图、本地图片上传、多图连续生成和结果自动下载。
 ---
 
 # volcengine-image-studio
 
 Use this skill to **actually generate images** through a Volcengine/ARK-compatible image endpoint.
+
+## 中文说明
+
+这是一个面向 **火山引擎 / ARK 兼容图片生成接口** 的实战型 skill，不只是帮你写提示词，而是直接把图片生成跑起来。
+
+适用场景包括：
+
+- 生成海报、宣传图、配图
+- 文生图
+- 单张或多张参考图生图
+- 直接使用本地图片作为输入
+- 一次生成多张结果图
+- 自动下载生成结果到本地
 
 ## Default path
 
@@ -168,6 +181,15 @@ Compared with an earlier bare-bones generation flow, this version is packaged ar
 - Missing model → set `VOLCENGINE_MODEL`
 - Missing endpoint → set `VOLCENGINE_ENDPOINT`
 - Local file not found → check the `--image` path
+- 401/403 → key invalid or lacks permission
+- 404/405 → endpoint wrong
+- 400 → model/size/request body incompatible with the target API
+- No returned files/URLs → inspect `raw` in the JSON output
+
+## References
+
+- `references/sources.md`
+ found → check the `--image` path
 - 401/403 → key invalid or lacks permission
 - 404/405 → endpoint wrong
 - 400 → model/size/request body incompatible with the target API
