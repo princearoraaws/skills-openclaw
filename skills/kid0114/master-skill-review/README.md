@@ -1,4 +1,4 @@
-# skill-review
+# master-skill-review
 
 A higher-privilege OpenClaw meta-skill for reviewing and improving other skills.
 

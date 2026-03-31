@@ -1,5 +1,5 @@
 ---
-name: skill-review
+name: master-skill-review
 description: Review an OpenClaw skill for token efficiency, scriptability, and clean action boundaries; back up first, then improve the skill.
 input: skill path or skill name
 output: 审查结论、优化建议、建议新增的 scripts/references、是否通过
@@ -45,7 +45,7 @@ This meta-skill reviews another skill and checks whether it:
 
 ## Recommended command
 ```bash
-bash skills/skill-review/scripts/review_skill.sh <skill-dir-or-skill-md>
+bash skills/master-skill-review/scripts/review_skill.sh <skill-dir-or-skill-md>
 ```
 
 ## Do not
