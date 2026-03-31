@@ -1,7 +1,7 @@
 ---
 name: saturnday
-version: 1.5.0
-description: Governed AI software execution — scan code for 75+ security, quality, and DevOps checks. Build projects from a brief with per-commit governance, or auto-fix findings. Covers Python, TypeScript, Dockerfiles, Terraform, Kubernetes, GitHub Actions, GitLab CI, and Jenkins. Supports Claude Code, Codex, and Cursor. Requires pip install saturnday.
+version: 1.7.0
+description: Governed AI software execution — scan code for 75+ security, quality, and DevOps checks with LLM-powered security triage to filter false positives. Build projects from a brief with per-commit governance, or auto-fix findings. Covers Python, TypeScript, Dockerfiles, Terraform, Kubernetes, GitHub Actions, GitLab CI, and Jenkins. Five backends — Claude Code, Codex, Cursor, OpenAI API, Anthropic API. Requires pip install saturnday.
 homepage: https://www.saturnday.dev
 source: https://github.com/honouralexwill/saturnday
 license: MIT
@@ -30,7 +30,7 @@ metadata:
 
 # Saturnday
 
-Govern AI-built software from scan to build to repair — all from the terminal. Saturnday runs 50+ security and quality checks, builds projects from a brief with ticketed execution and per-commit governance, and auto-fixes findings with evidence.
+Govern AI-built software from scan to build to repair — all from the terminal. Saturnday runs 75+ security, quality, and DevOps checks, builds projects from a brief with ticketed execution and per-commit governance, and auto-fixes findings with evidence.
 
 **Requires:** `pip install saturnday` (Python 3.10+)
 
@@ -115,7 +115,7 @@ saturnday governance --repo <path> --full
 ```
 
 ### What it checks
-All 50+ checks: security (SQL injection, XSS, CSRF, auth bypass, hardcoded secrets, WebSocket security, OAuth, token handling, rate limiting, IDOR, user enumeration, cookie security), AI-specific (hallucinated imports, fake tests, dead code, placeholders), quality (syntax, dependencies, Python version compat, code quality, blast radius, project hygiene, typosquat detection).
+All 75+ checks: security (SQL injection, XSS, CSRF, auth bypass, hardcoded secrets, WebSocket security, OAuth, token handling, rate limiting, IDOR, user enumeration, cookie security), AI-specific (hallucinated imports, fake tests, dead code, placeholders), quality (syntax, dependencies, Python version compat, code quality, blast radius, project hygiene, typosquat detection), DevOps (Dockerfile, GitHub Actions, GitLab CI, Jenkins, Terraform, Kubernetes, config security).
 
 ### Ratchet baselines
 Prevent regressions:
@@ -152,23 +152,30 @@ saturnday start
 | Backend | Value | Auth |
 |---------|-------|------|
 | Claude Code CLI | `claude-cli` | Claude Pro subscription |
-| Codex CLI | `codex-cli` | OPENAI_API_KEY |
+| Codex CLI | `codex-cli` | OpenAI subscription (runs via Saturnday REPL) |
 | Cursor CLI | `cursor-cli` | CURSOR_API_KEY |
 | OpenAI API | `openai` | OPENAI_API_KEY |
 | Anthropic API | `anthropic` | ANTHROPIC_API_KEY |
 
 ### What happens during a run
 
-1. **Planning** — 3-stage planner generates tickets with acceptance criteria and scope constraints
-2. **Execution** — each ticket executed sequentially, 50+ governance checks after every commit
-3. **Retry** — if governance fails, revert, feed findings back, retry (up to 3 attempts)
-4. **Ungoverned commit** — if a ticket still fails after retries and auto-repair, the code is committed with a `[GOVERNANCE: review required]` tag so the project stays complete
-5. **Auto-repair** — after all tickets, ungoverned and failed tickets go through the repair pipeline again
-6. **Definition of done** — evaluates whether plan goals are met
-7. **Review report** — for ungoverned tickets: `review-required.md` with findings, remediation tips, and copy-paste fix prompts for each ticket
-8. **Evidence** — timestamped directory with per-ticket results, governance evidence, analytics
+1. **Security triage** — LLM-powered data flow analysis filters false positives from security findings so you only review what matters
+2. **Brief enrichment** — vague briefs are auto-enriched with technical detail before planning
+2. **Planning** — 3-stage planner generates tickets with acceptance criteria and scope constraints
+3. **Execution** — each ticket executed sequentially, 75+ governance checks after every commit
+4. **Auto-install** — dependencies are automatically installed between tickets when pyproject.toml or package.json changes
+5. **Retry** — if governance fails, revert, feed findings back, retry (up to 3 attempts)
+6. **Ungoverned commit** — if a ticket still fails after retries and auto-repair, the code is committed with a `[GOVERNANCE: review required]` tag so the project stays complete
+7. **Auto-repair** — after all tickets, ungoverned and failed tickets go through the repair pipeline again
+8. **Definition of done** — evaluates whether plan goals are met
+9. **Review report** — for ungoverned tickets: `review-required.md` with findings, remediation tips, and copy-paste fix prompts for each ticket
+10. **Progress log** — live `saturnday-progress.log` with ticket outcomes, governance results, and counterfactual messages showing what ungoverned AI coders would have done wrong
+11. **Evidence** — timestamped directory with per-ticket results, governance evidence, analytics
 
 ### Resume interrupted runs
+
+Saturnday auto-detects prior runs. If you restart `saturnday run` on a project that already has a ledger, tickets that already passed are skipped automatically. You can also resume explicitly:
+
 ```bash
 saturnday resume --repo <path> --backend anthropic
 ```
