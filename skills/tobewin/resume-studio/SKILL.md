@@ -1,7 +1,7 @@
 ---
 name: resume-studio
 description: Professional resume generator. Use when user needs to create, optimize, or customize resumes for job applications. Supports Word and PDF output, multiple styles, industry templates, and ATS-friendly formats. 简历生成、求职简历、简历优化。
-version: 1.0.1
+version: 1.0.2
 license: MIT-0
 metadata: {"openclaw": {"emoji": "📋", "requires": {"bins": ["python3"], "env": []}}}
 dependencies: "pip install python-docx fpdf2"
@@ -15,12 +15,13 @@ Professional resume generator with ATS-friendly templates, multiple styles, and 
 
 - 📋 **Smart Generation**: AI-powered content optimization
 - 🎨 **Multiple Styles**: Classic, Modern, Creative, Minimal, Academic
-- 📄 **Dual Format**: Word (.docx) and PDF output
-- 🌐 **Web Research**: Query job market trends and requirements
+- 📄 **Word Output**: Professional .docx format
+- 👤 **Photo Support**: Optional photo area
+- 🌐 **Web Research**: Query job market trends
 - 📁 **File Import**: Import existing materials
 - 🎯 **ATS-Friendly**: Passes Applicant Tracking Systems
 - 🌍 **Multi-Language**: Chinese and English support
-- 📊 **Data Integration**: Combine multiple data sources
+- 🖥️ **Cross-Platform**: Windows, macOS, Linux
 
 ## Trigger Conditions
 
