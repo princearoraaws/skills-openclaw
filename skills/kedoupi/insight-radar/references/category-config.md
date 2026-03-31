@@ -126,7 +126,7 @@
 | 字段 | 必填 | 说明 | 示例 |
 |------|------|------|------|
 | `name` | ✅ | 类别名称（英文，用于标识） | "AI/Tech" |
-| `keywords` | ✅ | 搜索关键词（数组） | ["AI", "machine learning"] |
+| `keywords` | ✅ | 覆盖度评估关键词（insight-radar 用于判断搜索结果是否覆盖了该类别的主要子领域，不直接作为搜索词） | ["AI", "machine learning", "semiconductor"] |
 | `sources` | ✅ | 信息源列表 | 见下表 |
 | `active` | ✅ | 是否启用 | true / false |
 | `search_params` | ⭕ | 搜索参数（可选） | 见下表 |
@@ -143,23 +143,25 @@
 
 | 字段 | 默认值 | 说明 |
 |------|--------|------|
-| `freshness` | "day" | 时间范围：day/week/month/year |
-| `count` | 5 | 返回结果数量 |
+| `count` | 5 | 每次搜索返回结果数量 |
 
 ---
 
 ## ✅ 最佳实践
 
-### 1. Keywords 选择
+### 1. Keywords 选择（用于覆盖度评估）
+
+keywords 不是搜索词，而是 insight-radar 搜索后评估"结果是否覆盖了该类别的主要子领域"的标准。如果某个子领域在搜索结果中缺失，AI 会自动补搜。
 
 **好的关键词**:
-- ✅ 具体且相关："machine learning", "LLM"
-- ✅ 行业术语："DeFi", "biotech"
-- ✅ 3-6个关键词
+- ✅ 覆盖该类别的 3-4 个不同子领域
+- ✅ 行业术语："DeFi", "biotech", "semiconductor"
+- ✅ 5-8 个关键词，每个子领域 1-2 个代表词
 
 **不好的关键词**:
 - ❌ 太宽泛："news", "technology"
-- ❌ 太少（1-2个）或太多（>10个）
+- ❌ 全部集中在同一个子领域
+- ❌ 太少（<3）导致无法评估覆盖度
 
 ### 2. Sources 选择
 
@@ -218,4 +220,4 @@
 
 ---
 
-*Last updated: 2026-03-23*
+*Last updated: 2026-03-27*
