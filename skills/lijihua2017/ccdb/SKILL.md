@@ -1,175 +1,175 @@
 ---
 name: ccdb
 description: |
-  CCDB 碳排放因子搜索工具。基于碳阻迹（Carbonstop）CCDB 数据库，通过 ccdb-mcp-server 查询碳排放因子数据。
-  支持关键词搜索碳排放因子、获取结构化 JSON 数据、多关键词对比。
+  CCDB Carbon Emission Factor Search Tool. Based on the Carbonstop CCDB database, it queries carbon emission factor data via ccdb-mcp-server.
+  Supports keyword search for carbon emission factors, retrieving structured JSON data, and multi-keyword comparisons.
 
-  **当以下情况时使用此 Skill**：
-  (1) 用户查询碳排放因子（如"电力排放因子"、"水泥碳排放"、"天然气排放系数"等）
-  (2) 用户需要进行碳排放计算（需要先查因子再乘以活动量）
-  (3) 用户需要对比不同能源/材料的碳排放因子
-  (4) 用户提到 "CCDB"、"碳排放因子"、"排放系数"、"碳足迹"、"LCA"、"emission factor"
-  (5) 需要查询特定国家/地区、特定年份的碳排放因子数据
+  **Use this Skill when**:
+  (1) The user queries carbon emission factors (e.g., "electricity emission factor", "cement carbon emission", "natural gas emission coefficient", etc.)
+  (2) The user needs to perform carbon emission calculations (needs to query the factor first, then multiply by activity data)
+  (3) The user needs to compare the carbon emission factors of different energy sources/materials
+  (4) The user mentions "CCDB", "carbon emission factor", "emission coefficient", "carbon footprint", "LCA", or "emission factor"
+  (5) The user needs to query carbon emission factor data for a specific country/region or a specific year
 ---
 
-# CCDB 碳排放因子搜索
+# CCDB Carbon Emission Factor Search
 
-通过 [ccdb-mcp-server](https://www.npmjs.com/package/ccdb-mcp-server) 调用碳阻迹 CCDB 碳排放因子数据库。
+Queries the Carbonstop CCDB emission factor database using [ccdb-mcp-server](https://www.npmjs.com/package/ccdb-mcp-server).
 
-## 前置条件
+## Prerequisites
 
-需要全局安装 ccdb-mcp-server：
+Global installation of `ccdb-mcp-server` is required if using MCP:
 
 ```bash
 npm install -g ccdb-mcp-server
 ```
 
-无需 API Key，公开接口。
+No API Key is needed; it utilizes a public API.
 
-## 可用工具
+## Available Tools
 
-通过 `mcporter` 以 stdio 模式调用 `ccdb-mcp` CLI，暴露 3 个 MCP 工具：
+The `ccdb-mcp` CLI can be called via `mcporter` in stdio mode, exposing 3 MCP tools:
 
-### 1. search_factors — 搜索碳排放因子（格式化输出）
+### 1. `search_factors` — Search Emission Factors (Formatted Output)
 
-**用途**：按关键词搜索碳排放因子，返回人类可读的格式化文本。
+**Purpose**: Search for carbon emission factors by keyword and return humane-readable formatted text.
 
 ```bash
-mcporter call ccdb-mcp --stdio -- search_factors '{"name":"电力","lang":"zh"}'
+mcporter call ccdb-mcp --stdio -- search_factors '{"name":"electricity","lang":"en"}'
 ```
 
-参数：
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `name` | string | ✅ | 搜索关键词，如"电力"、"水泥"、"钢铁"、"天然气" |
-| `lang` | `"zh"` \| `"en"` | ❌ | 搜索语言，默认 `zh` |
+Parameters:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `name` | string | ✅ | Search keyword, e.g., "electricity", "cement", "steel", "natural gas" |
+| `lang` | `"zh"` \| `"en"` | ❌ | Target language for the search. Defaults to `zh` |
 
-返回：格式化文本，包含因子值、单位、适用地区、年份、发布机构等。
+Returns: Formatted text containing the factor value, unit, applicable region, year, publishing institution, etc.
 
-### 2. search_factors_json — 搜索碳排放因子（JSON 输出）
+### 2. `search_factors_json` — Search Emission Factors (JSON Output)
 
-**用途**：与 search_factors 相同，但返回结构化 JSON，适合程序化处理和碳排放计算。
+**Purpose**: Operates the same as `search_factors`, but returns structured JSON data. Highly recommended for programmatic handling and carbon emission calculations.
 
 ```bash
-mcporter call ccdb-mcp --stdio -- search_factors_json '{"name":"电力","lang":"zh"}'
+mcporter call ccdb-mcp --stdio -- search_factors_json '{"name":"electricity","lang":"en"}'
 ```
 
-参数同 `search_factors`。
+Parameters are identical to `search_factors`.
 
-返回 JSON 字段说明：
-| 字段 | 说明 |
-|------|------|
-| `name` | 因子名称 |
-| `factor` | 排放因子值 |
-| `unit` | 单位（如 kgCO₂e/kWh） |
-| `countries` | 适用国家/地区 |
-| `year` | 发布年份 |
-| `institution` | 发布机构 |
-| `specification` | 规格说明 |
-| `description` | 描述 |
-| `sourceLevel` | 因子级别 |
-| `business` | 所属行业 |
-| `documentType` | 文件类型 |
+JSON Return Fields:
+| Field | Description |
+|-------|-------------|
+| `name` | Factor Name |
+| `factor` | Emission Factor Value |
+| `unit` | Unit (e.g., kgCO₂e/kWh) |
+| `countries` | Applicable Countries/Regions |
+| `year` | Publication Year |
+| `institution` | Publishing Institution |
+| `specification` | Specification details |
+| `description` | Additional description |
+| `sourceLevel` | Factor source level |
+| `business` | Industry sector |
+| `documentType` | Document/Source type |
 
-### 3. compare_factors — 多关键词碳排放因子对比
+### 3. `compare_factors` — Compare Multiple Emission Factors
 
-**用途**：同时对比最多 5 个关键词的碳排放因子，用于横向比较不同能源/材料。
+**Purpose**: Compare the carbon emission factors of up to 5 keywords simultaneously. Useful for horizontal comparison of different energy sources or materials.
 
 ```bash
-mcporter call ccdb-mcp --stdio -- compare_factors '{"keywords":["电力","天然气","煤炭"],"lang":"zh"}'
+mcporter call ccdb-mcp --stdio -- compare_factors '{"keywords":["electricity","natural gas","coal"],"lang":"en"}'
 ```
 
-参数：
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| `keywords` | string[] | ✅ | 搜索关键词列表，1-5 个 |
-| `lang` | `"zh"` \| `"en"` | ❌ | 搜索语言，默认 `zh` |
+Parameters:
+| Parameter | Type | Required | Description |
+|-----------|------|----------|-------------|
+| `keywords` | string[] | ✅ | List of search keywords, 1-5 items maximum |
+| `lang` | `"zh"` \| `"en"` | ❌ | Target language for the search. Defaults to `zh` |
 
-## 调用方式
+## Call Methods
 
-本 Skill 通过 `mcporter` CLI 以 stdio 模式桥接 ccdb-mcp-server：
+This skill bridges the `ccdb-mcp-server` via the `mcporter` CLI in stdio mode:
 
 ```bash
-# 通用格式
+# General Format
 mcporter call ccdb-mcp --stdio -- <tool_name> '<json_arguments>'
 ```
 
-如果 `mcporter` 尚未配置 ccdb-mcp，先注册：
+If `mcporter` hasn't configured `ccdb-mcp` yet, register it first:
 
 ```bash
 mcporter add ccdb-mcp --command "ccdb-mcp" --args "--stdio"
 ```
 
-**备选方案**（直接用 npx，无需 mcporter）：
+**Alternative Method** (using npx directly, no mcporter required):
 
 ```bash
 echo '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"agent","version":"1.0.0"}}}' | npx -y ccdb-mcp-server --stdio 2>/dev/null
 ```
 
-或使用下方的**直接 HTTP 调用脚本**（推荐，最轻量）。
+Or you can use the **Direct HTTP Call script** below (Recommended, as it's the most lightweight).
 
-## 直接调用脚本（推荐 · 无需安装 MCP Server）
+## Direct Execution Script (Recommended · No MCP Server Needed)
 
-Skill 自带轻量 CLI 脚本 `scripts/ccdb-search.mjs`，直接调用 CCDB 公开 HTTP API，无需安装任何依赖。
+This skill comes with a lightweight CLI script `scripts/ccdb-search.mjs` that directly calls the CCDB public HTTP API, requiring ZERO dependencies.
 
-### 搜索因子（格式化输出）
-
-```bash
-node /workspace/skills/ccdb/scripts/ccdb-search.mjs "电力"
-node /workspace/skills/ccdb/scripts/ccdb-search.mjs "cement" en
-```
-
-### 搜索因子（JSON 输出，适合计算）
+### Search Factors (Formatted Output)
 
 ```bash
-node /workspace/skills/ccdb/scripts/ccdb-search.mjs "电力" zh --json
+node /workspace/skills/skills/ccdb/scripts/ccdb-search.mjs "电力"
+node /workspace/skills/skills/ccdb/scripts/ccdb-search.mjs "cement" en
 ```
 
-### 多关键词对比
+### Search Factors (JSON Output, best for calculation)
 
 ```bash
-node /workspace/skills/ccdb/scripts/ccdb-search.mjs --compare 电力 天然气 柴油
-node /workspace/skills/ccdb/scripts/ccdb-search.mjs --compare 电力 天然气 --json
+node /workspace/skills/skills/ccdb/scripts/ccdb-search.mjs "electricity" en --json
 ```
 
-### Node.js 一行式（备选）
+### Compare Multiple Keywords
 
 ```bash
-node -e "const c=require('crypto'),n=process.argv[1],s=c.createHash('md5').update('mcp_ccdb_search'+n).digest('hex');fetch('https://gateway.carbonstop.com/management/system/website/searchFactorDataMcp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sign:s,name:n,lang:'zh'})}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d,null,2)))" "电力"
+node /workspace/skills/skills/ccdb/scripts/ccdb-search.mjs --compare 电力 天然气 柴油
+node /workspace/skills/skills/ccdb/scripts/ccdb-search.mjs --compare electricity "natural gas" --json
 ```
 
-## 使用场景与示例
+### Node.js One-Liner (Fallback)
 
-### 场景 1：查询某种能源的排放因子
+```bash
+node -e "const c=require('crypto'),n=process.argv[1],s=c.createHash('md5').update('mcp_ccdb_search'+n).digest('hex');fetch('https://gateway.carbonstop.com/management/system/website/searchFactorDataMcp',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sign:s,name:n,lang:'en'})}).then(r=>r.json()).then(d=>console.log(JSON.stringify(d,null,2)))" "electricity"
+```
 
-> 用户：中国电网的碳排放因子是多少？
+## Usage Scenarios & Examples
 
-→ 搜索关键词 `"电力"` 或 `"中国电网"`，筛选中国地区、最新年份
+### Scenario 1: Query Emission Factor for a Specific Energy Source
 
-### 场景 2：碳排放量计算
+> User: What is the carbon emission factor for the Chinese power grid?
 
-> 用户：我公司去年用了 50 万度电，碳排放是多少？
+→ Action: Search using the keyword `"electricity"` or `"China grid"`, filtering for the China region and the most recent year.
 
-→ 步骤：
-1. 搜索 `"电力"` 因子，选中国、最新年份
-2. 碳排放 = 500000 kWh × 因子值 (kgCO₂e/kWh)
+### Scenario 2: Carbon Emission Calculation
 
-### 场景 3：不同能源对比
+> User: My company used 500,000 kWh of electricity last year, what is the carbon footprint?
 
-> 用户：对比电力、天然气和柴油的碳排放因子
+→ Workflow:
+1. Search the `"electricity"` factor (JSON output preferably), select China and the latest year.
+2. Calculate Carbon Emissions = 500,000 kWh × Factor Value (in kgCO₂e/kWh).
 
-→ 使用 `compare_factors`，keywords = `["电力", "天然气", "柴油"]`
+### Scenario 3: Comparing Energy Alternatives
 
-### 场景 4：特定行业查询
+> User: Compare the carbon emission factors of electricity, natural gas, and diesel.
 
-> 用户：水泥行业的碳排放因子
+→ Action: Use `compare_factors` with keywords = `["electricity", "natural gas", "diesel"]`.
 
-→ 搜索 `"水泥"`
+### Scenario 4: Querying Industry-Specific Data
 
-## 注意事项
+> User: What is the emission factor for the cement industry?
 
-1. **优先推荐中国大陆地区、最新年份**的因子（除非用户指定其他地区）
-2. **因子值需注意单位换算**：不同因子的单位可能不同（kgCO₂/kWh vs tCO₂/TJ 等）
-3. **数据来源权威性**：关注发布机构（如生态环境部、IPCC、IEA 等）
-4. **搜索无结果时**：尝试换同义词（如"电"→"电力"→"电网"→"electricity"）
-5. **计算场景用 JSON 版本**：`search_factors_json` 返回精确数值，适合计算
+→ Action: Search using `"cement"`.
+
+## Important Notes
+
+1. **Prioritize China Mainland and the Latest Year**: Unless the user specifies another region or year, implicitly prioritize data for China and the most recent year available.
+2. **Pay Close Attention to Unit Conversion**: Different factors might have entirely different units (e.g., kgCO₂/kWh vs. tCO₂/TJ). Always double-check before doing mathematical calculations.
+3. **Data Authority / Providers**: Take note of the publishing institutions (e.g., MEE, IPCC, IEA, EPA).
+4. **No Results Found? Use Synonyms**: If the search yields empty results, attempt to use synonyms (e.g., translate your query, or map "power" → "electricity" → "grid").
+5. **Always Use JSON for Calculations**: The `search_factors_json` format returns highly precise numerical figures that are ideal for programmatic multiplication.
