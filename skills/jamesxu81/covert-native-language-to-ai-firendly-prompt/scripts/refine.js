@@ -110,9 +110,11 @@ function refinePrompt(raw) {
       needsClarification: needsClarification,
       suggestedQuestions: needsClarification ? questions : [],
       recommendedStructure: {
+        persona: '[Role + expertise relevant to the task]',
         task: '[Specific action on specific target]',
         context: '[System/file/service details, environment, account]',
-        requirements: '[Constraints, checks, scope limits]',
+        references: '[Few-shot examples or templates when format matters]',
+        requirements: '[Constraints, checks, scope limits, edge cases]',
         output: '[Format, destination, success criteria]',
       },
       nextStep: needsClarification 
@@ -138,17 +140,28 @@ ${needsClarification ? `\n⚠️  NEEDS CLARIFICATION\n\nAsk ONE question from b
 
 📋 Structured Prompt Template:
 
+  Persona:
+    [Role + expertise relevant to the task]
+
   Task:
     [Clear action verb + specific what to do]
 
   Context:
     [System/file/service details, environment, account info]
 
+  References:
+    [Few-shot examples or templates when format consistency matters]
+
   Requirements:
-    [Constraints, scope limits, what to check, success criteria]
+    [Constraints, scope limits, what to check, edge cases]
 
   Output:
     [Format, destination, level of detail, pass/fail criteria]
+
+  Advanced (when needed):
+    - Add "Think step by step:" for complex reasoning (Chain of Thought)
+    - Break into chained sub-prompts for multi-phase tasks
+    - Add "Meta: What info do you need?" if unsure how to frame it
 
 💡 Next Step:
   ${needsClarification 
