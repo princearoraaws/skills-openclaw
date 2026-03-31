@@ -1,6 +1,13 @@
 ---
 name: core-prism
 description: CORE four-dimensional strategic lens for deep analysis of news, business theories, and strategic decisions. Use when (1) analyzing news/reports/business theories, (2) making strategic decisions requiring multi-dimensional breakdown, (3) extracting core insights from reading, (4) user explicitly asks "analyze with CORE framework".
+permissions:
+  filesystem:
+    read:
+      - USER.md  # Reads user context for personalizing [E] Execution dimension
+config:
+  reads:
+    - USER.md  # User profile for [E] Execution dimension personalization
 ---
 
 # CORE Prism (CORE四维战略透镜)
@@ -163,14 +170,11 @@ For each dimension, ask:
 ### Input: Business Theory
 **User**: "Apply CORE to Clayton Christensen's Disruptive Innovation"
 
-**Claude**:
-1. Extracts core theory
-2. Applies CORE:
-   - [C]: Incumbents fail because they listen to top customers
-   - [O]: Low-end entrants who serve "non-consumers"
-   - [R]: Only works if tech improvement > market demand growth
-   - [E]: **For you**: Don't just serve premium users; also explore "good enough" low-end
-3. Outputs analysis
+**Claude applies CORE**:
+- [C]: Incumbents fail because they listen to top customers
+- [O]: Low-end entrants who serve "non-consumers"
+- [R]: Only works if tech improvement > market demand growth
+- [E]: Don't just serve premium users; also explore "good enough" low-end
 
 ---
 
@@ -208,11 +212,5 @@ For each dimension, ask:
 | **Reading** | Business book chapter | [C] First principle? [R] When does this fail? |
 | **Decision making** | "Should I invest in X?" | [O] Who wins? [R] What's the black swan? [E] Action? |
 
----
 
-## Version History
-
-- **v2.1** (2026-03-23): Removed user-specific references, added USER.md integration, skill-creator compliant structure
-- **v2.0** (2026-03-20): Initial version with CORE framework
-
-*Last updated: 2026-03-23*
+*Last updated: 2026-03-27*
