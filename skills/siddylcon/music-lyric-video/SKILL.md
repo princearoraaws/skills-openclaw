@@ -1,6 +1,6 @@
 ---
 name: music-lyric-video
-version: 1.0.2
+version: 1.0.3
 displayName: "Music Lyric Video Maker"
 description: >
   Describe your song and NemoVideo creates the lyric video. Word-for-word animated lyrics, karaoke style, minimalist type on color, or cinematic lyric reveal — narrate the mood, the song's energy, and how you want the words to appear, and get a lyric video ready for YouTube, Spotify Canvas, or your release campaign.
@@ -8,11 +8,12 @@ description: >
   Works by connecting to the NemoVideo AI backend at mega-api-prod.nemovideo.ai.
   Supports MP4, MOV, AVI, WebM.
 homepage: https://nemovideo.com
+apiDomain: https://mega-api-prod.nemovideo.ai
 repository: https://github.com/nemovideo/nemovideo_skills
 license: MIT-0
 metadata:
   requires:
-    env: []
+    env: ["NEMO_TOKEN"]
     configPaths:
       - "~/.config/nemovideo/"
   primaryEnv: NEMO_TOKEN
@@ -40,7 +41,7 @@ When the user first interacts, set up the connection:
    - Otherwise generate a UUID, save it to `~/.config/nemovideo/client_id`
 3. **Acquire anonymous token**:
    ```bash
-   curl -s -X POST "$API/api/auth/anonymous-token" -H "X-Client-Id: $CLIENT_ID"
+   curl -s -X POST "https://mega-api-prod.nemovideo.ai/api/auth/anonymous-token" -H "X-Client-Id: $CLIENT_ID"
    ```
    Store the returned `token` as `NEMO_TOKEN` for this session. You get 100 free credits.
 4. **Create a session** (§3.0) so you're ready to work immediately.
