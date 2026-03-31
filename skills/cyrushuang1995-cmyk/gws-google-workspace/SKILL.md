@@ -1,12 +1,15 @@
 ---
 name: gws
-description: "Google Workspace CLI. Use when the user mentions Gmail, Google Drive, Calendar, Sheets, Docs, Tasks, People, Keep, sending email, checking inbox, managing files, reading/writing spreadsheets, viewing schedules, standup reports, or any Google Workspace operation — even if they don't explicitly say 'gws'."
+description: "Google Workspace CLI. Use when the user mentions Gmail, Google Drive, Calendar, Sheets, Docs, Tasks, People, Slides, Forms, Meet, Classroom, sending email, checking inbox, managing files, reading/writing spreadsheets, viewing schedules, standup reports, or any Google Workspace operation — even if they don't explicitly say 'gws'."
 metadata:
   {
-    "requires":
+    "openclaw":
       {
-        "env": ["GOOGLE_WORKSPACE_PROJECT_ID", "GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE", "GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND"],
-        "bins": ["gws", "jq", "base64"]
+        "requires":
+          {
+            "env": ["GOOGLE_WORKSPACE_PROJECT_ID", "GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE", "GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND"],
+            "bins": ["gws", "jq", "base64"]
+          }
       }
   }
 ---
@@ -27,63 +30,70 @@ export GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE=~/.config/gws/credentials.json
 export GOOGLE_WORKSPACE_CLI_KEYRING_BACKEND=file
 ```
 
-Auth once with `gws auth login`. Enable required APIs in GCP Console first.
+First-time setup and authorization: see **Prerequisites** below.
 
-## Usage Philosophy
+## Prerequisites
 
-**不确定参数时，查 schema 而不是猜。** `gws schema <api.method>` 返回完整参数说明，比盲目尝试快得多。
+### 1. 安装 gws
 
-**批量操作优先。** 每次 `gws` 调用有 ~2-3s 启动延迟。批量标记已读/加星用 `batchModify`（每批 ≤100 条），避免逐条循环。
+```bash
+npm install -g @googleworkspace/cli
+```
 
-**JSON + jq 是默认输出模式。** 程序化处理用 JSON 输出配合 jq 提取字段。`--format table` 仅用于给人类看的展示场景。
+### 2. GCP Console 配置
 
-**并行加速 I/O bound 操作。** 逐条 get 邮件等操作可用 `&` 后台并行 + `wait`，从 N×3s 降到 ~3s。
+前往 [Google Cloud Console → APIs & Services → Library](https://console.cloud.google.com/apis/library)，启用以下 API：
 
-**所有 `--upload` 和 `--output` 路径仅支持相对路径。** 必须先 `cd` 到目标目录再操作，这是 CLI 的硬性限制。
+| 服务 | API 名称 |
+|------|----------|
+| Gmail | Gmail API |
+| Drive | Google Drive API |
+| Calendar | Google Calendar API |
+| Sheets | Google Sheets API |
+| Docs | Google Docs API |
+| Tasks | Tasks API |
+| People | People API |
+| Slides | Google Slides API |
+| Forms | Forms API |
+| Meet | Google Meet API |
+| Classroom | Google Classroom API |
 
-## Known API Quirks
+大部分 API 在 `gws auth login` 时会自动关联，但 Sheets/Docs/Slides 等可能需要手动启用后才能调用。
 
-- **Gmail header 顺序不固定。** API 按内部存储顺序返回 headers，而非请求顺序。**必须按 header name 匹配，不能按数组 index 取值。**
-- **Drive upload 的 name 参数无效。** `files create` 的 `"name"` 被忽略，上传后文件名始终为 "Untitled"，需先 upload 再 `update` 重命名。但 `files copy` 的 name 参数有效。
-- **Drive delete 返回 HTML 而非 JSON。** 成功时返回 `{"status":"success","saved_file":"download.html"}`，忽略即可。
-- **Sheets 的 sheet 名称不一定是 "Sheet1"。** `+read` 的 range 必须用实际 sheet 名，先 `get` 获取 `.sheets[].properties.title`。
-- **Gmail `messages list` 仅返回 ID。** 需逐条 `get`。用 `format=metadata` 比 `format=full` 更快更省 token，只在需要正文时用 `full`。
-- **Gmail 邮件 parts 结构不固定。** 有些邮件是单层 `.payload.parts[]`，有些是嵌套 `.payload.parts[].parts[]`。两种写法都要准备好。
-- **People `searchContacts` 必须指定 `readMask`。** 不传会报 400。`connections list` 不需要。
+**重要：启用 API 和 OAuth scope 是两回事。** API 启用决定"能不能调这个服务"，OAuth scope 决定"能做什么操作"，两者都需要。
 
-## Service Availability
+### 3. OAuth 授权
 
-| 服务 | 状态 | 前置条件 |
-|------|------|----------|
-| Gmail | ✅ | Gmail API 已启用 |
-| Drive | ✅ | Drive API 已启用 |
-| Calendar | ✅ | Calendar API 已启用 |
-| Sheets | ✅ | Sheets API 已启用 |
-| Docs | ✅ | Docs API 已启用 |
-| Tasks | ✅ | Tasks API 已启用 |
-| People | ✅ | People API 已启用 |
-| Slides | ✅ | Slides API 已启用 |
-| Forms | ✅ | Forms API 已启用 |
-| Meet | ✅ | Meet API 已启用 |
-| Classroom | ✅ | Classroom API 已启用 |
-| Keep | ⚠️ | 需额外 scope，重新授权时勾选 Keep 权限 |
-| Workflow | ✅ | 内置 helper，无需额外 API |
-| Chat | ❌ | 需要在 Google Workspace Admin 开启 Google Chat |
-| Admin Reports | ❌ | 需超级管理员权限 |
+`gws` 是无头 CLI，授权流程需要用户在浏览器中完成：
+
+```bash
+gws auth login
+```
+
+1. CLI 输出 OAuth URL
+2. **将链接发给用户**，让用户在浏览器中打开并授权
+3. 用户将回调页面中的授权码复制回来
+4. 在 CLI 中粘贴授权码，完成认证
+
+凭证保存在 `GOOGLE_WORKSPACE_CLI_CREDENTIALS_FILE` 指定的路径。`gws auth login -s <service>` 支持分批授权特定服务，不会覆盖已有 scope。
+
+如果遇到 `insufficient authentication scopes` 错误，重新运行 `gws auth login` 并勾选缺少的权限。
 
 ## Troubleshooting
 
-- **`insufficient authentication scopes`** → `gws auth login` 重新授权，确保勾选所需权限
-- **`File not found`** → 检查是否使用了绝对路径，改用相对路径
-- **上传后文件名为 "Untitled"** → 这是已知行为，用 `files update` 重命名
+- **`insufficient authentication scopes`** → 见 Prerequisites > Scope 说明，重新授权并勾选缺少的权限
+- **`File not found`** → 检查是否使用了绝对路径，改用相对路径（见 Usage Philosophy）
+- **上传后文件名为 "Untitled"** → 用 `files update` 重命名（见 Known API Quirks）
 - **参数不确定** → `gws schema <api.method>` 查询任意 API 的完整参数结构
-- **API 未启用** → 前往 GCP Console → APIs & Services → 启用对应 API
+- **API 未启用** → 见 Prerequisites > GCP Console，启用对应 API
 
 ---
 
 ## Gmail
 
-Gmail 是最常用的服务，支持完整的邮件 CRUD、搜索、标签、附件、线程、批量操作和设置管理。
+**Gmail** 是最常用的服务，支持完整的邮件 CRUD、搜索、标签、附件、线程、批量操作和设置管理。
+
+每次 `gws` 调用有 ~2-3s 启动延迟，批量操作优先（`batchModify` 每批 ≤100 条）。逐条 get 邮件可用 `&` 并行 + `wait` 加速。
 
 ### 搜索与列表
 
@@ -96,7 +106,11 @@ gws gmail users messages list --params '{"userId":"me","q":"is:unread"}' --page-
 
 ### 读取邮件
 
-**决策原则**：只需要摘要（发件人/主题/时间）用 `metadata`，需要正文用 `full`，只要预览用 `snippet` 字段。
+`messages list` 仅返回 ID，需逐条 `get`。只需要摘要用 `format=metadata`（更快省 token），需要正文用 `format=full`。
+
+**注意**：API 返回的 header 顺序不固定（按内部存储顺序，非请求顺序），**必须按 header name 匹配，不能按数组 index 取值。**
+
+邮件正文 parts 结构不固定——有些是单层 `.payload.parts[]`，有些是嵌套 `.payload.parts[].parts[]`，两种写法都要准备好。
 
 ```bash
 # 提取 headers（按 name 匹配，不要按 index）
@@ -134,11 +148,15 @@ gws gmail users messages batchModify --params '{"userId":"me"}' --json "{\"ids\"
 
 ### 发送邮件
 
-构造 RFC 2822 格式邮件，Base64 编码后发送。支持 HTML 和附件：
+构造 RFC 2822 格式邮件，Base64 编码后发送：
 
 ```bash
 # 纯文本
 RAW=$(printf "To: recipient@example.com\r\nSubject: Hello\r\nFrom: me@gmail.com\r\nContent-Type: text/plain; charset=utf-8\r\n\r\nBody text here" | base64 -w0)
+gws gmail users messages send --json "{\"raw\":\"$RAW\"}" --params '{"userId":"me"}'
+
+# HTML（改 Content-Type 为 text/html）
+RAW=$(printf "To: recipient@example.com\r\nSubject: Hello\r\nFrom: me@gmail.com\r\nContent-Type: text/html; charset=utf-8\r\n\r\n<h1>Title</h1><p>Body</p>" | base64 -w0)
 gws gmail users messages send --json "{\"raw\":\"$RAW\"}" --params '{"userId":"me"}'
 ```
 
@@ -190,7 +208,7 @@ gws gmail users settings sendAs list --params '{"userId":"me"}'
 
 ## Drive
 
-Drive 支持文件和文件夹的完整生命周期管理：创建、上传、下载、复制、移动、删除、权限、共享盘。
+**Drive** 支持文件和文件夹的完整生命周期管理。所有 `--upload` 和 `--output` 路径仅支持相对路径，必须先 `cd` 到目标目录。
 
 ### 浏览与搜索
 
@@ -202,7 +220,7 @@ gws drive files list --params '{"q":"'\''FOLDER_ID'\'' in parents"}'
 
 ### 上传（两步命名）
 
-`files create` 的 name 参数无效，必须先上传再 rename：
+`files create` 的 name 参数无效（CLI 未传递给 API），上传后文件名始终为 "Untitled"，必须先上传再 rename。注意：`files copy` 的 name 参数有效，不受此限制。
 
 ```bash
 cd /path/to/target/dir
@@ -247,6 +265,8 @@ gws drive about get --params '{"fields":"storageQuota"}' | jq '.storageQuota'
 
 ### 删除
 
+`files delete` 成功时返回 `{"status":"success","saved_file":"download.html"}` 而非空 JSON，忽略即可。
+
 ```bash
 gws drive files delete --params '{"fileId":"ID"}'
 ```
@@ -255,7 +275,7 @@ gws drive files delete --params '{"fileId":"ID"}'
 
 ## Calendar
 
-支持完整的事件 CRUD、日历管理、忙碌查询和权限控制。所有时间参数使用 RFC 3339 格式。
+**Calendar** 支持完整的事件 CRUD、日历管理、忙碌查询和权限控制。所有时间参数使用 RFC 3339 格式。
 
 ### 事件管理
 
@@ -299,7 +319,11 @@ gws calendar calendarList list --params '{"maxResults":10}'
 
 ## Sheets
 
-先获取真实 sheet 名称再操作。支持创建、读写、更新、清空和批量操作。
+**Sheets** 支持完整的电子表格操作：读写单元格、公式、格式化、行列操作、条件格式、冻结等。
+
+Sheet 名称不一定是 "Sheet1"，`+read` 的 range 必须用实际 sheet 名，先 `get` 获取 `.sheets[].properties.title`。
+
+### 创建与读取
 
 ```bash
 # 创建 Spreadsheet
@@ -308,22 +332,63 @@ gws sheets spreadsheets create --json '{"properties":{"title":"My Sheet"}}' --pa
 # 获取 sheet 名称
 SHEET=$(gws sheets spreadsheets get --params '{"spreadsheetId":"ID"}' 2>/dev/null | jq -r '.sheets[0].properties.title')
 
-# 读写
+# 读取
 gws sheets +read --spreadsheet "ID" --range "${SHEET}!A1:C10"
-gws sheets +append --spreadsheet "ID" --range "${SHEET}!A:A" --values '[["col1","col2"]]'
+```
 
-# 更新单元格
+### 编辑单元格
+
+```bash
+# 更新单元格（RAW = 原样写入）
 gws sheets spreadsheets values update --params '{"spreadsheetId":"ID","range":"Sheet1!A1","valueInputOption":"RAW"}' --json '{"values":[["New Value"]]}'
+
+# 输入公式（必须用 USER_ENTERED，不能用 RAW）
+gws sheets spreadsheets values update --params '{"spreadsheetId":"ID","range":"Sheet1!C1","valueInputOption":"USER_ENTERED"}' --json '{"values":[["=AVERAGE(B2:B10)"]]}'
+gws sheets spreadsheets values update --params '{"spreadsheetId":"ID","range":"Sheet1!D1","valueInputOption":"USER_ENTERED"}' --json '{"values":[["=SUM(B2:B10)"]]}'
+gws sheets spreadsheets values update --params '{"spreadsheetId":"ID","range":"Sheet1!E1","valueInputOption":"USER_ENTERED"}' --json '{"values":[["=IF(B2>90,\"A\",\"B\")"]]}'
+
+# 追加行（注意：+append 没有 --range 参数，始终追加到第一个 sheet 末尾）
+gws sheets +append --spreadsheet "ID" --values 'col1,col2'
+gws sheets +append --spreadsheet "ID" --json-values '[["col1","col2"],["col3","col4"]]'
 
 # 清空单元格（保留格式）
 gws sheets spreadsheets values clear --params '{"spreadsheetId":"ID","range":"Sheet1!A1:C10"}'
+```
+
+### 行列操作
+
+```bash
+# 删除行
+gws sheets spreadsheets batchUpdate --params '{"spreadsheetId":"ID"}' --json '{"requests":[{"deleteDimension":{"range":{"sheetId":0,"dimension":"ROWS","startIndex":2,"endIndex":3}}}]}'
+
+# 插入行/列
+gws sheets spreadsheets batchUpdate --params '{"spreadsheetId":"ID"}' --json '{"requests":[{"insertDimension":{"range":{"sheetId":0,"dimension":"COLUMNS","startIndex":1,"endIndex":2},"inheritFromBefore":true}}]}'
+
+# 合并单元格
+gws sheets spreadsheets batchUpdate --params '{"spreadsheetId":"ID"}' --json '{"requests":[{"mergeCells":{"range":{"sheetId":0,"startRowIndex":0,"endRowIndex":1,"startColumnIndex":0,"endColumnIndex":3},"mergeType":"MERGE_ALL"}}]}'
+
+# 设置列宽/行高
+gws sheets spreadsheets batchUpdate --params '{"spreadsheetId":"ID"}' --json '{"requests":[{"updateDimensionProperties":{"range":{"sheetId":0,"dimension":"COLUMNS","startIndex":0,"endIndex":1},"properties":{"pixelSize":200},"fields":"pixelSize"}}]}'
+```
+
+### 格式化
+
+```bash
+# 单元格背景色
+gws sheets spreadsheets batchUpdate --params '{"spreadsheetId":"ID"}' --json '{"requests":[{"repeatCell":{"range":{"sheetId":0,"startRowIndex":0,"endRowIndex":1},"cell":{"userEnteredFormat":{"backgroundColor":{"red":0.2,"green":0.6,"blue":1}},"fields":"userEnteredFormat.backgroundColor"}}}]}'
+
+# 条件格式
+gws sheets spreadsheets batchUpdate --params '{"spreadsheetId":"ID"}' --json '{"requests":[{"addConditionalFormatRule":{"rule":{"ranges":[{"sheetId":0,"startRowIndex":1,"endRowIndex":100}],"booleanRule":{"condition":{"type":"NUMBER_GREATER","values":[{"userEnteredValue":"90"}]},"format":{"backgroundColor":{"red":0,"green":1,"blue":0}}}},"index":0}}]}'
+
+# 冻结行/列
+gws sheets spreadsheets batchUpdate --params '{"spreadsheetId":"ID"}' --json '{"requests":[{"updateSheetProperties":{"properties":{"sheetId":0,"gridProperties":{"frozenRowCount":1,"frozenColumnCount":1}},"fields":"gridProperties.frozenRowCount,gridProperties.frozenColumnCount"}}]}'
 ```
 
 ---
 
 ## Docs
 
-支持创建文档和提取纯文本内容。文档编辑通过 `batchUpdate` 实现。
+**Docs** 支持创建、读取、编辑文档。文档编辑通过 `batchUpdate` 实现。
 
 ```bash
 # 创建
@@ -333,9 +398,30 @@ gws docs documents create --json '{"title":"My Doc"}' --params '{}'
 gws docs documents get --params '{"documentId":"ID"}' | jq '[.body.content[]|select(.paragraph)|.paragraph.elements[]?|select(.textRun)|.textRun.content]|join("")'
 ```
 
+### 编辑
+
+```bash
+# 插入文本（index 1 = 文档开头）
+gws docs documents batchUpdate --json '{"requests":[{"insertText":{"location":{"index":1},"text":"Hello World\n"}}]}' --params '{"documentId":"ID"}'
+
+# 设置文本样式（加粗、斜体、字号、颜色等）
+gws docs documents batchUpdate --json '{"requests":[{"updateTextStyle":{"range":{"startIndex":1,"endIndex":6},"textStyle":{"bold":true},"fields":"bold"}}]}' --params '{"documentId":"ID"}'
+
+# 设置段落样式（标题、列表等）
+gws docs documents batchUpdate --json '{"requests":[{"updateParagraphStyle":{"range":{"startIndex":1,"endIndex":10},"style":{"namedStyleType":"HEADING_1"},"fields":"namedStyleType"}}]}' --params '{"documentId":"ID"}'
+
+# 插入图片
+gws docs documents batchUpdate --json '{"requests":[{"insertInlineImage":{"uri":"https://example.com/image.png","location":{"index":1}}}]} --params '{"documentId":"ID"}'
+
+# 创建列表（bullet）
+gws docs documents batchUpdate --json '{"requests":[{"createParagraphBullets":{"range":{"startIndex":1,"endIndex":20},"bulletPreset":"BULLET_DISC_CIRCLE_SQUARE"}}]}' --params '{"documentId":"ID"}'
+```
+
 ---
 
 ## Slides
+
+**Slides** 支持创建、读取、编辑演示文稿。编辑通过 `batchUpdate` 实现。
 
 ```bash
 # 创建
@@ -345,13 +431,36 @@ gws slides presentations create --json '{"title":"My Slides"}' --params '{}'
 gws slides presentations get --params '{"presentationId":"ID"}' | jq '{title, slideCount: (.slides | length)}'
 ```
 
+### 编辑
+
+```bash
+# 创建文本框并插入文本
+gws slides presentations batchUpdate --json '{"requests":[{"createShape":{"objectId":"shape1","shapeType":"TEXT_BOX","elementProperties":{"pageObjectId":"p1","size":{"width":{"magnitude":4000000,"unit":"EMU"},"height":{"magnitude":300000,"unit":"EMU"}},"transform":{"scaleX":1,"scaleY":1,"translateX":100000,"translateY":100000,"unit":"EMU"}}}},{"insertText":{"objectId":"shape1","text":"Hello Slides!"}}]}' --params '{"presentationId":"ID"}'
+
+# 设置文本样式（加粗 + 字号）
+gws slides presentations batchUpdate --json '{"requests":[{"updateTextStyle":{"objectId":"shape1","style":{"bold":true,"fontSize":{"magnitude":36,"unit":"PT"}},"textRange":{"type":"ALL"},"fields":"bold,fontSize"}}]}' --params '{"presentationId":"ID"}'
+
+# 新增幻灯片
+gws slides presentations batchUpdate --json '{"requests":[{"createSlide":{"objectId":"slide2"}}]}' --params '{"presentationId":"ID"}'
+
+# 插入图片
+gws slides presentations batchUpdate --json '{"requests":[{"createImage":{"url":"https://example.com/image.png","elementProperties":{"pageObjectId":"p1","size":{"width":{"magnitude":3000000,"unit":"EMU"},"height":{"magnitude":2000000,"unit":"EMU"}},"transform":{"scaleX":1,"scaleY":1,"translateX":500000,"translateY":500000,"unit":"EMU"}}}}]}' --params '{"presentationId":"ID"}'
+```
+
+> 注意：`presentations create` 输出的是完整对象，提取 presentationId 需要解析 JSON。Slides 坐标单位为 EMU（1 inch = 914400 EMU）。
+
 ---
 
 ## Forms
 
+**Forms** 支持创建表单、添加题目和查看回复。`forms create` 只能创建空表单（仅 title 生效），添加题目需要用 `batchUpdate`。
+
 ```bash
-# 创建表单
+# 创建空表单
 gws forms forms create --json '{"info":{"title":"Survey"}}' --params '{}'
+
+# 添加文本题目（location 是必填字段，放在 createItem 级别）
+gws forms forms batchUpdate --json '{"requests":[{"createItem":{"location":{"index":0},"item":{"title":"What is your name?","questionItem":{"question":{"required":true,"textQuestion":{}}}}}}]}' --params '{"formId":"FORM_ID"}'
 
 # 查看回复
 gws forms forms responses list --params '{"formId":"FORM_ID"}'
@@ -361,7 +470,7 @@ gws forms forms responses list --params '{"formId":"FORM_ID"}'
 
 ## Tasks
 
-支持任务列表 CRUD 和完成状态管理。
+**Tasks** 支持任务列表 CRUD 和完成状态管理。
 
 ```bash
 gws tasks tasklists list | jq '.items[]|{title,id}'
@@ -376,7 +485,7 @@ gws tasks tasks clear --params '{"tasklist":"@default"}'  # 清除所有已完�
 
 ## People
 
-支持联系人搜索、创建、分组和个人资料查询。
+**People** 支持个人资料、联系人搜索/创建和分组管理。`searchContacts` 必须指定 `readMask`，不传会报 400。`connections list` 不需要。
 
 ```bash
 # 个人资料
@@ -399,7 +508,7 @@ gws people contactGroups list --params '{"pageSize":10}'
 
 ## Meet / Classroom
 
-基础查询可用，详细操作通过 `gws schema` 查参数。
+**Meet** 支持会议记录查询。**Classroom** 支持课程、学生和作业管理（需要教育账号）。
 
 ```bash
 # Meet: 会议记录
@@ -412,15 +521,11 @@ gws classroom courses students list --params '{"courseId":"COURSE_ID"}'
 gws classroom courses.courseWork list --params '{"courseId":"COURSE_ID"}'
 ```
 
-## Keep
-
-报 `insufficient authentication scopes` 时重新授权：
-
-```bash
-gws auth login  # 确保勾选 Keep 权限
-```
+---
 
 ## Workflow Helpers
+
+快捷工作流命令，适合日常自动化场景：
 
 ```bash
 gws workflow +standup-report        # 今日会议 + 待办任务
@@ -429,10 +534,15 @@ gws workflow +weekly-digest         # 本周会议 + 未读邮件数
 gws workflow +email-to-task --message-id "MSG_ID"  # Gmail → Tasks
 ```
 
+---
+
 ## General
 
 ```bash
-gws schema <api.method>            # 查询任意 API 的参数结构
+gws schema <service>              # 列出该服务所有方法
+gws schema <api.method>           # 查询具体参数结构
 gws <service> <method> --params '{}' --format table   # 表格输出（给人类看）
 gws <service> <method> --params '{}' --page-all       # 自动翻页
 ```
+
+不确定参数时先查 schema，不要猜。JSON + jq 是默认输出模式，`--format table` 仅用于给人类看。
