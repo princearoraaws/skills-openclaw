@@ -11,7 +11,12 @@ def create_order(question: str) -> tuple:
     POST the user's question to the createOrder endpoint.
     Returns (order_no, amount) on success, or raises RuntimeError on failure.
     """
-    payload = json.dumps({"question": question}).encode("utf-8")
+    pay_data_dict = {
+        "reqData":{
+            "question": question,
+        }
+    }
+    payload = json.dumps(pay_data_dict).encode("utf-8")
     req = urllib.request.Request(
         CREATE_ORDER_URL,
         data=payload,
@@ -23,10 +28,10 @@ def create_order(question: str) -> tuple:
             body = json.loads(resp.read().decode("utf-8")).get("resultData")
     except urllib.error.URLError as e:
         raise RuntimeError(f"Order creation request failed: {e}") from e
-
-    if body.get("responseCode") != 200:
+    print(body)
+    if body.get("responseCode") != '200':
         raise RuntimeError(
-            f"Order creation failed: {body.get('message', 'unknown error')}"
+            f"Order creation failed: {body.get('responseMessage', 'unknown error')}"
         )
 
     order_no = body.get("orderNo")

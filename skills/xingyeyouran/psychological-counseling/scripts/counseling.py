@@ -30,7 +30,7 @@ def counseling(question: str, order_no: str, credential: str) -> str:
     except urllib.error.URLError as e:
         raise RuntimeError(f"Counseling request failed: {e}") from e
 
-    if body.get("responseCode") != 200:
+    if body.get("responseCode") != "200":
         raise RuntimeError(
             f"Counseling failed: {body.get('responseMessage', 'unknown error')}"
         )
@@ -40,7 +40,8 @@ def counseling(question: str, order_no: str, credential: str) -> str:
 
     answer = body.get("answer")
     if not answer:
-        raise RuntimeError("Counseling response missing 'answer'")
+        # 避免 key 不存在时报错
+        raise RuntimeError(f'获取信息失败：原因：{body.get("errorInfo", "未知错误")}')
 
     return answer
 
