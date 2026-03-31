@@ -1,95 +1,190 @@
-# Contract YAML Schema
+# Contract Schema Reference
 
-参考：设计文档 §3.1、需求文档 §5.1/§5.2。
+本文档描述 OpenNexum TS 使用的 Contract YAML 字段。说明以 `packages/core/src/types.ts` 的 `Contract` 接口和 `packages/core/src/contract.ts` 的校验逻辑为准。
 
-## 顶层字段
+## Overview
 
-| 字段 | 类型 | 必填 | 说明 |
+Contract 是任务的单一事实来源。CLI 会根据它决定：
+
+- 任务名称和类型
+- 可修改文件范围
+- 交付物清单
+- 评估策略与判定标准
+- generator / evaluator 的 agent 选择
+- 最大重试次数
+- 依赖关系
+
+## Required Fields
+
+| Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `id` | string | 是 | Task ID。建议格式：`[A-Z]+-[0-9]+`，如 `TASK-001`、`WRITE-001`。 |
-| `name` | string | 是 | 任务名称，面向人类可读。 |
-| `type` | enum | 是 | 任务类型。枚举：`coding` \| `task` \| `creative`。 |
-| `created_at` | string | 是 | Contract 创建时间，使用 ISO 8601 UTC 时间戳。 |
-| `scope` | object | 是 | 文件范围、禁止边界、串行冲突声明。详见下节。 |
-| `deliverables` | string[] | 是 | 交付物清单。每项都应能被 evaluator 逐条核验。 |
-| `eval_strategy` | object | 是 | 验证策略定义。详见下节。 |
-| `generator` | string | 是 | 执行 agent 标识，如 `codex-1`、`cc-writer`。 |
-| `evaluator` | string | 是 | 评估 agent 标识，通常为 `eval`。 |
-| `max_iterations` | integer | 是 | 最大反馈循环次数。超过后应升级为人工处理。 |
-| `depends_on` | string[] | 是 | 上游依赖 task id 列表；未满足前通常保持 `blocked`。 |
+| `id` | string | Yes | Unique task ID, such as `NX2-005` |
+| `name` | string | Yes | Human-readable task name |
+| `type` | `coding | task | creative` | Yes | Contract category |
+| `created_at` | string | Yes | ISO timestamp required by runtime validation |
+| `scope` | object | Yes | File scope, boundaries, and conflict declarations |
+| `deliverables` | string[] | Yes | Expected outputs of the task |
+| `eval_strategy` | object | Yes | Evaluation mode and criteria |
+| `generator` | string | Yes | Agent ID used for implementation |
+| `evaluator` | string | Yes | Agent ID used for review/evaluation |
+| `max_iterations` | number | Yes | Maximum retry count before final failure |
+| `depends_on` | string[] | Yes | Upstream task IDs that must be done first |
 
-## `scope`
+## Field Details
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `scope.files` | string[] | 是 | 允许修改的文件列表。generator 的提交范围必须受此约束。 |
-| `scope.boundaries` | string[] | 是 | 明确禁止修改的范围、组件、模块或系统边界。 |
-| `scope.conflicts_with` | string[] | 是 | 与哪些 task id 存在语义冲突，需串行执行。无冲突时填空数组。 |
+### `id`
 
-## `eval_strategy`
+任务唯一标识。建议使用稳定、可排序的编号，例如 `NX-001` 或 `NX2-005`。该字段同时会被用于：
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `eval_strategy.type` | enum | 是 | 验证策略类型。枚举：`unit` \| `integration` \| `e2e` \| `review` \| `composite`。 |
-| `eval_strategy.tools` | string[] | 否 | 该策略依赖的工具，如 `playwright`、测试命令或其他执行器。 |
-| `eval_strategy.local_url` | string | 条件必填 | 本地应用地址。`type: e2e` 时必须提供。 |
-| `eval_strategy.evaluator_model` | string | 否 | 覆盖默认 evaluator 模型的可选字段，常用于创作/主观评审。 |
-| `eval_strategy.criteria` | object[] | 是 | 逐条验证标准列表。为空通常表示 Contract 设计不完整。 |
-| `eval_strategy.sub_strategies` | object[] | 条件必填 | 仅 `type: composite` 时使用，定义子策略序列。 |
+- `nexum spawn <taskId>`
+- `nexum eval <taskId>`
+- `nexum complete <taskId> <verdict>`
+- prompt 文件命名
+- retry commit message 命名
 
-### `eval_strategy.sub_strategies[]`
+### `name`
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `type` | enum | 是 | 子策略类型。枚举同 `eval_strategy.type`，但通常不再嵌套 `composite`。 |
+任务可读名称。CLI 会在 prompt、状态输出、通知消息中使用它。应避免过长，但要足够具体。
 
-## `eval_strategy.criteria[]`
+### `type`
 
-| 字段 | 类型 | 必填 | 说明 |
-| --- | --- | --- | --- |
-| `id` | string | 是 | criterion 唯一标识，如 `C1`。 |
-| `desc` | string | 是 | 需要被验证的结果描述。 |
-| `method` | string | 是 | evaluator 的验证方法说明，如 `review: checklist`、`playwright: check URL after submit`。 |
-| `threshold` | enum | 是 | 通过门槛。枚举：`pass` \| `score`。 |
-| `min_score` | number | 否 | 仅当 `threshold: score` 时有意义，表示最低通过分。 |
-
-## 枚举约束
-
-### Contract `type`
+允许值：
 
 - `coding`
 - `task`
 - `creative`
 
-### Runtime `status`
+当前实现中，`type` 主要作为分类元数据；并不会自动切换不同执行器逻辑，但评估器和编排者可以基于它做路由。
 
-说明：`status` 不属于静态 Contract 文件，而是运行态字段，存储在 `active-tasks.json`。
+### `scope`
 
-- `pending`
-- `blocked`
-- `running`
-- `evaluating`
-- `done`
-- `failed`
-- `escalated`
-- `cancelled`
+`scope` 是一个对象，包含以下子字段：
 
-### `eval_strategy.type`
+| Subfield | Type | Required | Description |
+| --- | --- | --- | --- |
+| `files` | string[] | Yes | Files expected to be changed or delivered |
+| `boundaries` | string[] | Yes | Paths that must stay out of scope |
+| `conflicts_with` | string[] | Yes | Task IDs that conflict with this task |
+
+#### `scope.files`
+
+列出本任务应直接涉及的文件路径。`nexum spawn` 会把它们拼入建议的 `git add -- ...` 命令中，因此这里应尽量精确。
+
+#### `scope.boundaries`
+
+列出禁止扩散修改的目录、模块或区域。这个字段是给 agent 和 reviewer 的边界提醒，帮助降低无关修改的风险。
+
+#### `scope.conflicts_with`
+
+用于标记互斥任务。当前 CLI 没有自动执行冲突调度，但该字段对上层 orchestrator 很重要，可用于避免同时派发相互覆盖的任务。
+
+### `deliverables`
+
+字符串数组。每一项都应描述一个可以被 reviewer 验证的交付物，例如：
+
+- `README.md with setup and workflow`
+- `SKILL.md for ClawHub-compatible discovery`
+- `Reference guide for sessions_spawn`
+
+建议写成结果导向，而不是过程导向。
+
+### `eval_strategy`
+
+`eval_strategy` 是一个对象，包含：
+
+| Subfield | Type | Required | Description |
+| --- | --- | --- | --- |
+| `type` | `unit | integration | review` | Yes | Evaluation strategy category |
+| `criteria` | array | Yes | Criteria list used by the evaluator |
+
+#### `eval_strategy.type`
+
+允许值：
 
 - `unit`
 - `integration`
-- `e2e`
 - `review`
-- `composite`
 
-### `criteria[].threshold`
+当前仓库里，文档任务通常使用 `review`。即便选择 `unit` 或 `integration`，是否真的执行自动化测试仍取决于 evaluator prompt 和外部 orchestrator。
 
-- `pass`
-- `score`
+#### `eval_strategy.criteria`
 
-## 条件规则
+criteria 为对象数组，每项包含：
 
-- `eval_strategy.type: e2e` 时，`eval_strategy.local_url` 为必填。
-- `criteria[].min_score` 仅在 `criteria[].threshold: score` 时有意义；`threshold: pass` 时应省略或设为 `null`。
-- `scope.files`、`scope.boundaries`、`scope.conflicts_with`、`deliverables`、`depends_on` 即使为空，也应使用显式数组，避免省略后产生歧义。
-- Contract 创建后保持静态；`status`、`iteration`、`commit_hash`、`eval_result_path` 等运行态信息不应写回 Contract。
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | string | Yes | Criterion ID such as `C1` |
+| `desc` | string | Yes | What the evaluator should verify |
+| `method` | string | Yes | How to verify it |
+| `threshold` | string | Yes | Passing threshold, often `pass` |
+
+`nexum complete` 在失败时会尝试从 evaluator 结果文件中提取失败 criteria，并据此构建 retry prompt。
+
+### `generator`
+
+字符串，表示负责编码或产出主结果的 agent ID。它会被 `nexum spawn` 读出，并结合 `nexum/config.json` 的 `agents` 配置解析为具体 CLI。
+
+### `evaluator`
+
+字符串，表示负责审查、验证或打分的 agent ID。`nexum eval` 使用该字段选择 evaluator。
+
+### `max_iterations`
+
+数字。表示 evaluator 返回 `fail` 后，最多允许重试多少轮。`nexum complete` 的行为如下：
+
+- `fail` 且当前 `iteration < max_iterations`：返回 retry payload
+- `fail` 且已达到上限：任务进入 `failed`
+- `escalated`：直接进入 `failed`，并标记需要人工介入
+
+### `depends_on`
+
+字符串数组，表示当前任务依赖的上游任务 ID。任务完成后，`nexum complete` 会尝试解锁依赖它的下游任务；只有当所有依赖都已经 `done` 时，下游任务才会从 `blocked` 转为 `pending`。
+
+## Example
+
+```yaml
+id: NX2-005
+name: "SKILL.md + README + Contract Schema 文档"
+type: coding
+created_at: "2026-03-29T09:00:00Z"
+
+scope:
+  files:
+    - SKILL.md
+    - README.md
+    - references/contract-schema.md
+    - references/orchestrator-guide.md
+  boundaries:
+    - packages/
+    - nexum/
+  conflicts_with: []
+
+deliverables:
+  - "ClawHub-compatible skill description"
+  - "Bilingual README"
+  - "Contract schema reference"
+  - "Orchestrator workflow reference"
+
+eval_strategy:
+  type: review
+  criteria:
+    - id: C1
+      desc: "Docs are complete"
+      method: "review"
+      threshold: pass
+
+generator: codex
+evaluator: claude
+max_iterations: 3
+depends_on:
+  - NX2-003
+  - NX2-004
+```
+
+## Authoring Notes
+
+- Keep `scope.files` narrow and explicit.
+- Always include `created_at`, even if higher-level docs omit it.
+- Write `deliverables` and criteria so an evaluator can judge them without guessing.
+- Use stable `generator` / `evaluator` IDs that exist in `nexum/config.json`.
+- Treat `depends_on` as scheduling truth, not optional commentary.
