@@ -26,7 +26,7 @@ def my_urlencode(q):
     return '&'.join(l)
 
 
-def create_room(userid, api_key, name, templatetype=1):
+def create_room(userid, api_key, name, templatetype=1, mobileViewMode=None):
     """
     Create a CC live streaming room
 
@@ -34,7 +34,10 @@ def create_room(userid, api_key, name, templatetype=1):
         userid: CC account ID
         api_key: API key for THQS signature
         name: Room name (max 40 characters)
-        templatetype: 1=纯视频模板, 2=视频+文档模板
+        templatetype: 1=大屏模式, 2=问答、视频、聊天, 3=视频、聊天,
+                      4=文档、视频、聊天, 5=视频、文档、问答、聊天, 6=视频、问答
+        mobileViewMode: Mobile view mode. 2=竖屏观看, None=使用默认(横屏)
+                        Only applicable for templatetype 1, 2, 3, 6
 
     Returns:
         dict: API response containing roomid if successful
@@ -48,6 +51,9 @@ def create_room(userid, api_key, name, templatetype=1):
         'publisherpass': '123456',  # 推流端密码
         'assistantpass': '123456',  # 助教端密码
     }
+
+    if mobileViewMode is not None:
+        params['mobileViewMode'] = mobileViewMode
 
     # Generate THQS signature
     qftime = 'time=%d' % int(time.time())
@@ -75,15 +81,19 @@ def create_room(userid, api_key, name, templatetype=1):
 
 if __name__ == '__main__':
     if len(sys.argv) < 4:
-        print('Usage: python create_room.py <userid> <api_key> <room_name> [templatetype]')
+        print('Usage: python create_room.py <userid> <api_key> <room_name> [templatetype] [mobileViewMode]')
+        print('  templatetype: 1-6 (default: 1)')
+        print('  mobileViewMode: 2=竖屏观看, not set=横屏(default)')
+        print('  Note: mobileViewMode only applies to templatetype 1, 2, 3, 6')
         sys.exit(1)
 
     userid = sys.argv[1]
     api_key = sys.argv[2]
     name = sys.argv[3]
     templatetype = int(sys.argv[4]) if len(sys.argv) > 4 else 1
+    mobileViewMode = int(sys.argv[5]) if len(sys.argv) > 5 else None
 
-    result = create_room(userid, api_key, name, templatetype)
+    result = create_room(userid, api_key, name, templatetype, mobileViewMode)
 
     if result.get('result') == 'OK' and 'room' in result:
         print('\n=== 直播间创建成功 ===')

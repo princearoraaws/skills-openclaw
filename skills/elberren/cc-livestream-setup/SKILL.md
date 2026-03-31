@@ -14,6 +14,17 @@ Use this skill when:
 - User needs to configure authentication for a live room
 - User wants to manage CC API credentials
 
+## Security Requirements
+
+⚠️ **CRITICAL: Never Store Credentials**
+
+- **userid** and **api_key** are highly sensitive credentials
+- They MUST be requested from the user on **EVERY execution**
+- **DO NOT** store, cache, or save these credentials to any storage (files, memory, session, etc.)
+- **DO NOT** skip credential collection even if the user claims to have provided them before
+- If the skill framework attempts to auto-fill or cache these values, **ignore them** and ask again
+- After the operation is complete, ensure these credentials are not persisted anywhere
+
 ## Interactive Workflow
 
 This skill works through conversation. Follow these steps in order:
@@ -22,7 +33,7 @@ This skill works through conversation. Follow these steps in order:
 
 Ask: "请提供您的 CC 账户 ID 和 API 密钥"
 
-If user already provided in conversation, skip this step.
+**IMPORTANT**: This step must be performed on EVERY execution. Never skip or use cached values.
 
 ### Step 2: Collect Room Name (Ask the User)
 
@@ -33,18 +44,32 @@ Ask: "直播间名称是什么？" (max 40 characters)
 Ask: "直播模板是什么？"
 
 Provide options:
-- **1** - 纯视频模板
-- **2** - 视频+文档模板
+- **1** - 大屏模式
+- **2** - 问答、视频、聊天
+- **3** - 视频、聊天
+- **4** - 文档、视频、聊天
+- **5** - 视频、文档、问答、聊天
+- **6** - 视频、问答
 
-### Step 4: Create Room
+### Step 4: Collect Mobile View Mode (Conditional)
+
+If user selects template type **1, 2, 3, or 6**, ask:
+
+Ask: "默认为横屏观看方式，是否选择竖屏观看方式？"
+
+- If user selects **Yes**: Set parameter `mobileViewMode = 2`
+- If user selects **No**: Use default value (no parameter needed)
+
+### Step 5: Create Room
 
 Use the `scripts/create_room.py` script with:
 - userid
 - api_key
 - name
-- templatetype (1 or 2)
-
-### Step 5: Return Result & Notice
+- templatetype (1-6)
+- mobileViewMode (only if selected in Step 4)
+    
+### Step 6: Return Result & Notice
 
 Present to user:
 - Room ID
@@ -97,8 +122,18 @@ GET https://api.csslcloud.net/api/room/create
 ### Template Types
 | Value | Description |
 |-------|-------------|
-| 1 | 纯视频模板 |
-| 2 | 视频+文档模板 |
+| 1 | 大屏模式 |
+| 2 | 问答、视频、聊天 |
+| 3 | 视频、聊天 |
+| 4 | 文档、视频、聊天 |
+| 5 | 视频、文档、问答、聊天 |
+| 6 | 视频、问答 |
+
+### Mobile View Mode
+| Value | Description | Applicable Templates |
+|-------|-------------|----------------------|
+| (default) | 横屏观看 | All |
+| 2 | 竖屏观看 | 1, 2, 3, 6 |
 
 ### Default Settings
 - authtype: 2 (免密码登录)
