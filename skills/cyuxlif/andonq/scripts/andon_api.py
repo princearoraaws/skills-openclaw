@@ -304,6 +304,29 @@ def build_describe_organization_tickets_payload(
     return payload
 
 
+def build_update_ticket_status_payload(ticket_id: str, status: int = 2, source: int = DEFAULT_SOURCE) -> dict:
+    """Build an UpdateMCTicketStatus request payload.
+
+    Used to close/resolve a ticket by updating its status.
+
+    Args:
+        ticket_id: The ticket ID string (e.g. "202603244502").
+        status: Target status (default 2 = 已确认/结单).
+        source: Request source identifier (default 26 = AndonQ).
+
+    Raises ValueError if ticket_id is empty.
+    """
+    if not isinstance(ticket_id, str) or not ticket_id.strip():
+        raise ValueError("TicketId must be a non-empty string")
+
+    payload = {
+        "TicketId": ticket_id.strip(),
+        "Status": status,
+        "Source": source,
+    }
+    return payload
+
+
 def build_add_comment_payload(ticket_id: str, comment: str) -> dict:
     """Build an AddMCComment request payload.
 
@@ -892,6 +915,33 @@ def normalize_add_comment_response(raw: dict) -> dict:
     }, request_id)
 
 
+def normalize_update_ticket_status_response(raw: dict) -> dict:
+    """Normalize UpdateMCTicketStatus response — extract Data array."""
+    action = "UpdateMCTicketStatus"
+    response_obj = raw.get("Response") if isinstance(raw, dict) else None
+
+    if response_obj is None or not isinstance(response_obj, dict):
+        return make_error(
+            action, "MalformedResponse",
+            "Response envelope missing or not a dict",
+        )
+
+    request_id = response_obj.get("RequestId", "")
+
+    if "Error" in response_obj:
+        error_info = response_obj["Error"]
+        return make_error(
+            action,
+            error_info.get("Code", "UnknownError"),
+            error_info.get("Message", "Unknown error"),
+            request_id,
+        )
+
+    return make_success(action, {
+        "message": "工单状态更新成功",
+    }, request_id)
+
+
 def normalize_organization_stories_response(raw):
     """Normalize DescribeOrganizationStories response (camelCase)."""
     action = "DescribeOrganizationStories"
@@ -1374,6 +1424,16 @@ def main(argv=None):
             print(json.dumps(make_error(args.action, "InvalidParameter", str(e)), indent=2))
             sys.exit(1)
 
+    elif args.action == "UpdateMCTicketStatus":
+        ticket_id = data.get("TicketId", "")
+        status = data.get("Status", 2)
+        source = data.get("Source", DEFAULT_SOURCE)
+        try:
+            payload_dict = build_update_ticket_status_payload(ticket_id, status, source)
+        except ValueError as e:
+            print(json.dumps(make_error(args.action, "InvalidParameter", str(e)), indent=2))
+            sys.exit(1)
+
     else:
         payload_dict = data
 
@@ -1423,6 +1483,8 @@ def main(argv=None):
         result = normalize_create_ticket_response({"Response": result["data"]})
     elif args.action == "AddMCComment" and result["success"]:
         result = normalize_add_comment_response({"Response": result["data"]})
+    elif args.action == "UpdateMCTicketStatus" and result["success"]:
+        result = normalize_update_ticket_status_response({"Response": result["data"]})
 
     if args.verbose:
         print(f"\nResponse:")
