@@ -1,0 +1,11 @@
+{
+  "owner": "justintieu",
+  "slug": "ai-news-skill",
+  "displayName": "Morning Briefing AI News",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1774241502985,
+    "commit": null
+  },
+  "history": []
+}
