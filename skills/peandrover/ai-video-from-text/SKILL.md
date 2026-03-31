@@ -1,10 +1,12 @@
 ---
 name: ai-video-from-text
-version: "1.0.0"
+version: 1.2.1
 displayName: "AI Video from Text — Turn Any Text into a Professional Video with AI Automatically"
 description: >
   Turn any text into a finished video using AI — paste a script, article, blog post, product description, or rough idea and NemoVideo generates a complete video with scene-matched visuals, voiceover narration, animated text overlays, background music, transitions, and subtitles. No filming needed, no footage library, no editing skills required. Write the words and NemoVideo produces the video — ready for YouTube, TikTok, Instagram, LinkedIn, or any platform.
 metadata: {"openclaw": {"emoji": "📝", "requires": {"env": [], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
+homepage: https://nemovideo.com
+repository: https://github.com/nemovideo/nemovideo_skills
 ---
 
 # AI Video from Text — Turn Written Content into Video Automatically
