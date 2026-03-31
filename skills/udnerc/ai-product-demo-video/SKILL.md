@@ -1,10 +1,12 @@
 ---
 name: ai-product-demo-video
-version: "1.0.0"
+version: 1.0.2
 displayName: "AI Product Demo Video — Create Professional Product Demos and Walkthroughs"
 description: >
   Create professional product demo videos with AI — produce software walkthroughs, physical product demonstrations, feature showcases, onboarding tutorials, and sales enablement videos from product descriptions or screen recordings. NemoVideo transforms raw screen captures into polished demos with zoom-on-click highlighting, cursor smoothing, step annotations, voiceover narration, background music, and branded formatting. Product demo video maker, software demo creator, product walkthrough video, SaaS demo video, app demo maker, product tour video, feature showcase video.
 metadata: {"openclaw": {"emoji": "🖥️", "requires": {"env": [], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
+homepage: https://nemovideo.com
+repository: https://github.com/nemovideo/nemovideo_skills
 ---
 
 # AI Product Demo Video — Show Your Product the Way It Deserves to Be Seen
