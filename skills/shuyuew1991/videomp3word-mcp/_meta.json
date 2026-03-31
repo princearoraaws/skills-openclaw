@@ -3,9 +3,15 @@
   "slug": "videomp3word-mcp",
   "displayName": "videomp3word MCP",
   "latest": {
-    "version": "1.1.1",
-    "publishedAt": 1774493269287,
-    "commit": "https://github.com/openclaw/skills/commit/e3f2ea46167d74f7574f226621c22b332ba6474e"
+    "version": "1.1.3",
+    "publishedAt": 1774931520253,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.1.1",
+      "publishedAt": 1774493269287,
+      "commit": "https://github.com/openclaw/skills/commit/e3f2ea46167d74f7574f226621c22b332ba6474e"
+    }
+  ]
 }
