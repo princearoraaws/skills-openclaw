@@ -25,6 +25,39 @@ description: >
 
 ---
 
+## Phase 0: Workspace Architecture Detection
+
+Before starting the Aegis workflow, detect the project architecture to choose the right contract strategy.
+
+### Auto-Detection
+
+Scan the workspace for indicators:
+- Both `frontend/`/`client/`/`web/` AND `backend/`/`server/`/`api/` directories → **Monorepo**
+- `package.json` with workspaces containing both frontend and backend → **Monorepo**
+- Only one side present (pure frontend or pure backend) → **Split Workspace**
+
+### If Split Workspace detected, ask the human:
+```
+Detected: This workspace contains only {frontend|backend} code.
+Where does the other side live?
+
+(a) Another repo managed by the same agent (I can access it)
+(b) Another repo managed by a different agent/workspace (I cannot access it)
+(c) This is actually a monorepo (I missed something)
+```
+
+### Architecture Modes
+
+| Mode | Contract Location | Sync Method |
+|------|------------------|-------------|
+| **Monorepo** | `contracts/` in project root | Direct (same repo) |
+| **Multi-Repo, Single Agent** | Lead workspace's `contracts/`, copied to each repo | Copy before dispatch |
+| **Cross-Agent, Cross-Workspace** | Dedicated contract repository | Git submodule / package / lead copy-sync |
+
+**Cross-Workspace:** Contract lives in an independent Git repo. Each agent's workspace integrates it as read-only. Contract Change Requests go through the Lead who has merge rights. See `references/multi-agent-protocol.md` for the full protocol.
+
+---
+
 ## Phase 1: Design
 
 Before any non-trivial feature, create a Design Brief:
@@ -110,20 +143,56 @@ If the contract needs changes:
 After implementation, validate quality:
 
 1. Run contract tests — `bash scripts/validate-contract.sh <project-path>`
-2. Generate gap report — `bash scripts/gap-report.sh <project-path>`
-3. Review: are all Design Brief items implemented?
-4. Review: do all endpoints have contract tests?
-5. **Gate:** All contract tests must pass before PR/MR
+2. Run frontend tests — `pnpm test` (if frontend exists)
+3. Run backend integration tests — HTTP E2E against real server + real DB
+4. Generate gap report — `bash scripts/gap-report.sh <project-path>`
+5. Review: are all Design Brief items implemented?
+6. Review: do all endpoints have contract + integration tests?
+7. **Gate:** All tests must pass before PR/MR
 
 ### Testing Hierarchy
 
 ```
-Unit Test         ← Mock external deps, test pure logic
+E2E Test          ← Playwright (real browser + real backend)
+Integration Test  ← Real HTTP server + real DB (no mocks)
 Contract Test     ← Validate against api-spec.yaml (NO mocking the contract)
-Integration Test  ← Real services via docker-compose.integration.yml
+Frontend Test     ← Vitest + React Testing Library + MSW (contract-typed mocks)
+Unit Test         ← Mock external deps, test pure logic
 ```
 
-Reference: `references/testing-strategy.md` for the full testing pyramid.
+### Frontend Testing (when project has frontend)
+
+- **Stack:** Vitest + React Testing Library + MSW
+- **Required coverage:** API clients (normal/error/auth), data hooks (loading/success/error), key components
+- **MSW handlers:** must mock every backend endpoint with data matching `contracts/shared-types.ts`
+- **CI gate:** `pnpm test` must pass — same blocking power as backend tests
+
+### Backend Integration Testing (HTTP E2E)
+
+- **Every endpoint** must have: happy path (200) + bad request (400) + not found (404) + auth failure (401)
+- **Real database** — isolated test DB, not mocks. Transactions or migrations for clean state.
+- **Mutation verification** — POST/PUT/DELETE → GET to confirm state change
+- **CI pipeline:** `lint → type-check → unit → frontend-test → contract → integration → route-coverage → build → E2E`
+
+### Consumer-Driven Route Coverage
+
+Integration tests must cover what the frontend calls, not just what the backend implements.
+
+- **Full mode:** `verify-route-coverage.sh` cross-references frontend API calls with backend routes. Every consumer route needs a backend handler + integration test.
+- **Degraded mode:** If no frontend manifest or scannable frontend code exists, CI warns but does not fail. Provider-driven tests remain the baseline.
+- **Cross-workspace:** Frontend agent exports `consumer-routes.yaml` to the contract repo. Backend CI validates coverage against it.
+- **Route manifest:** `contracts/route-manifest.yaml` — declares every API route the frontend consumes. Auto-generated or manual.
+
+Run after integration tests in CI:
+```bash
+bash scripts/verify-route-coverage.sh <project-path>
+```
+
+### Test Strategy = Design Artifact
+
+Full-stack features require a complete testing strategy **in the Design Brief** before coding begins.
+
+Reference: `references/testing-strategy.md` for the full testing pyramid and standards.
 
 ## Phase 5: PM
 
@@ -165,7 +234,10 @@ When multiple agents work on the same project:
 - Each agent reads contracts before starting
 - Contracts are the synchronization point — not code
 - Change Requests prevent concurrent contract modifications
-- Reference: `references/multi-agent-protocol.md`
+
+**Cross-Workspace:** When agents operate in separate workspaces, contract lives in a dedicated repository. Each agent integrates via submodule/package/copy-sync and treats `contracts/` as read-only. Integration testing is orchestrated externally.
+
+Reference: `references/multi-agent-protocol.md`
 
 ## File Structure
 
@@ -180,14 +252,16 @@ When multiple agents work on the same project:
 │   ├── errors-starter.yaml
 │   ├── contract-test-example.ts
 │   ├── docker-compose.integration.yml
-│   └── implementation-summary.md
+│   ├── implementation-summary.md
+│   └── route-manifest-starter.yaml  # Consumer route manifest template
 ├── scripts/                     # Automation
 │   ├── init-project.sh          # Initialize Aegis in a project
 │   ├── setup-guardrails.sh      # Pre-commit + CI setup
 │   ├── detect-stack.sh          # Auto-detect language/framework
 │   ├── validate-contract.sh     # Validate contract consistency
 │   ├── gap-report.sh            # Design Brief vs implementation gaps
-│   └── generate-types.sh        # Generate types from OpenAPI spec
+│   ├── generate-types.sh        # Generate types from OpenAPI spec
+│   └── verify-route-coverage.sh # Consumer-driven route coverage check
 └── references/                  # Deep-dive guides
     ├── contract-first-guide.md
     ├── testing-strategy.md
