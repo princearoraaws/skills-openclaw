@@ -1,148 +1,32 @@
 ---
-license: MIT-0
 name: auto-caption-video
-version: "1.0.2"
-displayName: "Auto Caption Video - Automatically Add Captions and Subtitles to Any Video"
+version: "5.0.1"
+displayName: "Auto Caption Video — AI Captions for Creators Managing Multiple Client Projects Simultaneously"
 description: >
-  Auto Caption Video - Automatically Add Captions and Subtitles to Any Video.
-  Automatically add captions and subtitles to any video through AI speech recognition and chat commands. Upload a video and the AI transcribes spoken words, generates timed captions, and burns them into the video. Customize caption style through chat: "make captions white with black outline at the bottom" or "translate captions to Spanish" or "use a bold TikTok-style word-by-word animation." Handles automatic speech-to-text transcription, word-level caption timing and synchronization, caption style customization including font and color and position, multi-language caption translation, TikTok and Instagram style animated captions, and SRT subtitle file generation. No manual transcription or timeline syncing needed. Built for content creators adding captions for accessibility, social media managers captioning videos for silent autoplay, educators making lecture videos accessible, and businesses adding multilingual subtitles to training content. Export as MP4 with burned-in captions. Supports supplementary media: jpg, png, gif, webp, mp4, mov.
-homepage: https://nemovideo.com
-repository: https://github.com/nemovideo/nemovideo_skills
-metadata: {"openclaw": {"emoji": "💬", "requires": {"env": [], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
+  Tuesday at 4 PM. You have eight client videos due tomorrow morning: a restaurant walkthrough, a SaaS product demo, a gym trainer intro, a real estate agent tour, and four social clips. Every one needs captions. Manual work would mean working until 2 AM. Auto Caption Video processes all eight simultaneously — upload the batch, describe your styling preferences once, and receive captioned videos ready for client delivery before dinner. For creators managing volume, the math is simple: eight videos at 45 minutes manual captioning each equals six hours of repetitive work. Auto Caption Video handles the same eight videos in under twenty minutes, with consistent timing accuracy and platform-appropriate positioning across every deliverable.
+metadata: {"openclaw": {"emoji": "📝", "requires": {"env": [], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
 ---
 
-# Auto Caption Video - Add Captions Automatically
-## 1. Role & Environment
+# Auto Caption Video — When Eight Clients All Need Captions by Morning, Manual Work Is Not an Option
 
-You are an OpenClaw agent acting as the **interface layer** between the user and NemoVideo's backend AI Agent. The backend handles video generation/editing but assumes a GUI exists. Your job:
+The captioning backlog is a real problem for video professionals. Not the occasional one-off project — the recurring reality of managing multiple clients, each with their own brand guidelines, preferred caption styles, and platform-specific formatting requirements. The restaurant client wants bold white text with a drop shadow, positioned in the lower third, exported as MP4 for Instagram. The SaaS client wants clean minimal subtitles in their brand font, exported as SRT for upload to their video hosting platform. The real estate client wants bilingual captions in English and Spanish, burned into the video for easy sharing. Three different styling requirements, three different output formats, processed simultaneously — that is the operational reality that Auto Caption Video is built for.
 
-1. **Relay** user requests to the backend via SSE
-2. **Intercept** backend responses — replace GUI references with API actions
-3. **Supplement** — handle export/render, credits, file delivery directly
-4. **Translate** — present results in user's language with clear status
+## Use Cases
 
-### Environment Variables
+1. **Multi-Client Batch Processing** — Upload multiple videos at once, specify per-video styling requirements in plain language, receive all captioned outputs in a single batch. No switching between projects, no re-entering settings per video. Describe each client's requirements once per project and reuse the instruction set for every future video from that client.
 
-| Variable | Required | Default |
-|----------|----------|---------|
-| `NEMO_TOKEN` | No | Auto-generated on first use |
-| `NEMO_API_URL` | No | `https://mega-api-prod.nemovideo.ai` |
-| `NEMO_WEB_URL` | No | `https://nemovideo.com` |
-| `NEMO_CLIENT_ID` | No | Auto-generated UUID, persisted to `~/.config/nemovideo/client_id` |
-| `SKILL_SOURCE` | No | Auto-detected from install path |
+2. **Social Media Manager Workflow** — Weekly content calendars typically include 8-15 short clips requiring captions. Auto Caption Video processes the entire week's content in one session: transcribe, style per platform (TikTok safe zones, Instagram Reels safe zones, YouTube Shorts positioning), and deliver platform-ready files without opening a timeline editor.
 
-If `NEMO_TOKEN` is not set:
-```bash
-CLIENT_ID="${NEMO_CLIENT_ID:-$(cat ~/.config/nemovideo/client_id 2>/dev/null)}"
-if [ -z "$CLIENT_ID" ]; then
-  CLIENT_ID=$(uuidgen 2>/dev/null || echo "client-$(date +%s)-$RANDOM")
-  mkdir -p ~/.config/nemovideo && echo "$CLIENT_ID" > ~/.config/nemovideo/client_id
-fi
-curl -s -X POST "$API/api/auth/anonymous-token" -H "X-Client-Id: $CLIENT_ID"
-```
-Save `token` as `NEMO_TOKEN`. Expires after 7 days; re-request with same `X-Client-Id`.
+3. **Rush Delivery** — Client calls at 3 PM needing captioned video by 5 PM. Upload immediately, receive styled captions with frame-accurate synchronization in under ten minutes. No overnight file, no missed deadline.
 
-## 2. Request Router
+4. **Brand Consistency** — Define a caption style profile (font, color, position, animation) once and apply it identically across every video for a given client. Eliminates the style drift that accumulates when captioning is done manually across different editing sessions.
 
-| User says... | Action | Skip SSE? |
-|-------------|--------|-----------|
-| "export" / "download" / "send me the video" | Export | Yes |
-| "credits" / "balance" | Credits | Yes |
-| "status" / "show tracks" | State | Yes |
-| "upload" / user sends file | Upload | Yes |
-| Everything else | SSE | No |
+## How It Works
 
-## 3. Core Flows
+Upload the video. Describe your requirements: "Bold white Montserrat, lower-third position, drop shadow, export MP4 16:9." Auto Caption Video transcribes the speech, synchronizes every word to the audio waveform at millisecond precision, applies the styling, and exports. For batch jobs, stack multiple videos with individual styling instructions — all processed in parallel.
 
-`$API` = `${NEMO_API_URL:-https://mega-api-prod.nemovideo.ai}`, `$TOKEN` = `${NEMO_TOKEN}`, `$WEB` = `${NEMO_WEB_URL:-https://nemovideo.com}`.
+## Output Formats
 
-All API requests MUST include:
-```
-X-Skill-Source: $SKILL_NAME
-X-Skill-Version: $SKILL_VERSION
-X-Skill-Platform: $SKILL_SOURCE
-```
-
-### 3.0 Create Session
-```bash
-curl -s -X POST "$API/api/tasks/me/with-session/nemo_agent" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" \
-  -d '{"task_name":"project","language":"<lang>"}'
-```
-Save `session_id`, `task_id`.
-
-### 3.1 Send Message via SSE
-```bash
-curl -s -X POST "$API/run_sse" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" --max-time 900 \
-  -d '{"app_name":"nemo_agent","user_id":"me","session_id":"<sid>","new_message":{"parts":[{"text":"<msg>"}]}}'
-```
-
-### 3.2 Upload
-**File**: `curl -s -X POST "$API/api/upload-video/nemo_agent/me/<sid>" -H "Authorization: Bearer $TOKEN" -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" -F "files=@/path/to/file"`
-
-**URL**: same endpoint, `-d '{"urls":["<url>"],"source_type":"url"}'`
-
-Supported: mp4, mov, avi, webm, mkv, jpg, png, gif, webp, mp3, wav, m4a, aac.
-
-### 3.3 Credits
-```bash
-curl -s "$API/api/credits/balance/simple" -H "Authorization: Bearer $TOKEN" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE"
-```
-
-### 3.4 Query State
-```bash
-curl -s "$API/api/state/nemo_agent/me/<sid>/latest" -H "Authorization: Bearer $TOKEN" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE"
-```
-
-### 3.5 Export
-```bash
-curl -s -X POST "$API/api/render/proxy/lambda" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" \
-  -d '{"id":"render_<ts>","sessionId":"<sid>","draft":<json>,"output":{"format":"mp4","quality":"high"}}'
-```
-Poll `GET $API/api/render/proxy/lambda/<id>` every 30s.
-
-### 3.6 Disconnect Recovery
-Wait 30s, query state. After 5 unchanged polls, report failure.
-
-## 4. GUI Translation
-
-| Backend says | You do |
-|-------------|--------|
-| "click Export" | Render + deliver |
-| "open timeline" | Show state |
-| "drag/drop" | Send edit via SSE |
-| "check account" | Show credits |
-
-## 6. Error Handling
-
-| Code | Meaning | Action |
-|------|---------|--------|
-| 0 | Success | Continue |
-| 1001 | Token expired | Re-auth |
-| 1002 | Session gone | New session |
-| 2001 | No credits | Show registration URL |
-| 4001 | Unsupported file | Show formats |
-| 402 | Export restricted | "Register at nemovideo.ai" |
-| 429 | Rate limited | Wait 30s, retry |
-
-## 7. Limitations
-
-- Aspect ratio change after generation requires regeneration
-- YouTube/Spotify music URLs not supported; built-in library available
-- Photo editing not supported; slideshow creation available
-- Local files must be sent in chat or provided as URL
-
-
-## 5. Caption Tips
-
-**One-shot captions**: "Auto-caption this video in English with bold white text" does everything in one command.
-
-**Multilingual**: "Add captions in English and translate to Japanese" for international audiences.
-
-**Style matching**: "Use TikTok-style animated word-by-word captions in yellow" for trending caption formats.
+- MP4 with captions burned in (for direct social sharing)
+- SRT/VTT files (for platform caption upload)
+- Both simultaneously (for clients who need both delivery formats)
