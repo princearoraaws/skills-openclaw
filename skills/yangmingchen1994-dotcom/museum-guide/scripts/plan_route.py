@@ -1,319 +1,361 @@
 #!/usr/bin/env python3
 """
-根据用户画像与文物列表筛选、排序并输出参观路线。
-
-用法：
-  python3 plan_route.py --profile profile.json --artifacts artifacts.json --output route_result.json
+博物馆参观路线规划模块：根据用户画像和文物列表生成最优参观路线
 """
 
-import os
-import sys
 import json
-import argparse
+import random
+import sys
 from typing import List, Dict, Any
-
-import requests
-
-DYNASTY_ORDER = {
-    "远古时期":       1,
-    "夏商西周":       2,
-    "春秋战国":       3,
-    "秦汉":           4,
-    "三国两晋南北朝": 5,
-    "隋唐五代":       6,
-    "辽宋夏金元":     7,
-    "明清":           8,
-    "现代":           9,
-}
-
-TARGET_COUNT = {
-    "2-3小时": 30,
-    "4-5小时": 50,
-}
-RETRIEVE_COUNT = {
-    "2-3小时": 80,
-    "4-5小时": 100,
-}
-
-def load_api_config() -> dict:
-    api_key = os.environ.get("API_KEY", "")
-    api_base = os.environ.get("API_BASE", "")
-    model_name = os.environ.get("MODEL_NAME", "")
-
-    if api_key and api_base and model_name:
-        if not api_base.endswith("/chat/completions"):
-            api_base = f"{api_base.rstrip('/')}/chat/completions"
-        return {"api_key": api_key, "api_base": api_base, "model": model_name}
-
-    config_path = os.path.join(os.path.dirname(__file__), "config.json")
-    if os.path.exists(config_path):
-        with open(config_path, "r", encoding="utf-8") as f:
-            config = json.load(f)
-        api_base = config.get("api_base", "")
-        if api_base and not api_base.endswith("/chat/completions"):
-            api_base = f"{api_base.rstrip('/')}/chat/completions"
-        return {
-            "api_key": config.get("api_key", ""),
-            "api_base": api_base,
-            "model": config.get("model_name", ""),
-        }
-
-    raise ValueError("未配置 API Key，请在环境变量或 scripts/config.json 中配置")
+from collections import defaultdict
+from extract_profile import load_api_config, call_llm_api
 
 
-def call_llm_api(prompt: str) -> Dict[str, Any]:
-    api = load_api_config()
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api['api_key']}",
+def normalize_profile(profile: Dict[str, Any]) -> Dict[str, Any]:
+    """标准化用户画像，确保字段格式一致"""
+    normalized = {
+        "museum_name": profile.get("museum_name", ""),
+        "duration": profile.get("duration", "2-3小时"),
+        "with_children": profile.get("with_children", False),
+        "artifact_types": profile.get("artifact_types", []),
+        "dynasties": profile.get("dynasties", []),
+        "domains": profile.get("domains", []),
+        "first_visit": profile.get("first_visit", False)
     }
-    data = {
-        "model": api["model"],
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.2,
-        "max_tokens": 1200,
-    }
-    response = requests.post(api["api_base"], headers=headers, json=data, timeout=40)
-    response.raise_for_status()
-    result = response.json()
-
-    if "choices" in result and len(result["choices"]) > 0:
-        content = result["choices"][0]["message"]["content"]
-        content = content.replace("```json", "").replace("```", "").strip()
-        return json.loads(content)
-
-    return {"error": "Invalid API response"}
-
-
-def summarize_reasons_with_llm(artifacts: List[dict], profile: dict, max_reason_len: int = 28) -> None:
-    """
-    为 artifacts 生成简短推荐理由，写入 artifact["recommendation_reason"]。
-    若失败则不做覆盖，交由 format_markdown_table 的 fallback 逻辑展示。
-    """
-    items = []
-    for idx, a in enumerate(artifacts, 1):
-        desc = (a.get("description") or "").strip()
-        if len(desc) > 180:
-            desc = desc[:180]
-        items.append(
-            {
-                "idx": idx,
-                "name": a.get("name", ""),
-                "period": a.get("period", ""),
-                "type": a.get("type", ""),
-                "domains": a.get("domains", []),
-                "is_treasure": bool(a.get("is_treasure")),
-                "description": desc,
-            }
-        )
-
-    user_domains = ", ".join(profile.get("domains", []) or [])
-    user_types = ", ".join(profile.get("artifact_types", []) or [])
-    user_dynasties = ", ".join(profile.get("dynasties", []) or [])
-
-    prompt = f"""
-你是一位博物馆参观路线规划助手。请为每件文物生成一句“推荐理由”，用于表格中。
-要求：
-1) 每条理由必须基于输入的 description/文物字段总结，不要编造事实。
-2) 优先突出：与用户的 domains/artifact_types/dynasties 的匹配；若 is_treasure=true，优先强调“镇馆之宝”。
-3) 单条理由长度 <= {max_reason_len} 个汉字左右，不要换行。
-4) 输出严格 JSON：{{"reasons": {{}}}}，keys 为文物 idx（字符串），value 为理由字符串。
-
-用户画像：
-- domains: {user_domains}
-- artifact_types: {user_types}
-- dynasties: {user_dynasties}
-
-文物列表：
-{json.dumps(items, ensure_ascii=False)}
-"""
-
-    try:
-        resp = call_llm_api(prompt)
-        reasons = (resp or {}).get("reasons") or {}
-        for idx, a in enumerate(artifacts, 1):
-            r = reasons.get(str(idx)) or reasons.get(idx)
-            if isinstance(r, str) and r.strip():
-                a["recommendation_reason"] = r.strip()
-    except Exception:
-        return
-
-def normalize_profile(profile: dict) -> dict:
-    """统一字段名，兼容不同来源的数据"""
-    normalized = dict(profile)
     
-    if "visit_time" in profile and "duration" not in profile:
-        normalized["duration"] = profile["visit_time"]
-    if "fields" in profile and "domains" not in profile:
-        normalized["domains"] = profile["fields"]
+    # 处理文物种类别名
+    artifact_mapping = {
+        "铜器": "青铜器",
+        "玉器": "玉器宝石"
+    }
+    normalized_artifacts = []
+    for t in normalized["artifact_types"]:
+        normalized_artifacts.append(artifact_mapping.get(t, t))
+    normalized["artifact_types"] = normalized_artifacts
     
     return normalized
 
 
-def score_artifact(artifact: dict, profile: dict) -> float:
-    """计算文物与用户画像的匹配分数（0-100）。"""
+# 朝代别名映射
+PERIOD_ALIAS = {
+    "远古时期":       ["远古", "史前", "新石器", "旧石器", "新石器时代", "旧石器时代"],
+    "夏商西周":       ["夏", "商", "殷", "西周", "殷商"],
+    "春秋战国":       ["春秋", "战国", "东周"],
+    "秦汉":           ["秦", "西汉", "东汉", "汉"],
+    "三国两晋南北朝": ["三国", "魏", "蜀", "吴", "晋", "西晋", "东晋", "南北朝", "北朝", "南朝"],
+    "隋唐五代":       ["隋", "唐", "五代", "五代十国"],
+    "辽宋夏金元":     ["宋", "北宋", "南宋", "辽", "金", "元", "西夏"],
+    "明清":           ["明", "清", "清代", "明代"],
+}
+
+def match_period(artifact_period: str, user_dynasties: list) -> bool:
+    """判断文物时期是否匹配用户选择的朝代（含别名，自动去除"时期"后缀）"""
+    normalized = artifact_period.replace("时期", "").strip()
+
+    for candidate in (artifact_period, normalized):
+        if candidate in user_dynasties:
+            return True
+        for dynasty in user_dynasties:
+            aliases = PERIOD_ALIAS.get(dynasty, [])
+            if candidate in aliases:
+                return True
+    return False
+
+
+def calculate_score(artifact: Dict[str, Any], profile: Dict[str, Any]) -> float:
+    """计算文物的匹配得分"""
     score = 0.0
 
-    if profile.get("dynasties"):
-        if artifact.get("period") in profile["dynasties"]:
-            score += 25
-        else:
-            for d in profile["dynasties"]:
-                if d in artifact.get("period", ""):
-                    score += 15
-                    break
+    # 1. 文物种类匹配：一致 +2，不一致 +0.5
+    artifact_type = artifact.get("type", "")
+    if artifact_type in profile.get("artifact_types", []):
+        score += 2.0
+    else:
+        score += 0.5
 
-    if profile.get("artifact_types"):
-        if artifact.get("type") in profile["artifact_types"]:
-            score += 35
-        else:
-            for at in profile["artifact_types"]:
-                if at in artifact.get("type", ""):
-                    score += 20
-                    break
+    # 2. 朝代匹配：一致 +2，不一致 +0
+    artifact_period = artifact.get("period", "")
+    if match_period(artifact_period, profile.get("dynasties", [])):
+        score += 2.0
 
-    if profile.get("domains"):
-        artifact_domains = artifact.get("domains", [])
-        matched = len(set(artifact_domains) & set(profile["domains"]))
-        if matched > 0:
-            score += min(30, matched * 15)
+    # 3. 镇馆之宝 vs 一般文物
+    is_treasure = artifact.get("is_treasure", False)
+    first_visit = profile.get("first_visit", None)
+    if first_visit is True:
+        # 首次参观：镇馆之宝 +3，一般文物 +0
+        if is_treasure:
+            score += 3.0
+    else:
+        # 非首次参观（含 None）：镇馆之宝 +0.5，一般文物 +0
+        if is_treasure:
+            score += 0.5
 
-    if artifact.get("is_treasure"):
-        score += 10 if profile.get("first_visit") else 2
-
-    if profile.get("with_children") and artifact.get("child_friendly"):
-        score += 5
+    # 4. 领域匹配（辅助加分）
+    artifact_domains = artifact.get("domains", [])
+    for domain in artifact_domains:
+        if domain in profile.get("domains", []):
+            score += 0.5
 
     return score
 
 
-def get_period_order(artifact: dict) -> int:
-    """获取文物时期的排序序号，未知时期排最后。"""
-    period = artifact.get("period", "")
-    for dynasty, order in DYNASTY_ORDER.items():
-        if dynasty in period:
-            return order
-    return 99
-
-
-def select_and_sort(artifacts: List[dict], profile: dict) -> List[dict]:
-    """筛选文物并排序。"""
-    target = TARGET_COUNT.get(profile.get("duration", "2-3小时"), 30)
-    retrieve_target = RETRIEVE_COUNT.get(profile.get("duration", "2-3小时"), 80)
-
-    if len(artifacts) < retrieve_target:
-        print(f"提示：共检索到 {len(artifacts)} 件文物")
-
-    for a in artifacts:
-        a["relevance_score"] = score_artifact(a, profile)
-        a["_period_order"] = get_period_order(a)
-
-    sorted_by_score = sorted(artifacts, key=lambda x: -x["relevance_score"])
-
-    selected = []
-    dynasty_counts: Dict[int, int] = {}
-    max_per_dynasty = max(3, target // len(DYNASTY_ORDER))
-
-    for a in sorted_by_score:
-        order = a["_period_order"]
-        if dynasty_counts.get(order, 0) < max_per_dynasty:
-            selected.append(a)
-            dynasty_counts[order] = dynasty_counts.get(order, 0) + 1
-        if len(selected) >= target:
-            break
-
-    if len(selected) < target:
-        for a in sorted_by_score:
-            if a not in selected:
-                selected.append(a)
-            if len(selected) >= target:
-                break
-
-    selected.sort(key=lambda x: x["_period_order"])
-
-    return selected[:target]
-
-
-def format_markdown_table(artifacts: List[dict]) -> str:
-    """输出 Markdown 表格。"""
-    valid_halls = sum(1 for a in artifacts if a.get("hall") and a.get("hall") != "待确认")
-    show_hall = valid_halls > len(artifacts) * 0.3
-
-    def fallback_reason(text: str, max_len: int = 28) -> str:
-        if not text:
-            return ""
-        text = str(text).strip().replace("\n", " ")
-        for sep in ["。", "！", "？", ",", "，"]:
-            if sep in text:
-                text = text.split(sep, 1)[0]
-                break
-        if len(text) > max_len:
-            text = text[:max_len]
-        return text
+def select_and_sort(artifacts: List[Dict[str, Any]], profile: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """根据用户画像筛选并排序文物"""
+    if not artifacts:
+        return []
     
-    if show_hall:
-        lines = [
-            "| 序号 | 文物名称 | 展馆 | 时期 | 推荐理由 |",
-            "|---|---------|------|------|---------|",
-        ]
-        for i, a in enumerate(artifacts, 1):
-            name = a.get("name", "")
-            hall = a.get("hall", "")
-            period = a.get("period", "")
-            reason = a.get("recommendation_reason") or fallback_reason(a.get("description", ""), 28)
-            treasure_mark = " ⭐" if a.get("is_treasure") else ""
-            lines.append(f"| {i} | {name}{treasure_mark} | {hall} | {period} | {reason} |")
+    # 带儿童时，直接过滤掉不适合儿童的文物
+    if profile.get("with_children"):
+        artifacts = [a for a in artifacts if a.get("child_friendly", True)]
+
+    # 计算每个文物的得分
+    scored_artifacts = []
+    for artifact in artifacts:
+        score = calculate_score(artifact, profile)
+        scored_artifacts.append((artifact, score))
+    
+    # 按得分降序排序
+    scored_artifacts.sort(key=lambda x: -x[1])
+    
+    # 根据参观时长选择数量
+    duration = profile["duration"]
+    if duration == "2-3小时":
+        count = min(15, len(scored_artifacts))
+    elif duration == "4-5小时":
+        count = min(25, len(scored_artifacts))
     else:
-        lines = [
-            "| 序号 | 文物名称 | 时期 | 推荐理由 |",
-            "|---|---------|------|---------|",
-        ]
-        for i, a in enumerate(artifacts, 1):
-            name = a.get("name", "")
-            period = a.get("period", "")
-            reason = a.get("recommendation_reason") or fallback_reason(a.get("description", ""), 28)
-            treasure_mark = " ⭐" if a.get("is_treasure") else ""
-            lines.append(f"| {i} | {name}{treasure_mark} | {period} | {reason} |")
-    return "\n".join(lines)
+        count = min(15, len(scored_artifacts))
+    
+    # 确保覆盖不同朝代和类型
+    selected = []
+    selected_types = set()
+    period_count = defaultdict(int)
+    
+    # 优先选择高分且多样化的文物
+    for artifact, score in scored_artifacts:
+        if len(selected) >= count:
+            break
+            
+        artifact_type = artifact.get("type", "other")
+        artifact_period = artifact.get("period", "unknown")
+        
+        # 检查朝代分布是否均衡（不超过40%）
+        if artifact_period in period_count:
+            if period_count[artifact_period] >= count * 0.4:
+                continue
+        
+        # 确保覆盖多种文物类型：优先选不同类型，类型重复的跳过（除非快达到数量上限）
+        if artifact_type in selected_types:
+            # 类型已存在，检查是否还有名额，可以加一个重复类型的
+            if len(selected) < count * 0.8:
+                selected.append(artifact)
+                period_count[artifact_period] += 1
+        else:
+            # 新类型，优先添加
+            selected.append(artifact)
+            selected_types.add(artifact_type)
+            period_count[artifact_period] += 1
+    
+    # 如果还有剩余名额，补充高分文物
+    if len(selected) < count:
+        remaining = count - len(selected)
+        for artifact, score in scored_artifacts:
+            if artifact not in selected and remaining > 0:
+                # 再次检查朝代分布
+                artifact_period = artifact.get("period", "unknown")
+                if artifact_period in period_count and period_count[artifact_period] >= count * 0.4:
+                    continue
+                selected.append(artifact)
+                period_count[artifact_period] += 1
+                remaining -= 1
+            if remaining <= 0:
+                break
+    
+    # 判断展馆信息是否充足（超过50%有效展馆才按展馆分组）
+    valid_hall_count = sum(
+        1 for a in selected if a.get("hall") and a.get("hall") not in ("待确认", "unknown", "")
+    )
+    use_hall_grouping = valid_hall_count > len(selected) * 0.5
+
+    if use_hall_grouping:
+        # 按展馆分组，减少折返；同展馆内按时期排序
+        period_order = ["远古时期","夏商西周","春秋战国","秦汉","三国两晋南北朝","隋唐五代","辽宋夏金元","明清"]
+        grouped_by_hall = defaultdict(list)
+        for artifact in selected:
+            hall = artifact.get("hall", "unknown")
+            grouped_by_hall[hall].append(artifact)
+        final_order = []
+        for hall, hall_artifacts in grouped_by_hall.items():
+            hall_artifacts.sort(key=lambda a: period_order.index(a.get("period","")) if a.get("period","") in period_order else 99)
+            final_order.extend(hall_artifacts)
+    else:
+        # 展馆信息不足，直接按时期顺序排列
+        period_order = ["远古时期","夏商西周","春秋战国","秦汉","三国两晋南北朝","隋唐五代","辽宋夏金元","明清"]
+        final_order = sorted(selected, key=lambda a: period_order.index(a.get("period","")) if a.get("period","") in period_order else 99)
+
+    return final_order
+
+
+def summarize_reasons_with_llm(artifacts: List[Dict[str, Any]], profile: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """使用大模型生成每个文物的推荐理由"""
+    if not artifacts:
+        return []
+    
+    # 准备文物数据（含博物馆名称，离线模式下由 artifact.museum_name 提供）
+    museum_name = profile.get("museum_name", "")
+    artifacts_data = []
+    for artifact in artifacts:
+        artifacts_data.append({
+            "name": artifact.get("name", ""),
+            "museum": artifact.get("museum_name", museum_name),
+            "type": artifact.get("type", ""),
+            "period": artifact.get("period", ""),
+            "hall": artifact.get("hall", ""),
+            "description": artifact.get("description", ""),
+            "is_treasure": artifact.get("is_treasure", False),
+        })
+    
+    prompt = f"""
+你是一位专业的博物馆讲解员，请为以下文物各生成一句简短推荐理由（30字以内）。
+要求：突出文物的历史价值、艺术特色或趣味亮点，语气积极正向，不要出现任何否定表述。
+
+文物列表：
+{json.dumps(artifacts_data, ensure_ascii=False, indent=2)}
+
+请返回JSON格式，key为文物名称，value为推荐理由：
+{{
+    "文物名称1": "推荐理由1",
+    "文物名称2": "推荐理由2"
+}}
+"""
+    
+    try:
+        result = call_llm_api(prompt)
+        if "error" in result:
+            # 如果API调用失败，生成默认理由
+            for artifact in artifacts:
+                artifact["reason"] = f"{artifact.get('name', '文物')}，{artifact.get('description', '')}"
+            return artifacts
+            
+        # 为每个文物添加推荐理由
+        for artifact in artifacts:
+            name = artifact.get("name", "")
+            if name in result:
+                artifact["reason"] = result[name]
+            else:
+                artifact["reason"] = f"{artifact.get('name', '文物')}，{artifact.get('description', '')[:30]}..."
+                
+    except Exception as e:
+        print(f"生成推荐理由失败: {e}", file=sys.stderr)
+        for artifact in artifacts:
+            artifact["reason"] = f"{artifact.get('name', '文物')}，{artifact.get('description', '')[:30]}..."
+    
+    return artifacts
+
+
+def format_markdown_table(artifacts: List[Dict[str, Any]]) -> str:
+    """将文物列表格式化为Markdown表格"""
+    if not artifacts:
+        return "没有找到符合条件的文物"
+    
+    # 检查展馆信息是否充足
+    valid_hall_count = 0
+    for artifact in artifacts:
+        hall = artifact.get("hall", "")
+        if hall and hall != "待确认":
+            valid_hall_count += 1
+    
+    # 决定是否显示展馆列
+    show_hall = valid_hall_count > len(artifacts) * 0.3
+    
+    # 构建表头
+    if show_hall:
+        headers = ["序号", "文物名称", "展馆", "时期", "推荐理由"]
+    else:
+        headers = ["序号", "文物名称", "时期", "推荐理由"]
+    
+    table = "| " + " | ".join(headers) + " |\n"
+    table += "| " + " | ".join(["---" for _ in headers]) + " |\n"
+    
+    # 构建表格内容
+    for i, artifact in enumerate(artifacts, 1):
+        name = artifact.get("name", "未知文物")
+        period = artifact.get("period", "未知时期")
+        reason = artifact.get("reason", "无推荐理由")
+        
+        # 处理长文本
+        if len(reason) > 50:
+            reason = reason[:47] + "..."
+            
+        if show_hall:
+            hall = artifact.get("hall", "待确认")
+            row = [
+                str(i),
+                name,
+                hall,
+                period,
+                reason
+            ]
+        else:
+            row = [
+                str(i),
+                name,
+                period,
+                reason
+            ]
+        
+        table += "| " + " | ".join(row) + " |\n"
+    
+    return table
+
 
 def main():
-    parser = argparse.ArgumentParser(description="博物馆参观路线规划器")
-    parser.add_argument("--profile", required=True, help="用户画像 JSON 文件路径")
-    parser.add_argument("--artifacts", required=True, help="文物列表 JSON 文件路径")
-    parser.add_argument("--output", default="route_result.json", help="输出 JSON 文件路径")
+    import argparse
+    parser = argparse.ArgumentParser(description="博物馆参观路线规划")
+    parser.add_argument("--profile", required=True, help="用户画像JSON文件路径")
+    parser.add_argument("--artifacts", required=True, help="文物列表JSON文件路径")
+    parser.add_argument("--output", help="输出结果文件路径")
     args = parser.parse_args()
-
-    with open(args.profile, encoding="utf-8") as f:
+    
+    # 读取用户画像
+    with open(args.profile, 'r', encoding='utf-8') as f:
         profile = json.load(f)
-    profile = normalize_profile(profile)
     
-    with open(args.artifacts, encoding="utf-8") as f:
-        artifacts_data = json.load(f)
+    # 读取文物列表
+    with open(args.artifacts, 'r', encoding='utf-8') as f:
+        artifacts = json.load(f)
     
-    if isinstance(artifacts_data, dict):
-        artifacts = artifacts_data.get("artifacts") or []
-        if not artifacts and "museum_name" not in artifacts_data:
-            artifacts = list(artifacts_data.values())[0] if artifacts_data else []
+    # 标准化用户画像
+    normalized_profile = normalize_profile(profile)
+    
+    # 筛选并排序文物
+    selected_artifacts = select_and_sort(artifacts, normalized_profile)
+    
+    # 生成推荐理由
+    selected_artifacts = summarize_reasons_with_llm(selected_artifacts, normalized_profile)
+    
+    # 格式化为Markdown表格
+    markdown_table = format_markdown_table(selected_artifacts)
+    
+    # 生成最终结果
+    museum_name = normalized_profile.get("museum_name", "博物馆")
+    header = f"\n## 🗺️ {museum_name} 参观路线规划\n"
+    meta = (
+        f"**参观时长：** {normalized_profile.get('duration')}  |  "
+        f"**推荐文物数：** {len(selected_artifacts)} 件  |  "
+        f"**首次参观：** {'是' if normalized_profile.get('first_visit') else '否'}  |  "
+        f"**携带儿童：** {'是' if normalized_profile.get('with_children') else '否'}\n"
+    )
+    
+    final_output = header + meta + markdown_table
+    
+    # 输出结果
+    if args.output:
+        with open(args.output, 'w', encoding='utf-8') as f:
+            f.write(final_output)
+        print(f"路线规划结果已保存到: {args.output}")
     else:
-        artifacts = artifacts_data
-
-    selected = select_and_sort(artifacts, profile)
-    summarize_reasons_with_llm(selected, profile)
-
-    print(f"\n## 🗺️ {profile.get('museum_name', '博物馆')} 参观路线规划\n")
-    print(f"**参观时长：** {profile.get('duration')}  |  "
-          f"**推荐文物数：** {len(selected)} 件  |  "
-          f"**首次参观：** {'是' if profile.get('first_visit') else '否'}  |  "
-          f"**携带儿童：** {'是' if profile.get('with_children') else '否'}\n")
-    print(format_markdown_table(selected))
-
-    with open(args.output, "w", encoding="utf-8") as f:
-        json.dump({
-            "profile": profile,
-            "selected_count": len(selected),
-            "artifacts": selected
-        }, f, ensure_ascii=False, indent=2)
-    print(f"\n✅ 结果已保存至 {args.output}")
+        print(final_output)
 
 
 if __name__ == "__main__":

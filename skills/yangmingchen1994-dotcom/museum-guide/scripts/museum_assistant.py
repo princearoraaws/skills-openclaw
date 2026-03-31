@@ -9,41 +9,9 @@ import json
 import sys
 from typing import Any, Dict
 
-
-def _load_extract_module():
-    from pathlib import Path
-
-    script_dir = Path(__file__).resolve().parent
-    if str(script_dir) not in sys.path:
-        sys.path.insert(0, str(script_dir))
-
-    import extract_profile as ep
-
-    return ep
-
-
-def _load_plan_module():
-    from pathlib import Path
-
-    script_dir = Path(__file__).resolve().parent
-    if str(script_dir) not in sys.path:
-        sys.path.insert(0, str(script_dir))
-
-    import plan_route as pr
-
-    return pr
-
-
-def _load_search_module():
-    from pathlib import Path
-
-    script_dir = Path(__file__).resolve().parent
-    if str(script_dir) not in sys.path:
-        sys.path.insert(0, str(script_dir))
-
-    import search_artifacts as sa
-
-    return sa
+import extract_profile as ep
+import plan_route as pr
+import search_artifacts as sa
 
 
 def extract_and_maybe_confirm(user_input: str, accept_inferred: bool) -> Dict[str, Any]:
@@ -53,7 +21,6 @@ def extract_and_maybe_confirm(user_input: str, accept_inferred: bool) -> Dict[st
     - confirmation_prompt: str（当需要确认时）
     - profile: dict
     """
-    ep = _load_extract_module()
 
     llm_profile = ep.extract_profile(user_input)
     if not llm_profile:
@@ -85,6 +52,9 @@ def extract_and_maybe_confirm(user_input: str, accept_inferred: bool) -> Dict[st
 
     profile = llm_profile
 
+    museum_name = profile.get("museum_name", "")
+    is_specialty = ep.is_specialty_museum(museum_name)
+
     if missing_duration:
         profile["duration"] = ep.DEFAULT_DURATION
     if missing_with_children:
@@ -97,6 +67,8 @@ def extract_and_maybe_confirm(user_input: str, accept_inferred: bool) -> Dict[st
     profile = ep.normalize_profile_for_scoring(profile)
 
     confirmation_needed = len(inferred_fields) > 0
+    if is_specialty:
+        confirmation_needed = False
     if confirmation_needed and not accept_inferred:
         return {
             "profile": profile,
@@ -114,8 +86,6 @@ def extract_and_maybe_confirm(user_input: str, accept_inferred: bool) -> Dict[st
 
 
 def plan_route_inline(profile: Dict[str, Any], artifacts: list) -> Dict[str, Any]:
-    pr = _load_plan_module()
-
     normalized_profile = pr.normalize_profile(profile)
     artifacts_selected = pr.select_and_sort(artifacts, normalized_profile)
     pr.summarize_reasons_with_llm(artifacts_selected, normalized_profile)
@@ -167,8 +137,7 @@ def main() -> None:
         print(json.dumps({"error": "缺少博物馆名称，无法继续。请补充后重试。", "profile": profile}, ensure_ascii=False))
         sys.exit(2)
 
-    sa = _load_search_module()
-    artifacts = sa.get_artifacts(museum_name)
+    artifacts, source = sa.get_artifacts(museum_name)
 
     if not artifacts:
         print(json.dumps({"error": f"无法检索到{museum_name}的文物信息，请检查网络连接或尝试其他博物馆。", "profile": profile}, ensure_ascii=False))

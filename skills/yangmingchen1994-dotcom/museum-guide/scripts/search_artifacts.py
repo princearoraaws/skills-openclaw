@@ -9,11 +9,14 @@
 
 import sys
 import json
-import subprocess
 import os
 import requests
 from pathlib import Path
 from typing import Optional, List, Dict, Any
+
+# 导入离线数据加载器
+sys.path.insert(0, str(Path(__file__).parent))
+from load_references import load_artifacts_from_csv, list_available_museums
 
 SEARCH_QUERIES = [
     "{museum} 镇馆之宝",
@@ -27,67 +30,7 @@ SEARCH_QUERIES = [
 ]
 
 
-def load_api_config() -> dict:
-    """从环境变量或配置文件加载大模型配置"""
-    api_key = os.environ.get("API_KEY", "")
-    api_base = os.environ.get("API_BASE", "")
-    model_name = os.environ.get("MODEL_NAME", "")
-
-    if api_key and api_base and model_name:
-        if not api_base.endswith("/chat/completions"):
-            api_base = f"{api_base.rstrip('/')}/chat/completions"
-        return {
-            "api_key": api_key,
-            "api_base": api_base,
-            "model": model_name,
-        }
-
-    config_path = Path(__file__).parent / "config.json"
-    if config_path.exists():
-        with open(config_path, 'r', encoding='utf-8') as f:
-            config = json.load(f)
-
-        api_base = config.get("api_base", "")
-        if api_base and not api_base.endswith("/chat/completions"):
-            api_base = f"{api_base.rstrip('/')}/chat/completions"
-
-        return {
-            "api_key": config.get("api_key", ""),
-            "api_base": api_base,
-            "model": config.get("model_name", ""),
-        }
-
-    raise ValueError("未配置 API Key，请在环境变量或 scripts/config.json 中配置")
-
-
-def call_llm_api(prompt: str) -> Dict[str, Any]:
-    """调用大模型API"""
-    api = load_api_config()
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api['api_key']}"
-    }
-
-    data = {
-        "model": api["model"],
-        "messages": [{"role": "user", "content": prompt}],
-        "temperature": 0.2,
-        "max_tokens": 4000
-    }
-
-    try:
-        response = requests.post(api["api_base"], headers=headers, json=data, timeout=120)
-        response.raise_for_status()
-        result = response.json()
-
-        if "choices" in result and len(result["choices"]) > 0:
-            content = result["choices"][0]["message"]["content"]
-            content = content.replace("```json", "").replace("```", "").strip()
-            return json.loads(content)
-        else:
-            return {"error": "Invalid API response"}
-    except Exception as e:
-        return {"error": str(e)}
+from extract_profile import load_api_config, call_llm_api
 
 
 def prosearch(keyword: str, count: int = 10) -> dict:
@@ -96,20 +39,12 @@ def prosearch(keyword: str, count: int = 10) -> dict:
     url = f"http://localhost:{port}/proxy/prosearch/search"
     
     payload = {"keyword": keyword, "cnt": count}
+    headers = {"Content-Type": "application/json"}
     
     try:
-        result = subprocess.run(
-            ["curl", "-s", "-X", "POST", url, "-H", "Content-Type: application/json", 
-             "-d", json.dumps(payload)],
-            capture_output=True,
-            text=True,
-            timeout=30
-        )
-        
-        if result.returncode == 0 and result.stdout:
-            return json.loads(result.stdout)
-        else:
-            return {"error": "搜索请求失败", "details": result.stderr}
+        response = requests.post(url, json=payload, headers=headers, timeout=30)
+        response.raise_for_status()
+        return response.json()
     except Exception as e:
         return {"error": str(e)}
 
@@ -118,15 +53,16 @@ def extract_artifacts_with_llm(search_results: List[str], museum_name: str) -> L
     """使用大模型从搜索结果中提取文物信息"""
     
     combined_content = "\n\n".join([
-        f"--- 搜索结果 {i+1} ---\n{result[:3000]}"
-        for i, result in enumerate(search_results)
+        f"--- 搜索结果 {i+1} ---\n{result[:1500]}"
+        for i, result in enumerate(search_results[:12])
     ])
 
     prompt = f"""
 你是一位博物馆文物专家。请从以下{museum_name}的搜索结果中提取文物信息。
 
 要求：
-1. 提取文物名称、所属展馆、所属时期、文物种类、是否是镇馆之宝、简要描述
+1. 只提取该博物馆的**常设馆藏文物**，排除借展、巡展、复制品、仿品
+2. 提取文物名称、所属展馆、所属时期、文物种类、是否是镇馆之宝、简要描述
 2. 时期必须从以下列表中选择：远古时期、夏商西周、春秋战国、秦汉、三国两晋南北朝、隋唐五代、辽宋夏金元、明清
 3. 文物种类必须从以下列表中选择：青铜器、陶器、瓷器、漆器、玉器宝石、石器石刻、书画古籍、服饰、砖瓦、钱币、化石、金银器、其他
 4. 关注的领域从以下列表中选择：农耕、狩猎、饮食、建筑、人物、武器、文房四宝、牌章证件、货币、书法、绘画、雕像、服装、饰品、仪器、佛教、乐器、纹饰、花瓶、礼制、古生物、新石器、旧石器、陈设品、科技、其他
@@ -189,10 +125,21 @@ def search_artifacts(museum_name: str) -> list:
     return artifacts
 
 
-def get_artifacts(museum_name: str) -> list:
-    """获取博物馆文物列表"""
+def get_artifacts(museum_name: str) -> tuple:
+    """
+    获取博物馆文物列表。
+    返回 (artifacts, source)，source 为 "offline" 或 "online"。
+    """
+    # 优先查找离线数据
+    offline = load_artifacts_from_csv(museum_name)
+    if offline is not None:
+        print(f"[离线模式] 使用 references/ 中的数据，共 {len(offline)} 件文物", file=sys.stderr)
+        return offline, "offline"
+
+    # 没有离线数据，走在线搜索
+    print(f"[在线模式] 未找到 {museum_name} 的离线数据，启动联网搜索...", file=sys.stderr)
     artifacts = search_artifacts(museum_name)
-    return artifacts
+    return artifacts, "online"
 
 
 def main():
@@ -201,10 +148,12 @@ def main():
         print(json.dumps({"error": "请提供博物馆名称"}, ensure_ascii=False))
         sys.exit(1)
 
-    artifacts = get_artifacts(museum_name)
-    
+    artifacts, source = get_artifacts(museum_name)
+
+    # 描述由 plan_route.py 的 summarize_reasons_with_llm 统一生成
     print(json.dumps({
         "museum_name": museum_name,
+        "source": source,
         "artifacts_count": len(artifacts),
         "artifacts": artifacts
     }, ensure_ascii=False, indent=2))
