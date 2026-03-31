@@ -3,9 +3,15 @@
   "slug": "makeup-tutorial-video",
   "displayName": "Makeup Tutorial Video",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1774582212653,
-    "commit": "https://github.com/openclaw/skills/commit/fd406916b43882b743f1f4bd62211b00dcf039c4"
+    "version": "1.0.0",
+    "publishedAt": 1774731114227,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1774582212653,
+      "commit": "https://github.com/openclaw/skills/commit/fd406916b43882b743f1f4bd62211b00dcf039c4"
+    }
+  ]
 }
