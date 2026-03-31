@@ -1,0 +1,11 @@
+{
+  "owner": "orange-afk",
+  "slug": "crawl4ai-docker-skill",
+  "displayName": "Crawl4ai Docker Skill",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774664650497,
+    "commit": null
+  },
+  "history": []
+}
