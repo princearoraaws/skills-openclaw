@@ -1,0 +1,11 @@
+{
+  "owner": "comphone",
+  "slug": "group-logger",
+  "displayName": "Group Logger",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774238230160,
+    "commit": null
+  },
+  "history": []
+}
