@@ -1,13 +1,19 @@
 /**
- * Unit tests for import adapters (Task 9).
+ * Unit tests for import adapters.
  *
  * Run with: npx tsx import-adapters/import-adapters.test.ts
  *
  * Uses TAP-style output (no test framework dependency).
+ *
+ * ChatGPT and Claude adapters return conversation CHUNKS (not facts).
+ * Fact extraction is delegated to the LLM via extractFacts().
+ * Mem0 and MCP Memory adapters return pre-structured facts.
  */
 
 import { Mem0Adapter } from './mem0-adapter.js';
 import { MCPMemoryAdapter } from './mcp-memory-adapter.js';
+import { ChatGPTAdapter } from './chatgpt-adapter.js';
+import { ClaudeAdapter } from './claude-adapter.js';
 import { BaseImportAdapter } from './base-adapter.js';
 import { getAdapter } from './index.js';
 import type {
@@ -58,7 +64,7 @@ class TestAdapter extends BaseImportAdapter {
   readonly displayName = 'Test Adapter';
 
   async parse(): Promise<AdapterParseResult> {
-    return { facts: [], warnings: [], errors: [] };
+    return { facts: [], chunks: [], totalMessages: 0, warnings: [], errors: [] };
   }
 
   // Expose protected methods for testing
@@ -102,6 +108,7 @@ async function runTests(): Promise<void> {
     assert(result.facts[0].source === 'mem0', 'Mem0: source is mem0');
     assert(result.facts[1].type === 'fact', 'Mem0: fact category mapped');
     assert(result.facts[1].sourceId === 'mem-2', 'Mem0: sourceId preserved');
+    assert(result.chunks.length === 0, 'Mem0: no chunks (pre-structured source)');
   }
 
   // --- parses export file format ---
@@ -250,13 +257,11 @@ async function runTests(): Promise<void> {
     const result = await adapter.parse({ content });
 
     assert(result.facts.length === 3, 'MCP: 2 entities with 3 total observations -> 3 facts');
-    // "Works at Acme Corp" starts with uppercase verb -> prefixed: "John: Works at Acme Corp"
-    // Actually the adapter checks if it starts lowercase (verb) or uppercase (standalone sentence)
-    // "Works" starts uppercase -> "John: Works at Acme Corp"
     assert(result.facts[0].text.includes('John'), 'MCP: first fact includes entity name');
     assert(result.facts[0].text.includes('Acme Corp'), 'MCP: first fact includes observation');
     assert(result.facts[1].text.includes('TypeScript'), 'MCP: second fact includes TypeScript');
     assert(result.facts[0].source === 'mcp-memory', 'MCP: source is mcp-memory');
+    assert(result.chunks.length === 0, 'MCP: no chunks (pre-structured source)');
   }
 
   // --- contextualizes observations correctly ---
@@ -538,6 +543,521 @@ async function runTests(): Promise<void> {
   }
 
   // =========================================================================
+  // ChatGPTAdapter — conversations.json (returns chunks, not facts)
+  // =========================================================================
+
+  console.log('# ChatGPTAdapter — conversations.json (chunks)');
+
+  // --- returns conversation chunks with user + assistant messages ---
+  {
+    const conversations = [
+      {
+        id: 'conv-1',
+        title: 'Test Conversation',
+        create_time: 1700000000,
+        mapping: {
+          root: { id: 'root', message: null, parent: null, children: ['msg1'] },
+          msg1: {
+            id: 'msg1',
+            message: {
+              id: 'msg1',
+              author: { role: 'user' },
+              content: { content_type: 'text', parts: ['I work at Google as a software engineer'] },
+              create_time: 1700000001,
+            },
+            parent: 'root',
+            children: ['msg2'],
+          },
+          msg2: {
+            id: 'msg2',
+            message: {
+              id: 'msg2',
+              author: { role: 'assistant' },
+              content: { content_type: 'text', parts: ['That sounds great! Tell me more about your work.'] },
+              create_time: 1700000002,
+            },
+            parent: 'msg1',
+            children: ['msg3'],
+          },
+          msg3: {
+            id: 'msg3',
+            message: {
+              id: 'msg3',
+              author: { role: 'user' },
+              content: { content_type: 'text', parts: ['I prefer TypeScript over JavaScript for new projects'] },
+              create_time: 1700000003,
+            },
+            parent: 'msg2',
+            children: [],
+          },
+        },
+      },
+    ];
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: JSON.stringify(conversations) });
+
+    assert(result.facts.length === 0, 'ChatGPT conv: no pre-extracted facts (uses chunks)');
+    assert(result.chunks.length === 1, `ChatGPT conv: 1 conversation chunk (got ${result.chunks.length})`);
+    assert(result.chunks[0].title === 'Test Conversation', 'ChatGPT conv: chunk title matches conversation title');
+    assert(result.chunks[0].messages.length === 3, `ChatGPT conv: 3 messages (user + assistant) (got ${result.chunks[0].messages.length})`);
+    assert(result.chunks[0].messages[0].role === 'user', 'ChatGPT conv: first message is user');
+    assert(result.chunks[0].messages[0].text.includes('Google'), 'ChatGPT conv: first message text correct');
+    assert(result.chunks[0].messages[1].role === 'assistant', 'ChatGPT conv: second message is assistant');
+    assert(result.chunks[0].messages[2].role === 'user', 'ChatGPT conv: third message is user');
+    assert(result.chunks[0].messages[2].text.includes('TypeScript'), 'ChatGPT conv: third message text correct');
+    assert(result.chunks[0].timestamp !== undefined, 'ChatGPT conv: chunk has timestamp');
+    assert(result.totalMessages === 3, `ChatGPT conv: totalMessages is 3 (got ${result.totalMessages})`);
+    assert(result.errors.length === 0, 'ChatGPT conv: no errors');
+  }
+
+  // --- includes both user and assistant messages ---
+  {
+    const conversations = [
+      {
+        title: 'Context Test',
+        mapping: {
+          root: { id: 'root', message: null, parent: null, children: ['msg1'] },
+          msg1: {
+            id: 'msg1',
+            message: {
+              id: 'msg1',
+              author: { role: 'user' },
+              content: { content_type: 'text', parts: ['I want to migrate to TypeScript'] },
+            },
+            parent: 'root',
+            children: ['msg2'],
+          },
+          msg2: {
+            id: 'msg2',
+            message: {
+              id: 'msg2',
+              author: { role: 'assistant' },
+              content: { content_type: 'text', parts: ['TypeScript migration involves setting up tsconfig and converting files'] },
+            },
+            parent: 'msg1',
+            children: [],
+          },
+        },
+      },
+    ];
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: JSON.stringify(conversations) });
+
+    assert(result.chunks.length === 1, 'ChatGPT: includes assistant messages for context');
+    assert(result.chunks[0].messages.length === 2, 'ChatGPT: both user and assistant in chunk');
+    assert(result.chunks[0].messages[1].role === 'assistant', 'ChatGPT: assistant message preserved');
+  }
+
+  // --- skips system and tool messages ---
+  {
+    const conversations = [
+      {
+        title: 'Test',
+        mapping: {
+          root: { id: 'root', message: null, parent: null, children: ['msg1'] },
+          msg1: {
+            id: 'msg1',
+            message: {
+              id: 'msg1',
+              author: { role: 'system' },
+              content: { content_type: 'text', parts: ['You are a helpful assistant'] },
+            },
+            parent: 'root',
+            children: ['msg2'],
+          },
+          msg2: {
+            id: 'msg2',
+            message: {
+              id: 'msg2',
+              author: { role: 'tool' },
+              content: { content_type: 'text', parts: ['Tool output: search results...'] },
+            },
+            parent: 'msg1',
+            children: ['msg3'],
+          },
+          msg3: {
+            id: 'msg3',
+            message: {
+              id: 'msg3',
+              author: { role: 'user' },
+              content: { content_type: 'text', parts: ['I work at Google as a senior engineer'] },
+            },
+            parent: 'msg2',
+            children: [],
+          },
+        },
+      },
+    ];
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: JSON.stringify(conversations) });
+
+    assert(result.chunks.length === 1, 'ChatGPT: has 1 chunk');
+    assert(result.chunks[0].messages.length === 1, 'ChatGPT: only user message (skips system + tool)');
+    assert(result.chunks[0].messages[0].role === 'user', 'ChatGPT: the surviving message is user');
+  }
+
+  // --- chunks large conversations into batches of 20 ---
+  {
+    // Build a conversation with 45 messages
+    const mapping: Record<string, any> = {
+      root: { id: 'root', message: null, parent: null, children: ['msg-0'] },
+    };
+
+    for (let i = 0; i < 45; i++) {
+      const role = i % 2 === 0 ? 'user' : 'assistant';
+      mapping[`msg-${i}`] = {
+        id: `msg-${i}`,
+        message: {
+          id: `msg-${i}`,
+          author: { role },
+          content: { content_type: 'text', parts: [`Message number ${i} from ${role} about various topics`] },
+        },
+        parent: i === 0 ? 'root' : `msg-${i - 1}`,
+        children: i < 44 ? [`msg-${i + 1}`] : [],
+      };
+    }
+
+    const conversations = [{ title: 'Long Conversation', mapping }];
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: JSON.stringify(conversations) });
+
+    assert(result.chunks.length === 3, `ChatGPT: 45 messages -> 3 chunks (got ${result.chunks.length})`);
+    assert(result.chunks[0].messages.length === 20, `ChatGPT: first chunk has 20 messages (got ${result.chunks[0].messages.length})`);
+    assert(result.chunks[1].messages.length === 20, `ChatGPT: second chunk has 20 messages (got ${result.chunks[1].messages.length})`);
+    assert(result.chunks[2].messages.length === 5, `ChatGPT: third chunk has 5 messages (got ${result.chunks[2].messages.length})`);
+    assert(result.chunks[0].title.includes('part 1/3'), `ChatGPT: first chunk title has part indicator (got: ${result.chunks[0].title})`);
+    assert(result.chunks[2].title.includes('part 3/3'), `ChatGPT: last chunk title has part indicator (got: ${result.chunks[2].title})`);
+    assert(result.totalMessages === 45, `ChatGPT: totalMessages is 45 (got ${result.totalMessages})`);
+  }
+
+  // --- handles single conversation object (not array) ---
+  {
+    const conv = {
+      title: 'Single',
+      mapping: {
+        root: { id: 'root', message: null, parent: null, children: ['msg1'] },
+        msg1: {
+          id: 'msg1',
+          message: { id: 'msg1', author: { role: 'user' }, content: { content_type: 'text', parts: ['I live in San Francisco near the park'] } },
+          parent: 'root', children: [],
+        },
+      },
+    };
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: JSON.stringify(conv) });
+
+    assert(result.chunks.length === 1, 'ChatGPT: single conversation object parses into 1 chunk');
+    assert(result.chunks[0].messages[0].text.includes('San Francisco'), 'ChatGPT: single conv message correct');
+  }
+
+  // --- handles null/non-string parts ---
+  {
+    const conversations = [
+      {
+        title: 'Null Parts',
+        mapping: {
+          root: { id: 'root', message: null, parent: null, children: ['msg1'] },
+          msg1: {
+            id: 'msg1',
+            message: {
+              id: 'msg1',
+              author: { role: 'user' },
+              content: { content_type: 'text', parts: [null, { type: 'image' }, 'I prefer dark mode in all my applications'] },
+            },
+            parent: 'root', children: [],
+          },
+        },
+      },
+    ];
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: JSON.stringify(conversations) });
+
+    assert(result.chunks.length === 1, 'ChatGPT: handles null/non-string parts');
+    assert(result.chunks[0].messages[0].text.includes('dark mode'), 'ChatGPT: extracted text from valid part');
+  }
+
+  // --- invalid JSON returns error ---
+  {
+    const adapter = new ChatGPTAdapter();
+    const result2 = await adapter.parse({ content: '[invalid json array' });
+    assert(result2.chunks.length === 0, 'ChatGPT: invalid JSON array yields 0 chunks');
+    assert(result2.errors.length > 0, 'ChatGPT: invalid JSON produces error');
+  }
+
+  // --- empty input returns error ---
+  {
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({});
+
+    assert(result.chunks.length === 0, 'ChatGPT: no input yields 0 chunks');
+    assert(result.errors.length > 0, 'ChatGPT: no input produces error');
+  }
+
+  // --- conversation with no text messages produces no chunks ---
+  {
+    const conversations = [
+      {
+        title: 'Empty',
+        mapping: {
+          root: { id: 'root', message: null, parent: null, children: ['msg1'] },
+          msg1: {
+            id: 'msg1',
+            message: {
+              id: 'msg1',
+              author: { role: 'user' },
+              content: { content_type: 'text', parts: [null] },
+            },
+            parent: 'root', children: [],
+          },
+        },
+      },
+    ];
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: JSON.stringify(conversations) });
+
+    assert(result.chunks.length === 0, 'ChatGPT: conversation with no text -> no chunks');
+  }
+
+  // --- multiple conversations produce multiple chunks ---
+  {
+    const conversations = [
+      {
+        title: 'Conv 1',
+        create_time: 1700000000,
+        mapping: {
+          root: { id: 'root', message: null, parent: null, children: ['msg1'] },
+          msg1: {
+            id: 'msg1',
+            message: { id: 'msg1', author: { role: 'user' }, content: { content_type: 'text', parts: ['First conversation message'] } },
+            parent: 'root', children: [],
+          },
+        },
+      },
+      {
+        title: 'Conv 2',
+        create_time: 1700100000,
+        mapping: {
+          root: { id: 'root', message: null, parent: null, children: ['msg1'] },
+          msg1: {
+            id: 'msg1',
+            message: { id: 'msg1', author: { role: 'user' }, content: { content_type: 'text', parts: ['Second conversation message'] } },
+            parent: 'root', children: [],
+          },
+        },
+      },
+    ];
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: JSON.stringify(conversations) });
+
+    assert(result.chunks.length === 2, `ChatGPT: 2 conversations -> 2 chunks (got ${result.chunks.length})`);
+    assert(result.chunks[0].title === 'Conv 1', 'ChatGPT: first chunk title correct');
+    assert(result.chunks[1].title === 'Conv 2', 'ChatGPT: second chunk title correct');
+  }
+
+  // =========================================================================
+  // ChatGPTAdapter — memories text (returns chunks, not facts)
+  // =========================================================================
+
+  console.log('# ChatGPTAdapter — memories text (chunks)');
+
+  // --- parses plain text memories into chunks ---
+  {
+    const memoriesText = `User prefers dark mode
+User works at Google as a software engineer
+User lives in San Francisco
+User likes hiking on weekends`;
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    assert(result.facts.length === 0, 'ChatGPT memories: no pre-extracted facts');
+    assert(result.chunks.length === 1, `ChatGPT memories: 4 lines -> 1 chunk (got ${result.chunks.length})`);
+    assert(result.chunks[0].messages.length === 4, `ChatGPT memories: 4 messages in chunk (got ${result.chunks[0].messages.length})`);
+    assert(result.chunks[0].messages[0].text === 'User prefers dark mode', 'ChatGPT memories: first message text correct');
+    assert(result.chunks[0].messages[0].role === 'user', 'ChatGPT memories: all messages are user role');
+    assert(result.totalMessages === 4, `ChatGPT memories: totalMessages is 4 (got ${result.totalMessages})`);
+  }
+
+  // --- handles bullet points and numbered lists ---
+  {
+    const memoriesText = `- User prefers TypeScript
+* User works remotely
+1. User lives in Berlin
+2) User likes coffee in the morning`;
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    assert(result.chunks.length === 1, 'ChatGPT memories: 4 lines -> 1 chunk');
+    assert(result.chunks[0].messages.length === 4, `ChatGPT memories: handles bullets/numbers (got ${result.chunks[0].messages.length})`);
+    assert(!result.chunks[0].messages[0].text.startsWith('-'), 'ChatGPT memories: bullet stripped');
+    assert(!result.chunks[0].messages[2].text.startsWith('1'), 'ChatGPT memories: number stripped');
+  }
+
+  // --- skips empty lines and header lines ---
+  {
+    const memoriesText = `Memories:
+
+User prefers dark mode
+
+User lives in London`;
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    assert(result.chunks.length === 1, 'ChatGPT memories: skips header/blank');
+    assert(result.chunks[0].messages.length === 2, `ChatGPT memories: only 2 valid lines (got ${result.chunks[0].messages.length})`);
+  }
+
+  // --- empty text input ---
+  {
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: '' });
+
+    assert(result.chunks.length === 0, 'ChatGPT memories: empty text yields 0 chunks');
+  }
+
+  // --- large memory list chunks into multiple batches ---
+  {
+    const lines = Array.from({ length: 50 }, (_, i) => `User memory item number ${i + 1} about their preferences`);
+    const memoriesText = lines.join('\n');
+
+    const adapter = new ChatGPTAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    assert(result.chunks.length === 3, `ChatGPT memories: 50 lines -> 3 chunks (got ${result.chunks.length})`);
+    assert(result.chunks[0].messages.length === 20, `ChatGPT memories: first chunk has 20 (got ${result.chunks[0].messages.length})`);
+    assert(result.chunks[1].messages.length === 20, `ChatGPT memories: second chunk has 20 (got ${result.chunks[1].messages.length})`);
+    assert(result.chunks[2].messages.length === 10, `ChatGPT memories: third chunk has 10 (got ${result.chunks[2].messages.length})`);
+    assert(result.totalMessages === 50, `ChatGPT memories: totalMessages is 50 (got ${result.totalMessages})`);
+  }
+
+  // =========================================================================
+  // ClaudeAdapter (returns chunks, not facts)
+  // =========================================================================
+
+  console.log('# ClaudeAdapter (chunks)');
+
+  // --- parses plain text memories into chunks ---
+  {
+    const memoriesText = `User prefers functional programming
+User works at a startup in Berlin
+User decided to use Rust for the backend
+User wants to learn machine learning`;
+
+    const adapter = new ClaudeAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    assert(result.facts.length === 0, 'Claude: no pre-extracted facts (uses chunks)');
+    assert(result.chunks.length === 1, `Claude: 4 memories -> 1 chunk (got ${result.chunks.length})`);
+    assert(result.chunks[0].messages.length === 4, `Claude: 4 messages in chunk (got ${result.chunks[0].messages.length})`);
+    assert(result.chunks[0].messages[0].role === 'user', 'Claude: all messages are user role');
+    assert(result.chunks[0].messages[0].text === 'User prefers functional programming', 'Claude: first message text correct');
+    assert(result.totalMessages === 4, `Claude: totalMessages is 4 (got ${result.totalMessages})`);
+  }
+
+  // --- handles date prefixes (strips them from text) ---
+  {
+    const memoriesText = `[2026-03-15] - User prefers dark mode
+[2026-03-10] - User works at Google
+No date prefix here but still a memory`;
+
+    const adapter = new ClaudeAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    assert(result.chunks.length === 1, 'Claude: parsed into 1 chunk');
+    assert(result.chunks[0].messages.length === 3, `Claude: 3 messages (got ${result.chunks[0].messages.length})`);
+    assert(!result.chunks[0].messages[0].text.includes('[2026'), 'Claude: date prefix stripped from text');
+    assert(result.chunks[0].messages[0].text === 'User prefers dark mode', 'Claude: cleaned text correct');
+    assert(result.chunks[0].timestamp === '2026-03-15', 'Claude: chunk timestamp from first dated entry');
+  }
+
+  // --- handles bullet points and numbered lists ---
+  {
+    const memoriesText = `- User prefers TypeScript
+* User works remotely from home
+1. User lives in Lisbon, Portugal
+2) User likes exploring new restaurants`;
+
+    const adapter = new ClaudeAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    assert(result.chunks.length === 1, 'Claude: 4 lines -> 1 chunk');
+    assert(result.chunks[0].messages.length === 4, `Claude: handles bullets/numbers (got ${result.chunks[0].messages.length})`);
+    assert(!result.chunks[0].messages[0].text.startsWith('-'), 'Claude: bullet stripped');
+    assert(!result.chunks[0].messages[2].text.startsWith('1'), 'Claude: number stripped');
+  }
+
+  // --- skips empty lines and header lines ---
+  {
+    const memoriesText = `Claude Memories:
+
+User prefers dark mode in editors
+
+User lives in Tokyo`;
+
+    const adapter = new ClaudeAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    assert(result.chunks.length === 1, 'Claude: skips header/blank');
+    assert(result.chunks[0].messages.length === 2, `Claude: only 2 valid lines (got ${result.chunks[0].messages.length})`);
+  }
+
+  // --- empty input returns error ---
+  {
+    const adapter = new ClaudeAdapter();
+    const result = await adapter.parse({});
+
+    assert(result.chunks.length === 0, 'Claude: no input yields 0 chunks');
+    assert(result.errors.length > 0, 'Claude: no input produces error');
+  }
+
+  // --- empty text yields 0 chunks ---
+  {
+    const adapter = new ClaudeAdapter();
+    const result = await adapter.parse({ content: '' });
+
+    assert(result.chunks.length === 0, 'Claude: empty text yields 0 chunks');
+  }
+
+  // --- skips very short memories ---
+  {
+    const memoriesText = `ok
+ab
+User prefers TypeScript over JavaScript`;
+
+    const adapter = new ClaudeAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    // "ok" and "ab" are < 3 chars after validation
+    assert(result.chunks.length === 1, 'Claude: has 1 chunk');
+    assert(result.chunks[0].messages.length === 1, `Claude: skips short memories (got ${result.chunks[0].messages.length})`);
+    assert(result.chunks[0].messages[0].text.includes('TypeScript'), 'Claude: valid memory kept');
+  }
+
+  // --- large memory list chunks correctly ---
+  {
+    const lines = Array.from({ length: 25 }, (_, i) => `Claude memory item number ${i + 1} about their workflow`);
+    const memoriesText = lines.join('\n');
+
+    const adapter = new ClaudeAdapter();
+    const result = await adapter.parse({ content: memoriesText });
+
+    assert(result.chunks.length === 2, `Claude: 25 lines -> 2 chunks (got ${result.chunks.length})`);
+    assert(result.chunks[0].messages.length === 20, `Claude: first chunk has 20 (got ${result.chunks[0].messages.length})`);
+    assert(result.chunks[1].messages.length === 5, `Claude: second chunk has 5 (got ${result.chunks[1].messages.length})`);
+    assert(result.totalMessages === 25, `Claude: totalMessages is 25 (got ${result.totalMessages})`);
+  }
+
+  // =========================================================================
   // getAdapter factory
   // =========================================================================
 
@@ -550,6 +1070,12 @@ async function runTests(): Promise<void> {
 
     const mcp = getAdapter('mcp-memory');
     assert(mcp instanceof MCPMemoryAdapter, 'getAdapter("mcp-memory") returns MCPMemoryAdapter');
+
+    const chatgpt = getAdapter('chatgpt');
+    assert(chatgpt instanceof ChatGPTAdapter, 'getAdapter("chatgpt") returns ChatGPTAdapter');
+
+    const claude = getAdapter('claude');
+    assert(claude instanceof ClaudeAdapter, 'getAdapter("claude") returns ClaudeAdapter');
   }
 
   // --- unknown source throws ---
@@ -569,6 +1095,8 @@ async function runTests(): Promise<void> {
       const msg = (e as Error).message;
       assert(msg.includes('mem0'), 'getAdapter error lists "mem0" as valid source');
       assert(msg.includes('mcp-memory'), 'getAdapter error lists "mcp-memory" as valid source');
+      assert(msg.includes('chatgpt'), 'getAdapter error lists "chatgpt" as valid source');
+      assert(msg.includes('claude'), 'getAdapter error lists "claude" as valid source');
     }
   }
 

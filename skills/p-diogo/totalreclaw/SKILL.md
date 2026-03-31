@@ -1,16 +1,14 @@
 ---
 name: totalreclaw
 description: "End-to-end encrypted memory for AI agents — portable, yours forever. AES-256-GCM E2EE: server never sees plaintext."
-version: 1.5.0
+version: 1.6.0
 author: TotalReclaw Team
 license: MIT
 homepage: https://totalreclaw.xyz
 metadata:
   openclaw:
     requires:
-      env:
-        - TOTALRECLAW_RECOVERY_PHRASE
-        - TOTALRECLAW_SERVER_URL
+      env: []
       bins: []
     emoji: "🧠"
     os: ["macos", "linux", "windows"]
@@ -344,13 +342,13 @@ Migrate memories from testnet (Base Sepolia) to mainnet (Gnosis) after upgrading
 
 Import memories from other AI memory tools into TotalReclaw.
 
-**When to use:** User mentions migrating from Mem0, MCP Memory Server, or wants to import memories from another tool.
+**When to use:** User mentions migrating from Mem0, MCP Memory Server, ChatGPT, Claude, or wants to import memories from another tool.
 
 **Parameters:**
 
 | Name | Type | Required | Description |
 |------|------|----------|-------------|
-| source | string | Yes | Source system: `mem0`, `mcp-memory` (MVP). Post-MVP: `memoclaw`, `generic-json`, `generic-csv` |
+| source | string | Yes | Source system: `mem0`, `mcp-memory`, `chatgpt`, `claude`. Post-MVP: `memoclaw`, `generic-json`, `generic-csv` |
 | api_key | string | No | API key for the source (Mem0). Used once, never stored. |
 | source_user_id | string | No | User or agent ID in the source system |
 | content | string | No | File content (JSON, JSONL, or CSV) -- for file-based sources |
@@ -375,6 +373,33 @@ Import memories from other AI memory tools into TotalReclaw.
 {
   "source": "mcp-memory",
   "file_path": "~/.mcp-memory/memory.jsonl",
+  "dry_run": true
+}
+```
+
+**Example -- import from ChatGPT (memories text):**
+```json
+{
+  "source": "chatgpt",
+  "content": "User prefers dark mode\nUser works at Google\nUser lives in SF",
+  "dry_run": true
+}
+```
+
+**Example -- import from ChatGPT (conversations.json):**
+```json
+{
+  "source": "chatgpt",
+  "file_path": "~/Downloads/chatgpt-export/conversations.json",
+  "dry_run": true
+}
+```
+
+**Example -- import from Claude (memories text):**
+```json
+{
+  "source": "claude",
+  "content": "[2026-03-15] - User prefers TypeScript\nUser works at a startup in Berlin",
   "dry_run": true
 }
 ```
@@ -415,11 +440,7 @@ Imported facts are tagged with `import_source:{source}` for easy filtering. The 
 
 After installing TotalReclaw, the agent MUST complete setup automatically. **Do NOT ask the user to set environment variables manually.**
 
-### Step 1: Set the server URL
-
-The TotalReclaw server URL is always `https://api.totalreclaw.xyz`. This is set automatically — no action required.
-
-### Step 2: Recovery phrase
+### Step 1: Recovery phrase
 
 The recovery phrase is a **12-word BIP-39 mnemonic**. It derives all encryption keys. The server never sees it.
 
@@ -432,11 +453,11 @@ Ask the user:
 
 When setup is required, the plugin will automatically detect the host environment (macOS, Linux, or Docker) and provide the exact commands or config snippets needed to set the env vars. Follow those instructions.
 
-### Step 3: Storage mode (optional)
+### Step 2: Storage mode (optional)
 
-The managed service is the default -- no extra configuration needed. If you want to self-host instead, set `TOTALRECLAW_SELF_HOSTED=true` and point `TOTALRECLAW_SERVER_URL` to your server.
+The managed service is the default -- no extra configuration needed. If you want to self-host instead, set `TOTALRECLAW_SELF_HOSTED=true` and `TOTALRECLAW_SERVER_URL` to your server URL.
 
-### Step 4: Set memory slot
+### Step 3: Set memory slot
 
 Register TotalReclaw as the memory plugin:
 ```json
@@ -571,9 +592,10 @@ Use when:
 #### totalreclaw_import_from
 
 Use when:
-- The user mentions migrating from Mem0, MCP Memory Server, or another AI memory tool
+- The user mentions migrating from Mem0, MCP Memory Server, ChatGPT, Claude, or another AI memory tool
 - The user wants to import memories from a file or API
 - The user asks to consolidate memories from multiple tools
+- The user mentions ChatGPT memories, conversations export, or Claude memory
 
 Always run with `dry_run=true` first and show the preview before importing. API keys are used in-memory only and never stored.
 
@@ -852,7 +874,7 @@ Default configuration values:
 
 | Key | Default | Description |
 |-----|---------|-------------|
-| `serverUrl` | `https://api.totalreclaw.xyz` | TotalReclaw server URL |
+| `serverUrl` | `https://api.totalreclaw.xyz` | TotalReclaw server URL (do not change unless self-hosting) |
 | `autoExtractEveryTurns` | `3` | Turns between automatic extractions |
 | `minImportanceForAutoStore` | `6` | Minimum importance to auto-store |
 | `maxMemoriesInContext` | `8` | Maximum memories to inject into context |

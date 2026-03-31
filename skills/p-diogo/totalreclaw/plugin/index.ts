@@ -332,6 +332,9 @@ async function getFactCount(logger: OpenClawPluginApi['logger']): Promise<number
 /** True when recovery phrase is missing — tools return setup instructions. */
 let needsSetup = false;
 
+/** True on first before_agent_start after successful init — show welcome message once. */
+let firstRunAfterInit = true;
+
 /**
  * Derive keys from the recovery phrase, load or create credentials, and
  * register with the server if this is the first run.
@@ -1287,7 +1290,12 @@ async function storeExtractedFacts(
 /**
  * Handle import_from tool calls in the plugin context.
  *
- * Uses the shared adapters to parse, then stores via storeExtractedFacts().
+ * Two paths:
+ * 1. Pre-structured sources (Mem0, MCP Memory) — adapter returns facts directly,
+ *    stored via storeExtractedFacts().
+ * 2. Conversation-based sources (ChatGPT, Claude) — adapter returns conversation
+ *    chunks, each chunk is passed through extractFacts() (the same LLM extraction
+ *    pipeline used for auto-extraction), then stored via storeExtractedFacts().
  */
 async function handlePluginImportFrom(
   params: Record<string, unknown>,
@@ -1296,7 +1304,7 @@ async function handlePluginImportFrom(
   const startTime = Date.now();
 
   const source = params.source as string;
-  const validSources = ['mem0', 'mcp-memory', 'memoclaw', 'generic-json', 'generic-csv'];
+  const validSources = ['mem0', 'mcp-memory', 'chatgpt', 'claude', 'memoclaw', 'generic-json', 'generic-csv'];
 
   if (!source || !validSources.includes(source)) {
     return { success: false, error: `Invalid source. Must be one of: ${validSources.join(', ')}` };
@@ -1314,7 +1322,10 @@ async function handlePluginImportFrom(
       file_path: params.file_path as string | undefined,
     });
 
-    if (parseResult.errors.length > 0 && parseResult.facts.length === 0) {
+    const hasChunks = parseResult.chunks && parseResult.chunks.length > 0;
+    const hasFacts = parseResult.facts && parseResult.facts.length > 0;
+
+    if (parseResult.errors.length > 0 && !hasFacts && !hasChunks) {
       return {
         success: false,
         error: `Failed to parse ${adapter.displayName} data`,
@@ -1322,7 +1333,24 @@ async function handlePluginImportFrom(
       };
     }
 
+    // Dry run: report what was parsed (chunks or facts)
     if (params.dry_run) {
+      if (hasChunks) {
+        return {
+          success: true,
+          dry_run: true,
+          source,
+          total_chunks: parseResult.chunks.length,
+          total_messages: parseResult.totalMessages,
+          preview: parseResult.chunks.slice(0, 5).map((c) => ({
+            title: c.title,
+            messages: c.messages.length,
+            first_message: c.messages[0]?.text.slice(0, 100),
+          })),
+          note: 'Chunks will be processed through LLM extraction (same quality as auto-extraction).',
+          warnings: parseResult.warnings,
+        };
+      }
       return {
         success: true,
         dry_run: true,
@@ -1337,7 +1365,12 @@ async function handlePluginImportFrom(
       };
     }
 
-    // Convert NormalizedFact[] to ExtractedFact[] for storeExtractedFacts()
+    // ── Path 1: Conversation chunks (ChatGPT, Claude) — LLM extraction ──
+    if (hasChunks) {
+      return handleChunkImport(parseResult.chunks, parseResult.totalMessages, source, logger, startTime, parseResult.warnings);
+    }
+
+    // ── Path 2: Pre-structured facts (Mem0, MCP Memory) — direct store ──
     const extractedFacts: ExtractedFact[] = parseResult.facts.map((f) => ({
       text: f.text,
       type: f.type,
@@ -1374,6 +1407,77 @@ async function handlePluginImportFrom(
     logger.error(`Import failed: ${msg}`);
     return { success: false, error: `Import failed: ${msg}` };
   }
+}
+
+/**
+ * Process conversation chunks through LLM extraction and store results.
+ *
+ * Each chunk is passed to extractFacts() — the same extraction pipeline used
+ * for auto-extraction during live conversations. This ensures import quality
+ * matches conversation extraction quality.
+ */
+async function handleChunkImport(
+  chunks: import('./import-adapters/types.js').ConversationChunk[],
+  totalMessages: number,
+  source: string,
+  logger: OpenClawPluginApi['logger'],
+  startTime: number,
+  warnings: string[],
+): Promise<Record<string, unknown>> {
+  let totalExtracted = 0;
+  let totalStored = 0;
+  let chunksProcessed = 0;
+
+  for (const chunk of chunks) {
+    chunksProcessed++;
+    logger.info(
+      `Import: extracting facts from chunk ${chunksProcessed}/${chunks.length}: "${chunk.title}"`,
+    );
+
+    // Convert chunk messages to the format extractFacts() expects.
+    // extractFacts() takes an array of message-like objects with { role, content }.
+    const messages = chunk.messages.map((m) => ({
+      role: m.role,
+      content: m.text,
+    }));
+
+    // Use 'full' mode to extract ALL valuable memories from the chunk
+    // (not just the last few messages like 'turn' mode does).
+    const facts = await extractFacts(messages, 'full');
+
+    if (facts.length > 0) {
+      totalExtracted += facts.length;
+
+      // Store through the normal pipeline (dedup, encrypt, store)
+      const stored = await storeExtractedFacts(facts, logger);
+      totalStored += stored;
+
+      logger.info(
+        `Import chunk ${chunksProcessed}/${chunks.length}: extracted ${facts.length} facts, stored ${stored}`,
+      );
+    }
+  }
+
+  if (totalExtracted === 0 && chunks.length > 0) {
+    warnings.push(
+      `Processed ${chunks.length} conversation chunks (${totalMessages} messages) but the LLM ` +
+      `did not extract any facts worth storing. This can happen if the conversations are mostly ` +
+      `generic/ephemeral content without personal facts, preferences, or decisions.`,
+    );
+  }
+
+  return {
+    success: totalStored > 0 || totalExtracted > 0,
+    source,
+    import_id: crypto.randomUUID(),
+    total_chunks: chunks.length,
+    total_messages: totalMessages,
+    facts_extracted: totalExtracted,
+    imported: totalStored,
+    skipped: totalExtracted - totalStored,
+    warnings,
+    duration_ms: Date.now() - startTime,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -2308,16 +2412,16 @@ const plugin = {
         name: 'totalreclaw_import_from',
         label: 'Import From',
         description:
-          'Import memories from other AI memory tools (Mem0, MCP Memory Server, MemoClaw, or generic JSON/CSV). ' +
-          'Provide the source name and either an API key or file content. ' +
+          'Import memories from other AI memory tools (Mem0, MCP Memory Server, ChatGPT, Claude, MemoClaw, or generic JSON/CSV). ' +
+          'Provide the source name and either an API key, file content, or file path. ' +
           'Use dry_run=true to preview before importing. Idempotent — safe to run multiple times.',
         parameters: {
           type: 'object',
           properties: {
             source: {
               type: 'string',
-              enum: ['mem0', 'mcp-memory', 'memoclaw', 'generic-json', 'generic-csv'],
-              description: 'The source system to import from',
+              enum: ['mem0', 'mcp-memory', 'chatgpt', 'claude', 'memoclaw', 'generic-json', 'generic-csv'],
+              description: 'The source system to import from (chatgpt: conversations.json or memory text; claude: memory text)',
             },
             api_key: {
               type: 'string',
@@ -2641,21 +2745,36 @@ const plugin = {
 
           await ensureInitialized(api.logger);
 
-          // If setup is still needed after init, inject setup instructions
+          // If setup is still needed after init, inject guided onboarding
           if (needsSetup) {
             return {
               prependContext:
-                '## TotalReclaw Setup Required\n\n' +
-                'TotalReclaw is installed but needs configuration. Follow the "Post-Install Setup" steps in SKILL.md to complete setup.\n' +
-                'Ask the user: "Do you have an existing TotalReclaw recovery phrase, or should I generate a new one?"',
+                '## TotalReclaw — First-Time Setup\n\n' +
+                'TotalReclaw is an end-to-end encrypted memory vault. It remembers things across conversations — preferences, decisions, project context — all encrypted so no one (not even the server) can read your memories.\n\n' +
+                '**To get started, ask the user:** "Do you have an existing TotalReclaw recovery phrase you\'d like to restore, or should I generate a new one?"\n\n' +
+                '**If new user:** Generate a random 12-word BIP-39 mnemonic and set it as the TOTALRECLAW_RECOVERY_PHRASE environment variable. Display it prominently and warn:\n' +
+                '- "This is your ONLY way to access your memories. Write it down and store it securely."\n' +
+                '- "NEVER use a recovery phrase from an existing crypto wallet — keep this separate from any wallet that holds funds."\n' +
+                '- "If you lose this phrase, your memories are gone forever — there is no recovery."\n\n' +
+                '**If returning user:** Ask them to provide their 12-word phrase, validate it, and set it as TOTALRECLAW_RECOVERY_PHRASE.\n\n' +
+                '**After setup:** Explain that from now on, you will automatically remember important things from conversations and recall relevant memories at the start of each session. The user can also explicitly ask you to remember, recall, forget, or export memories.',
             };
           }
 
-          // One-time welcome-back message for returning Pro users.
+          // One-time welcome message (first conversation after setup or returning user)
           let welcomeBack = '';
           if (welcomeBackMessage) {
             welcomeBack = `\n\n${welcomeBackMessage}`;
             welcomeBackMessage = null; // Consume — only show once
+          } else if (firstRunAfterInit) {
+            // First conversation with a configured user — explain what's happening
+            firstRunAfterInit = false;
+            const cache = readBillingCache();
+            const tier = cache?.tier || 'free';
+            const tierInfo = tier === 'pro'
+              ? 'You are on the **Pro** tier — unlimited memories, permanently stored on Gnosis mainnet.'
+              : 'You are on the **Free** tier — memories stored on testnet. Use the totalreclaw_upgrade tool to upgrade to Pro for permanent on-chain storage.';
+            welcomeBack = `\n\nTotalReclaw is active. I will automatically remember important things from our conversations and recall relevant context at the start of each session. ${tierInfo}`;
           }
 
           // Billing cache check — warn if quota is approaching limit.
