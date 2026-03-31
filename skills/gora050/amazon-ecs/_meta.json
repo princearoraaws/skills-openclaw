@@ -1,0 +1,11 @@
+{
+  "owner": "gora050",
+  "slug": "amazon-ecs",
+  "displayName": "Amazon Ecs",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774639455625,
+    "commit": null
+  },
+  "history": []
+}
