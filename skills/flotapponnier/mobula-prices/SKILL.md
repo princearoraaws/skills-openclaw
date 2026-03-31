@@ -126,12 +126,12 @@ Get historical price data for charts and trend analysis.
 
 ### Recent Trades (`mobula_market_trades`)
 
-**Endpoint:** `GET https://api.mobula.io/api/1/market/trades`
+**Endpoint:** `GET https://api.mobula.io/api/1/market/trades/pair`
 
-Live trade feed for any token across all DEXs.
+Live trade feed for a specific liquidity pool.
 
 **Parameters:**
-- `asset` (required): Token name, symbol, or address
+- `address` (required): Liquidity pool address (not token address)
 - `limit` (optional): Number of trades (default: 50, max: 300)
 
 **Returns:**
@@ -142,10 +142,10 @@ Live trade feed for any token across all DEXs.
 - DEX and chain info
 - Transaction hashes
 
+**Note:** This endpoint requires the **pool/pair address**, not the token address. Pool addresses are not easily accessible via Mobula API. Consider using wallet transactions endpoint instead for trade history.
+
 **Example prompts:**
-- "Show recent trades for this token"
-- "Who's buying PEPE right now?"
-- "Any whale movements on this token?"
+- "Show recent trades for this pool: [pool_address]"
 
 ---
 
@@ -271,9 +271,11 @@ Full list: [docs.mobula.io/blockchains](https://docs.mobula.io/blockchains)
 
 ## Version History
 
+**1.0.1** (2026-03-28): Updated documentation
+- Fixed trades endpoint: requires pool address (`/api/1/market/trades/pair`)
+
 **1.0.0** (2024-03-25): Initial release
 - Market data endpoint
 - Multi-token batch queries
 - Historical price data
-- Recent trades feed
 - Token metadata

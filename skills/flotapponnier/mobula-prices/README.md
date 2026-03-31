@@ -14,7 +14,6 @@
 ✅ **Real-time prices** - Current price, 24h change, volume, market cap
 ✅ **Historical data** - Charts and trends for any timeframe
 ✅ **Batch queries** - Compare up to 500 tokens in one request
-✅ **Live trades** - Recent trade feed for whale watching
 ✅ **Token metadata** - Project info, social links, contract addresses
 
 ### Perfect For
