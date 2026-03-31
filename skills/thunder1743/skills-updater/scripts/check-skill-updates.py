@@ -21,6 +21,7 @@ import zipfile
 import shutil
 import urllib.request
 import urllib.error
+import urllib.parse
 import ssl
 import time
 from typing import Optional, Dict, List, Tuple
@@ -29,11 +30,12 @@ from typing import Optional, Dict, List, Tuple
 SKILLS_DIRS = [
     Path.home() / "OpenClaw" / "skills",
     Path.home() / ".openclaw" / "skills",
+    Path.home() / ".openclaw" / "workspace" / "skills",
 ]
 BACKUP_DIR = Path.home() / "Desktop" / "skill-backups"
 MEMORY_DIR = Path.home() / ".openclaw" / "workspace" / "memory"
 CACHE_DIR = Path.home() / ".openclaw" / ".skill-updater-cache"
-CLAWHUB_API_BASE = "https://api.clawhub.com/v1"  # Official ClawHub API endpoint
+CLAWHUB_API_BASE = "https://clawhub.ai"  # Official ClawHub registry (discovered via /.well-known/clawhub.json)
 CACHE_TTL_HOURS = 24
 MAX_RETRIES = 3
 RETRY_DELAY_BASE = 2  # seconds, exponential backoff
@@ -151,7 +153,11 @@ class SkillUpdater:
         return skills
 
     def fetch_latest_version(self, slug: str, retry_count: int = 0) -> Optional[Dict]:
-        """Fetch the latest version info for a skill from ClawdHub."""
+        """Fetch the latest version info for a skill from ClawHub.
+        
+        Uses the /api/v1/skills/{slug} JSON endpoint to get metadata,
+        NOT the /api/v1/download endpoint (which returns a zip).
+        """
         # Try cache first
         cached = self.cache.get(slug)
         if cached:
@@ -166,32 +172,36 @@ class SkillUpdater:
             return None
 
         try:
-            url = f"{CLAWHUB_API_BASE}/download?slug={slug}"
-            # Use tempfile module for secure temp path (prevents TOCTOU attacks)
-            import tempfile
-            with tempfile.NamedTemporaryFile(suffix=f'-{slug}.zip', delete=False) as tmp:
-                temp_zip = Path(tmp.name)
-            
-            # Download with SSL context
-            request = urllib.request.Request(url)
+            # Use the metadata API endpoint (returns JSON with version info)
+            url = f"{CLAWHUB_API_BASE}/api/v1/skills/{urllib.parse.quote(slug, safe='')}"
+            request = urllib.request.Request(url, headers={"Accept": "application/json"})
             response = urllib.request.urlopen(request, context=self.ssl_context, timeout=10)
-            with open(temp_zip, 'wb') as f:
-                f.write(response.read())
+            data = json.loads(response.read().decode('utf-8'))
             
-            # Extract _meta.json from the zip with path traversal protection
-            with zipfile.ZipFile(temp_zip, 'r') as z:
-                # Validate all zip entries for path traversal
-                for name in z.namelist():
-                    if name.startswith('/') or '..' in name:
-                        raise ValueError(f"Unsafe zip entry detected: {name}")
-                if '_meta.json' in z.namelist():
-                    meta_content = z.read('_meta.json').decode('utf-8')
-                    meta = json.loads(meta_content)
-                    temp_zip.unlink()  # Clean up
-                    
-                    # Cache the result
-                    self.cache.set(slug, meta)
-                    return meta
+            # Build a meta dict compatible with the rest of the updater
+            latest_version = None
+            if data.get('latestVersion'):
+                latest_version = data['latestVersion'].get('version')
+            elif data.get('skill', {}).get('tags', {}).get('latest'):
+                latest_version = data['skill']['tags']['latest']
+            
+            if not latest_version:
+                if self.verbose:
+                    print(f"    No version info found in API response for '{slug}'")
+                return None
+            
+            meta = {
+                'slug': slug,
+                'version': latest_version,
+                'displayName': data.get('skill', {}).get('displayName', slug),
+                'summary': data.get('skill', {}).get('summary', ''),
+                'changelog': data.get('latestVersion', {}).get('changelog', ''),
+            }
+            
+            # Cache the result
+            self.cache.set(slug, meta)
+            return meta
+            
         except urllib.error.HTTPError as e:
             if e.code == 429:  # Rate limited
                 if retry_count < MAX_RETRIES:
@@ -200,12 +210,17 @@ class SkillUpdater:
                     time.sleep(delay)
                     return self.fetch_latest_version(slug, retry_count + 1)
                 else:
-                    msg = f"Rate limit exceeded for '{slug}' after {MAX_RETRIES} retries (HTTP 429). Using cached version if available. Try again in a few minutes."
+                    msg = f"Rate limit exceeded for '{slug}' after {MAX_RETRIES} retries (HTTP 429). Try again in a few minutes."
                     print(f"⚠️  {msg}")
                     self.warnings.append(msg)
                     return None
+            elif e.code == 404:
+                msg = f"Skill '{slug}' not found on ClawHub (HTTP 404). May not be published or slug mismatch."
+                print(f"⚠️  {msg}")
+                self.warnings.append(msg)
+                return None
             elif e.code == 503:  # Service unavailable
-                msg = f"ClawdHub is temporarily unavailable (HTTP 503). Using cached version if available."
+                msg = f"ClawHub is temporarily unavailable (HTTP 503)."
                 print(f"⚠️  {msg}")
                 self.warnings.append(msg)
                 return None
@@ -214,7 +229,7 @@ class SkillUpdater:
                 print(f"❌ {msg}")
                 self.errors.append(msg)
         except urllib.error.URLError as e:
-            if "429" in str(e):  # Catch 429 in URLError too
+            if "429" in str(e):
                 msg = f"Rate limit for '{slug}' (HTTP 429). Skipping. Try again later."
                 print(f"⚠️  {msg}")
                 self.warnings.append(msg)
@@ -264,7 +279,11 @@ class SkillUpdater:
         """Download and update skill to latest version."""
         import tempfile
         try:
-            url = f"{CLAWHUB_API_BASE}/download?slug={slug}"
+            # Use the correct download endpoint: /api/v1/download?slug=X&version=Y
+            latest_version = latest_meta.get('version', '')
+            url = f"{CLAWHUB_API_BASE}/api/v1/download?slug={urllib.parse.quote(slug, safe='')}"
+            if latest_version:
+                url += f"&version={urllib.parse.quote(latest_version, safe='')}"
             # Use tempfile for secure paths (prevents TOCTOU attacks)
             with tempfile.NamedTemporaryFile(suffix=f'-{slug}.zip', delete=False) as tmp:
                 temp_zip = Path(tmp.name)

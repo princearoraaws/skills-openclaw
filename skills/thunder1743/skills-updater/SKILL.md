@@ -137,6 +137,6 @@ Built by 狗剩 (Goason) for OpenClaw.
 
 ---
 
-**Latest Version:** 1.0.7
-**Last Updated:** 2026-03-25  
+**Latest Version:** 1.1.0
+**Last Updated:** 2026-03-29  
 **Status:** Production Ready ✅
