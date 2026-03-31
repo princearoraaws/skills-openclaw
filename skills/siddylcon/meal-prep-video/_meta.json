@@ -3,9 +3,15 @@
   "slug": "meal-prep-video",
   "displayName": "Meal Prep Video",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1774597751747,
-    "commit": "https://github.com/openclaw/skills/commit/5808f5b3ee74e14e926c160e249a0a6de722d0f4"
+    "version": "1.0.0",
+    "publishedAt": 1774742430721,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1774597751747,
+      "commit": "https://github.com/openclaw/skills/commit/5808f5b3ee74e14e926c160e249a0a6de722d0f4"
+    }
+  ]
 }
