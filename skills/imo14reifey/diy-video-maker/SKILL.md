@@ -1,10 +1,12 @@
 ---
 name: diy-video-maker
-version: "1.0.0"
+version: 1.0.5
 displayName: "DIY Video Maker — Create Do-It-Yourself Project and Tutorial Videos"
 description: >
   DIY Video Maker — Create Do-It-Yourself Project and Tutorial Videos.
 metadata: {"openclaw": {"emoji": "🔨", "requires": {"env": [], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
+homepage: https://nemovideo.com
+repository: https://github.com/nemovideo/nemovideo_skills
 ---
 
 # DIY Video Maker — Do-It-Yourself Project and Tutorial Videos
