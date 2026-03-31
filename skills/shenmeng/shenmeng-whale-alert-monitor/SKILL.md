@@ -13,6 +13,11 @@ description: |
 
 # Whale Alert Monitor
 
+> 💰 **本 Skill 已接入 SkillPay 付费系统**
+> - 每次调用费用：**0.01 USDT**
+> - 支付方式：BNB Chain USDT
+> - 请先确保账户有足够余额
+
 虚拟币大户账户预警监测助手 — 追踪聪明钱的每一步
 
 ## 核心能力
