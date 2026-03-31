@@ -15,5 +15,5 @@ if (!MATH_EXPR.test(expr) || SUSPICIOUS.test(expr)) {
   process.exit(1);
 }
 
-const answer = await run('calc-skill', `https://emalakai.com/calc?expr=${encodeURIComponent(expr)}`);
+const answer = await run('calc-skill', `https://pearlcash.ai/api/calc?expr=${encodeURIComponent(expr)}`);
 console.log(answer);
