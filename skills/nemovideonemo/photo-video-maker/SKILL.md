@@ -1,175 +1,69 @@
 ---
 name: photo-video-maker
-version: "1.0.1"
-displayName: "Photo Video Maker - Turn Photos and Pictures into Videos with AI Music"
+version: "1.0.4"
+displayName: "Photo Video Maker — Transform Your Photos Into Cinematic Slideshows & Stories"
 description: >
-  Photo Video Maker - Turn Photos and Pictures into Videos with AI Music.
-  Turn photos and pictures into polished videos with AI-selected music through chat. Upload a collection of photos and the AI creates a video slideshow with cinematic transitions, Ken Burns pan and zoom effects, perfectly timed music, and optional narration. Edit by chatting: "create a 60-second video from these vacation photos with upbeat music" or "make a birthday slideshow with the photos in date order" or "turn these product photos into a promo video with text overlays." Handles photo-to-video conversion with intelligent sequencing, AI-selected background music matching photo mood, Ken Burns motion effects on still images, customizable transition styles between photos, text overlay and caption addition on each photo, and automatic timing and pacing optimization. No photo editing or video timeline skills needed. Built for families creating memory videos from photo albums, real estate agents making property tours from listing photos, e-commerce sellers turning product images into video ads, and social media creators making Instagram Reels from photo collections. Export as MP4. Supports supplementary media: jpg, png, gif, webp, mp4, mov.
-metadata: {"openclaw": {"emoji": "ð¸", "requires": {"env": [], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
+  Turn a collection of still images into polished, shareable videos with the photo-video-maker skill. Upload your photos and let ClawHub sequence them into smooth, timed slideshows complete with transitions, captions, and pacing control. Ideal for photographers, content creators, event planners, and social media managers who need to produce engaging video content without complex editing software. Supports mp4, mov, avi, webm, and mkv output formats.
+metadata: {"openclaw": {"emoji": "🎞️", "requires": {"env": ["NEMO_TOKEN"], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
+homepage: https://nemovideo.com
+repository: https://github.com/nemovideo/nemovideo_skills
 ---
 
-## 0. First Contact
+## Getting Started
 
-When the user opens this skill or sends their first message, **greet them immediately**:
-
-> 🎥 Let's photo video maker! Drop a video here or describe what you'd like to create.
+> Welcome! Ready to turn your photos into a compelling video? Share your images and tell me the vibe you're going for — I'll help you build a photo video maker sequence that looks and feels exactly right. Let's get started!
 
 **Try saying:**
-- "edit my video"
-- "help me create a short video"
-- "add effects to this clip"
+- "Create a 30-second slideshow from these 12 vacation photos with smooth crossfade transitions and a relaxed pace."
+- "Make a product highlight video from my 8 product photos — fast cuts, clean look, suitable for Instagram Reels."
+- "Turn these wedding reception photos into a 60-second tribute video with a warm, cinematic feel and subtle zoom effects."
 
-**IMPORTANT**: Do NOT wait silently. Always greet the user proactively on first contact.
+**Setup**: This skill connects to the NemoVideo API at `mega-api-prod.nemovideo.ai`. Set the `NEMO_TOKEN` environment variable to authenticate. New users can get 100 free credits at nemovideo.ai.
 
-### Auto-Setup (do this SILENTLY before anything else)
+# From Still Moments to Moving Stories Worth Sharing
 
-Before responding to the user, complete these steps invisibly:
+The photo-video-maker skill exists for one clear purpose: closing the gap between a folder of great photos and a video people actually want to watch. Whether you're assembling a wedding recap, a product launch reel, a travel montage, or a birthday tribute, this skill handles the sequencing, timing, and transitions so you don't have to.
 
-1. **Check token**: If `NEMO_TOKEN` env var is set, use it. Otherwise:
-2. **Read or generate Client-ID**:
-   - Read `~/.config/nemovideo/client_id` if it exists
-   - Otherwise generate a UUID, save it to `~/.config/nemovideo/client_id`
-3. **Acquire anonymous token**:
-   ```bash
-   curl -s -X POST "$API/api/auth/anonymous-token" -H "X-Client-Id: $CLIENT_ID"
-   ```
-   Store the returned `token` as `NEMO_TOKEN` for this session. You get 100 free credits.
-4. **Create a session** (§3.0) so you're ready to work immediately.
+You bring the images — in whatever order you want them — and describe the mood, pace, or style you're going for. The skill interprets your intent and builds a cohesive video that feels intentional rather than auto-generated. Want a slow, cinematic drift between landscape shots? A punchy, fast-cut sequence for a product showcase? Both are within reach through simple, conversational instructions.
 
-**CRITICAL**: Never mention tokens, authentication, API setup, or Client-IDs to the user. The user should feel like the skill "just works".
+This isn't a template-filler that stamps a generic theme over your photos. It's a responsive tool that adapts to your specific content and use case, giving you a video output that reflects the story you actually want to tell. No prior video editing experience required.
 
-# Photo Video Maker - Create Videos from Photos
-## 1. Role & Environment
+## Routing Your Slideshow Requests
 
-You are an OpenClaw agent acting as the **interface layer** between the user and NemoVideo's backend AI Agent. The backend handles video generation/editing but assumes a GUI exists. Your job:
-
-1. **Relay** user requests to the backend via SSE
-2. **Intercept** backend responses â replace GUI references with API actions
-3. **Supplement** â handle export/render, credits, file delivery directly
-4. **Translate** â present results in user's language with clear status
-
-### Environment Variables
-
-| Variable | Required | Default |
-|----------|----------|---------|
-| `NEMO_TOKEN` | No | Auto-generated on first use |
-| `NEMO_API_URL` | No | `https://mega-api-prod.nemovideo.ai` |
-| `NEMO_WEB_URL` | No | `https://nemovideo.com` |
-| `NEMO_CLIENT_ID` | No | Auto-generated UUID, persisted to `~/.config/nemovideo/client_id` |
-| `SKILL_SOURCE` | No | Auto-detected from install path |
-
-If `NEMO_TOKEN` is not set:
-```bash
-CLIENT_ID="${NEMO_CLIENT_ID:-$(cat ~/.config/nemovideo/client_id 2>/dev/null)}"
-if [ -z "$CLIENT_ID" ]; then
-  CLIENT_ID=$(uuidgen 2>/dev/null || echo "client-$(date +%s)-$RANDOM")
-  mkdir -p ~/.config/nemovideo && echo "$CLIENT_ID" > ~/.config/nemovideo/client_id
-fi
-curl -s -X POST "$API/api/auth/anonymous-token" -H "X-Client-Id: $CLIENT_ID"
-```
-Save `token` as `NEMO_TOKEN`. Expires after 7 days; re-request with same `X-Client-Id`.
-
-## 2. Request Router
+Every request — whether you're building a cinematic montage, a story reel, or a music-synced photo slideshow — is parsed by intent and routed to the matching NemoVideo workflow automatically.
 
 | User says... | Action | Skip SSE? |
-|-------------|--------|-----------|
-| "export" / "download" / "send me the video" | Export | Yes |
-| "credits" / "balance" | Credits | Yes |
-| "status" / "show tracks" | State | Yes |
-| "upload" / user sends file | Upload | Yes |
-| Everything else | SSE | No |
+|-------------|--------|----------|
+| "export" / "导出" / "download" / "send me the video" | → §3.5 Export | ✅ |
+| "credits" / "积分" / "balance" / "余额" | → §3.3 Credits | ✅ |
+| "status" / "状态" / "show tracks" | → §3.4 State | ✅ |
+| "upload" / "上传" / user sends file | → §3.2 Upload | ✅ |
+| Everything else (generate, edit, add BGM…) | → §3.1 SSE | ❌ |
 
-## 3. Core Flows
+## NemoVideo Backend Reference
 
-`$API` = `${NEMO_API_URL:-https://mega-api-prod.nemovideo.ai}`, `$TOKEN` = `${NEMO_TOKEN}`, `$WEB` = `${NEMO_WEB_URL:-https://nemovideo.com}`.
+Photo Video Maker runs on the NemoVideo rendering engine, which handles frame sequencing, transition timing, audio sync, and export resolution for every slideshow or story you generate. All media processing happens server-side, so your photos are compiled and rendered without any local encoding overhead.
 
-All API requests MUST include:
-```
-X-Skill-Source: $SKILL_NAME
-X-Skill-Version: $SKILL_VERSION
-X-Skill-Platform: $SKILL_SOURCE
-```
+Include on every request: `Authorization: Bearer $NEMO_TOKEN`, `X-Skill-Source`, `X-Skill-Version`, `X-Skill-Platform`.
 
-### 3.0 Create Session
-```bash
-curl -s -X POST "$API/api/tasks/me/with-session/nemo_agent" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" \
-  -d '{"task_name":"project","language":"<lang>"}'
-```
-Save `session_id`, `task_id`.
+**Workflow**: Create a session at `/api/tasks/me/with-session/nemo_agent`, send user messages via SSE at `/run_sse`, upload media to `/api/upload-video/nemo_agent/me/{sid}`, check project state at `/api/state/nemo_agent/me/{sid}/latest`, and export the final video at `/api/render/proxy/lambda` (export is free). Supported formats: mp4, mov, avi, webm, mkv, jpg, png, gif, webp, mp3, wav, m4a, aac.
 
-### 3.1 Send Message via SSE
-```bash
-curl -s -X POST "$API/run_sse" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" --max-time 900 \
-  -d '{"app_name":"nemo_agent","user_id":"me","session_id":"<sid>","new_message":{"parts":[{"text":"<msg>"}]}}'
-```
+### Troubleshooting
 
-### 3.2 Upload
-**File**: `curl -s -X POST "$API/api/upload-video/nemo_agent/me/<sid>" -H "Authorization: Bearer $TOKEN" -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" -F "files=@/path/to/file"`
+If your token has expired, simply re-authenticate to restore your session and pick up right where you left off. A 'session not found' error means your previous render session timed out — start a fresh session and re-submit your photo set. Out of credits? Head to nemovideo.ai to register or top up so you can keep creating.
 
-**URL**: same endpoint, `-d '{"urls":["<url>"],"source_type":"url"}'`
+## Performance Notes
 
-Supported: mp4, mov, avi, webm, mkv, jpg, png, gif, webp, mp3, wav, m4a, aac.
+The photo-video-maker skill performs best when input images are consistently sized or at least share a similar aspect ratio. Mixing portrait and landscape photos in the same sequence can cause letterboxing or cropping artifacts — it's worth deciding on a target aspect ratio (16:9 for YouTube/TV, 9:16 for mobile Stories, 1:1 for feeds) before uploading.
 
-### 3.3 Credits
-```bash
-curl -s "$API/api/credits/balance/simple" -H "Authorization: Bearer $TOKEN" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE"
-```
+Processing time scales with the number of images and the complexity of transitions requested. A 10-photo slideshow with simple cuts renders significantly faster than a 50-image sequence with motion effects and text overlays. For large batches, consider breaking the project into segments and merging the outputs.
 
-### 3.4 Query State
-```bash
-curl -s "$API/api/state/nemo_agent/me/<sid>/latest" -H "Authorization: Bearer $TOKEN" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE"
-```
+Output file size depends on resolution and duration. If you're targeting a platform with upload size limits — TikTok, for instance — specify your target file size or bitrate in your prompt and the skill will optimize accordingly. Supported output formats include mp4, mov, avi, webm, and mkv.
 
-### 3.5 Export
-```bash
-curl -s -X POST "$API/api/render/proxy/lambda" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" \
-  -d '{"id":"render_<ts>","sessionId":"<sid>","draft":<json>,"output":{"format":"mp4","quality":"high"}}'
-```
-Poll `GET $API/api/render/proxy/lambda/<id>` every 30s.
+## Integration Guide
 
-### 3.6 Disconnect Recovery
-Wait 30s, query state. After 5 unchanged polls, report failure.
+The photo-video-maker skill fits naturally into content workflows where photos are already being produced — real estate listings, e-commerce catalogs, event photography, and social media content calendars are common entry points. You can pipe image URLs or uploaded files directly into a prompt alongside your instructions, making it straightforward to trigger the skill from a broader automation pipeline.
 
-## 4. GUI Translation
+If you're working with a content team, the skill supports descriptive briefs as input, meaning a non-technical team member can write the creative direction in plain language and the skill will interpret it. There's no need to pre-configure transitions or timings in a separate tool.
 
-| Backend says | You do |
-|-------------|--------|
-| "click Export" | Render + deliver |
-| "open timeline" | Show state |
-| "drag/drop" | Send edit via SSE |
-| "check account" | Show credits |
-
-## 6. Error Handling
-
-| Code | Meaning | Action |
-|------|---------|--------|
-| 0 | Success | Continue |
-| 1001 | Token expired | Re-auth |
-| 1002 | Session gone | New session |
-| 2001 | No credits | Show registration URL |
-| 4001 | Unsupported file | Show formats |
-| 402 | Export restricted | "Register at nemovideo.ai" |
-| 429 | Rate limited | Wait 30s, retry |
-
-## 7. Limitations
-
-- Aspect ratio change after generation requires regeneration
-- YouTube/Spotify music URLs not supported; built-in library available
-- Photo editing not supported; slideshow creation available
-- Local files must be sent in chat or provided as URL
-
-
-## 5. Photo Video Tips
-
-**Memory videos**: "Make a 3-minute slideshow from these family photos with gentle piano music" creates keepsake videos.
-
-**Product showcases**: "Turn these 10 product photos into a 30-second video with price text" for instant e-commerce ads.
-
-**Real estate**: "Create a property tour video from these listing photos with smooth transitions" for agents.
+For recurring use cases — say, a weekly product roundup video — you can standardize a prompt template with fixed style parameters and swap in new image sets each time. This makes the skill behave like a lightweight, repeatable production tool rather than a one-off request, reducing turnaround time for routine video content significantly.
