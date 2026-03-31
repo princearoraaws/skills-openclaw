@@ -21,14 +21,14 @@
     "resumeMode": "new|continue|truncated|checkpoint"
   },
   "models": {
-    "orchestrator": "provider/model",
-    "worldbuilding": "provider/model|n/a",
-    "characters": "provider/model|n/a",
-    "outline": "provider/model|n/a",
-    "style": "provider/model|n/a",
-    "writer": "provider/model|n/a",
-    "reviewer": "provider/model|n/a",
-    "memory": "provider/model|n/a"
+    "orchestrator": "provider/model-id",
+    "worldbuilding": "provider/model-id|n/a",
+    "characters": "provider/model-id|n/a",
+    "outline": "provider/model-id|n/a",
+    "style": "provider/model-id|n/a",
+    "writer": "provider/model-id|n/a",
+    "reviewer": "provider/model-id|n/a",
+    "memory": "provider/model-id|n/a"
   },
   "canon": {
     "hard": [],
@@ -40,6 +40,12 @@
   },
   "planning": {
     "outline": {},
+    "batchOutline": {
+      "windowStart": 0,
+      "windowEnd": 0,
+      "locked": false,
+      "stale": false
+    },
     "volumes": [],
     "chapters": [],
     "currentBeat": {},

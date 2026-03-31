@@ -13,22 +13,33 @@ Before any downstream generation, verify the bootstrap gate:
 - taboo list
 - premise
 - execution mode (multi-agent)
+- if multi-agent: `/root/.openclaw/openclaw.json` has been read and the agent/model inventories have been shown to the user
 
 If the bootstrap gate is not satisfied, stop and ask for the missing items instead of inventing defaults.
+
+For every stage, do not advance until the designated agent output exists and passes the smallest relevant validation check.
 
 Output:
 - current project status
 - execution mode
-- model assignment or N/A
+- model assignment as `provider/model-id` or N/A
 - bootstrap gate status
 - next action
 - risks
+- wait condition / stop condition
 
 ## Worldbuilding
 
 Build a world bible that supports the story the user actually wants to tell. Prioritize rules that affect plot, character decisions, and long-term conflicts. Separate hard canon from expandable canon.
 
 Only use this prompt after the bootstrap gate has passed.
+
+Minimal input packet:
+- world premise
+- taboo list
+- relevant soft canon
+- target tone
+- unresolved plot loops
 
 Output:
 - world premise
@@ -43,6 +54,12 @@ Output:
 
 Write character dossiers that explain behavior, not just appearance. Make each character usable in later chapters by defining goals, contradictions, speech, and OOC red lines.
 
+Minimal input packet:
+- locked world premise
+- relevant canon slice
+- current relationship state
+- target role in story
+
 Output:
 - dossier per character
 - relationship map
@@ -54,6 +71,12 @@ Output:
 Turn the canon into a long-range story spine. Build a chapter plan that can survive 50+ chapters. Preserve escalation, reversals, and recovery beats.
 
 Do not invent or resolve hard canon here; use only locked canon and explicitly marked soft canon.
+
+Minimal input packet:
+- locked worldbuilding
+- locked character dossiers
+- target chapter count
+- unresolved plot loops
 
 Output:
 - core premise
@@ -68,6 +91,12 @@ Write multiple excerpts from the same fixed scene. Keep the scene logic identica
 
 Do not run style sampling before the premise and core tone are locked.
 
+Minimal input packet:
+- locked premise
+- locked tone
+- one fixed scene brief
+- relevant style constraints
+
 Output:
 - candidate 1..N
 - style comparison notes
@@ -75,9 +104,17 @@ Output:
 
 ## Chapter writer
 
-Write only from the current chapter beat, nearby memory, locked style spec, and unresolved plot loops. Stay inside character logic. End with a usable hook or consequence.
+Write only from the current batch outline / chapter beat, nearby memory, locked style spec, and unresolved plot loops. Stay inside character logic. End with a usable hook or consequence.
 
 Do not begin chapter drafting unless the current beat and the relevant canon slice are already prepared.
+
+Minimal input packet:
+- chapter goal
+- opening state
+- relevant canon slice
+- forbidden deviations
+- current character state
+- checkpoint / resume boundary, if any
 
 Output:
 - chapter draft
@@ -90,6 +127,13 @@ Act like a strict continuity editor. Compare draft against canon, outline, chara
 
 If any hard conflict exists, the result is fail and the draft must be revised before release.
 
+Minimal input packet:
+- chapter draft
+- relevant canon slice
+- style rules
+- unresolved plot loops
+- current character state
+
 Output:
 - issue list
 - severity
@@ -101,6 +145,12 @@ Output:
 Compress the chapter into structured memory. Keep what matters for future chapters and delete noise.
 
 Use this only after a chapter or batch is accepted.
+
+Minimal input packet:
+- accepted chapter
+- current character state
+- open loops
+- state delta from this chapter
 
 Output:
 - chapter summary

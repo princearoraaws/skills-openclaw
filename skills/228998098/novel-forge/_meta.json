@@ -3,11 +3,16 @@
   "slug": "novel-forge",
   "displayName": "novel-forge",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1774626709001,
-    "commit": "https://github.com/openclaw/skills/commit/86e2248215292841d76f90d4bf26398c36b3bc58"
+    "version": "2.0.0",
+    "publishedAt": 1774712073147,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1774626709001,
+      "commit": "https://github.com/openclaw/skills/commit/86e2248215292841d76f90d4bf26398c36b3bc58"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1774626420331,

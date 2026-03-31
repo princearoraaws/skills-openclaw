@@ -23,15 +23,17 @@ Treat these as the source of truth:
 2. Read the smallest relevant canon slice.
 3. Confirm execution mode and model mapping.
 4. Lock premise, hard canon, and style before prose.
-5. Draft one chapter beat at a time.
-6. Run writer → reviewer → orchestrator.
-7. Sync chapter, memory, and state after acceptance.
+5. Draft one 10-chapter batch outline at a time.
+6. If the full outline changes, invalidate any derived batch outline and regenerate it before drafting chapters.
+7. Run writer → reviewer → orchestrator for the chapters inside the locked batch outline.
+8. Sync chapter, memory, and state after acceptance.
 
 ## State machine
 Recommended runtime steps:
 - `idle`
 - `project_discovered`
 - `project_locked`
+- `batch_outline_planned`
 - `chapter_planned`
 - `writer_running`
 - `writer_done`
@@ -63,3 +65,4 @@ The main session should only assemble context, route work, verify outputs, and w
 
 ## Failure handling
 If a required fact is missing, pause and ask. If reviewer output arrives without writer prose, treat the workflow as incomplete, not as a valid review.
+If the full outline changes, clear any derived batch-outline state before continuing.

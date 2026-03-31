@@ -25,7 +25,7 @@ def parse_models_json(raw: str) -> dict[str, Any]:
     except json.JSONDecodeError as exc:
         raise SystemExit(f"invalid --models-json: {exc}") from exc
     if not isinstance(data, dict):
-        raise SystemExit("invalid --models-json: expected a JSON object mapping roles to provider/model strings")
+        raise SystemExit("invalid --models-json: expected a JSON object mapping roles to provider/model-id strings")
     return {str(k): str(v) for k, v in data.items()}
 
 

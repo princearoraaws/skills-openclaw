@@ -42,9 +42,9 @@ User intent:
 - “写第 12 章。”
 
 Good response shape:
-- confirm the chapter beat and relevant canon slice already exist
+- confirm the current batch outline and relevant canon slice already exist
 - chapter goal
-- chapter beat used
+- batch outline used
 - draft
 - review notes
 - revision summary
@@ -56,9 +56,9 @@ User intent:
 - “从第 20 章写到第 23 章。”
 
 Good response shape:
-- confirm batch size
+- confirm batch size (10 chapters)
 - confirm the chapter plan exists for the batch
-- show chapter plan for the batch
+- show batch outline for the batch
 - draft batch 1
 - review and archive
 - checkpoint before batch 2
