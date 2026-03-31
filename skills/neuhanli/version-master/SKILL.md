@@ -1,6 +1,6 @@
 ---
 name: version-master
-version: "2.1.0"
+version: "2.1.1"
 description: "Intelligent single-file version management. Save, restore, diff, and clean file snapshots with per-file version history. Activate when users need version control, file snapshot management, or project state recovery."
 
 keywords: ["version snapshot", "version control", "snapshot save", "version restore", "version diff", "快照保存", "版本管理", "版本恢复", "版本对比"]
