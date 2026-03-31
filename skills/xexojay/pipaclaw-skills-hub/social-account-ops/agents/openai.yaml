@@ -1,0 +1,4 @@
+interface:
+  display_name: "Social Account Ops"
+  short_description: "One visible operating team for Xiaohongshu, X, and Douyin diagnosis, planning, writing, and retro."
+  default_prompt: "Use $social-account-ops as the single front door for social account work. Research live links first, show what was already checked, give the first judgment fast, and keep diagnosis, planning, writing, and retro inside one visible team."
