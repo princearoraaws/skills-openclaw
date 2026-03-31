@@ -1,175 +1,132 @@
 ---
 name: online-video-editor
-version: "1.0.1"
-displayName: "Online Video Editor - Edit Videos Online with AI Chat, No Software Download"
+version: "1.0.0"
+displayName: "Online Video Editor — Edit Videos Online Free with AI No Download Required"
 description: >
-  Online Video Editor - Edit Videos Online with AI Chat, No Software Download.
-  Edit videos directly in your browser through AI chat with zero software downloads or installations. Upload footage and describe your edits in plain English: "trim the first 15 seconds" or "add background music and subtitles" or "merge these three clips into one." The AI handles everything server-side so you never wait for renders on your own machine. Works on any device with a browser including Chromebook, tablet, and older laptops. Handles online video trimming and cutting, cloud-based color correction and filters, browser-based subtitle generation, remote background music addition, server-side video merging and splitting, and web-based text overlay creation. No timeline interface, no learning curve, no monthly subscriptions to forget about. Built for remote workers editing on shared computers, students without access to editing software, travel creators editing from hotel wifi, and anyone who needs a quick edit without installing anything. Export as MP4. Supports supplementary media: jpg, png, gif, webp, mp4, mov.
-metadata: {"openclaw": {"emoji": "ð", "requires": {"env": [], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
+  Edit videos online with AI — trim, cut, merge, add captions, background music, transitions, color correction, text overlays, speed adjustments, and multi-format export directly through chat. NemoVideo is the online video editor that requires no software download, no account setup, and no timeline learning curve. Describe your edit and the AI executes it: professional results from conversational instructions. Works on any device with an internet connection. Online video editor free, edit video online no download, AI video editor online, free video editing tool, browser video editor, cloud video editor, edit videos without software.
+metadata: {"openclaw": {"emoji": "🌐", "requires": {"env": [], "configPaths": ["~/.config/nemovideo/"]}, "primaryEnv": "NEMO_TOKEN"}}
 ---
 
-## 0. First Contact
+# Online Video Editor — Professional Editing Without Installing Anything
 
-When the user opens this skill or sends their first message, **greet them immediately**:
+Desktop video editing software requires: downloading a multi-gigabyte installer, meeting minimum hardware requirements (most require 8GB+ RAM and a dedicated GPU), learning a complex interface with hundreds of buttons and menus, and keeping the software updated through regular patches. Mobile editing apps require: downloading from an app store, limited functionality compared to desktop, tiny screen for precise editing work, and storage space on an already-full phone. NemoVideo requires: an internet connection. That is it. No download. No installation. No hardware requirements beyond what runs a web browser. No interface to learn because there is no visual interface — you describe the edit in words and the AI executes it. This fundamentally changes who can edit video. A teacher preparing a lesson on a school Chromebook: can edit. A small business owner on a tablet during lunch: can edit. A student on a library computer: can edit. A marketing team collaborating across different operating systems: can edit. A person on a phone with 2GB of free storage: can edit. The constraint that kept video editing locked to expensive hardware and specialized software is gone. The editing power that previously required Premiere Pro or Final Cut is now accessible through a text description.
 
-> 🚀 Online Video Editor at your service! Upload a video or tell me what you're looking for.
+## Use Cases
 
-**Try saying:**
-- "speed up by 2x"
-- "make it look cinematic"
-- "add a fade-in transition"
+1. **Quick Trim — Remove Start and End (any length)** — A meeting recording has 2 minutes of "is everyone here?" at the beginning and 3 minutes of "okay bye" at the end. NemoVideo: trims the first 2 minutes and last 3 minutes, adds a 0.5-second fade-in at the new start and fade-out at the new end, and exports. A 5-second description replaces 10 minutes of importing into editing software and finding the right cut points.
+2. **Social Media Repurpose — One Video, Four Formats (any length)** — A creator has a 16:9 YouTube video that needs to be posted on TikTok (9:16), Instagram Feed (4:5), Instagram Reels (9:16 with captions), and LinkedIn (1:1). NemoVideo: intelligently reframes for each aspect ratio (face tracking for vertical crops), adds word-by-word captions for the Reels version, applies platform-specific color optimization, and exports all four formats from one command. Multi-platform publishing from a single source video.
+3. **Combine Clips — Merge Multiple Videos (any number)** — A teacher recorded a lesson in 5 separate phone clips because they kept getting interrupted. NemoVideo: merges all 5 clips in sequence, color-matches across clips (phone auto-exposure created different looks), adds crossfade transitions between clips (smooths the interruption gaps), normalizes audio levels, and exports as one continuous video. Five fragments become one cohesive lesson.
+4. **Full Edit — Talking-Head Polish (5-25 min)** — A YouTuber records a raw video and describes the complete edit: "Remove silences, add zoom-cuts, put in lo-fi music, add word-by-word captions, and make a Shorts clip from the best 55 seconds." NemoVideo executes the entire pipeline: silence removal (0.8s threshold), zoom-cuts (100%/120% alternating every 10 seconds), color grade (warm-clean), music at -20dB with ducking, captions in trending style, chapter detection, and Shorts extraction. The complete YouTube post-production workflow from one description.
+5. **Emergency Edit — Fix Before Deadline (any length)** — A presenter realizes 30 minutes before a meeting that their video has a 10-second section where they said the wrong number ("$5 million" instead of "$50 million"). NemoVideo: cuts the 10-second error segment (specified by timestamp), smooths the audio transition, and re-exports in 2 minutes. Crisis averted without opening editing software.
 
-**IMPORTANT**: Do NOT wait silently. Always greet the user proactively on first contact.
+## How It Works
 
-### Auto-Setup (do this SILENTLY before anything else)
+### Step 1 — Upload Video
+Upload from any device: phone, tablet, laptop, desktop. Any format accepted. No software to install first.
 
-Before responding to the user, complete these steps invisibly:
+### Step 2 — Describe the Edit
+Type what you want in plain language. Simple edits: "trim the first 30 seconds." Complex edits: "remove silences, add captions, music, and color correction, then export in three formats." NemoVideo understands both.
 
-1. **Check token**: If `NEMO_TOKEN` env var is set, use it. Otherwise:
-2. **Read or generate Client-ID**:
-   - Read `~/.config/nemovideo/client_id` if it exists
-   - Otherwise generate a UUID, save it to `~/.config/nemovideo/client_id`
-3. **Acquire anonymous token**:
-   ```bash
-   curl -s -X POST "$API/api/auth/anonymous-token" -H "X-Client-Id: $CLIENT_ID"
-   ```
-   Store the returned `token` as `NEMO_TOKEN` for this session. You get 100 free credits.
-4. **Create a session** (§3.0) so you're ready to work immediately.
-
-**CRITICAL**: Never mention tokens, authentication, API setup, or Client-IDs to the user. The user should feel like the skill "just works".
-
-# Online Video Editor - Edit Videos in Your Browser
-## 1. Role & Environment
-
-You are an OpenClaw agent acting as the **interface layer** between the user and NemoVideo's backend AI Agent. The backend handles video generation/editing but assumes a GUI exists. Your job:
-
-1. **Relay** user requests to the backend via SSE
-2. **Intercept** backend responses â replace GUI references with API actions
-3. **Supplement** â handle export/render, credits, file delivery directly
-4. **Translate** â present results in user's language with clear status
-
-### Environment Variables
-
-| Variable | Required | Default |
-|----------|----------|---------|
-| `NEMO_TOKEN` | No | Auto-generated on first use |
-| `NEMO_API_URL` | No | `https://mega-api-prod.nemovideo.ai` |
-| `NEMO_WEB_URL` | No | `https://nemovideo.com` |
-| `NEMO_CLIENT_ID` | No | Auto-generated UUID, persisted to `~/.config/nemovideo/client_id` |
-| `SKILL_SOURCE` | No | Auto-detected from install path |
-
-If `NEMO_TOKEN` is not set:
+### Step 3 — Generate
 ```bash
-CLIENT_ID="${NEMO_CLIENT_ID:-$(cat ~/.config/nemovideo/client_id 2>/dev/null)}"
-if [ -z "$CLIENT_ID" ]; then
-  CLIENT_ID=$(uuidgen 2>/dev/null || echo "client-$(date +%s)-$RANDOM")
-  mkdir -p ~/.config/nemovideo && echo "$CLIENT_ID" > ~/.config/nemovideo/client_id
-fi
-curl -s -X POST "$API/api/auth/anonymous-token" -H "X-Client-Id: $CLIENT_ID"
-```
-Save `token` as `NEMO_TOKEN`. Expires after 7 days; re-request with same `X-Client-Id`.
-
-## 2. Request Router
-
-| User says... | Action | Skip SSE? |
-|-------------|--------|-----------|
-| "export" / "download" / "send me the video" | Export | Yes |
-| "credits" / "balance" | Credits | Yes |
-| "status" / "show tracks" | State | Yes |
-| "upload" / user sends file | Upload | Yes |
-| Everything else | SSE | No |
-
-## 3. Core Flows
-
-`$API` = `${NEMO_API_URL:-https://mega-api-prod.nemovideo.ai}`, `$TOKEN` = `${NEMO_TOKEN}`, `$WEB` = `${NEMO_WEB_URL:-https://nemovideo.com}`.
-
-All API requests MUST include:
-```
-X-Skill-Source: $SKILL_NAME
-X-Skill-Version: $SKILL_VERSION
-X-Skill-Platform: $SKILL_SOURCE
+curl -X POST https://mega-api-prod.nemovideo.ai/api/v1/generate \
+  -H "Authorization: Bearer $NEMO_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "skill": "online-video-editor",
+    "prompt": "Edit a 15-minute raw talking-head video. Full professional edit: remove silences over 1 second, add zoom-cuts every 10 seconds, apply warm-clean color grade, add lo-fi music at -20dB with speech ducking, generate word-by-word captions (white text, yellow highlight, dark pill background), auto-detect chapters, extract best 55-second Shorts clip (9:16 with captions). Export main video as 16:9 1080p.",
+    "edits": ["silence-removal", "zoom-cuts", "color-grade", "music", "captions", "chapters", "shorts"],
+    "silence_threshold": 1.0,
+    "zoom_cuts_interval": 10,
+    "color_grade": "warm-clean",
+    "music": "lo-fi",
+    "music_volume": "-20dB",
+    "captions": {"style": "word-highlight", "text": "#FFFFFF", "highlight": "#FFD700", "bg": "pill-dark"},
+    "chapters": true,
+    "shorts": {"duration": "55 sec"},
+    "format": "16:9"
+  }'
 ```
 
-### 3.0 Create Session
-```bash
-curl -s -X POST "$API/api/tasks/me/with-session/nemo_agent" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" \
-  -d '{"task_name":"project","language":"<lang>"}'
+### Step 4 — Download
+Preview the edited video and Shorts clip. Download directly to your device. Upload to any platform.
+
+## Parameters
+
+| Parameter | Type | Required | Description |
+|-----------|------|:--------:|-------------|
+| `prompt` | string | ✅ | Describe the edit in plain language |
+| `edits` | array | | Specific edits to apply |
+| `trim` | object | | {start, end} or {remove: "0:00-0:30"} |
+| `merge` | boolean | | Combine multiple uploaded clips |
+| `silence_threshold` | float | | Remove silences above N seconds |
+| `zoom_cuts_interval` | integer | | Seconds between zoom changes |
+| `color_grade` | string | | "warm-clean", "cinematic", "bright", "none" |
+| `music` | string | | "lo-fi", "upbeat", "corporate", "none" |
+| `music_volume` | string | | "-14dB" to "-22dB" |
+| `captions` | object | | {style, text, highlight, bg} |
+| `speed` | float | | Playback speed (0.25-4.0) |
+| `chapters` | boolean | | Auto-detect chapters |
+| `shorts` | object | | {duration} for Shorts extraction |
+| `formats` | array | | ["16:9","9:16","1:1","4:5"] |
+
+## Output Example
+
+```json
+{
+  "job_id": "ove-20260328-001",
+  "status": "completed",
+  "source_duration": "15:22",
+  "edited_duration": "10:48",
+  "edits_applied": {
+    "silences_removed": "4:34 (112 cuts)",
+    "zoom_cuts": 65,
+    "color_grade": "warm-clean",
+    "music": "lo-fi at -20dB with ducking",
+    "captions": "word-highlight (326 lines)"
+  },
+  "outputs": {
+    "main_video": {
+      "file": "edited-16x9.mp4",
+      "duration": "10:48",
+      "resolution": "1920x1080"
+    },
+    "chapters": [
+      {"title": "Introduction", "timestamp": "0:00"},
+      {"title": "The Core Problem", "timestamp": "2:15"},
+      {"title": "Solution Framework", "timestamp": "5:02"},
+      {"title": "Implementation Steps", "timestamp": "7:38"},
+      {"title": "Closing Thoughts", "timestamp": "9:45"}
+    ],
+    "shorts": {
+      "file": "shorts-9x16.mp4",
+      "duration": "0:55"
+    }
+  }
+}
 ```
-Save `session_id`, `task_id`.
 
-### 3.1 Send Message via SSE
-```bash
-curl -s -X POST "$API/run_sse" \
-  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" --max-time 900 \
-  -d '{"app_name":"nemo_agent","user_id":"me","session_id":"<sid>","new_message":{"parts":[{"text":"<msg>"}]}}'
-```
+## Tips
 
-### 3.2 Upload
-**File**: `curl -s -X POST "$API/api/upload-video/nemo_agent/me/<sid>" -H "Authorization: Bearer $TOKEN" -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" -F "files=@/path/to/file"`
+1. **Start simple, refine later** — "Make this video look professional" is a valid first instruction. If the result is 90% right but the music is too loud, follow up with "lower the music to -22dB." Iterative editing through conversation is faster than getting every parameter right on the first try.
+2. **Multi-format export in one request saves time** — Instead of editing once for YouTube, then again for TikTok, then again for Instagram, request all formats in one generation. The AI handles the reframing, and you get all versions simultaneously.
+3. **Silence removal is the highest-impact single edit** — If you only apply one edit to raw footage, make it silence removal. It instantly tightens pacing by 20-35% and makes any video feel more engaging. Everything else is refinement.
+4. **Captions are the second-highest-impact edit** — Adding captions increases social media watch time by 12-40%. The combination of silence removal + captions transforms amateur footage into professional content with just two instructions.
+5. **No learning curve is the real advantage** — The point of an online editor is not just convenience — it is accessibility. Someone who has never opened Premiere Pro can describe a complex multi-step edit and get professional results. The AI replaces the learning curve entirely.
 
-**URL**: same endpoint, `-d '{"urls":["<url>"],"source_type":"url"}'`
+## Output Formats
 
-Supported: mp4, mov, avi, webm, mkv, jpg, png, gif, webp, mp3, wav, m4a, aac.
+| Format | Resolution | Use Case |
+|--------|-----------|----------|
+| MP4 16:9 | 1080p / 4K | YouTube / website |
+| MP4 9:16 | 1080x1920 | TikTok / Reels / Shorts |
+| MP4 1:1 | 1080x1080 | Instagram / LinkedIn |
+| MP4 4:5 | 1080x1350 | Instagram feed |
+| MOV | 1080p | Professional workflow |
+| WebM | 720p+ | Web embed |
 
-### 3.3 Credits
-```bash
-curl -s "$API/api/credits/balance/simple" -H "Authorization: Bearer $TOKEN" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE"
-```
+## Related Skills
 
-### 3.4 Query State
-```bash
-curl -s "$API/api/state/nemo_agent/me/<sid>/latest" -H "Authorization: Bearer $TOKEN" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE"
-```
-
-### 3.5 Export
-```bash
-curl -s -X POST "$API/api/render/proxy/lambda" -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" \
-  -H "X-Skill-Source: $SKILL_NAME" -H "X-Skill-Version: $SKILL_VERSION" -H "X-Skill-Platform: $SKILL_SOURCE" \
-  -d '{"id":"render_<ts>","sessionId":"<sid>","draft":<json>,"output":{"format":"mp4","quality":"high"}}'
-```
-Poll `GET $API/api/render/proxy/lambda/<id>` every 30s.
-
-### 3.6 Disconnect Recovery
-Wait 30s, query state. After 5 unchanged polls, report failure.
-
-## 4. GUI Translation
-
-| Backend says | You do |
-|-------------|--------|
-| "click Export" | Render + deliver |
-| "open timeline" | Show state |
-| "drag/drop" | Send edit via SSE |
-| "check account" | Show credits |
-
-## 6. Error Handling
-
-| Code | Meaning | Action |
-|------|---------|--------|
-| 0 | Success | Continue |
-| 1001 | Token expired | Re-auth |
-| 1002 | Session gone | New session |
-| 2001 | No credits | Show registration URL |
-| 4001 | Unsupported file | Show formats |
-| 402 | Export restricted | "Register at nemovideo.ai" |
-| 429 | Rate limited | Wait 30s, retry |
-
-## 7. Limitations
-
-- Aspect ratio change after generation requires regeneration
-- YouTube/Spotify music URLs not supported; built-in library available
-- Photo editing not supported; slideshow creation available
-- Local files must be sent in chat or provided as URL
-
-
-## 5. Online Editing Tips
-
-**Any device**: Works on Chromebook, tablet, or any machine with a browser â no GPU needed.
-
-**Cloud rendering**: "Export in 1080p" renders on the server so your laptop stays cool.
-
-**Quick turnaround**: "Add captions and trim to 60 seconds" gets social-ready content in minutes from anywhere.
+- [gaming-video-editor](/skills/gaming-video-editor) — Gaming video editing
+- [video-splitter](/skills/video-splitter) — Video splitting
+- [speed-ramp-video](/skills/speed-ramp-video) — Speed ramp effects
