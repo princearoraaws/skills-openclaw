@@ -144,6 +144,42 @@ class Page:
         remote_obj = result.get("result", {})
         return remote_obj.get("value")
 
+    def set_cookie(
+        self,
+        name: str,
+        value: str,
+        domain: str,
+        path: str = "/",
+        expires_days: float | None = 30,
+    ) -> bool:
+        """通过 CDP Network.setCookie 设置 cookie（支持特殊字符）。
+
+        Args:
+            name: Cookie 名称
+            value: Cookie 值（支持特殊字符，无需转义）
+            domain: Cookie 域名（如 .qunar.com）
+            path: Cookie 路径，默认 /
+            expires_days: 过期天数，默认30天。设为 None 则为 Session Cookie
+
+        Returns:
+            True 设置成功，False 设置失败
+        """
+        try:
+            params = {
+                "name": name,
+                "value": value,
+                "domain": domain,
+                "path": path,
+            }
+            if expires_days is not None:
+                import time
+                params["expires"] = time.time() + expires_days * 24 * 60 * 60
+            result = self._send_session("Network.setCookie", params)
+            return result.get("success", False)
+        except CDPError as e:
+            logger.warning(f"设置 cookie {name} 失败: {e}")
+            return False
+
     def evaluate_function(self, function_body: str, *args: Any) -> Any:
         """执行 JavaScript 函数并返回结果。
 
@@ -687,6 +723,7 @@ class Browser:
         page._send_session("Page.enable")
         page._send_session("DOM.enable")
         page._send_session("Runtime.enable")
+        page._send_session("Network.enable")  # 启用 Network domain 以支持 setCookie
         return page
 
     def new_page(self, url: str = "about:blank") -> Page:

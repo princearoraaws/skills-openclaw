@@ -108,20 +108,18 @@ class PlatformHandler(ABC):
                 page.navigate(self.url)
                 time.sleep(1)
             
-            # 设置 cookie
+            # 使用 CDP Network.setCookie 设置 cookie（支持特殊字符）
+            success_count = 0
             for name, value in cookies.items():
                 try:
-                    page.evaluate(
-                        f"""(() => {{
-                            document.cookie = '{name}={value}; domain=.{self.cookie_domain}; path=/';
-                        }})()"""
-                    )
+                    if page.set_cookie(name, value, f".{self.cookie_domain}"):
+                        success_count += 1
                 except Exception as e:
                     logger.debug(f"设置 cookie {name} 失败: {e}")
             
-            logger.info(f"已从本地加载 {len(cookies)} 个 cookie")
+            logger.info(f"已从本地加载 {success_count}/{len(cookies)} 个 cookie")
             time.sleep(0.5)
-            return True
+            return success_count > 0
             
         except Exception as e:
             logger.warning(f"加载 cookie 文件失败: {e}")
