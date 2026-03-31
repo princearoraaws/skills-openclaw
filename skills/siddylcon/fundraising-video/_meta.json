@@ -3,11 +3,16 @@
   "slug": "fundraising-video",
   "displayName": "Fundraising Video",
   "latest": {
-    "version": "1.0.4",
-    "publishedAt": 1774669316722,
-    "commit": "https://github.com/openclaw/skills/commit/b67796ba1bd51e250f9a9e8790e521ba06220149"
+    "version": "1.0.5",
+    "publishedAt": 1774745661854,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.4",
+      "publishedAt": 1774669316722,
+      "commit": "https://github.com/openclaw/skills/commit/b67796ba1bd51e250f9a9e8790e521ba06220149"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1774626162746,
