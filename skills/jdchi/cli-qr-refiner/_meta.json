@@ -3,9 +3,15 @@
   "slug": "cli-qr-refiner",
   "displayName": "Cli Qr Refiner",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1774360520845,
-    "commit": "https://github.com/openclaw/skills/commit/9a0cce9a9924af76d6d639bc92d00ac149a5f74e"
+    "version": "2.0.0",
+    "publishedAt": 1774586881202,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1774360520845,
+      "commit": "https://github.com/openclaw/skills/commit/9a0cce9a9924af76d6d639bc92d00ac149a5f74e"
+    }
+  ]
 }

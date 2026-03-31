@@ -1,9 +1,9 @@
 ---
 id: cli-qr-refiner
 name: CLI-QR-Refiner
-version: 1.0.1
+version: 2.0.0
 description: Professional utility to refine terminal-based ASCII QR code blocks (█, ▀, ▄) into high-definition PNG images.
-metadata: { "openclaw": { "requires": { "bins": ["node"] }, "emoji": "🔍" } }
+metadata: { "openclaw": { "requires": { "bins": ["python3"] }, "emoji": "🔍" } }
 ---
 
 # CLI-QR-Refiner
@@ -13,19 +13,23 @@ A specialized tool for OpenClaw agents to capture and refine rough ASCII/Unicode
 ## Features
 - **Block Recognition**: Automatically interprets `█` (full), `▀` (upper), and `▄` (lower) block characters.
 - **Pixel-Perfect Scaling**: Renders vector-like precision to ensure zero scanning failures.
+- **Zero Dependencies**: Built on Python 3 + PIL (pre-installed on most systems).
 - **Headless Optimized**: Designed specifically for server-side environments where terminal displays are unreliable.
 
 ## Dependencies
-- **Runtime**: Node.js (v16+)
-- **Libraries**: `canvas` (`npm install canvas`)
+- **Runtime**: Python 3 (no external packages required — uses built-in PIL/Pillow)
 
 ## Tools & Commands
-The refinement logic resides in `{baseDir}/scripts/cli_qr_refiner.js`.
+The refinement logic resides in `{baseDir}/scripts/cli_qr_refiner.py`.
 
 ### Refinement Command
 ```bash
-node {baseDir}/scripts/cli_qr_refiner.js <input_txt_path> <output_png_path>
+python3 {baseDir}/scripts/cli_qr_refiner.py <input_txt_path> <output_png_path> [scale]
 ```
+
+- `input_txt_path`: Path to text file containing ASCII QR code
+- `output_png_path`: Path for output PNG image
+- `scale` (optional): Pixel size per character cell, default 10
 
 ## Prompting / Behavior
 ### When to use
@@ -36,7 +40,7 @@ Trigger this skill when:
 ### How to use
 1. **Capture**: Extract the raw character block from the terminal output.
 2. **Save**: Write the captured block to a temporary file (e.g., `/tmp/qr_source.txt`).
-3. **Refine**: Run the `node` command using `{baseDir}` to generate the high-def image.
+3. **Refine**: Run the Python script to generate the high-def image.
 4. **Deliver**: Send the refined PNG to the user.
 
 ## Examples
@@ -49,3 +53,12 @@ Trigger this skill when:
 
 ### Output
 A professional, high-definition PNG file, ready for any scanning app.
+
+## How it works
+Each character in the ASCII QR maps to a cell:
+- `█` → full black cell
+- `▀` → upper-half black cell
+- `▄` → lower-half black cell
+- ` ` (space) → white cell
+
+The script scales each cell to `scale × scale*2` pixels for crisp rendering.
