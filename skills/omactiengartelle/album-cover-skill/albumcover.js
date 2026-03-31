@@ -25,7 +25,7 @@ if (!prompt) {
 }
 
 // --- Token resolution ---
-const TOKEN = tokenFlag;
+const TOKEN = tokenFlag || process.env.NETA_TOKEN;
 
 if (!TOKEN) {
   console.error(

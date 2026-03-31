@@ -3,11 +3,16 @@
   "slug": "album-cover-skill",
   "displayName": "Album Cover Skill",
   "latest": {
-    "version": "1.5.4",
-    "publishedAt": 1774580745680,
-    "commit": "https://github.com/openclaw/skills/commit/6030850b83cfcf9e4d01b45888a773709115f0c7"
+    "version": "1.5.7",
+    "publishedAt": 1774581973597,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.5.4",
+      "publishedAt": 1774580745680,
+      "commit": "https://github.com/openclaw/skills/commit/6030850b83cfcf9e4d01b45888a773709115f0c7"
+    },
     {
       "version": "1.0.2",
       "publishedAt": 1774422190344,

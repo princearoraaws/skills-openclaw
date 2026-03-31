@@ -51,7 +51,7 @@ node albumcover.js "lo-fi beats cover art" --token YOUR_TOKEN_HERE
 | `--size` | `square`, `portrait`, `landscape`, `tall` | `square` | Output image dimensions |
 | `--style` | `anime`, `cinematic`, `realistic` | `cinematic` | Visual style (informational) |
 | `--ref` | `<picture_uuid>` | — | Reference image UUID for style inheritance |
-| `--token` | `<token>` | — | Override token resolution |
+| `--token` | `<token>` | — | Neta API token (required) |
 
 ### Size dimensions
 

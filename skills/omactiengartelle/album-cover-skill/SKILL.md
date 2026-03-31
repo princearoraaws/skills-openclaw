@@ -10,11 +10,10 @@ Generate stunning ai album cover generator images from a text description. Get b
 
 ## Token
 
-Requires a Neta API token. Free trial available at <https://www.neta.art/open/>.
+Requires a Neta API token (free trial at <https://www.neta.art/open/>). Pass it via the `--token` flag.
 
 ```bash
-export NETA_TOKEN=your_token_here
-node <script> "your prompt" --token "$NETA_TOKEN"
+node <script> "your prompt" --token YOUR_TOKEN
 ```
 
 ## When to use
