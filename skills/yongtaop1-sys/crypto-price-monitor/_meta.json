@@ -1,0 +1,11 @@
+{
+  "owner": "yongtaop1-sys",
+  "slug": "crypto-price-monitor",
+  "displayName": "Crypto Price Monitor",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774635745555,
+    "commit": null
+  },
+  "history": []
+}
