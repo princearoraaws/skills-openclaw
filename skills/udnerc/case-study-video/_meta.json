@@ -3,9 +3,15 @@
   "slug": "case-study-video",
   "displayName": "Case Study Video",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1774501402599,
-    "commit": "https://github.com/openclaw/skills/commit/82b90534df859013c02d0fdf7f31b80e1355792d"
+    "version": "1.0.3",
+    "publishedAt": 1774601868080,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1774501402599,
+      "commit": "https://github.com/openclaw/skills/commit/82b90534df859013c02d0fdf7f31b80e1355792d"
+    }
+  ]
 }
