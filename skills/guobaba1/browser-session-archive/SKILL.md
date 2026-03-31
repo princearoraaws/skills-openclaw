@@ -1,17 +1,17 @@
 ---
 name: browser-session-archive
-description: Archive ChatGPT and Claude share links to Markdown using Chrome CDP. Captures browser sessions for offline reading.
+description: Extracts and archives chatgpt.com and claude.ai share links to Markdown using Chrome CDP (e.g., ChatGPT or Claude conversations).
 metadata: {"openclaw": {"emoji": "📄", "requires": {"bins": ["node", "bun"], "npm": ["ws"]}, "install": [{"id": "ws", "kind": "npm", "label": "Install ws module", "packages": [{"name": "ws", "global": true}]}], "os": ["darwin", "linux"]}}
 ---
 
 # Browser Session Archive
 
-Extract ChatGPT and Claude share link content to structured Markdown files using Chrome DevTools Protocol.
+Extracts and archives chatgpt.com and claude.ai share links to Markdown using Chrome DevTools Protocol.
 
 ## Triggers
 
 User message contains:
-1. **Keywords**: `提取 chatgpt 文档`, `提取 claude 文档`, `提取文档`, `extract chatgpt`, `extract claude`
+1. **Keywords**: `提取 chatgpt`, `提取 claude`, `提取文档`, `提取 chatgpt 对话`, `提取 claude 对话`, `归档 chatgpt 对话`, `归档 claude 对话`, `保存 chatgpt 对话`, `保存 claude 对话`, `extract chatgpt`, `extract claude`, `archive chatgpt`, `archive claude`, `save chatgpt`, `save claude`
 2. **Links**:
    - `https://chatgpt.com/share/{share-id}`
    - `https://claude.ai/share/{share-id}`
@@ -22,25 +22,24 @@ User message contains:
 
 ```bash
 # Copy script to PATH
-cp ~/.openclaw/skills/ai-share-extractor/scripts/extract.sh /usr/local/bin/
+cp {baseDir}/scripts/extract.sh /usr/local/bin/
 chmod +x /usr/local/bin/extract.sh
 
 # Run
 extract.sh "https://chatgpt.com/share/xxx"
-extract.sh "https://claude.ai/share/xxx" "~/LookBack/2026-03-26/Claude"
+extract.sh "https://claude.ai/share/xxx"
 ```
 
 ### Step by Step
 
 ```bash
 # 1. Capture HTML
-cd ~/.openclaw/skills/ai-share-extractor/scripts
+cd {baseDir}/scripts
 CHROME_DEBUG_PORT=9222 TARGET_URL="https://chatgpt.com/share/xxx" \
-  OUTPUT_DIR="~/LookBack/2026-03-26/ChatGPT" \
   node capture-cdp.js
 
-# 2. Convert to Markdown
-node convert-markdown.js --metadata "~/LookBack/2026-03-26/ChatGPT/.metadata.json"
+# 2. Convert to Markdown (use output path from step 1)
+node convert-markdown.js --metadata "~/LookBack/$(date +%Y-%m-%d)/ChatGPT/.metadata.json"
 ```
 
 ## Environment Variables
@@ -56,8 +55,8 @@ node convert-markdown.js --metadata "~/LookBack/2026-03-26/ChatGPT/.metadata.jso
 ```
 ~/LookBack/{YYYY-MM-DD}/
 ├── ChatGPT/
-│   ├── {timestamp}-{title}.md              # Markdown file
-│   ├── {timestamp}-{title}-captured.html   # HTML snapshot
+│   ├── {title}-{timestamp}.md              # Markdown file
+│   ├── {title}-{timestamp}-captured.html   # HTML snapshot
 │   └── .metadata.json                       # Metadata
 └── Claude/
     └── ...

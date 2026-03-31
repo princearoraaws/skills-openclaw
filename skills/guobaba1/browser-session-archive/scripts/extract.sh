@@ -7,7 +7,7 @@
 #
 # 示例:
 #   ./extract.sh "https://chatgpt.com/share/xxx"
-#   ./extract.sh "https://claude.ai/share/xxx" "~/LookBack/2026-03-26/Claude"
+#   ./extract.sh "https://claude.ai/share/xxx"
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 SKILL_DIR="$(dirname "$SCRIPT_DIR")"
@@ -15,7 +15,7 @@ SKILL_DIR="$(dirname "$SCRIPT_DIR")"
 # 默认值
 TARGET_URL="${1:-${TARGET_URL}}"
 OUTPUT_DIR="${2:-${OUTPUT_DIR}}"
-CHROME_DEBUG_PORT="${CHROME_DEBUG_PORT:-60184}"
+CHROME_DEBUG_PORT="${CHROME_DEBUG_PORT:-9222}"
 
 if [ -z "$TARGET_URL" ]; then
   echo "用法: $0 <URL> [OUTPUT_DIR]"
@@ -25,7 +25,7 @@ if [ -z "$TARGET_URL" ]; then
   echo "  [OUTPUT_DIR] 输出目录 (可选，默认: ~/LookBack/{日期}/{ChatGPT|Claude})"
   echo ""
   echo "环境变量:"
-  echo "  CHROME_DEBUG_PORT  Chrome 调试端口 (默认: 60184)"
+  echo "  CHROME_DEBUG_PORT  Chrome 调试端口 (默认: 9222)"
   exit 1
 fi
 
