@@ -3,14 +3,14 @@ name: technical-article-writer
 description: "Write compelling technical articles and blog posts for developer audiences. Use this skill whenever the user asks to write a blog post, technical article, or any long-form technical content. Also trigger when the user says 'write about [technical topic]', 'help me draft an article', 'turn this into a blog post', 'write a post about', 'I want to publish something about', or mentions writing for a developer audience. Covers the full pipeline: idea sharpening, hook/title generation, article structure, body drafting, and editing. Even if the user just says 'I want to write about X' without specifying format, use this skill. Do NOT use for platform-specific optimization, newsletter strategy, or ghostwriting voice matching."
 user-invocable: true
 license: MIT
-compatibility: Designed for Claude Code or similar AI coding agents.
+compatibility: Designed for Claude or similar AI agents.
 metadata:
   author: samber
-  version: "1.1.0"
+  version: "1.1.2"
   openclaw:
     emoji: "📝"
     homepage: https://github.com/samber/cc-skills
-allowed-tools: Read Edit Write Glob Grep Agent WebFetch WebSearch
+allowed-tools: Read Edit Write Glob Grep Agent WebFetch WebSearch AskUserQuestion
 ---
 
 # Technical Article Writer
@@ -143,6 +143,12 @@ For the **conclusion**, avoid restating the article. Instead pick one of:
 - **Implication**: What does this mean for the reader's work going forward?
 - **Open question**: What's still unresolved or worth exploring?
 - **Call to action**: What should the reader do next?
+
+### Phase 5b: Humanize
+
+Invoke a humanizer skill (e.g. "humanize", "humanizer", "de-slop", "natural writing check", "AI detection cleanup", "rewrite like a human") to strip AI-generated patterns — filler words, predictable cadence, over-hedging, hollow transitions, inflated language. Developer audiences have a built-in BS detector; AI-sounding prose kills trust before the reader reaches the technical content.
+
+**Preserve the hook and title.** The opening hook (Phase 3) and title (Phase 2) were deliberately engineered for curiosity and credibility. Instruct the humanizer to leave them intact — rewriting them for "naturalness" destroys the copywriting structure that earns the click and the first scroll.
 
 ### Phase 6: Image suggestions
 
