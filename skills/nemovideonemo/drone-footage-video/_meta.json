@@ -3,11 +3,16 @@
   "slug": "drone-footage-video",
   "displayName": "Drone Footage Video",
   "latest": {
-    "version": "1.0.3",
-    "publishedAt": 1774641258399,
-    "commit": "https://github.com/openclaw/skills/commit/a31d17e25c19595b8796761a1eef11a6f73815e9"
+    "version": "1.0.0",
+    "publishedAt": 1774687905731,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.3",
+      "publishedAt": 1774641258399,
+      "commit": "https://github.com/openclaw/skills/commit/a31d17e25c19595b8796761a1eef11a6f73815e9"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1774597998281,
