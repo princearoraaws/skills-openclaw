@@ -10,161 +10,143 @@ import sys
 import os
 import json
 
-# 添加父目录到路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from mdclaw_client import MDClawOpenClawClient
+from mdclaw_client import MDClawClient
 
 
-def test_connection():
-    """测试 API 连接"""
+def test_client_init():
+    """测试 1: 客户端初始化"""
     print("=" * 60)
-    print("测试 1: API 连接测试")
+    print("测试 1: 客户端初始化")
     print("=" * 60)
 
     try:
-        client = MDClawOpenClawClient()
+        client = MDClawClient()
         print(f"✅ 客户端初始化成功")
-        print(f"   网关地址: {client.gateway_url}")
-        print(f"   API Key: {client.api_key[:10]}...")
-        print(f"   Auth Token: {client.auth_token[:10]}...")
-        client.close()
+        print(f"   网关地址: {client.GATEWAY_URL}")
+        print(f"   API Key: {client.api_key[:10]}..." if client.api_key else "   API Key: (未设置)")
         return True
+    except ValueError as e:
+        print(f"❌ 客户端初始化失败: {e}")
+        return False
     except Exception as e:
         print(f"❌ 客户端初始化失败: {e}")
         return False
 
 
-def test_list_skills():
-    """测试获取技能列表"""
+def test_text_to_image():
+    """测试 2: 文生图"""
     print("\n" + "=" * 60)
-    print("测试 2: 获取技能列表")
+    print("测试 2: 文生图")
     print("=" * 60)
 
     try:
-        with MDClawOpenClawClient() as client:
-            print("正在获取技能列表...")
-            result = client.call_skill("list_skills")
-            print("✅ 成功获取技能列表")
-            print("\n响应数据:")
-            print(json.dumps(result, indent=2, ensure_ascii=False))
+        client = MDClawClient()
+        result = client.text_to_image(
+            prompt="测试图片",
+            aspect_ratio="1:1"
+        )
+
+        if result.get('success'):
+            print(f"✅ 文生图测试成功")
+            print(f"   图片URL: {result['result']['image_urls'][0]}")
             return True
+        else:
+            print(f"❌ 文生图测试失败: {result.get('error')}")
+            return False
     except Exception as e:
-        print(f"❌ 获取技能列表失败: {e}")
+        print(f"❌ 文生图测试异常: {e}")
         return False
 
 
-def test_health_check():
-    """测试健康检查"""
+def test_text_to_speech():
+    """测试 3: 文字转语音"""
     print("\n" + "=" * 60)
-    print("测试 3: 健康检查")
+    print("测试 3: 文字转语音")
     print("=" * 60)
 
     try:
-        with MDClawOpenClawClient() as client:
-            is_healthy = client.health_check()
-            print(f"✅ 健康检查完成")
-            print(f"   状态: {'正常' if is_healthy else '异常'}")
-            return is_healthy
-    except Exception as e:
-        print(f"❌ 健康检查失败: {e}")
-        return False
+        client = MDClawClient()
+        result = client.text_to_speech("这是一段测试语音")
 
-
-def test_skill_call():
-    """测试技能调用"""
-    print("\n" + "=" * 60)
-    print("测试 4: 技能调用测试")
-    print("=" * 60)
-
-    try:
-        with MDClawOpenClawClient() as client:
-            print("正在调用技能...")
-            # 这里使用 list_skills 作为测试
-            result = client.call_skill("list_skills", {})
-            print("✅ 技能调用成功")
-            print("\n响应数据:")
-            print(json.dumps(result, indent=2, ensure_ascii=False))
+        if result.get('success'):
+            print(f"✅ 文字转语音测试成功")
+            print(f"   音频URL: {result['result']['audio_url']}")
             return True
+        else:
+            print(f"❌ 文字转语音测试失败: {result.get('error')}")
+            return False
     except Exception as e:
-        print(f"❌ 技能调用失败: {e}")
+        print(f"❌ 文字转语音测试异常: {e}")
         return False
 
 
-def test_retry_mechanism():
-    """测试重试机制"""
+def test_video_status():
+    """测试 4: 视频状态查询"""
     print("\n" + "=" * 60)
-    print("测试 5: 重试机制测试")
+    print("测试 4: 视频状态查询")
     print("=" * 60)
 
     try:
-        with MDClawOpenClawClient() as client:
-            print("正在测试重试机制（调用不存在的技能）...")
-            # 故意调用不存在的技能来测试重试
-            try:
-                result = client.call_skill_with_retry(
-                    "nonexistent_skill_test",
-                    {},
-                    max_retries=2,
-                    backoff_factor=0.5
-                )
-                print("❌ 应该抛出异常但没有")
-                return False
-            except Exception as e:
-                print(f"✅ 重试机制正常工作")
-                print(f"   捕获到预期异常: {type(e).__name__}")
-                return True
+        client = MDClawClient()
+        # 用一个假的 task_id 测试 API 响应
+        result = client.video_status("test_task_id_123")
+
+        print(f"✅ 视频状态查询成功")
+        print(f"   响应: {json.dumps(result, indent=2, ensure_ascii=False)}")
+        return True
     except Exception as e:
-        print(f"❌ 重试机制测试失败: {e}")
+        print(f"❌ 视频状态查询异常: {e}")
+        return False
+
+
+def test_ai_search():
+    """测试 5: AI 搜索"""
+    print("\n" + "=" * 60)
+    print("测试 5: AI 搜索")
+    print("=" * 60)
+
+    try:
+        client = MDClawClient()
+        result = client.ai_search("今天天气怎么样")
+
+        if result.get('success'):
+            print(f"✅ AI 搜索测试成功")
+            print(f"   结果: {result.get('result', {}).get('answer', 'N/A')[:100]}...")
+            return True
+        else:
+            print(f"❌ AI 搜索测试失败: {result.get('error')}")
+            return False
+    except Exception as e:
+        print(f"❌ AI 搜索测试异常: {e}")
         return False
 
 
 def test_error_handling():
-    """测试错误处理"""
+    """测试 6: 错误处理"""
     print("\n" + "=" * 60)
-    print("测试 6: 错误处理测试")
+    print("测试 6: 错误处理")
     print("=" * 60)
 
     try:
-        with MDClawOpenClawClient() as client:
-            # 测试空技能名称
-            try:
-                result = client.call_skill("", {})
-                print("❌ 应该抛出 ValueError 但没有")
-                return False
-            except ValueError as e:
-                print(f"✅ 正确捕获 ValueError: {e}")
+        # 测试无 API Key 时的错误处理
+        original_key = os.environ.get('MDCLAW_API_KEY')
+        if original_key:
+            del os.environ['MDCLAW_API_KEY']
 
-            # 测试 None 技能名称
-            try:
-                result = client.call_skill(None, {})
-                print("❌ 应该抛出 ValueError 但没有")
-                return False
-            except ValueError as e:
-                print(f"✅ 正确捕获 ValueError: {e}")
-
+        try:
+            client = MDClawClient()
+            print(f"❌ 应该抛出 ValueError 但没有")
+            return False
+        except ValueError as e:
+            print(f"✅ 正确抛出 ValueError: {str(e)[:50]}...")
             return True
+        finally:
+            if original_key:
+                os.environ['MDCLAW_API_KEY'] = original_key
     except Exception as e:
-        print(f"❌ 错误处理测试失败: {e}")
-        return False
-
-
-def test_context_manager():
-    """测试上下文管理器"""
-    print("\n" + "=" * 60)
-    print("测试 7: 上下文管理器测试")
-    print("=" * 60)
-
-    try:
-        print("测试 with 语句...")
-        with MDClawOpenClawClient() as client:
-            print(f"✅ 进入上下文: {client}")
-            result = client.list_skills()
-            print("✅ 成功执行操作")
-        print("✅ 自动退出上下文（连接已关闭）")
-        return True
-    except Exception as e:
-        print(f"❌ 上下文管理器测试失败: {e}")
+        print(f"❌ 错误处理测试异常: {e}")
         return False
 
 
@@ -173,16 +155,19 @@ def main():
     print("\n" + "=" * 60)
     print("MDClaw OpenClaw 连接测试")
     print("=" * 60)
-    print()
+
+    if not os.getenv('MDCLAW_API_KEY'):
+        print("⚠️ 请设置环境变量 MDCLAW_API_KEY")
+        print("   export MDCLAW_API_KEY='你的API Key'")
+        return
 
     tests = [
-        ("API 连接", test_connection),
-        ("获取技能列表", test_list_skills),
-        ("健康检查", test_health_check),
-        ("技能调用", test_skill_call),
-        ("重试机制", test_retry_mechanism),
+        ("客户端初始化", test_client_init),
+        ("文生图", test_text_to_image),
+        ("文字转语音", test_text_to_speech),
+        ("视频状态查询", test_video_status),
+        ("AI 搜索", test_ai_search),
         ("错误处理", test_error_handling),
-        ("上下文管理器", test_context_manager)
     ]
 
     results = []
@@ -219,7 +204,6 @@ def main():
     print(f"成功率: {passed/len(results)*100:.1f}%")
     print("=" * 60)
 
-    # 返回退出码
     sys.exit(0 if failed == 0 else 1)
 
 
