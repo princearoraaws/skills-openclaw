@@ -3,9 +3,15 @@
   "slug": "free-youtube-video-editor",
   "displayName": "Free Youtube Video Editor",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1774504565651,
-    "commit": "https://github.com/openclaw/skills/commit/b81f95f3778fad03de85d5b4827f61eadd84dabd"
+    "version": "1.2.1",
+    "publishedAt": 1774850352022,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1774504565651,
+      "commit": "https://github.com/openclaw/skills/commit/b81f95f3778fad03de85d5b4827f61eadd84dabd"
+    }
+  ]
 }
