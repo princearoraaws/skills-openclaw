@@ -1,13 +1,13 @@
 #!/bin/bash
 # Get video URL by name via POST /media with only PUBLIC_KEY, SECRET_KEY and video name in body
-# Usage: ./get_video_url_by_name.sh PUBLIC_KEY SECRET_KEY VIDEO_NAME
+# Usage: STREAM_PUBLIC_KEY=... STREAM_SECRET_KEY=... ./get_video_url_by_name.sh VIDEO_NAME
 
-PUBLIC_KEY="$1"
-SECRET_KEY="$2"
-VIDEO_NAME="$3"
+PUBLIC_KEY="${STREAM_PUBLIC_KEY}"
+SECRET_KEY="${STREAM_SECRET_KEY}"
+VIDEO_NAME="$1"
 
 if [ -z "$PUBLIC_KEY" ] || [ -z "$SECRET_KEY" ] || [ -z "$VIDEO_NAME" ]; then
-    echo "Usage: $0 PUBLIC_KEY SECRET_KEY VIDEO_NAME"
+    echo "Usage: STREAM_PUBLIC_KEY=<key> STREAM_SECRET_KEY=<key> $0 VIDEO_NAME"
     exit 1
 fi
 

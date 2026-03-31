@@ -1,14 +1,14 @@
 #!/bin/bash
 # Get media list via GET /media with optional search and page filters
-# Usage: ./get_media_list.sh PUBLIC_KEY SECRET_KEY [SEARCH] [PAGE]
+# Usage: STREAM_PUBLIC_KEY=... STREAM_SECRET_KEY=... ./get_media_list.sh [SEARCH] [PAGE]
 
-PUBLIC_KEY="$1"
-SECRET_KEY="$2"
-SEARCH="$3"
-PAGE="$4"
+PUBLIC_KEY="${STREAM_PUBLIC_KEY}"
+SECRET_KEY="${STREAM_SECRET_KEY}"
+SEARCH="$1"
+PAGE="$2"
 
 if [ -z "$PUBLIC_KEY" ] || [ -z "$SECRET_KEY" ]; then
-  echo "Usage: $0 PUBLIC_KEY SECRET_KEY [SEARCH] [PAGE]"
+  echo "Usage: STREAM_PUBLIC_KEY=<key> STREAM_SECRET_KEY=<key> $0 [SEARCH] [PAGE]"
     exit 1
 fi
 

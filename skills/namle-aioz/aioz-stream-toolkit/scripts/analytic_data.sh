@@ -1,17 +1,17 @@
 #!/bin/bash
 # Get aggregate and breakdown metrics from AIOZ API
-# Usage: ./analytic_data.sh PUBLIC_KEY SECRET_KEY TYPE FROM TO
+# Usage: STREAM_PUBLIC_KEY=... STREAM_SECRET_KEY=... ./analytic_data.sh TYPE FROM TO
 # FROM and TO in dd/mm/yyyy
 
-PUBLIC_KEY="$1"
-SECRET_KEY="$2"
-TYPE="$3"
-FROM="$4"
-TO="$5"
+PUBLIC_KEY="${STREAM_PUBLIC_KEY}"
+SECRET_KEY="${STREAM_SECRET_KEY}"
+TYPE="$1"
+FROM="$2"
+TO="$3"
 
 # Check required arguments
 if [ -z "$PUBLIC_KEY" ] || [ -z "$SECRET_KEY" ] || [ -z "$TYPE" ] || [ -z "$FROM" ] || [ -z "$TO" ]; then
-    echo "Usage: $0 PUBLIC_KEY SECRET_KEY TYPE(from 'video' or 'audio') FROM(dd/mm/yyyy) TO(dd/mm/yyyy)"
+    echo "Usage: STREAM_PUBLIC_KEY=<key> STREAM_SECRET_KEY=<key> $0 TYPE(from 'video' or 'audio') FROM(dd/mm/yyyy) TO(dd/mm/yyyy)"
     exit 1
 fi
 

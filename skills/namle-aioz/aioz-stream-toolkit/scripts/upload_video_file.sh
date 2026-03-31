@@ -1,11 +1,11 @@
 #!/bin/bash
 # Upload video file to W3Stream (create + upload in one step)
-# Usage: ./upload_video_file.sh PUBLIC_KEY SECRET_KEY FILE_PATH TITLE
+# Usage: STREAM_PUBLIC_KEY=... STREAM_SECRET_KEY=... ./upload_video_file.sh FILE_PATH TITLE
 
-PUBLIC_KEY="$1"
-SECRET_KEY="$2"
-INPUT_SOURCE="$3"
-TITLE="$4"
+PUBLIC_KEY="${STREAM_PUBLIC_KEY}"
+SECRET_KEY="${STREAM_SECRET_KEY}"
+INPUT_SOURCE="$1"
+TITLE="$2"
 
 is_video_extension() {
   local input="$1"
@@ -34,7 +34,7 @@ is_video_mime() {
 }
 
 if [ -z "$PUBLIC_KEY" ] || [ -z "$SECRET_KEY" ] || [ -z "$INPUT_SOURCE" ] || [ -z "$TITLE" ]; then
-  echo "Usage: $0 PUBLIC_KEY SECRET_KEY FILE_PATH TITLE"
+  echo "Usage: STREAM_PUBLIC_KEY=<key> STREAM_SECRET_KEY=<key> $0 FILE_PATH TITLE"
     exit 1
 fi
 

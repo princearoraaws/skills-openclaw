@@ -1,14 +1,14 @@
 #!/bin/bash
 # Get usage data from AIOZ API
-# Usage: ./get_usage_data.sh PUBLIC_KEY SECRET_KEY FROM TO
+# Usage: STREAM_PUBLIC_KEY=... STREAM_SECRET_KEY=... ./get_usage_data.sh FROM TO
 
-PUBLIC_KEY="$1"
-SECRET_KEY="$2"
-FROM="$3"
-TO="$4"
+PUBLIC_KEY="${STREAM_PUBLIC_KEY}"
+SECRET_KEY="${STREAM_SECRET_KEY}"
+FROM="$1"
+TO="$2"
 
 if [ -z "$PUBLIC_KEY" ] || [ -z "$SECRET_KEY" ] || [ -z "$FROM" ] || [ -z "$TO" ]; then
-    echo "Usage: $0 PUBLIC_KEY SECRET_KEY FROM(dd/mm/yyyy) TO(dd/mm/yyyy)"
+    echo "Usage: STREAM_PUBLIC_KEY=<key> STREAM_SECRET_KEY=<key> $0 FROM(dd/mm/yyyy) TO(dd/mm/yyyy)"
     echo "  FROM, TO: Timestamps or date formats valid for the API"
   
     exit 1

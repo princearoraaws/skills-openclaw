@@ -1,12 +1,12 @@
 #!/bin/bash
 # Get user balance/info from AIOZ API
-# Usage: ./get_balance.sh PUBLIC_KEY SECRET_KEY
+# Usage: STREAM_PUBLIC_KEY=... STREAM_SECRET_KEY=... ./get_balance.sh
 
-PUBLIC_KEY="$1"
-SECRET_KEY="$2"
+PUBLIC_KEY="${STREAM_PUBLIC_KEY}"
+SECRET_KEY="${STREAM_SECRET_KEY}"
 
 if [ -z "$PUBLIC_KEY" ] || [ -z "$SECRET_KEY" ]; then
-    echo "Usage: $0 PUBLIC_KEY SECRET_KEY"
+    echo "Usage: STREAM_PUBLIC_KEY=<key> STREAM_SECRET_KEY=<key> $0"
     exit 1
 fi
 
