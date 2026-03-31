@@ -1,6 +1,6 @@
 ---
 name: startup-pitch-video
-version: "1.0.1"
+version: 1.0.2
 displayName: "Startup Pitch Video Maker"
 description: >
   Describe your startup and NemoVideo creates the pitch video. Seed round, Series A, demo day, YC application — narrate the problem, the solution, the traction, and the ask, and get a pitch video that communicates your vision clearly to investors who see hundreds of decks.
@@ -10,6 +10,12 @@ description: >
 homepage: https://nemovideo.com
 repository: https://github.com/nemovideo/nemovideo_skills
 license: MIT-0
+metadata:
+  requires:
+    env: []
+    configPaths:
+      - "~/.config/nemovideo/"
+  primaryEnv: NEMO_TOKEN
 ---
 
 ## 0. First Contact
