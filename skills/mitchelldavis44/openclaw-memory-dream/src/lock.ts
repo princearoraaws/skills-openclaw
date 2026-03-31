@@ -8,9 +8,16 @@ interface LockData {
   timestamp: string;
 }
 
+/**
+ * Check if a process is alive by sending signal 0 (no-op liveness probe).
+ * Signal 0 does not kill or interrupt the process — it only checks existence.
+ * See: https://man7.org/linux/man-pages/man2/kill.2.html
+ */
 function isProcessRunning(pid: number): boolean {
   try {
-    process.kill(pid, 0);
+    // POSIX signal 0 = liveness check only, no side effects
+    const LIVENESS_PROBE = 0 as unknown as NodeJS.Signals;
+    process.kill(pid, LIVENESS_PROBE);
     return true;
   } catch {
     return false;

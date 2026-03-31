@@ -2,7 +2,7 @@ import { definePluginEntry } from "openclaw/plugin-sdk/plugin-entry";
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk/plugin-entry";
 import { homedir } from "os";
 import { join } from "path";
-import { loadState, incrementSession, saveState } from "./src/state.js";
+import { loadState, detectAndCountSession, saveState } from "./src/state.js";
 import { isLocked } from "./src/lock.js";
 import { shouldTrigger, hoursUntilNextTrigger, mergeConfig } from "./src/scheduler.js";
 import { consolidate } from "./src/consolidate.js";
@@ -23,67 +23,64 @@ export default definePluginEntry({
     const pluginCfg = (api.pluginConfig ?? {}) as Record<string, unknown>;
     const cfg = mergeConfig(pluginCfg);
 
-    // ── Hook: after each session ends ──────────────────────────────────────
-    api.on("session_end", async (_event, ctx) => {
+    // ── Hook: before each agent turn — time-based trigger check ────────────
+    // session_start/session_end are gated on isNewSession which never fires in
+    // persistent DM contexts. before_agent_start fires every turn; we check
+    // whether enough time has passed since last consolidation and fire if so.
+    api.on("before_agent_start", async (_event, ctx) => {
       if (!cfg.enabled) return;
 
-      const stateDir = resolveStateDir(ctx.agentId);
+      const agentId = (ctx as { agentId?: string }).agentId;
+      const stateDir = resolveStateDir(agentId);
 
       try {
-        const state = await incrementSession(stateDir);
-        api.logger.info(
-          `[memory-dream] Session ended. Sessions since last consolidation: ${state.sessionCount}`
-        );
+        // Detect session boundary (gap > 30 min = new session) and update counter
+        const { state, newSessionDetected } = await detectAndCountSession(stateDir, 30);
 
+        if (newSessionDetected) {
+          api.logger.info(
+            `[memory-dream] New session detected. Sessions since last consolidation: ${state.sessionCount}`
+          );
+        }
+
+        // Surface last consolidation status in logs
+        if (state.lastRunStatus === "success" && state.lastRunSummary) {
+          const lastRun = state.lastRunAt
+            ? new Date(state.lastRunAt).toLocaleString()
+            : "unknown";
+          api.logger.info(
+            `[memory-dream] Last consolidation: ${lastRun} — ${state.lastRunSummary}`
+          );
+        } else if (state.lastRunStatus === "running") {
+          const locked = await isLocked(stateDir);
+          if (!locked) {
+            api.logger.warn(
+              "[memory-dream] Last consolidation interrupted (status=running, no lock) — marking failed"
+            );
+            await saveState(stateDir, { ...state, lastRunStatus: "failed" });
+          }
+        }
+
+        // Check trigger: N sessions AND 24h since last run
         const trigger = await shouldTrigger(state, cfg, stateDir);
         if (trigger) {
           api.logger.info(
-            "[memory-dream] Trigger conditions met — starting background consolidation"
+            `[memory-dream] Trigger conditions met (${state.sessionCount} sessions, 24h elapsed) — starting background consolidation`
           );
 
-          // Resolve workspace dir using the agent's config + id
           const workspaceDir = api.runtime.agent.resolveAgentWorkspaceDir(
             api.config,
-            ctx.agentId ?? "main"
+            agentId ?? "main"
           );
 
-          // Fire and forget — intentionally not awaited
-          consolidate(stateDir, workspaceDir, cfg, api, ctx.agentId ?? "main").catch((err: unknown) => {
+          consolidate(stateDir, workspaceDir, cfg, api, agentId ?? "main").catch((err: unknown) => {
             api.logger.error(
               `[memory-dream] Background consolidation error: ${String(err)}`
             );
           });
         }
       } catch (err) {
-        api.logger.error(`[memory-dream] session_end hook error: ${String(err)}`);
-      }
-    });
-
-    // ── Hook: before each session starts ──────────────────────────────────
-    api.on("before_agent_start", async (_event, ctx) => {
-      const stateDir = resolveStateDir((ctx as { agentId?: string }).agentId);
-
-      try {
-        const state = await loadState(stateDir);
-
-        if (state.lastRunStatus === "success" && state.lastRunSummary) {
-          const lastRun = state.lastRunAt
-            ? new Date(state.lastRunAt).toLocaleString()
-            : "unknown";
-          api.logger.info(
-            `[memory-dream] Memory consolidated at ${lastRun}: ${state.lastRunSummary}`
-          );
-        } else if (state.lastRunStatus === "running") {
-          const locked = await isLocked(stateDir);
-          if (!locked) {
-            api.logger.warn(
-              "[memory-dream] Last consolidation may have been interrupted (status=running, no lock)"
-            );
-            await saveState(stateDir, { ...state, lastRunStatus: "failed" });
-          }
-        }
-      } catch {
-        // Non-fatal — don't block agent start
+        api.logger.error(`[memory-dream] before_agent_start error: ${String(err)}`);
       }
     });
 

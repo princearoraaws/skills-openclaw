@@ -130,8 +130,8 @@ export async function consolidate(
 
     logger.info("[memory-dream] Starting memory consolidation");
 
-    // Step 3: Read LCM summaries for context
-    const lcmSummaries = await readLcmSummaries(workspaceDir);
+    // Step 3: Read LCM summaries for context (from agent state dir, not workspace)
+    const lcmSummaries = await readLcmSummaries(stateDir);
 
     const updatedFiles: string[] = [];
     const skippedFiles: string[] = [];

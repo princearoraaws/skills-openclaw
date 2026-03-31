@@ -21,17 +21,21 @@ openclaw plugins install openclaw-memory-dream
 
 ## Configuration
 
-Add to your agent's `openclaw.config.json` (or equivalent):
+Add to your `openclaw.json` under `plugins.entries`:
 
 ```json
 {
   "plugins": {
-    "memory-dream": {
-      "minSessions": 5,
-      "minHours": 24,
-      "memoryFiles": ["MEMORY.md"],
-      "model": "claude-opus-4-6",
-      "enabled": true
+    "entries": {
+      "memory-dream": {
+        "enabled": true,
+        "config": {
+          "minSessions": 5,
+          "minHours": 24,
+          "memoryFiles": ["MEMORY.md"],
+          "model": "claude-haiku-4-5"
+        }
+      }
     }
   }
 }
@@ -39,13 +43,15 @@ Add to your agent's `openclaw.config.json` (or equivalent):
 
 | Option | Type | Default | Description |
 |---|---|---|---|
-| `minSessions` | `number` | `5` | Sessions since last consolidation before triggering |
+| `minSessions` | `number` | `5` | Session boundaries since last consolidation before triggering |
 | `minHours` | `number` | `24` | Hours since last consolidation before triggering |
 | `memoryFiles` | `string[]` | `["MEMORY.md"]` | Memory files to consolidate (relative to workspace root) |
 | `model` | `string` | *(agent default)* | Model override for consolidation LLM calls |
 | `enabled` | `boolean` | `true` | Disable without uninstalling |
 
 Both `minSessions` **and** `minHours` must be satisfied for consolidation to trigger.
+
+> **Session detection in persistent channels:** In DM-style channels where there's no discrete session lifecycle (e.g. Slack DMs), the plugin detects session boundaries via inactivity gaps — a gap of 30+ minutes between messages counts as a new session. This matches the spirit of Claude Code's Auto Dream behavior.
 
 ## How it works
 
@@ -61,7 +67,7 @@ After every session ends, the plugin increments a session counter stored in `{ag
 
 1. Acquires a lock file at `{agentDir}/.memory-dream.lock` (PID + timestamp)
 2. Reads each file in `memoryFiles` from the workspace root
-3. Reads recent LCM (Lossless Context Management) summaries from `{agentDir}/lossless-claw/` for session context (skipped gracefully if not present)
+3. Reads recent LCM (Lossless Context Management) summaries from `{agentDir}/lossless-claw/` for additional session context — **optional**, skipped gracefully if [lossless-claw](https://clawhub.ai) is not installed
 4. Calls the LLM once per memory file with the consolidation prompt
 5. Writes updated content back to each file
 6. Resets session counter to 0, records timestamp and summary
@@ -77,20 +83,23 @@ After every session ends, the plugin increments a session counter stored in `{ag
 
 ### State file
 
-The plugin maintains `{agentDir}/.memory-dream-state.json`:
+The plugin maintains state at `~/.openclaw/memory-dream/<agentId>/.memory-dream-state.json` (one directory per agent, under the user's home directory — not in the workspace):
 
 ```json
 {
   "sessionCount": 3,
   "lastRunAt": "2026-03-20T14:32:00.000Z",
   "lastRunStatus": "success",
-  "lastRunSummary": "updated: MEMORY.md"
+  "lastRunSummary": "updated: MEMORY.md",
+  "lastMessageAt": "2026-03-26T17:04:00.000Z"
 }
 ```
 
+The memory files themselves (e.g. `MEMORY.md`) are read from and written back to the **agent workspace root** (not the state directory).
+
 ### Lock file
 
-`{agentDir}/.memory-dream.lock` contains the PID of the consolidating process and a timestamp. On lock check, the PID is validated — stale locks from crashed processes are automatically cleared.
+`~/.openclaw/memory-dream/<agentId>/.memory-dream.lock` contains the PID of the consolidating process and a timestamp. On lock check, the PID is validated — stale locks from crashed processes are automatically cleared.
 
 ## Status tool
 
