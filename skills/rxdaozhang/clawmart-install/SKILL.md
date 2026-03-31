@@ -1,7 +1,7 @@
 ---
 name: clawmart-install
 description: Search and install an OpenClaw configuration pack from ClawMart
-version: 1.1.0
+version: 1.2.0
 triggers:
   - "install from clawmart"
   - "install pack"
@@ -18,7 +18,7 @@ You are helping the user find and install an OpenClaw configuration pack from Cl
 - ClawMart API base URL: `https://clawmart-gray.vercel.app`
 - Config file: `~/.openclaw/clawmart-config.json`
 - Install target: `~/.openclaw/workspace/` (non-skill files)
-- Skills target: `~/.openclaw/skills/` (`.skill.md` files)
+- Skills target: `~/.openclaw/workspace/skills/` (skill folders)
 - Backup directory: `~/.openclaw/backups/`
 
 ---
@@ -69,15 +69,15 @@ If results exist, display them as a numbered list:
 ```
 Found the following packs:
 
-1. Deep Research Analyst Pro
-   By: @researcher_li · ⭐ 4.8 · ↓ 1.2K
+1. <Pack Title A>
+   By: @username · ⭐ 4.8 · ↓ 1.2K
    Contains: SOUL, AGENTS, MEMORY, SKILLS ×3
-   "Comprehensive analysis configuration for academic and market research"
+   "Pack description..."
 
-2. Investment Research Lite
-   By: @quant_wang · ⭐ 4.5 · ↓ 856
+2. <Pack Title B>
+   By: @username · ⭐ 4.5 · ↓ 856
    Contains: SOUL, AGENTS
-   "Lightweight research configuration for everyday use"
+   "Pack description..."
 
 Select a pack to install (enter number, or 0 to cancel):
 ```
@@ -88,35 +88,23 @@ Wait for user input.
 
 ## Step 4: Show Pack Details
 
-After the user selects a pack, show its full details:
+Use the data already returned from the search response (no extra API call needed). Display:
 
 ```
 Pack Details:
 ─────────────────────────────
-Title:       Deep Research Analyst Pro
-By:          @researcher_li
-Version:     v2.1.0
-Rating:      ⭐ 4.8 (127 ratings)
-Downloads:   1,234
-
-Contents:
-  · claude.soul.md
-  · research.agents.md
-  · deep_analysis.boot.md
-  · memory_projects.json
-  · 3 local skill files
-  · External skills referenced:
-      - jd-interview-prep  (source: plugin:vercel, v5.0.6)
-      - ai-sdk             (source: plugin:vercel, v5.0.6)
+Title:       <pack.title>
+By:          @<pack.creator.username>
+Rating:      ⭐ <pack.avg_rating> · ↓ <pack.download_count>
 
 Description:
-Comprehensive analysis configuration for academic and market research...
+<pack.description>
 ─────────────────────────────
 
 Confirm install? (y/n)
 ```
 
-If the pack references external skills, note them but do not attempt to install them — they must be installed separately via their own package/plugin.
+Note the `id` from the search result — it is used in Step 6 to call the download endpoint.
 
 ---
 
@@ -139,18 +127,28 @@ Continue? (y/n)
 
 ## Step 6: Download Pack
 
-Request a signed download URL:
+Call the download endpoint:
 
 ```
-POST {base_url}/api/packs/{slug}/download
+POST {base_url}/api/packs/{id}/download
 Authorization: Bearer {token}
-X-Download-Mode: signed-url
 Content-Type: application/json
 ```
 
-Parse the `url` and `filename` from the response.
+The response is JSON — **no signed URL, no ZIP file**:
 
-Download the zip file from the signed URL to a temp location (e.g., `/tmp/clawmart-install-{random}.zip`).
+```json
+{
+  "version": "1.0.0",
+  "files": [
+    { "name": "SOUL.md",               "type": "SOUL",   "size": 4200, "content": "..." },
+    { "name": "skills/my.skill.md",    "type": "SKILLS", "size": 980,  "content": "..." },
+    { "name": "skills-manifest.json",  "type": "OTHER",  "size": 180,  "content": "{\"clawhub_skills\":[...]}" }
+  ]
+}
+```
+
+Store this response in memory for Step 8.
 
 ---
 
@@ -164,23 +162,23 @@ If any conflicting files were found in Step 5:
 
 ---
 
-## Step 8: Extract and Install
+## Step 8: Install Files
 
-Unzip the downloaded file. For each file:
+Write each entry from the `files` array in the download response:
 
-- If it matches `*.skill.md` → copy to `~/.openclaw/skills/`
-- If it is `skills-manifest.json` → read and display the external skills list (see below)
-- All other files → copy to `~/.openclaw/workspace/`
+- `type == "SKILLS"` → write `content` to `~/.openclaw/workspace/skills/{name without skills/ prefix}/SKILL.md`
+- `name == "skills-manifest.json"` → **do not write to disk**; parse the JSON and display the `clawhub_skills` list (see below)
+- All other files → write `content` to `~/.openclaw/workspace/{name}`
 
 Create directories if they don't exist.
 
-**External skills handling:** If `skills-manifest.json` exists in the zip, read its `external_skills` array and inform the user:
+**External skills handling:** If the response includes a `skills-manifest.json` file, parse its `clawhub_skills` array and inform the user:
 
 ```
 This pack references external skills that are not installed automatically:
 
-  - jd-interview-prep  (source: plugin:vercel, v5.0.6)
-  - ai-sdk             (source: plugin:vercel, v5.0.6)
+  - <skill-slug-1>  (v1.0.0)
+  - <skill-slug-2>  (v2.0.0)
 
 To install them, run the appropriate plugin install command for each source.
 ```
@@ -210,16 +208,10 @@ Restart OpenClaw to load the new configuration.
 
 ---
 
-## Step 10: Cleanup
-
-Delete the temporary zip file from `/tmp/`.
-
----
-
 ## Notes
 
-- Pack detail page: `{base_url}/packs/{slug}`
+- Pack detail page: `{base_url}/packs/{id}`
 - If token authentication fails (401), direct the user to regenerate at `{base_url}/dashboard/tokens`
-- Local skill files are installed to `~/.openclaw/skills/` and visible after installation
+- Local skill files are installed to `~/.openclaw/workspace/skills/` and visible after installation
 - External skills listed in `skills-manifest.json` must be installed separately via their own source
 - No restart required — OpenClaw loads new configuration on the next conversation
