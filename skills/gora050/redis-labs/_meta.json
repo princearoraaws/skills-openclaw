@@ -1,0 +1,11 @@
+{
+  "owner": "gora050",
+  "slug": "redis-labs",
+  "displayName": "Redis Labs",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774685024809,
+    "commit": null
+  },
+  "history": []
+}
