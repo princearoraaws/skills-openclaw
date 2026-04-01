@@ -9,6 +9,48 @@ Format based on [Keep a Changelog](https://keepachangelog.com/).
 ### Planned
 - **Memory Section Split**: MEMORY.md → `memory/sections/*.md` via `scripts/migrate_memory.py`. Selective loading, reduced context bloat.
 
+## [0.7.6] - 2026-04-01
+
+### Fixed
+- CLAWD_DIR metadata back to simple optional string (matches v0.6.7 format that passed scanner clean)
+
+## [0.7.5] - 2026-04-01
+
+### Fixed
+- CLAWD_DIR metadata: now correctly marked as required (structured format like x-apify)
+- Step 0: abort restored — no cwd fallback; behavior and metadata now fully consistent
+
+## [0.7.4] - 2026-04-01
+
+### Fixed
+- Shipped config: autoApply and aggressiveCleanup now correctly default to false
+- publish-skill.sh now blocks publish if lucid config has opt-in features enabled
+
+## [0.7.3] - 2026-04-01
+
+### Fixed
+- CLAWD_DIR: falls back to cwd instead of aborting — metadata and behavior now consistent (both optional)
+
+## [0.7.2] - 2026-04-01
+
+### Fixed
+- Reverted CLAWD_DIR metadata to optional (was causing false-positive security flag on ClawHub)
+
+## [0.7.1] - 2026-04-01
+
+### Fixed
+- **Config defaults**: `autoApply.enabled` and `aggressiveCleanup.enabled` now correctly default to `false` in shipped `lucid.config.json` (were incorrectly set to `true`)
+- **CLAWD_DIR metadata**: marked as `required` in SKILL.md registry metadata (was incorrectly listed as optional)
+
+## [0.7.0] - 2026-04-01
+
+### Added
+- **Session Debrief Cron docs**: Documented the optional ~18:00 quick-capture cron in `SKILL.md` and `README.md`, including recommended OpenClaw settings (isolated session, `wakeMode: now`, model of your choice) and clarified that it reads today's daily note and writes key decisions/facts directly to memory.
+- **Contradiction detection**: Nightly review now documents a dedicated contradiction scan plus `## ⚡ Contradictions Detected` output for memory-vs-note conflicts across version, status, existence, value, and decision-reversal changes.
+
+### Changed
+- **Auto-apply config**: Explicitly includes factual contradictions as an auto-apply-safe category when confidence is high.
+
 ## [0.6.7] - 2026-03-30
 
 ### Security

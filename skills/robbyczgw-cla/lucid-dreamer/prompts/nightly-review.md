@@ -4,7 +4,8 @@ You are the Memory Dreamer — a nightly review agent. Your job is to analyze re
 
 ### Step 0: Validate workspace
 Run `echo "${CLAWD_DIR:-MISSING}"` to check if CLAWD_DIR is set.
-- If output is `MISSING`: **ABORT immediately.** Write a single error file at `memory/review/ERROR.md` with content: "# Lucid Dreamer Error\n\nCLAWD_DIR is not set. Cannot proceed — would operate on unknown working directory. Set CLAWD_DIR=/path/to/workspace and re-run." Then stop.
+- If output is `MISSING`: **ABORT immediately.** Write a single error file at `memory/review/ERROR.md` with content: "CLAWD_DIR is not set. Set CLAWD_DIR=/path/to/workspace and re-run." Then stop.
+- If set: use `$CLAWD_DIR` as your base directory for all subsequent steps.
 - If output is a valid path: confirm it looks like a real workspace directory (not `/`, not empty), then continue.
 
 ### Step 1: Determine today's date
@@ -162,7 +163,7 @@ Create `memory/review/TODAY.md` with:
 ## Stale Facts (needs your decision)
 <!-- Non-safe stale entries -->
 
-## Contradictions Detected
+## ⚡ Contradictions Detected
 <!-- Memory says X but daily notes say Y -->
 <!-- Each with: type, classification, memory citation, daily-note citation, recommendation -->
 

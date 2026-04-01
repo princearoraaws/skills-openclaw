@@ -3,11 +3,16 @@
   "slug": "lucid-dreamer",
   "displayName": "Lucid Dreamer",
   "latest": {
-    "version": "0.6.7",
-    "publishedAt": 1774880653013,
-    "commit": "https://github.com/openclaw/skills/commit/1b3c5bf9735e3ec180a973c6632b58550da90668"
+    "version": "0.7.6",
+    "publishedAt": 1775032009408,
+    "commit": null
   },
   "history": [
+    {
+      "version": "0.6.7",
+      "publishedAt": 1774880653013,
+      "commit": "https://github.com/openclaw/skills/commit/1b3c5bf9735e3ec180a973c6632b58550da90668"
+    },
     {
       "version": "0.6.5",
       "publishedAt": 1774869193389,
