@@ -1,0 +1,11 @@
+{
+  "owner": "goog",
+  "slug": "ai-news-info",
+  "displayName": "Daily AI NEWS chinese version, big AI news",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774775887966,
+    "commit": null
+  },
+  "history": []
+}
