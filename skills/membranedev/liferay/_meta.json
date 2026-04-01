@@ -1,0 +1,11 @@
+{
+  "owner": "membranedev",
+  "slug": "liferay",
+  "displayName": "Liferay",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774911772326,
+    "commit": null
+  },
+  "history": []
+}
