@@ -1,0 +1,11 @@
+{
+  "owner": "stavc",
+  "slug": "my-diary-v2",
+  "displayName": "My Diary",
+  "latest": {
+    "version": "2.1.5",
+    "publishedAt": 1774958630601,
+    "commit": null
+  },
+  "history": []
+}
