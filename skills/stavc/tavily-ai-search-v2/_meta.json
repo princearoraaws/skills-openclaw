@@ -1,0 +1,11 @@
+{
+  "owner": "stavc",
+  "slug": "tavily-ai-search-v2",
+  "displayName": "Tavily-Ai-Search-v2",
+  "latest": {
+    "version": "2.0.0",
+    "publishedAt": 1774959090092,
+    "commit": null
+  },
+  "history": []
+}
