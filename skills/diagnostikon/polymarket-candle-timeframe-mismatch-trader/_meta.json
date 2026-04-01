@@ -1,0 +1,11 @@
+{
+  "owner": "diagnostikon",
+  "slug": "polymarket-candle-timeframe-mismatch-trader",
+  "displayName": "Candle Timeframe Mismatch Trader",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774856021342,
+    "commit": null
+  },
+  "history": []
+}
