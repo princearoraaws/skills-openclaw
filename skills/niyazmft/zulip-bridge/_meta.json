@@ -1,0 +1,11 @@
+{
+  "owner": "niyazmft",
+  "slug": "zulip-bridge",
+  "displayName": "💬 Zulip Bridge",
+  "latest": {
+    "version": "2026.3.31",
+    "publishedAt": 1774900911044,
+    "commit": null
+  },
+  "history": []
+}
