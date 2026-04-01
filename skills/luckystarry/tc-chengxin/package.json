@@ -1,0 +1,12 @@
+{
+  "name": "tc-chengxin",
+  "version": "1.0.0",
+  "description": "同程程心 Skills - 基于同程大模型的在线旅游搜索能力",
+  "main": "scripts/query.js",
+  "scripts": {
+    "query": "node scripts/query.js",
+    "test": "node scripts/test.js"
+  },
+  "author": "SUN BO <starry@vip.qq.com>",
+  "license": "MIT"
+}
