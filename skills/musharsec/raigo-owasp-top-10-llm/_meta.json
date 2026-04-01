@@ -1,0 +1,11 @@
+{
+  "owner": "musharsec",
+  "slug": "raigo-owasp-top-10-llm",
+  "displayName": "OWASP Top 10 AI",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774942200218,
+    "commit": null
+  },
+  "history": []
+}
