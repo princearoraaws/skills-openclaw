@@ -1,0 +1,11 @@
+{
+  "owner": "mova-compact",
+  "slug": "mova-intent-calibration",
+  "displayName": "Mova Intent Calibration",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774858041601,
+    "commit": null
+  },
+  "history": []
+}
