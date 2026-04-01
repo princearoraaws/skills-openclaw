@@ -1,11 +1,17 @@
 {
   "owner": "ugpoor",
   "slug": "tencentcloud-ops",
-  "displayName": "腾讯云运维管理",
+  "displayName": "TencentCloud OPS",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1774761115326,
-    "commit": "https://github.com/openclaw/skills/commit/7a515f18148437081ee72e55197a0228da5bd882"
+    "version": "1.2.0",
+    "publishedAt": 1774797208334,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1774761115326,
+      "commit": "https://github.com/openclaw/skills/commit/7a515f18148437081ee72e55197a0228da5bd882"
+    }
+  ]
 }

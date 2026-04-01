@@ -4,6 +4,19 @@
 
 **腾讯云 CVM/COS 资源管理工具**，用于创建和管理云服务器 (CVM)、对象存储 (COS) 等资源。
 
+### 入口组件
+
+本技能提供 CVM + COS 运维功能。如需统一管理所有腾讯云服务（CVM + Lighthouse + COS），请使用 **[tencentcloud-manager](../tencentcloud-manager/SKILL.md)** 作为入口组件。
+
+### 相关技能
+
+| 技能 | 说明 |
+|------|------|
+| [tencentcloud-manager](../tencentcloud-manager/SKILL.md) | 腾讯云统一入口组件 |
+| [tencentcloud-cvm](../tencentcloud-cvm/SKILL.md) | CVM 云服务器管理（含促销方案） |
+| [tencentcloud-lighthouse](../tencentcloud-lighthouse/SKILL.md) | Lighthouse 轻量服务器管理 |
+| [tencentcloud-cos](../tencentcloud-cos/SKILL.md) | COS 对象存储管理 |
+
 ### 核心功能
 
 ✅ **CVM 服务器管理**

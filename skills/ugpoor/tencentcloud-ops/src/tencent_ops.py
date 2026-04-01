@@ -29,7 +29,7 @@ SECRET_ID = os.getenv("TENCENT_SECRET_ID")
 SECRET_KEY = os.getenv("TENCENT_SECRET_KEY")
 REGION = os.getenv("TENCENT_REGION", "ap-seoul")
 ZONE = os.getenv("TENCENT_ZONE", "ap-seoul-1")
-RESOURCE_PREFIX = os.getenv("RESOURCE_PREFIX", "okx")
+RESOURCE_PREFIX = os.getenv("RESOURCE_PREFIX", "resource")
 
 # ==================== 初始化 ====================
 
@@ -187,7 +187,7 @@ class CVMManager:
             req = vpc_models.CreateSecurityGroupRequest()
             req.from_json_string(json.dumps({
                 "GroupName": f"{RESOURCE_PREFIX}-default-sg",
-                "GroupDescription": "OKX 数据采集默认安全组"
+                "GroupDescription": "Default security group for data collection"
             }))
             
             resp = self.vpc_client.CreateSecurityGroup(req)
