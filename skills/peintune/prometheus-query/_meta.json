@@ -1,0 +1,11 @@
+{
+  "owner": "peintune",
+  "slug": "prometheus-query",
+  "displayName": "prometheus-query",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774875172645,
+    "commit": null
+  },
+  "history": []
+}
