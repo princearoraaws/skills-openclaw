@@ -1,5 +1,11 @@
 # Implementation Patterns
 
+> **Security note — local caching:** Patterns in this file cache API responses and codebases to local files (e.g. `~/.claude_cache/`, `costs.log`, `batch_results.jsonl`). These files may contain source code, API responses, or other sensitive data.
+> - Set file permissions: `chmod 600 ~/.claude_cache/` and any log files
+> - Never cache content containing secrets, credentials, or PII
+> - Set a short `max_age_hours` TTL and clear cache regularly
+> - Add cache directories to `.gitignore`
+
 ## Model Selection Strategy
 
 Pick the cheapest model that solves the problem. Overspending on Opus for simple tasks can cost **10–18x more** than using Haiku.

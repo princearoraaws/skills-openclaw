@@ -1,7 +1,7 @@
 ---
 name: claude-api-cost-optimizer
 description: "Minimize Anthropic Claude API costs through model selection, prompt caching, batching, and cost tracking. Trigger phrases: reduce API costs, optimize Claude spending, save on API calls, Claude cost optimization, cheaper Claude models."
-metadata: {"clawdbot":{"emoji":"💰","requires":{"bins":[]},"env":["ANTHROPIC_API_KEY"],"os":["linux","darwin","win32"]}}
+metadata: {"clawdbot":{"emoji":"💰","requires":{"bins":[]},"env":["ANTHROPIC_API_KEY"],"os":["linux","darwin","win32"],"homepage":"https://clawhub.com/djc00p/claude-api-cost-optimizer"}}
 ---
 
 # Claude API Cost Optimizer
