@@ -1,0 +1,11 @@
+{
+  "owner": "gnllk",
+  "slug": "issue-report-generator",
+  "displayName": "医疗设备问题报告生成器",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774846795970,
+    "commit": null
+  },
+  "history": []
+}
