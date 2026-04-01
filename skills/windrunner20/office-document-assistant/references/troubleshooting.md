@@ -4,6 +4,14 @@ Use this guide when extraction is weak, empty, or fails.
 
 ## Quick dependency checks
 
+Preferred quick check:
+
+```bash
+python3 {skill_dir}/scripts/check_deps.py
+```
+
+Manual checks if needed:
+
 ### Python packages
 
 ```bash

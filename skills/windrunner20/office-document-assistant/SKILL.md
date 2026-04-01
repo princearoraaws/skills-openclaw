@@ -123,6 +123,13 @@ For the most robust behavior across real-world files, install:
 - Python packages: `pypdf`, `python-docx`, `openpyxl`, `python-pptx`
 - system tools: `poppler-utils`, `tesseract-ocr`, `tesseract-ocr-chi-sim`, `libreoffice`, `antiword`, `catdoc`
 
+### Dependency check
+Use the bundled checker to quickly see what is missing in the current environment:
+
+```bash
+python3 {skill_dir}/scripts/check_deps.py
+```
+
 ## Common Commands
 
 ```bash
