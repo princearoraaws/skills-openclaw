@@ -1,0 +1,11 @@
+{
+  "owner": "membranedev",
+  "slug": "stripe-financial-connections",
+  "displayName": "Stripe Financial Connections",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774738971920,
+    "commit": null
+  },
+  "history": []
+}
