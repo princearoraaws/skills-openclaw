@@ -1,0 +1,11 @@
+{
+  "owner": "zfinix",
+  "slug": "another",
+  "displayName": "Another",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1774858824048,
+    "commit": null
+  },
+  "history": []
+}
