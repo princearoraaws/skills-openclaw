@@ -1,0 +1,11 @@
+{
+  "owner": "bigint1",
+  "slug": "dingtalk-daily",
+  "displayName": "dingtalk-daily",
+  "latest": {
+    "version": "0.9.4",
+    "publishedAt": 1775124530402,
+    "commit": null
+  },
+  "history": []
+}
