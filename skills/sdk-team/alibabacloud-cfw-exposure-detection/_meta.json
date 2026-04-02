@@ -1,0 +1,11 @@
+{
+  "owner": "sdk-team",
+  "slug": "alibabacloud-cfw-exposure-detection",
+  "displayName": "Alibabacloud Cfw Exposure Detection",
+  "latest": {
+    "version": "0.0.1",
+    "publishedAt": 1775036092841,
+    "commit": null
+  },
+  "history": []
+}
