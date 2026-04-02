@@ -1,0 +1,11 @@
+{
+  "owner": "alexfleetcommander",
+  "slug": "agent-lifecycle-protocol",
+  "displayName": "Agent Lifecycle Protocol",
+  "latest": {
+    "version": "0.1.0",
+    "publishedAt": 1775089045183,
+    "commit": null
+  },
+  "history": []
+}
