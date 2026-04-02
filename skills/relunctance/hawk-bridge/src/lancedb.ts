@@ -1,0 +1,200 @@
+// LanceDB wrapper for hawk-bridge
+// Handles memory storage, retrieval, and schema management
+
+import * as path from 'path';
+import * as os from 'os';
+import type { MemoryEntry, RetrievedMemory } from './types.js';
+
+const TABLE_NAME = 'hawk_memories';
+
+export class HawkDB {
+  private db: any = null;
+  private table: any = null;
+  private dbPath: string;
+
+  constructor(dbPath?: string) {
+    const home = os.homedir();
+    this.dbPath = dbPath ?? path.join(home, '.hawk', 'lancedb');
+  }
+
+  async init(): Promise<void> {
+    try {
+      const lancedb = await import('@lancedb/lancedb');
+      this.db = await lancedb.connect(this.dbPath);
+
+      const tableNames = await this.db.tableNames();
+      if (!tableNames.includes(TABLE_NAME)) {
+        // Use makeArrowTable to create table with schema inferred from sample data
+        const { makeArrowTable } = lancedb;
+        const sampleRow = this._makeRow({
+          id: '__init__',
+          text: '__init__',
+          vector: new Float32Array(0),
+          category: 'fact',
+          scope: 'system',
+          importance: 0,
+          timestamp: Date.now(),
+          access_count: 0,
+          last_accessed_at: Date.now(),
+          metadata: '{}',
+        });
+        const table = makeArrowTable([sampleRow]);
+        this.table = await this.db.createTable(TABLE_NAME, table);
+        // Remove the init row
+        await this.table.delete(`id = '__init__'`);
+      } else {
+        this.table = await this.db.openTable(TABLE_NAME);
+      }
+    } catch (err) {
+      console.error('[hawk-bridge] LanceDB init failed:', err);
+      throw err;
+    }
+  }
+
+  private _makeRow(data: {
+    id: string;
+    text: string;
+    vector: Float32Array | number[];
+    category: string;
+    scope: string;
+    importance: number;
+    timestamp: number;
+    access_count: number;
+    last_accessed_at: number;
+    metadata: string;
+  }): any {
+    // Use a dummy vector of 384 zeros if empty (embedding dimension placeholder)
+    const vec = data.vector.length > 0 ? Array.from(data.vector) : new Array(384).fill(0);
+    return {
+      id: data.id,
+      text: data.text,
+      vector: vec,
+      category: data.category,
+      scope: data.scope,
+      importance: data.importance,
+      timestamp: BigInt(data.timestamp),
+      access_count: data.access_count,
+      last_accessed_at: BigInt(data.last_accessed_at),
+      metadata: data.metadata,
+    };
+  }
+
+  async store(entry: Omit<MemoryEntry, 'accessCount' | 'lastAccessedAt'>): Promise<void> {
+    if (!this.table) await this.init();
+    const now = Date.now();
+    const row = this._makeRow({
+      id: entry.id,
+      text: entry.text,
+      vector: entry.vector,
+      category: entry.category,
+      scope: entry.scope,
+      importance: entry.importance,
+      timestamp: entry.timestamp,
+      access_count: 0,
+      last_accessed_at: now,
+      metadata: JSON.stringify(entry.metadata || {}),
+    });
+    await this.table.add([row]);
+  }
+
+  async search(
+    queryVector: number[],
+    topK: number,
+    minScore: number,
+    scope?: string
+  ): Promise<RetrievedMemory[]> {
+    if (!this.table) await this.init();
+
+    let results = await this.table
+      .search(queryVector)
+      .limit(topK * 2)
+      .toList();
+
+    if (scope) {
+      results = results.filter((r: any) => r.scope === scope);
+    }
+
+    const retrieved: RetrievedMemory[] = [];
+    for (const row of results) {
+      const score = 1 - (row._distance ?? 0);
+      if (score < minScore) continue;
+      retrieved.push({
+        id: row.id,
+        text: row.text,
+        score,
+        category: row.category,
+        metadata: JSON.parse(row.metadata || '{}'),
+      });
+      if (retrieved.length >= topK) break;
+    }
+
+    for (const r of retrieved) {
+      await this.incrementAccess(r.id);
+    }
+
+    return retrieved;
+  }
+
+  private async incrementAccess(id: string): Promise<void> {
+    try {
+      await this.table.update({
+        where: `id = '${id}'`,
+        updates: {
+          access_count: this.db.util().scalar('access_count + 1'),
+          last_accessed_at: BigInt(Date.now()),
+        }
+      });
+    } catch {
+      // Non-critical if update fails
+    }
+  }
+
+  async listRecent(limit: number = 10): Promise<MemoryEntry[]> {
+    if (!this.table) await this.init();
+    const rows = await this.table.query().limit(limit).toList();
+    return rows.map((r: any) => ({
+      id: r.id,
+      text: r.text,
+      vector: r.vector || [],
+      category: r.category,
+      scope: r.scope,
+      importance: r.importance,
+      timestamp: Number(r.timestamp),
+      accessCount: r.access_count,
+      lastAccessedAt: Number(r.last_accessed_at),
+      metadata: JSON.parse(r.metadata || '{}'),
+    }));
+  }
+
+  async count(): Promise<number> {
+    if (!this.table) await this.init();
+    return await this.table.countRows();
+  }
+
+  async getAllTexts(): Promise<Array<{ id: string; text: string }>> {
+    if (!this.table) await this.init();
+    const rows = await this.table.query().limit(10000).toList();
+    return rows.map((r: any) => ({ id: r.id, text: r.text }));
+  }
+
+  async getById(id: string): Promise<(Omit<MemoryEntry, 'accessCount' | 'lastAccessedAt'> & { vector: number[] }) | null> {
+    if (!this.table) await this.init();
+    try {
+      const rows = await this.table.query().where(`id = '${id}'`).limit(1).toList();
+      if (!rows.length) return null;
+      const r = rows[0];
+      return {
+        id: r.id,
+        text: r.text,
+        vector: r.vector || [],
+        category: r.category,
+        scope: r.scope,
+        importance: r.importance,
+        timestamp: Number(r.timestamp),
+        metadata: JSON.parse(r.metadata || '{}'),
+      };
+    } catch {
+      return null;
+    }
+  }
+}
