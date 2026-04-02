@@ -316,6 +316,18 @@ Install capability skills to explore specific capabilities. Each one is built on
 
 ---
 
+### ⚠️ OpenClaw 2026.4.x Gateway Configuration
+
+OpenClaw 2026.4+ blocks `sessions_send` by default. CellCog requires it for result delivery. Run once:
+
+```bash
+openclaw config set gateway.tools.allow '["sessions_send", "sessions_list"]'
+```
+
+Then restart the gateway. Without this, CellCog task completions will not be delivered to your session.
+
+---
+
 ## Support & Troubleshooting
 
 For error handling, recovery patterns, ticket submission, and daemon troubleshooting:
