@@ -1,0 +1,11 @@
+{
+  "owner": "ctg-travel",
+  "slug": "ctg-travel",
+  "displayName": "Ctg Travel",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1775101515645,
+    "commit": null
+  },
+  "history": []
+}
