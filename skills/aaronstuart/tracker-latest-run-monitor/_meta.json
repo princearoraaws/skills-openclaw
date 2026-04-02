@@ -1,0 +1,11 @@
+{
+  "owner": "aaronstuart",
+  "slug": "tracker-latest-run-monitor",
+  "displayName": "Tracker Latest Run Monitor",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1775125537756,
+    "commit": null
+  },
+  "history": []
+}
