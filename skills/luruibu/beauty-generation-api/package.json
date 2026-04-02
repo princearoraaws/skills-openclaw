@@ -1,6 +1,6 @@
 {
   "name": "beauty-generation-free",
-  "version": "1.2.42",
+  "version": "1.2.47",
   "description": "FREE AI portrait generation service for creating professional headshots, character designs, and diverse representation. Supports 140+ nationalities, 8 styles, 24 moods, 22 hair styles, 22 skin tones. Fast generation (3-5 seconds) with built-in content safety filters. Perfect for creative projects, fashion visualization, and professional photography.",
   "main": "SKILL.md",
   "author": "DiversityFaces.org",
@@ -80,5 +80,53 @@
   "files": [
     "SKILL.md",
     "README.md"
-  ]
+  ],
+  "env_vars": [
+    "BEAUTY_API_KEY"
+  ],
+  "primary_credential": "BEAUTY_API_KEY",
+  "powered_by": "diversityfaces.org",
+  "provider": "DiversityFaces.org",
+  "requires": {
+    "bins": [
+      "curl"
+    ],
+    "env": [
+      "BEAUTY_API_KEY"
+    ]
+  },
+  "openclaw": {
+    "requires": {
+      "env": [
+        "BEAUTY_API_KEY"
+      ]
+    },
+    "primary_credential": "BEAUTY_API_KEY"
+  },
+  "clawdis": {
+    "skillKey": "beauty-generation-free",
+    "primaryEnv": "BEAUTY_API_KEY",
+    "homepage": "https://gen1.diversityfaces.org",
+    "requires": {
+      "bins": [
+        "curl"
+      ],
+      "env": [
+        "BEAUTY_API_KEY"
+      ]
+    }
+  },
+  "clawdbot": {
+    "skillKey": "beauty-generation-free",
+    "primaryEnv": "BEAUTY_API_KEY",
+    "homepage": "https://gen1.diversityfaces.org",
+    "requires": {
+      "bins": [
+        "curl"
+      ],
+      "env": [
+        "BEAUTY_API_KEY"
+      ]
+    }
+  }
 }
