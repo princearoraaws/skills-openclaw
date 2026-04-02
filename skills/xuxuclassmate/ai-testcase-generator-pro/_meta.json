@@ -3,9 +3,15 @@
   "slug": "ai-testcase-generator-pro",
   "displayName": "Ai Testcase Generator Pro",
   "latest": {
-    "version": "2.0.1",
-    "publishedAt": 1775140606155,
-    "commit": "https://github.com/openclaw/skills/commit/4b828c8f3040ff1a39c31eb56407e363f935543f"
+    "version": "2.2.0",
+    "publishedAt": 1775142150081,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "2.0.1",
+      "publishedAt": 1775140606155,
+      "commit": "https://github.com/openclaw/skills/commit/4b828c8f3040ff1a39c31eb56407e363f935543f"
+    }
+  ]
 }
