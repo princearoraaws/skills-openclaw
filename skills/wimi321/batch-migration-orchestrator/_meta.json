@@ -1,0 +1,11 @@
+{
+  "owner": "wimi321",
+  "slug": "batch-migration-orchestrator",
+  "displayName": "Batch Migration Orchestrator",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1775133868231,
+    "commit": null
+  },
+  "history": []
+}
