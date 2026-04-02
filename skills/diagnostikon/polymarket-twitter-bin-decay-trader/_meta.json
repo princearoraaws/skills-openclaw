@@ -1,0 +1,11 @@
+{
+  "owner": "diagnostikon",
+  "slug": "polymarket-twitter-bin-decay-trader",
+  "displayName": "Twitter Bin Decay Trader",
+  "latest": {
+    "version": "1.0.2",
+    "publishedAt": 1775134924359,
+    "commit": null
+  },
+  "history": []
+}
