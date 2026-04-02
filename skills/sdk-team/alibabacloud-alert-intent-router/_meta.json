@@ -1,0 +1,11 @@
+{
+  "owner": "sdk-team",
+  "slug": "alibabacloud-alert-intent-router",
+  "displayName": "Alibabacloud Alert Intent Router",
+  "latest": {
+    "version": "0.0.1-beta.1",
+    "publishedAt": 1775023124406,
+    "commit": null
+  },
+  "history": []
+}
