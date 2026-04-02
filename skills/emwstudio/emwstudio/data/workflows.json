@@ -1,0 +1,26 @@
+[
+  {
+    "workflowName": "生成多国语言版酱板鸭视频",
+    "workflowId": "2037239092089458690",
+    "workflowTip": "提示用户输入想要生成的语言版本，支持几十种语言（如英语、韩语、泰语、法语、德语、西班牙语等），并验证输入是否为有效语言。",
+    "nodeInfoList": [
+      {
+        "nodeId": "385",
+        "fieldName": "value",
+        "fieldValue": "语言"
+      }
+    ]
+  },
+  {
+    "workflowName": "生成不要怕视频",
+    "workflowId": "2039165345923080193",
+    "workflowTip": "提示用户输入\"不要怕\"视频的台词，比如：\"不要怕，上早八是我的最爱，课表给我五天排满！\"，并验证输入是否为有效台词，字数不能超过50个。",
+    "nodeInfoList": [
+      {
+        "nodeId": "405",
+        "fieldName": "value",
+        "fieldValue": "台词"
+      }
+    ]
+  }
+]
