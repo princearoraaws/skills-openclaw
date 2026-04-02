@@ -9,7 +9,7 @@ fi
 
 rpc() {
   local payload="$1"
-  curl -ksS -H 'Content-Type: application/json' -d "$payload" "$MOPIDY_URL"
+  curl -sS -H 'Content-Type: application/json' -d "$payload" "$MOPIDY_URL"
 }
 
 usage() {

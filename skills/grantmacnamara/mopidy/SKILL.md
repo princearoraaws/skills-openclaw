@@ -82,7 +82,7 @@ scripts/mopidy.sh clear
 - Confirm the selected item if multiple similarly named results exist.
 - For queueing requests, default to adding to the queue rather than replacing playback unless the user explicitly asks to play immediately.
 - Be careful with destructive queue actions; do not clear or replace the queue unless asked.
-- For requests like **top**, **best**, **essential**, **greatest**, or similar ranking language, do not rely on raw library order alone. First use web search to identify likely canonical songs/albums, then match those items against the local Mopidy library before adding them.
+- For requests like **top**, **best**, **essential**, **greatest**, genre-based prompts, or other fuzzy ranking language, do not rely on raw library order alone. First use web search to identify likely canonical songs/albums, then match those items against the local Mopidy library before adding them.
 - When using external rankings, report any items that could not be matched locally instead of silently substituting random search results.
 - If requested music is not in the library, say so plainly and ask the user rather than substituting random results.
 
@@ -92,12 +92,13 @@ For prompts like:
 - "add the top five The Fall songs"
 - "queue the best Bowie tracks"
 - "play the essential Brian Eno albums"
+- "add 5 of the top indie rock tracks to the queue"
 
 Use this workflow:
-1. search the web for a credible ranked or canonical list
+1. search the web for a credible ranked, canonical, or genre-representative list
 2. extract the song or album names
 3. match them against the local Mopidy library
-4. add the confirmed matches to the queue
+4. add only the confirmed matches to the queue
 5. tell the user what was added and what was not found
 
 Use `scripts/match_top_tracks.py` to help match externally sourced song names against the library.
