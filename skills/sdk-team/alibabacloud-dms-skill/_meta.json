@@ -1,0 +1,11 @@
+{
+  "owner": "sdk-team",
+  "slug": "alibabacloud-dms-skill",
+  "displayName": "Alibabacloud Dms Skill",
+  "latest": {
+    "version": "0.0.1",
+    "publishedAt": 1775111679579,
+    "commit": null
+  },
+  "history": []
+}
