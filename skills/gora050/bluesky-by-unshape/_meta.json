@@ -3,9 +3,15 @@
   "slug": "bluesky-by-unshape",
   "displayName": "Bluesky By Unshape",
   "latest": {
-    "version": "1.0.0",
-    "publishedAt": 1774523036014,
-    "commit": "https://github.com/openclaw/skills/commit/6c085058e5b13dcbe95ec120cfd084e61db6d6fd"
+    "version": "1.0.1",
+    "publishedAt": 1775167900466,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "1.0.0",
+      "publishedAt": 1774523036014,
+      "commit": "https://github.com/openclaw/skills/commit/6c085058e5b13dcbe95ec120cfd084e61db6d6fd"
+    }
+  ]
 }
