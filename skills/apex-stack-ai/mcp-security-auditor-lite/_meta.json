@@ -1,0 +1,11 @@
+{
+  "owner": "apex-stack-ai",
+  "slug": "mcp-security-auditor-lite",
+  "displayName": "MCP Security Auditor Lite",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1775101404040,
+    "commit": null
+  },
+  "history": []
+}
