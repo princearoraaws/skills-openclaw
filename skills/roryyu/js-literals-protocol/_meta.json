@@ -1,0 +1,11 @@
+{
+  "owner": "roryyu",
+  "slug": "js-literals-protocol",
+  "displayName": "Implements a JavaScript literal syntax-based protocol for LLM tool calls. Invoke when needing to enable LLM to call local JS functions using template literal syntax.",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1775029853336,
+    "commit": null
+  },
+  "history": []
+}
