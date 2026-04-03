@@ -1,6 +1,6 @@
 ---
 name: learn-cog
-description: "AI tutor and homework help powered by CellCog. Tutoring, study guides, exam prep, coding tutorials, language learning, math help, science explanations, practice problems — every subject, every level. Explains concepts five different ways: diagrams, analogies, worked examples, interactive lessons. #1 on DeepResearch Bench (Feb 2026)."
+description: "AI tutor and homework help powered by CellCog. Tutoring, study guides, exam prep, coding tutorials, language learning, math help, science explanations, practice problems — every subject, every level. Explains concepts five different ways: diagrams, analogies, worked examples, interactive lessons. #1 on DeepResearch Bench (Apr 2026)."
 metadata:
   openclaw:
     emoji: "📚"
@@ -14,7 +14,7 @@ dependencies: [cellcog]
 
 **The best tutors explain the same concept five different ways.** CellCog does too.
 
-#1 on DeepResearch Bench (Feb 2026) for reasoning depth — deep enough to break concepts into first principles — combined with multi-modal output for every learning style: diagrams, analogies, worked examples, practice problems, interactive explanations, and full study guides. Any subject, any level.
+#1 on DeepResearch Bench (Apr 2026) for reasoning depth — deep enough to break concepts into first principles — combined with multi-modal output for every learning style: diagrams, analogies, worked examples, practice problems, interactive explanations, and full study guides. Any subject, any level.
 
 ---
 
@@ -28,17 +28,26 @@ clawhub install cellcog
 
 **Read the cellcog skill first** for SDK setup. This skill shows you what's possible.
 
-**Quick pattern (v1.0+):**
+**OpenClaw agents (fire-and-forget — recommended for long tasks):**
 ```python
-# Fire-and-forget - returns immediately
 result = client.create_chat(
-    prompt="[your learning request]",
-    notify_session_key="agent:main:main",
-    task_label="learning-task",
-    chat_mode="agent"  # Agent mode for most learning
+    prompt="[your task prompt]",
+    notify_session_key="agent:main:main",  # OpenClaw only
+    task_label="my-task",
+    chat_mode="agent",  # See cellcog skill for all modes
 )
-# Daemon notifies you when complete - do NOT poll
 ```
+
+**All other agents (blocks until done):**
+```python
+result = client.create_chat(
+    prompt="[your task prompt]",
+    task_label="my-task",
+    chat_mode="agent",
+)
+```
+
+See the **cellcog** mothership skill for complete SDK API reference — delivery modes, timeouts, file handling, and more.
 
 ---
 
