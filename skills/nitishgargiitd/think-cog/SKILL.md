@@ -30,6 +30,27 @@ clawhub install cellcog
 
 **Read the cellcog skill first** for SDK setup. This skill shows you what's possible.
 
+**OpenClaw agents (fire-and-forget):**
+```python
+result = client.create_chat(
+    prompt="[your thinking prompt]",
+    notify_session_key="agent:main:main",  # OpenClaw only
+    task_label="my-task",
+    chat_mode="agent",
+)
+```
+
+**All other agents (blocks until done):**
+```python
+result = client.create_chat(
+    prompt="[your thinking prompt]",
+    task_label="my-task",
+    chat_mode="agent",
+)
+```
+
+See the **cellcog** mothership skill for complete SDK API reference.
+
 ---
 
 ## Why Think-Cog Exists
@@ -48,23 +69,26 @@ But some problems don't work that way:
 
 ## How It Works
 
-Unlike fire-and-forget tasks, think-cog is **conversational by design**:
+Unlike single-shot tasks, think-cog is **conversational by design**:
 
 ```python
-# Start a thinking session
+# Start the thinking session
 result = client.create_chat(
-    prompt="I'm trying to figure out the best architecture for a real-time multiplayer game...",
-    notify_session_key="agent:main:main",
-    task_label="architecture-thinking",
-    chat_mode="agent"  # Agent mode for iterative dialogue
+    prompt="[your thinking prompt]",
+    task_label="my-task",
+    chat_mode="agent",
 )
 
-# CellCog will think through the problem and may ask clarifying questions
-# You respond, building on the ideas
-# The solution emerges through dialogue
+# Continue the conversation — each exchange deepens understanding
+result = client.send_message(
+    chat_id=result["chat_id"],
+    message="What if we approached it from this angle instead?",
+)
 ```
 
-**This is not fire-and-forget.** Think-cog expects back-and-forth conversation. Each exchange deepens understanding.
+**Think-cog expects back-and-forth conversation**, not single requests. Each exchange deepens understanding.
+
+See the **cellcog** mothership skill for complete SDK API reference.
 
 ---
 
