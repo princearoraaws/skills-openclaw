@@ -65,11 +65,20 @@ seede create --no-interactive --prompt "Modern SaaS dashboard UI dark mode" --sc
 
 **Key Options:**
 
-- `--no-interactive`: **MANDATORY** for agents to prevent blocking.
-- `--prompt`: Detailed description of the desired design.
-- `--scene`: Context hint (`socialMedia`, `poster`, `scrollytelling`).
-- `--size`: Canvas dimensions (`1080x1080`, `1920x1080`, `Custom`).
-- `--width` / `--height`: Specific pixel dimensions (use with `--size Custom`).
+- `--no-interactive`: disable prompts; **MANDATORY** for agents.
+- `-p, --prompt <string>`: description of the design (required in non-interactive).
+- `-s, --scene <string>`: `socialMedia | poster | scrollytelling`.
+- `-f, --format <string>`: `webp | png | jpg` (default: `webp`).
+- `--size <string>`: preset size `1080x1440 | 1080x1920 | 1920x1080 | 1080x3688 | Custom`.
+- `-w, --width <number>`: width (used when `size=Custom`).
+- `-h, --height <string>`: height or `"auto"` (used when `size=Custom`).
+- `-r, --ref <string>`: reference image, format: `url|tag1,tag2`.
+- `-m, --model <string>`: model to use (interactive choices from `seede models`).
+
+Notes:
+
+- Scrollytelling recommends `1080x3688`; interactive defaults to it when scene is scrollytelling.
+- `height="auto"` supports content-driven layout.
 
 ### 2. Upload Assets
 
@@ -80,6 +89,11 @@ seede upload ./path/to/logo.png
 ```
 
 _Returns an Asset URL to be used in `create` commands._
+
+Details:
+
+- Content type is inferred from file extension.
+- Large files use resilient retries and may leverage direct/presigned uploads.
 
 ### 3. Manage & View
 
@@ -101,6 +115,16 @@ You can create and manage API tokens for CI/CD or Agent integration directly fro
 seede token create --name "My Agent Token" --expiration 30
 ```
 
+**List Tokens:**
+
+```bash
+seede token list
+```
+
+Notes:
+
+- Token creation output includes the full token only once; copy it immediately.
+
 ## Advanced Usage (Pro Tips)
 
 ### Integrating User Assets
@@ -116,6 +140,15 @@ seede create --no-interactive \
   --scene "poster"
 ```
 
+Payload fields for `@SeedeMaterial(JSON)`:
+
+- `filename`: original file name (optional).
+- `url`: publicly accessible image URL (ensure public access to avoid 404).
+- `width`: image width in pixels.
+- `height`: image height in pixels.
+- `aspectRatio`: width/height ratio (optional).
+- `tag`: short description to help placement (recommended).
+
 ### Enforcing Brand Guidelines
 
 To ensure the design matches specific brand colors:
@@ -123,6 +156,24 @@ To ensure the design matches specific brand colors:
 ```bash
 seede create --no-interactive \
   --prompt "Corporate annual report cover @SeedeTheme({'colors':['#000000','#FFD700']})"
+```
+
+### Using Reference Images
+
+Guide style/layout/color during generation via a directive:
+
+- Syntax: `@SeedeReferenceImage(url: 'string', tag: 'style,layout,color')`
+- Preset tags: `all, layout, style, color, texture, copy, font`
+- Ensure `url` is publicly accessible (otherwise 404 Not Found).
+
+Or via CLI flags（单一参考图）:
+
+```bash
+seede create --no-interactive \
+  --prompt "Tech event poster with neon wires and grid layout" \
+  --scene "poster" \
+  --format "png" \
+  --ref "https://example.com/reference1.png|style,layout,color"
 ```
 
 ## Agent Integration Examples
@@ -158,3 +209,38 @@ seede create --no-interactive --prompt "Blog banner about AI coding, futuristic 
       --scene "socialMedia" \
       --size "1080x1080"
     ```
+
+## CLI Reference
+
+### Environment
+
+- `SEEDE_API_TOKEN`: API token for non-interactive usage (CI/Agents).
+- `SEEDE_API_URL`: Override API base URL (default: `https://api.seede.ai`).
+
+### Auth
+
+- `seede login`: interactive login.
+- `seede register`: create a new account.
+- `seede whoami`: check login status.
+- `seede logout`: clear local token.
+
+### Models
+
+- `seede models`: list supported models from `/api/task/models` (requires auth).
+
+### Designs
+
+- `seede designs [options]`: list projects
+  - `-o, --offset <number>`: pagination offset (default: 0).
+  - `-l, --limit <number>`: page size (default: 40).
+  - `-s, --starred`: filter starred.
+  - `--order <field:direction>`: e.g. `updated_at:DESC`.
+  - `-q, --search <string>`: search term.
+  - `-t, --tag <string>`: filter by tag.
+- `seede open <designId>`: print design URL.
+
+### Assets
+
+- `seede upload <filePath>`: upload an asset (e.g., `logo.png`, `banner.svg`).
+  - Content type inferred from file extension.
+  - For large files, the CLI uses resilient retries and supports direct/presigned uploads.
