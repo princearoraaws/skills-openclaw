@@ -1,6 +1,6 @@
 # Internal Linking Optimizer — Output Templates
 
-Detailed output templates for internal-linking-optimizer steps 4-7. Referenced from [SKILL.md](../SKILL.md).
+Detailed output templates for internal-linking-optimizer steps 4-7. Referenced from [SKILL.md](https://github.com/aaron-he-zhu/seo-geo-claude-skills/blob/main/optimize/internal-linking-optimizer/SKILL.md).
 
 ---
 
