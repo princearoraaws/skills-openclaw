@@ -2,7 +2,6 @@
 name: cfshare
 description: Use the cfshare CLI to expose local ports/files as temporary Cloudflare Quick Tunnel URLs. Trigger when a user needs a temporary public URL for a local service, needs to share files/directories from terminal, or needs to inspect/export cfshare audit and policy state.
 metadata: { "cfshare": { "emoji": "☁️", "requires": { "bins": ["cfshare", "cloudflared"] }, "author": "ystemsrx" } }
-allowed-tools: Bash(cfshare:*)
 ---
 
 # CFShare CLI Skill
