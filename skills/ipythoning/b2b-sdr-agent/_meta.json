@@ -1,0 +1,11 @@
+{
+  "owner": "ipythoning",
+  "slug": "b2b-sdr-agent",
+  "displayName": "B2B SDR Agent",
+  "latest": {
+    "version": "3.4.0",
+    "publishedAt": 1775207544120,
+    "commit": null
+  },
+  "history": []
+}
