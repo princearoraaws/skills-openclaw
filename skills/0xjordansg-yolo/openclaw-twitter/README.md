@@ -1,6 +1,13 @@
 # OpenClaw Twitter 🐦
 
-Twitter/X read APIs and **OAuth-based posting** for autonomous agents. Powered by AIsa.
+Twitter/X intelligence and automation for autonomous agents. Powered by AIsa.
+
+This skill provides comprehensive capabilities to **read, search, write, and post (text & media)** to Twitter/X.
+
+## Features
+
+- **Read & Search**: Access user info, tweets, advanced search, trends, followers, lists, communities, and Spaces without requiring user login.
+- **Write & Post (OAuth)**: Publish text, images, and videos, create threads, and quote/reply to tweets securely via user OAuth authorization.
 
 ## Installation
 
@@ -10,22 +17,24 @@ export AISA_API_KEY="your-key"
 
 ## Quick Start
 
+### Read & Search
 ```bash
-# Read: user + search
+# Get user info and search tweets
 python scripts/twitter_client.py user-info --username elonmusk
 python scripts/twitter_client.py search --query "AI agents"
 python scripts/twitter_client.py trends
-
-# Post: OAuth relay
-python scripts/twitter_client.py authorize --open-browser
-python scripts/twitter_client.py post --text "Hello"
 ```
 
-## Features
+### Post & Write (Requires OAuth)
+```bash
+# Publish a text post
+python scripts/twitter_oauth_client.py post --text "Hello from OpenClaw!"
 
-- **Read**: User info, tweets, search, trends, followers, lists, communities, Spaces, etc.
-- **Post**: Browser OAuth via `POST /twitter/auth_twitter` and `POST /twitter/post_twitter` with `aisa_api_key` in the JSON body (no cookies, no proxy, no password).
+# Publish a post with media
+python scripts/twitter_oauth_client.py post --text "Check out this image" --media-file ./photo.png
+```
 
+> **Note**: For detailed posting workflows, authorization, and multi-chunk threading, please see [`./references/post_twitter.md`](./references/post_twitter.md).
 
 ## Get API Key
 

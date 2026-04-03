@@ -11,32 +11,33 @@ metadata: {"openclaw":{"emoji":"🐦","requires":{"bins":["curl","python3"],"env
 
 One API key. Full Twitter intelligence.
 
-## 🔥 What Can You Do?
+## What Can You Do?
 
 ### Monitor Influencers
-```
+```text
 "Get Elon Musk's latest tweets and notify me of any AI-related posts"
 ```
 
 ### Track Trends
-```
+```text
 "What's trending on Twitter worldwide right now?"
 ```
 
 ### Social Listening
-```
+```text
 "Search for tweets mentioning our product and analyze sentiment"
 ```
 
-### Post After OAuth
-```
-"Post this to X: we shipped a new release" (authorize in browser when prompted, then post)
-```
-
 ### Competitor Intel
-```
+```text
 "Monitor @anthropic and @GoogleAI - alert me on new announcements"
 ```
+
+## Posting Workflows
+
+This file does not define publishing logic.
+
+If the user asks to send, publish, or reply, or quote on X/Twitter, handle that workflow with `./references/post_twitter.md`.
 
 ## Quick Start
 
@@ -168,41 +169,6 @@ curl "https://api.aisa.one/apis/v1/twitter/spaces/detail?space_id=1dRJZlbLkjexB"
   -H "Authorization: Bearer $AISA_API_KEY"
 ```
 
-### Posting (OAuth relay)
-
-Posting does **not** use cookies, passwords, or proxies. Use the AIsa OAuth relay endpoints:
-
-- `POST /apis/v1/twitter/auth_twitter` — returns an authorization URL for the user to open in a browser
-- `POST /apis/v1/twitter/post_twitter` — publishes content after the user has authorized
-
-Both relay requests send **`aisa_api_key` in the JSON body**. Do **not** rely on `Authorization: Bearer` for these two POSTs.
-
-Required / optional JSON body fields:
-
-- `auth_twitter`: `aisa_api_key` (required)
-- `post_twitter`: `aisa_api_key` (required), `content` (required), `media_ids` (optional array)
-
-```bash
-# Request authorization URL
-curl -X POST "https://api.aisa.one/apis/v1/twitter/auth_twitter" \
-  -H "Content-Type: application/json" \
-  -d "{\"aisa_api_key\":\"$AISA_API_KEY\"}"
-
-# Publish a post (after user completes OAuth in browser)
-curl -X POST "https://api.aisa.one/apis/v1/twitter/post_twitter" \
-  -H "Content-Type: application/json" \
-  -d "{\"aisa_api_key\":\"$AISA_API_KEY\",\"content\":\"Hello from OpenClaw!\"}"
-```
-
-## Agent Instructions (posting)
-
-When the user asks to publish to X/Twitter:
-
-1. Ensure `AISA_API_KEY` is set.
-2. Prefer `post` when the user wants to publish; if the API indicates authorization is required, run `authorize` and return the `authorization_url` (or `data.auth_url` from the raw response).
-3. Do not ask for Twitter passwords or use cookie/proxy login flows.
-4. Do not claim the post succeeded until `post` returns success.
-
 ## Python Client
 
 ```bash
@@ -216,7 +182,7 @@ python3 {baseDir}/scripts/twitter_client.py followings --username elonmusk
 python3 {baseDir}/scripts/twitter_client.py verified-followers --user-id 44196397
 python3 {baseDir}/scripts/twitter_client.py check-follow --source elonmusk --target BillGates
 
-# Search & Discovery
+# Search & discovery
 python3 {baseDir}/scripts/twitter_client.py search --query "AI agents"
 python3 {baseDir}/scripts/twitter_client.py search --query "AI agents" --type Top
 python3 {baseDir}/scripts/twitter_client.py user-search --query "AI researcher"
@@ -238,13 +204,6 @@ python3 {baseDir}/scripts/twitter_client.py community-info --community-id 170848
 python3 {baseDir}/scripts/twitter_client.py community-members --community-id 1708485837274263614
 python3 {baseDir}/scripts/twitter_client.py community-tweets --community-id 1708485837274263614
 python3 {baseDir}/scripts/twitter_client.py community-search --query "AI"
-
-# OAuth posting
-python3 {baseDir}/scripts/twitter_client.py status
-python3 {baseDir}/scripts/twitter_client.py authorize
-python3 {baseDir}/scripts/twitter_client.py authorize --open-browser
-python3 {baseDir}/scripts/twitter_client.py post --text "Hello from OAuth"
-python3 {baseDir}/scripts/twitter_client.py post --text "With media" --media-id <id> --media-id <id2>
 ```
 
 ## API Endpoints Reference
@@ -280,21 +239,11 @@ python3 {baseDir}/scripts/twitter_client.py post --text "With media" --media-id 
 | `/twitter/community/get_tweets_from_all_community` | Search all community tweets | `query`, `cursor` |
 | `/twitter/spaces/detail` | Get Space detail | `space_id` |
 
-### Post Endpoints (OAuth relay, POST)
-
-| Endpoint | Description | Key Params |
-|----------|-------------|------------|
-| `/twitter/auth_twitter` | Get OAuth authorization URL | `aisa_api_key` |
-| `/twitter/post_twitter` | Publish a post | `aisa_api_key`, `content`, `media_ids` (optional) |
-
-Auth (relay only): JSON body field `aisa_api_key` (no `Authorization: Bearer` on these POSTs).
-
 ## Pricing
 
 | API | Cost |
 |-----|------|
 | Twitter read query | ~$0.0004 |
-| Twitter OAuth post (relay) | See [AIsa pricing](https://aisa.one) / console |
 
 Every response includes `usage.cost` and `usage.credits_remaining`.
 

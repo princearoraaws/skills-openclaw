@@ -1,13 +1,18 @@
 {
   "owner": "0xjordansg-yolo",
   "slug": "openclaw-twitter",
-  "displayName": "X/Twitter All-in-One: 30+ APIs, OAuth Post, One Key",
+  "displayName": "X/Twitter Automation: 30+ APIs, OAuth Post, One Key",
   "latest": {
-    "version": "1.0.1",
-    "publishedAt": 1774295804893,
-    "commit": "https://github.com/openclaw/skills/commit/b20eaa5461eff9eea2f9637337f5dddd0dec4ef7"
+    "version": "1.0.3",
+    "publishedAt": 1774946830644,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.1",
+      "publishedAt": 1774295804893,
+      "commit": "https://github.com/openclaw/skills/commit/b20eaa5461eff9eea2f9637337f5dddd0dec4ef7"
+    },
     {
       "version": "1.0.0",
       "publishedAt": 1770274943431,
