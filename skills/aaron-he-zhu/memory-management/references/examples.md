@@ -42,7 +42,7 @@ I'll update rankings for your hero keywords. Let me check the hot cache for the 
 
 ### Updated Files
 1. CLAUDE.md -> Hero Keywords table updated with current ranks
-2. memory/keywords/historical-rankings.csv -> New row added:
+2. memory/monitoring/rank-history/2024-12-15-ranks.csv -> New row added:
    `2024-12-15,keyword research tools,12,best seo software,24,free backlink checker,6,...`
 
 ### Recommendations
@@ -75,7 +75,7 @@ From your project glossary:
 - **Context**: This segment includes keywords where you can achieve page 1 rankings within 30-60 days due to low competition, despite having decent search volume
 
 According to your memory files, your current quick wins are stored in:
-`memory/keywords/long-tail-keywords.md` (tagged with "quick-win" label)
+`memory/research/keywords/long-tail-keywords.md` (tagged with "quick-win" label)
 
 Would you like me to show you the current list of quick win keywords?
 ```
@@ -93,7 +93,7 @@ I'll set up the two-layer memory system for your outdoor gear e-commerce site.
 
 ## Creating Directory Structure
 
-[Creates: memory/glossary.md, memory/keywords/, memory/competitors/, etc.]
+[Creates: memory/glossary.md, memory/research/, memory/content/, memory/monitoring/, etc.]
 
 ## CLAUDE.md (Hot Cache) - Initial Setup
 
@@ -126,9 +126,9 @@ Please provide what you have, and I'll create your initial CLAUDE.md and glossar
 Once you provide this information, I'll generate:
 - CLAUDE.md with your initial hot cache
 - memory/glossary.md with project terminology
-- memory/keywords/ structure with placeholder files
-- memory/competitors/ with initial competitor list
-- memory/content-calendar/active-calendar.md for Q1 2025
+- memory/research/keywords/ structure with placeholder files
+- memory/research/competitors/ with initial competitor list
+- memory/content/calendar/active-calendar.md for Q1 2025
 
 After setup, you can use commands like:
 - "Update rankings for hero keywords"

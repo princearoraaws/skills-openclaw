@@ -25,7 +25,7 @@ Create or update CLAUDE.md with this template:
 |---------|--------------|-------------|--------|--------|
 | [keyword 1] | #[X] | #[Y] | [vol] | [tracking/optimizing/achieved] |
 
-_Full keyword database: memory/keywords/_
+_Full keyword research: memory/research/keywords/_
 
 ## Primary Competitors (Top 3-5)
 
@@ -37,7 +37,7 @@ _Full keyword database: memory/keywords/_
    - Main strengths: [brief]
    - Our position vs. them: [ahead/behind/competitive]
 
-_Detailed analyses: memory/competitors/_
+_Detailed analyses: memory/research/competitors/_
 
 ## Current Optimization Priorities
 
@@ -66,7 +66,7 @@ _Detailed analyses: memory/competitors/_
 | Last Content Audit Score | [score]/100 | ([rating]) | — [date] | [page audited] |
 | Total Backlinks | [X] | [X] | [+/-X%] | [target] |
 
-_Historical data: memory/reports/_
+_Historical data: memory/monitoring/reports/ and memory/monitoring/rank-history/_
 
 ## Active Campaigns
 
@@ -84,7 +84,7 @@ _Historical data: memory/reports/_
 - **Progress**: [X]%
 - **Key activities**: [brief list]
 
-_Campaign archives: memory/reports/campaign/_
+_Campaign plans and archives: memory/content/calendar/_
 
 ## Quick Reference Notes
 
@@ -94,4 +94,3 @@ _Campaign archives: memory/reports/campaign/_
 
 _For project terminology, see: memory/glossary.md_
 ```
-
