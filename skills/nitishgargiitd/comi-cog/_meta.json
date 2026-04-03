@@ -3,11 +3,16 @@
   "slug": "comi-cog",
   "displayName": "Comi Cog",
   "latest": {
-    "version": "1.0.2",
-    "publishedAt": 1774585028186,
-    "commit": "https://github.com/openclaw/skills/commit/1dad62e9f42c9f8bb35c22e3a759aeed6e55265f"
+    "version": "1.0.5",
+    "publishedAt": 1775180587124,
+    "commit": null
   },
   "history": [
+    {
+      "version": "1.0.2",
+      "publishedAt": 1774585028186,
+      "commit": "https://github.com/openclaw/skills/commit/1dad62e9f42c9f8bb35c22e3a759aeed6e55265f"
+    },
     {
       "version": "1.0.1",
       "publishedAt": 1770773969008,
