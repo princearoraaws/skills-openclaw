@@ -1,0 +1,11 @@
+{
+  "owner": "membranedev",
+  "slug": "instana",
+  "displayName": "Instana",
+  "latest": {
+    "version": "1.0.0",
+    "publishedAt": 1775192640017,
+    "commit": null
+  },
+  "history": []
+}
