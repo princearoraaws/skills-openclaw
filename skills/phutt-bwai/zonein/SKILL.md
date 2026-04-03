@@ -1,24 +1,20 @@
 ---
-name: zonein
+name: hyperliquid-trading-agent
 version: 2.3.6
 description: |
-  Create, backtest, and deploy autonomous trading agents in plain English. Real-time smart money signals from 500+ profiled wallets, multi-timeframe TA, derivatives flow, HITL trade plans via Telegram, and a self-learning engine that makes your agent smarter after every trade. One install — 30+ commands. Perps, spot, HIP-3 (US stocks, commodities), and prediction markets.
+  Autonomous Hyperliquid trading agent powered by smart money signals. Create, backtest, and deploy AI trading agents that track 500+ whale wallets on Hyperliquid — perps, spot, and HIP-3 assets (TSLA, NVDA, GOLD, US500). Multi-timeframe technical analysis, derivatives flow, funding rates, liquidation maps, and a self-learning execution engine. HITL trade plans via Telegram. Also supports Polymarket prediction markets. 30+ commands, one API key.
 homepage: https://zonein.xyz
 compatibility: Requires python3. OpenClaw workspace with ZONEIN_API_KEY configured.
 metadata: {"openclaw":{"emoji":"🧠","requires":{"bins":["python3"],"env":["ZONEIN_API_KEY"]},"primaryEnv":"ZONEIN_API_KEY","files":["scripts/*","references/*"],"installer":{"instructions":"1. Go to https://app.zonein.xyz\n2. Log in with your refcode\n3. Click 'Get API Key' button\n4. Copy the key and paste it below"}}}
 ---
 
-# Zonein: Trading OS for Smarter Agents on Hyperliquid & Polymarket
+# Hyperliquid Trading Agent — Smart Money Signals & Autonomous Execution
 
-Create, backtest, and deploy autonomous trading agents with one skill install.
+Autonomous Hyperliquid trading agent powered by real-time smart money signals from 500+ whale wallets. Create, backtest, and deploy AI trading agents with one skill install.
 
-ZoneIn gives your OpenClaw agent a full trading stack - real-time smart money
-signals from 500+ profiled wallets, multi-timeframe technical analysis, derivatives
-flow, composite AI signals, and a self-learning engine. Agents get smarter after
-every trade.
+ZoneIn gives your OpenClaw agent a full trading stack — multi-timeframe technical analysis, derivatives flow, composite AI signals, funding rates, liquidation maps, and a self-learning engine that gets smarter after every trade.
 
-Supports: Hyperliquid perps, spot, HIP-3 (US stocks like TSLA/NVDA, commodities
-like GOLD, indices like US500), and Polymarket prediction markets.
+Supports: Hyperliquid perps, spot, HIP-3 (US stocks like TSLA/NVDA, commodities like GOLD, indices like US500), and Polymarket prediction markets.
 
 30+ commands. One API key. From zero to live trading agent in one conversation.
 

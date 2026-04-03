@@ -1,6 +1,6 @@
-# Zonein: Smart Money Intelligence & Trading Agents
+# Hyperliquid Trading Agent — Smart Money Signals & Autonomous Execution
 
-An [OpenClaw](https://openclaw.io) skill (v2.3.0) that tracks **500+ categorized whale wallets** on **Hyperliquid** and **Polymarket**, delivers real-time composite AI signals (Smart Money + Technical Analysis + Derivatives), and lets you create automated trading agents — all from your AI assistant.
+An [OpenClaw](https://openclaw.io) skill (v2.3.6) — autonomous Hyperliquid trading agent powered by smart money signals from **500+ whale wallets**. Create, backtest, and deploy AI trading agents on **Hyperliquid** (perps, spot, HIP-3 stocks) and **Polymarket** (prediction markets). Real-time composite AI signals (Smart Money + Technical Analysis + Derivatives), multi-timeframe analysis, and a self-learning execution engine — all from your AI assistant.
 
 ## Features
 
