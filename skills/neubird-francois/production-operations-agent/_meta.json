@@ -1,0 +1,11 @@
+{
+  "owner": "neubird-francois",
+  "slug": "production-operations-agent",
+  "displayName": "NeuBird AI Production Ops Agent",
+  "latest": {
+    "version": "1.0.1",
+    "publishedAt": 1775183502403,
+    "commit": null
+  },
+  "history": []
+}
