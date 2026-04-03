@@ -3,9 +3,15 @@
   "slug": "aegis-bridge",
   "displayName": "Aegis",
   "latest": {
-    "version": "2.5.3",
-    "publishedAt": 1775072766817,
-    "commit": "https://github.com/openclaw/skills/commit/a8433b21a8be3c3aa3294d8b098946c1885eaa56"
+    "version": "2.10.0",
+    "publishedAt": 1775234831119,
+    "commit": null
   },
-  "history": []
+  "history": [
+    {
+      "version": "2.5.3",
+      "publishedAt": 1775072766817,
+      "commit": "https://github.com/openclaw/skills/commit/a8433b21a8be3c3aa3294d8b098946c1885eaa56"
+    }
+  ]
 }
